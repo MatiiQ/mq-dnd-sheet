@@ -8,18 +8,21 @@ const DAMAGE_TYPES = ['Acid', 'Bludgeoning', 'Cold', 'Fire', 'Force', 'Lightning
 const CONDITION_OPTIONS = [...CONDITIONS.slice(0, 3), 'Exhaustion', ...CONDITIONS.slice(3)];
 
 export function Defenses() {
-  const { c, update } = useSheet();
+  const { c, update, edit } = useSheet();
+  const empty = !edit && !c.def.res.length && !c.def.vul.length && !c.def.imm.length;
   return (
     <section id="sec-defenses" aria-label="Defenses" className="card section gap-10">
       <div className="row wrap between" style={{ alignItems: 'baseline', gap: '6px 12px' }}>
         <span className="caps">DEFENSES</span>
-        <span className="muted">Resistance halves damage · Vulnerability doubles it · Immunity ignores damage or the condition</span>
+        {!empty && <span className="muted">Resistance halves damage · Vulnerability doubles it · Immunity ignores damage or the condition</span>}
       </div>
-      <div className="grid" style={{ '--min': '240px', gap: 12 } as CSSProperties}>
-        <DefenseGroup kind="res" title="Resistances" noun="resistance" color="var(--blue)" withConditions addLabel="Add a resistance" />
-        <DefenseGroup kind="vul" title="Vulnerabilities" noun="vulnerability" color="var(--orange)" addLabel="Add a vulnerability" />
-        <DefenseGroup kind="imm" title="Immunities" noun="immunity" color="var(--accent)" withConditions addLabel="Add an immunity" />
-      </div>
+      {empty ? <span className="muted">No resistances, vulnerabilities or immunities</span> : (
+        <div className="grid" style={{ '--min': '240px', gap: 12 } as CSSProperties}>
+          <DefenseGroup kind="res" title="Resistances" noun="resistance" color="var(--blue)" withConditions addLabel="Add a resistance" />
+          <DefenseGroup kind="vul" title="Vulnerabilities" noun="vulnerability" color="var(--orange)" addLabel="Add a vulnerability" />
+          <DefenseGroup kind="imm" title="Immunities" noun="immunity" color="var(--accent)" withConditions addLabel="Add an immunity" />
+        </div>
+      )}
       <label className="field" style={{ borderTop: '1px solid var(--line)', paddingTop: 10 }}>Save notes
         <input type="text" className="input" value={c.saveNotes} placeholder="e.g. Advantage on saves against being Charmed"
           onChange={(e) => update({ saveNotes: e.target.value })} />
