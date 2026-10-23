@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+
+# Player's Handbook source material: copyrighted, keep out of the public repo
+resources/
+reference/
