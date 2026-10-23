@@ -1,4 +1,3 @@
-import type { CSSProperties } from 'react';
 import { skillMod } from '../logic';
 import { saveEntry, useEntryForm, useSheet } from '../sheet';
 import type { Sense } from '../types';
@@ -10,7 +9,7 @@ export function Senses() {
   const { c, update, edit } = useSheet();
   const f = useEntryForm('sense', BLANK, 'sense', 'sense', 'ADD A SENSE');
   const passive = (label: string, value: number) => (
-    <div className="row between gap-8" style={{ minHeight: 44 }}><span>{label}</span><strong style={{ fontSize: 17 }}>{value}</strong></div>
+    <div className="row gap-8" style={{ minHeight: 44 }}><span>{label}</span><strong style={{ fontSize: 17 }}>{value}</strong></div>
   );
   const save = () => {
     const name = f.draft.name.trim();
@@ -26,14 +25,14 @@ export function Senses() {
       <div className="row gap-8" style={{ marginBottom: 2, color: 'var(--muted)' }}>
         <EyeIcon size={18} /><span className="caps">SENSES</span>
       </div>
-      <div className="grid" style={{ '--min': '220px', gap: '0 24px' } as CSSProperties}>
+      <div className="row wrap" style={{ gap: '0 32px' }}>
         {passive('Passive Perception', 10 + skillMod(c, 'perception', 'wis'))}
         {passive('Passive Investigation', 10 + skillMod(c, 'investigation', 'int'))}
         {passive('Passive Insight', 10 + skillMod(c, 'insight', 'wis'))}
         {c.senses.map((se) => (
-          <div key={se.id} className="row gap-4" style={{ minHeight: 44 }}>
-            <span className="grow">{se.name}</span>
-            <strong style={{ fontSize: 17, marginRight: 4 }}>{se.range}</strong>
+          <div key={se.id} className="row gap-8" style={{ minHeight: 44 }}>
+            <span>{se.name}</span>
+            <strong style={{ fontSize: 17 }}>{se.range}</strong>
             <EntryActions name={se.name} canEdit={edit}
               onEdit={() => f.openEdit(se.id, { name: se.name, range: se.range === '—' ? '' : se.range })}
               onRemove={() => update((p) => ({ senses: p.senses.filter((x) => x.id !== se.id) }))} />
