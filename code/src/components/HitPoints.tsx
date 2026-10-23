@@ -108,7 +108,7 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
       <div className="row wrap between" style={{ gap: '4px 12px' }}>
         <div className="row wrap">
           <span className="muted" style={{ marginRight: 2 }}>Hit Dice</span>
-          <UsePips used={hdUsed} max={c.level} color="var(--muted)" size={16} width={40} noun="Hit Die" onChange={(n) => update({ hdUsed: n })} />
+          <UsePips used={hdUsed} max={c.level} color="var(--accent)" size={16} width={40} noun="Hit Die" onChange={(n) => update({ hdUsed: n })} />
           <span style={{ fontSize: 13, color: 'var(--text-2)', marginLeft: 4 }}>{hdLeft} / {c.level}</span>
         </div>
         <button type="button" className="btn" style={{ fontSize: 14, padding: '0 12px' }} aria-disabled={!hdLeft} onClick={spendHD}>Spend Hit Die · {hdRoll}</button>

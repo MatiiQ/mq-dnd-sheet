@@ -31,20 +31,22 @@ export function Defenses() {
 function DefenseGroup({ kind, title, noun, color, withConditions, addLabel }: {
   kind: DefenseKind; title: string; noun: string; color: string; withConditions?: boolean; addLabel: string;
 }) {
-  const { c, update } = useSheet();
+  const { c, update, edit } = useSheet();
   const list = c.def[kind];
   const damageOptions = DAMAGE_TYPES.map((d) => <option key={d} value={d}>{d}</option>);
   return (
     <div className="col gap-6">
       <span style={{ fontWeight: 700, fontSize: 14, color }}>{title}</span>
       <div className="row wrap gap-6" style={{ minHeight: 44 }}>
-        {list.map((n) => (
+        {list.map((n) => !edit ? (
+          <span key={n} className="row" style={{ fontSize: 13, fontWeight: 600, minHeight: 44, padding: '0 12px', borderRadius: 22, border: '1px solid ' + color, color }}>{n}</span>
+        ) : (
           <DefenseChip key={n} name={n} noun={noun} color={color}
             onRemove={() => update((p) => ({ def: { ...p.def, [kind]: p.def[kind].filter((x) => x !== n) } }))} />
         ))}
         {list.length === 0 && <span className="muted">None</span>}
       </div>
-      <select className="input" aria-label={addLabel} value=""
+      {edit && <select className="input" aria-label={addLabel} value=""
         onChange={(e) => {
           const v = e.target.value;
           if (v) update((p) => ({ def: { ...p.def, [kind]: p.def[kind].includes(v) ? p.def[kind] : [...p.def[kind], v] } }));
@@ -56,7 +58,7 @@ function DefenseGroup({ kind, title, noun, color, withConditions, addLabel }: {
             <optgroup label="Conditions">{CONDITION_OPTIONS.map((d) => <option key={d} value={d}>{d}</option>)}</optgroup>
           </>
         ) : damageOptions}
-      </select>
+      </select>}
     </div>
   );
 }

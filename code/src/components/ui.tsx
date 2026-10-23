@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties, type InputHTMLAttributes, type ReactNode } from 'react';
 import { clamp } from '../logic';
+import { useSheet } from '../sheet';
 
 // ---------- icons (stroke SVG, colored by currentColor) ----------
 interface IconProps { size?: number; style?: CSSProperties }
@@ -49,9 +50,10 @@ export function RemoveButton({ name, onRemove }: { name: string; onRemove: () =>
 }
 
 export function EntryActions({ name, canEdit, onEdit, onRemove }: { name: string; canEdit: boolean; onEdit: () => void; onRemove: () => void }) {
+  if (!canEdit) return null;
   return (
     <div className="row">
-      {canEdit && <button type="button" className="icon-btn" aria-label={'Edit ' + name} onClick={onEdit}><PencilIcon /></button>}
+      <button type="button" className="icon-btn" aria-label={'Edit ' + name} onClick={onEdit}><PencilIcon /></button>
       <RemoveButton name={name} onRemove={onRemove} />
     </div>
   );
@@ -132,6 +134,8 @@ export function EntryForm({ kind, title, saveLabel, onSave, onCancel, inline, ch
 }
 
 export function AddButton({ onClick, children, style }: { onClick: () => void; children: ReactNode; style?: CSSProperties }) {
+  const { edit } = useSheet();
+  if (!edit) return null;
   return <button type="button" className="btn btn-add" style={style} onClick={onClick}>{children}</button>;
 }
 

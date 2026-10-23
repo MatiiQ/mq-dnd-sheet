@@ -16,7 +16,7 @@ export function Abilities() {
           ? 'Editing: set the original score, use − / + for temporary changes, tap Saving Throw to toggle proficiency, tap a skill to cycle Not proficient → Proficient → Expertise.'
           : 'Checks and saves: roll d20 + the bonus shown.'}
       </div>
-      <div className="grid" style={{ '--min': '300px', gap: 12 } as CSSProperties}>
+      <div className="grid" style={{ '--min': '300px', gap: 12, alignItems: 'start' } as CSSProperties}>
         {ABILITIES.map(([k, name]) => <AbilityCard key={k} k={k} name={name} />)}
       </div>
     </section>
