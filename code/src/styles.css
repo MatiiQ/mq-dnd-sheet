@@ -172,13 +172,16 @@ select.input { padding: 0 10px; }
 .nav { display: flex; overflow-x: auto; white-space: nowrap; padding: 0 14px; scrollbar-width: none; }
 .nav::-webkit-scrollbar { display: none; }
 .nav a {
-  display: inline-flex; align-items: center; min-height: 44px; padding: 0 10px; text-decoration: none;
+  display: inline-flex; align-items: center; min-height: 44px; padding: 0 2px; text-decoration: none;
   font-size: 14px; font-weight: 600; border-bottom: 3px solid transparent; color: var(--muted);
 }
+.nav a > span { padding: 6px 8px; border-radius: 16px; }
 .nav a.tab { color: var(--text-2); }
 .nav a.first-tab { margin-left: 10px; box-shadow: -11px 0 0 -10px var(--dash); }
-.nav a.selected { color: var(--accent); }
-.nav a.underline { border-bottom-color: var(--accent); }
+/* Gold underline = the section on screen; raised pill = the open tab. */
+.nav a.on-screen { color: var(--accent); border-bottom-color: var(--accent); }
+.nav a.open { color: var(--text); }
+.nav a.open > span { background: var(--raised); }
 .fade-l, .fade-r { position: absolute; top: 0; bottom: 3px; pointer-events: none; }
 .fade-l { left: 0; width: 36px; background: linear-gradient(to left, transparent, var(--bg) 80%); }
 .fade-r {

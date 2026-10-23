@@ -89,16 +89,16 @@ export function TopBar({ store, activeSec, setActiveSec, menuOpen, setMenuOpen, 
           {SECTION_LINKS.map(([id, label]) => {
             const on = activeSec === id;
             return (
-              <a key={id} href={'#' + id} aria-current={on ? 'location' : undefined} className={on ? 'selected underline' : undefined}
-                onClick={() => setActiveSec(id)}>{label}</a>
+              <a key={id} href={'#' + id} aria-current={on ? 'location' : undefined} className={on ? 'on-screen' : undefined}
+                onClick={() => setActiveSec(id)}><span>{label}</span></a>
             );
           })}
           {TABS.map(([t, label], i) => {
             const sel = c.tab === t;
             return (
               <a key={t} href="#sec-tabs" aria-current={sel ? 'page' : undefined}
-                className={['tab', i === 0 && 'first-tab', sel && 'selected', sel && inTabs && 'underline'].filter(Boolean).join(' ')}
-                onClick={() => { update({ tab: t }); setActiveSec('sec-tabs'); }}>{label}</a>
+                className={['tab', i === 0 && 'first-tab', sel && 'open', sel && inTabs && 'on-screen'].filter(Boolean).join(' ')}
+                onClick={() => { update({ tab: t }); setActiveSec('sec-tabs'); }}><span>{label}</span></a>
             );
           })}
         </nav>
