@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { sampleCharacter } from './defaults';
 import {
-  applyDamage, applyHeal, applySetTemp, conSave, fmt, longRest, shortRest, skillMod,
+  applyDamage, applyHeal, applySetTemp, conSave, fmt, hpColor, longRest, shortRest, skillMod,
   speedNow, spendHitDie, toggleCondition, undoHp
 } from './logic';
 import type { Character } from './types';
@@ -22,6 +22,28 @@ describe('derived numbers', () => {
   });
   it('uses temporary ability changes', () => {
     expect(conSave(make({ abilAdj: { con: 2 } }))).toBe(3);
+  });
+});
+
+describe('HP colour', () => {
+  const at = (hp: number, maxHp: number) => hpColor(make({ hp, maxHp }));
+  it('is green from 65% of max', () => {
+    expect(at(44, 44)).toBe('var(--hp-high)');
+    expect(at(29, 44)).toBe('var(--hp-high)');
+    expect(at(13, 20)).toBe('var(--hp-high)');
+  });
+  it('is yellow from 30% up to 65%', () => {
+    expect(at(28, 44)).toBe('var(--hp-mid)');
+    expect(at(14, 44)).toBe('var(--hp-mid)');
+    expect(at(6, 20)).toBe('var(--hp-mid)');
+  });
+  it('is red below 30%, including 0', () => {
+    expect(at(13, 44)).toBe('var(--hp-low)');
+    expect(at(5, 20)).toBe('var(--hp-low)');
+    expect(at(0, 44)).toBe('var(--hp-low)');
+  });
+  it('ignores temp HP', () => {
+    expect(hpColor(make({ hp: 13, maxHp: 44, temp: 20 }))).toBe('var(--hp-low)');
   });
 });
 

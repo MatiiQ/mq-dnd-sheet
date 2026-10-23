@@ -45,7 +45,7 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
       <div className="row wrap between gap-12" style={{ alignItems: 'baseline' }}>
         <div className="caps">HIT POINTS</div>
         <div className="row wrap" style={{ alignItems: 'baseline', gap: '4px 10px' }}>
-          <span style={{ fontSize: 34, fontWeight: 700 }}>{c.hp}</span>
+          <span style={{ fontSize: 40, fontWeight: 700, color: hpColor(c) }}>{c.hp}</span>
           <span style={{ color: 'var(--muted)', fontSize: 18 }}>/ {c.maxHp}</span>
           {c.temp > 0 && <span style={{ color: 'var(--blue)', fontWeight: 600 }}>+{c.temp} temp</span>}
           {!edit && c.origOn && delta !== 0 && <span style={{ fontSize: 13, color: deltaColor }}>max {deltaText} (original {c.origHp})</span>}

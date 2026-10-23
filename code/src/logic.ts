@@ -46,7 +46,9 @@ export const conSave = (c: Character) => abilityMod(c, 'con') + (c.saveProf.con 
 export const zeroSpeedBy = (c: Character) => CONDITIONS.filter((n) => c.conds[n] && ZERO_SPEED.includes(n));
 export const speedOf = (c: Character, base: number) => (zeroSpeedBy(c).length ? 0 : Math.max(0, base - 5 * c.exh));
 export const speedNow = (c: Character) => speedOf(c, c.speedBase);
-export const hpColor = (c: Character) => (c.hp <= Math.floor(c.maxHp / 4) ? 'var(--orange)' : 'var(--accent)');
+// Current HP against max, temp HP ignored: green from 65%, yellow from 30%, red below.
+export const hpColor = (c: Character) =>
+  (c.hp * 100 >= c.maxHp * 65 ? 'var(--hp-high)' : c.hp * 100 >= c.maxHp * 30 ? 'var(--hp-mid)' : 'var(--hp-low)');
 
 export function toggleCondition(c: Character, name: string): Character {
   const conds = { ...c.conds, [name]: !c.conds[name] };
