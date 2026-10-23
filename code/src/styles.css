@@ -217,7 +217,7 @@ select.input { padding: 0 10px; }
 button.vital { cursor: pointer; }
 .vital > svg { color: var(--muted); }
 .vital-value { font-size: 30px; font-weight: 700; }
-.vital-label { font-family: var(--serif); font-size: 11px; letter-spacing: 0.08em; color: var(--muted); font-weight: 700; }
+.vital-label { font-family: var(--serif); font-size: 12px; letter-spacing: 0.08em; color: var(--muted); font-weight: 700; }
 .tile { background: var(--raised); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
 
 /* ---------- boxes ---------- */
@@ -229,7 +229,7 @@ button.vital { cursor: pointer; }
   border: 1px solid var(--line-2); background: var(--raised); border-radius: 10px; min-height: 52px; padding: 4px 12px;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
 }
-.stat-box .k { font-size: 11px; color: var(--muted); }
+.stat-box .k { font-size: 11px; font-weight: 600; color: var(--muted); }
 .hp-bar { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; display: flex; }
 .hp-bar div { height: 8px; }
 .list-row { display: flex; align-items: center; gap: 8px; min-height: 44px; border-bottom: 1px solid var(--line); }

@@ -59,7 +59,7 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
       <div className="row wrap gap-8">
         <div className="row" style={{ border: '1px solid var(--line-2)', borderRadius: 10, overflow: 'hidden' }}>
           <button type="button" className="step" style={{ border: 'none', borderRadius: 0 }} aria-label="Decrease amount" onClick={() => setAmount(Math.max(1, c.amount - 1))}>−</button>
-          <label className="col" style={{ alignItems: 'center', width: 64, fontSize: 10, color: 'var(--muted)' }}>AMOUNT
+          <label className="col" style={{ alignItems: 'center', width: 64, fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>AMOUNT
             <NumInput key={amtKey} id="hp-amount" value={c.amount} min={0} max={999} initialDraft={hdPrompt ? '' : null} onCommit={(v) => update({ amount: v })}
               style={{ width: 56, font: '700 18px var(--sans)', textAlign: 'center', background: 'transparent', border: 'none', padding: 0 }} />
           </label>
