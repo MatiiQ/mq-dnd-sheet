@@ -10,7 +10,8 @@
   --muted: #B4AEA2;
   --faint: #9A9488;
   --dim: #A39E93;
-  --off: #6F6A60;
+  --off: #938D81;
+  --dot: #6A7282;
   --accent: #E3B260;
   --blue: #8EC5F5;
   --orange: #F0935A;
@@ -97,7 +98,7 @@ h1, h2 { margin: 0; }
 .pip-btn { width: 44px; height: 44px; border: none; background: transparent; cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; }
 .pip { display: inline-block; border-radius: 50%; border: 2px solid; }
 .dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; flex: none; }
-.dot-0 { border: 1.5px solid #6A7282; }
+.dot-0 { border: 1.5px solid var(--dot); }
 .dot-1 { background: var(--accent); }
 .dot-2 { border: 1.5px solid var(--accent); background: var(--accent); box-shadow: inset 0 0 0 2px var(--card); }
 
@@ -179,9 +180,9 @@ select.input { padding: 0 10px; }
 .nav a.selected { color: var(--accent); }
 .nav a.underline { border-bottom-color: var(--accent); }
 .fade-l, .fade-r { position: absolute; top: 0; bottom: 3px; pointer-events: none; }
-.fade-l { left: 0; width: 36px; background: linear-gradient(to left, rgba(16, 19, 24, 0), var(--bg) 80%); }
+.fade-l { left: 0; width: 36px; background: linear-gradient(to left, transparent, var(--bg) 80%); }
 .fade-r {
-  right: 0; width: 44px; background: linear-gradient(to right, rgba(16, 19, 24, 0), var(--bg) 75%);
+  right: 0; width: 44px; background: linear-gradient(to right, transparent, var(--bg) 75%);
   display: flex; align-items: center; justify-content: flex-end; padding-right: 8px; color: var(--muted);
 }
 
