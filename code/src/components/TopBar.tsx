@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { setLayoutMode, useLayoutMode, useWide, type LayoutMode } from '../layout';
-import { CONDITIONS, TABS, hpColor } from '../logic';
+import { CONDITIONS, TABS, hpColor, setConc } from '../logic';
 import { useSheet } from '../sheet';
 import { charName, saveBackupFile, type CharacterStore } from '../storage';
 import { CheckIcon, ChevronRight, MenuIcon, PencilIcon, StarIcon, XIcon, useArmed } from './ui';
@@ -89,7 +89,7 @@ export function TopBar({ store, activeSec, setActiveSec, menuOpen, setMenuOpen, 
       {(c.conc || condParts.length > 0) && (
         <div className="row wrap gap-6" style={{ paddingTop: 4 }}>
           {c.conc && (
-            <button type="button" className="status-chip" onClick={() => update({ conc: null, concCheck: null })} aria-label={'End concentration on ' + c.conc.name}>
+            <button type="button" className="status-chip" onClick={() => update(setConc(null))} aria-label={'End concentration on ' + c.conc.name}>
               Concentrating · {c.conc.name}<XIcon size={14} strokeWidth={2.5} />
             </button>
           )}
@@ -140,6 +140,7 @@ export function TopBar({ store, activeSec, setActiveSec, menuOpen, setMenuOpen, 
 function Menu({ store, onClose, onSwitched, onRest }: { store: CharacterStore; onClose: () => void; onSwitched: (editOn?: boolean, keepMenu?: boolean) => void; onRest: (kind: 'short' | 'long') => void }) {
   const { c } = useSheet();
   const [delArmed, tapDelete] = useArmed();
+  const [longArmed, tapLong] = useArmed();
   const [backupMsg, setBackupMsg] = useState<string | null>(null);
   const layout = useLayoutMode();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -153,9 +154,10 @@ function Menu({ store, onClose, onSwitched, onRest }: { store: CharacterStore; o
   const importBackup = async (file: File | undefined) => {
     if (!file) return;
     try {
-      const n = store.importAll(JSON.parse(await file.text()));
+      const { added, failed } = store.importAll(JSON.parse(await file.text()));
       onSwitched(false, true);
-      setBackupMsg('Imported ' + n + (n === 1 ? ' character.' : ' characters.'));
+      setBackupMsg('Imported ' + added + (added === 1 ? ' character.' : ' characters.') +
+        (failed ? ' ' + failed + ' could not be saved: storage is full.' : ''));
     } catch (e) {
       setBackupMsg(e instanceof Error && e.message.includes('backup') ? e.message : 'That file could not be read as a backup.');
     }
@@ -168,7 +170,11 @@ function Menu({ store, onClose, onSwitched, onRest }: { store: CharacterStore; o
         <span className="caps">RESTS</span>
         <div className="row gap-8">
           <a href="#sec-hp" className="rest-btn" onClick={() => onRest('short')}>Short Rest</a>
-          <a href="#sec-hp" className="rest-btn long" onClick={() => onRest('long')}>Long Rest</a>
+          {/* Long Rest resets a lot and has no undo, so it takes two taps. Only the second one follows the link. */}
+          <a href="#sec-hp" className={'rest-btn long' + (longArmed ? ' armed' : '')}
+            onClick={(e) => { if (!longArmed) e.preventDefault(); tapLong(() => onRest('long')); }}>
+            {longArmed ? 'Tap again to rest' : 'Long Rest'}
+          </a>
         </div>
 
         <span className="caps">CHARACTERS</span>

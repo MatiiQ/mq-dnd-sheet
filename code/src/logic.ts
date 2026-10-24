@@ -1,6 +1,6 @@
 // D&D 2024 rules used by the sheet. Pure functions: each takes a character and returns the next one.
 import { blankCharacter, sampleCharacter } from './defaults';
-import type { Ability, CastAbility, Character, HpSnapshot, Resource, Spell, Tab } from './types';
+import type { Ability, CastAbility, Character, Concentration, HpSnapshot, Resource, Spell, Tab } from './types';
 
 export const ABILITIES: [Ability, string][] = [
   ['str', 'STRENGTH'], ['dex', 'DEXTERITY'], ['con', 'CONSTITUTION'],
@@ -62,10 +62,26 @@ export const preparedCount = (c: Character) => c.spells.filter((x) => (x.lvl || 
 export const slotsLeft = (c: Character, level: number) => Math.max(0, c.slotMax[level] - c.slotUsed[level]);
 export const setSlotUsed = (c: Character, l: number, n: number) => { const u = c.slotUsed.slice(); u[l] = n; return { slotUsed: u }; };
 
+// Starting or ending Concentration makes the old CON save notice out of date, so it goes too.
+export const setConc = (conc: Concentration | null) => ({ conc, concCheck: null });
+
 // Casting with a slot uses one slot of that level. A Concentration spell starts Concentration, which ends any other (PHB p.363).
 export function castSpell(c: Character, sp: Spell, level: number): Partial<Character> {
   if (!slotsLeft(c, level)) return {};
-  return { ...setSlotUsed(c, level, c.slotUsed[level] + 1), ...(sp.c ? { conc: { id: sp.id, name: sp.name } } : {}) };
+  return { ...setSlotUsed(c, level, c.slotUsed[level] + 1), ...(sp.c ? setConc({ id: sp.id, name: sp.name }) : {}) };
+}
+
+// Removing a spell ends Concentration on it and drops its free cast.
+export function removeSpell(c: Character, id: string): Character {
+  const { [id]: _, ...free } = c.free;
+  return { ...c, spells: c.spells.filter((x) => x.id !== id), free, ...(c.conc?.id === id ? setConc(null) : {}) };
+}
+
+// After editing the concentrated spell: unticking Concentration ends it, and a new name shows in the chip.
+export function concAfterEdit(c: Character, sp: Pick<Spell, 'id' | 'name' | 'c'>): Partial<Character> {
+  if (c.conc?.id !== sp.id) return {};
+  if (!sp.c) return setConc(null);
+  return sp.name !== c.conc.name ? setConc({ id: sp.id, name: sp.name }) : {};
 }
 
 export const zeroSpeedBy = (c: Character) => CONDITIONS.filter((n) => c.conds[n] && ZERO_SPEED.includes(n));
@@ -78,7 +94,13 @@ export const hpColor = (c: Character) =>
 export function toggleCondition(c: Character, name: string): Character {
   const conds = { ...c.conds, [name]: !c.conds[name] };
   const endsConc = conds[name] && INCAPACITATING.includes(name) && c.conc;
-  return { ...c, conds, conc: endsConc ? null : c.conc };
+  return { ...c, conds, ...(endsConc ? setConc(null) : {}) };
+}
+
+// Exhaustion runs from 0 to 6. Level 6 is death (PHB p.366), and death ends Concentration (PHB p.363).
+export function setExhaustion(c: Character, n: number): Partial<Character> {
+  const exh = clamp(n, 0, 6);
+  return { exh, ...(exh >= 6 && c.conc ? setConc(null) : {}) };
 }
 
 const snapshot = (c: Character): HpSnapshot => ({ hp: c.hp, temp: c.temp, ds: c.ds, df: c.df, conds: c.conds, conc: c.conc });
@@ -90,11 +112,13 @@ export function applyDamage(c: Character): Character {
   const next: Character = { ...c, temp: c.temp - absorbed, hp: Math.max(0, c.hp - amt), concCheck: null };
   let text = 'Took ' + c.amount + ' damage' + (absorbed ? ' (' + absorbed + ' absorbed by temp HP)' : '') + '.';
   // Damage at 0 HP (PHB p.29): one failure, or death if it equals or exceeds max HP. A Stable character starts rolling again.
+  // Becoming Stable resets both counts (PHB p.29). Simplification: the app keeps ds at 3 to mark Stable, so it can't
+  // reset them at that moment; it ignores the old failures when the next damage comes in, and shows them until then.
   if (amt > 0 && c.hp === 0 && amt >= c.maxHp) {
     next.df = 3;
     text += ' Damage at 0 HP equals or exceeds max HP, so the character dies instantly.';
   } else if (amt > 0 && c.hp === 0) {
-    next.df = Math.min(3, c.df + 1);
+    next.df = Math.min(3, (c.ds >= 3 ? 0 : c.df) + 1);
     text += ' Damage at 0 HP: 1 death save failure marked (mark one more if it was a critical hit).';
     if (c.ds >= 3) {
       next.ds = 0;
@@ -120,8 +144,8 @@ export function applyDamage(c: Character): Character {
   return next;
 }
 
-// Three failed death saves: the character dies (PHB p.29).
-export const isDead = (c: Character) => c.hp === 0 && c.df >= 3;
+// Three failed death saves (PHB p.29) or Exhaustion level 6 (PHB p.366).
+export const isDead = (c: Character) => (c.hp === 0 && c.df >= 3) || c.exh >= 6;
 
 export function applyHeal(c: Character): Character {
   // Healing can't bring back a dead character; clear the failures first (e.g. after Revivify).
@@ -171,15 +195,21 @@ export const hdSpent = (c: Character) => Math.min(c.hdUsed, c.level);
 // Hit Dice are spent during a Short Rest, which needs at least 1 HP (PHB p.373).
 export function spendHitDie(c: Character): Character {
   const used = hdSpent(c);
-  if (used >= c.level || c.hp === 0) return c;
-  return { ...c, hdUsed: used + 1, amount: 0 };
+  if (used >= c.level || c.hp === 0 || isDead(c)) return c;
+  // Spending a die starts a new HP action, so the old undo (which may refund an earlier die) no longer applies.
+  return { ...c, hdUsed: used + 1, amount: 0, hpUndo: null };
 }
 
 // Spending a Hit Die: roll it and add the Con modifier (PHB p.373).
 export const hitDieRoll = (c: Character) => '1d' + c.hdDie + ' ' + fmt(abilityMod(c, 'con'));
 
 // Each spent Hit Die restores at least 1 HP, even with a negative Con modifier (PHB p.373).
-export const healHitDie = (c: Character) => applyHeal({ ...c, amount: Math.max(1, c.amount) });
+// Undoing a Hit Die heal also gives the die back, so the roll can be entered again.
+export function healHitDie(c: Character): Character {
+  const next = applyHeal({ ...c, amount: Math.max(1, c.amount) });
+  if (!next.hpUndo || next.hpUndo === c.hpUndo) return next;
+  return { ...next, hpUndo: { ...next.hpUndo, prev: { ...next.hpUndo.prev, hdUsed: Math.max(0, c.hdUsed - 1) } } };
+}
 
 export const rechargeOf = (r: Resource) => r.recharge || 'none';
 
@@ -196,14 +226,17 @@ export function refillFor(res: Resource[], kind: 'short' | 'long'): [Resource[],
   return [list, names];
 }
 
-// Either rest needs at least 1 HP to start (PHB p.370, p.373).
-const restBlocked = (c: Character, title: string): Character =>
-  ({ ...c, restMsg: { title, body: 'A rest can only start with at least 1 HP. Heal first.' } });
+// Either rest needs at least 1 HP to start (PHB p.370, p.373), and a dead character can't rest.
+const restBlocked = (c: Character, title: string): Character | null =>
+  isDead(c) ? { ...c, restMsg: { title, body: 'The character is dead.' } }
+    : c.hp === 0 ? { ...c, restMsg: { title, body: 'A rest can only start with at least 1 HP. Heal first.' } }
+      : null;
 
 // A Long Rest also returns a reduced HP maximum and reduced ability scores to normal (PHB p.370).
 // Raised values (from items or spells) are left alone.
 export function longRest(c: Character): Character {
-  if (c.hp === 0) return restBlocked(c, 'No Long Rest');
+  const blocked = restBlocked(c, 'No Long Rest');
+  if (blocked) return blocked;
   const [res, refilled] = refillFor(c.res, 'long');
   const maxHp = c.origOn && c.maxHp < c.origHp ? c.origHp : c.maxHp;
   const abilAdj = Object.fromEntries(Object.entries(c.abilAdj).map(([k, v]) => [k, Math.max(0, v || 0)]));
@@ -223,7 +256,8 @@ export function longRest(c: Character): Character {
 }
 
 export function shortRest(c: Character): Character {
-  if (c.hp === 0) return restBlocked(c, 'No Short Rest');
+  const blocked = restBlocked(c, 'No Short Rest');
+  if (blocked) return blocked;
   const [res, refilled] = refillFor(c.res, 'short');
   const left = c.level - hdSpent(c);
   return {
@@ -268,15 +302,25 @@ export function migrate(data: unknown): Character {
   }
   const c = d as unknown as Character;
   c.def = { res: strings(c.def.res), vul: strings(c.def.vul), imm: strings(c.def.imm) };
-  c.attune = strings(c.attune);
+  c.attune = [0, 1, 2].map((i) => strings(c.attune)[i] ?? '');
   c.slotMax = slots(c.slotMax);
   c.slotUsed = slots(c.slotUsed);
+  // These values size lists of buttons, so an out-of-range number could freeze the sheet. Limits match the UI.
+  c.level = clamp(c.level, 1, 20);
+  c.slotMax = c.slotMax.map((n) => clamp(n, 0, 9));
+  c.slotUsed = c.slotUsed.map((n, i) => clamp(n, 0, c.slotMax[i]));
+  c.exh = clamp(c.exh, 0, 6);
+  c.ds = clamp(c.ds, 0, 3);
+  c.df = clamp(c.df, 0, 3);
+  c.hdUsed = clamp(c.hdUsed, 0, c.level);
   if (!TABS.some(([t]) => t === c.tab)) c.tab = def.tab;
   if (!Object.hasOwn(CAST_NAMES, c.castAb)) c.castAb = 'none';
   if (c.spellFilter !== 'prepared') c.spellFilter = 'all';
   // Nullable fields: keep only well-formed values. The undo row lasts seconds, so it never survives a reload.
   const conc = c.conc as unknown;
   c.conc = isObj(conc) && typeof conc.id === 'string' && typeof conc.name === 'string' ? c.conc : null;
+  // Older versions kept Concentration on a spell after removing it. Checked after the entry filter above.
+  if (c.conc && !c.spells.some((x) => x.id === c.conc!.id)) c.conc = null;
   c.hpUndo = null;
   if (typeof c.concCheck !== 'string') c.concCheck = null;
   const msg = c.restMsg as unknown;

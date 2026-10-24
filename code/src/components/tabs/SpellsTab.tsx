@@ -1,6 +1,6 @@
 import { useState, type CSSProperties } from 'react';
-import { CAST_NAMES, castSpell, fmt, preparedCount, setSlotUsed, slotsLeft, spellAttack, spellSaveDC, spellUsable } from '../../logic';
-import { patchEntry, removeEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
+import { CAST_NAMES, castSpell, concAfterEdit, fmt, preparedCount, removeSpell, setConc, setSlotUsed, slotsLeft, spellAttack, spellSaveDC, spellUsable } from '../../logic';
+import { patchEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { Spell } from '../../types';
 import { AddButton, ChevronDown, EntryActions, EntryForm, Step, TextField, UsePips } from '../ui';
 
@@ -28,7 +28,8 @@ export function SpellsTab() {
       name, lvl: parseInt(d.lvl, 10) || 0, time: d.time, range: d.range.trim(), dice: d.dice.trim(), c: d.conc,
       source: d.source.trim() || 'Custom', dur: d.dur.trim(), comp: d.comp.trim(), always: d.always
     };
-    update((p) => ({ spells: saveEntry<Spell>(p.spells, built, f.editingId, { prep: true }) }));
+    const id = f.editingId;
+    update((p) => ({ spells: saveEntry<Spell>(p.spells, built, id, { prep: true }), ...(id ? concAfterEdit(p, { ...built, id }) : {}) }));
     f.close();
   };
 
@@ -217,7 +218,7 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
           onClick={() => update((p) => ({ spells: patchEntry(p.spells, sp.id, (x) => ({ prep: !x.prep })) }))}
           style={{
             flex: 'none', width: 40, height: 40, padding: 0, cursor: 'pointer', borderRadius: 10, font: '700 15px var(--sans)',
-            border: '2px solid ' + (prepOn ? 'var(--accent)' : 'var(--dash)'), background: prepOn ? 'var(--accent)' : 'transparent', color: prepOn ? 'var(--bg)' : '#8A8478'
+            border: '2px solid ' + (prepOn ? 'var(--accent)' : 'var(--dash)'), background: prepOn ? 'var(--accent)' : 'transparent', color: prepOn ? 'var(--bg)' : 'var(--off)'
           }}>P</button>
       )}
       {lvl > 0 && isAlways && (
@@ -242,14 +243,14 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
       {sp.c && (lvl === 0 || usable) && (
         <button type="button" aria-pressed={concOn} aria-label={concOn ? 'Stop concentrating on ' + sp.name : 'Concentrate on ' + sp.name}
           className="btn btn-sm" style={{ border: '1px solid var(--blue)', background: concOn ? 'var(--blue)' : 'transparent', color: concOn ? 'var(--bg)' : 'var(--blue)', borderRadius: 10 }}
-          onClick={() => update({ conc: concOn ? null : concOf })}>{concOn ? 'Conc. ✓' : 'Conc.'}</button>
+          onClick={() => update(setConc(concOn ? null : concOf))}>{concOn ? 'Conc. ✓' : 'Conc.'}</button>
       )}
       {sp.free && usable && (
         <button type="button" aria-pressed={freeUsed} aria-label={freeUsed ? 'Free cast of ' + sp.name + ' used; tap to restore' : 'Use free cast of ' + sp.name}
           className="btn btn-sm" style={{ border: '1px solid ' + (freeUsed ? 'var(--line-2)' : 'var(--accent)'), background: 'transparent', color: freeUsed ? 'var(--muted)' : 'var(--accent)' }}
           onClick={() => update((p) => {
             const used = !p.free[sp.id];
-            return { free: { ...p.free, [sp.id]: used }, ...(used && sp.c ? { conc: concOf } : {}) };
+            return { free: { ...p.free, [sp.id]: used }, ...(used && sp.c ? setConc(concOf) : {}) };
           })}>{freeUsed ? 'Free used' : 'Free'}</button>
       )}
       {!!first && usable && (
@@ -275,7 +276,7 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
         </div>
       )}
       {lvl > 0 && !sp.free && !first && usable && <span style={{ fontSize: 13, color: 'var(--orange)' }}>No slots of this level or higher</span>}
-      <EntryActions name={sp.name} canEdit={edit} onEdit={onEdit} onRemove={() => update((p) => ({ spells: removeEntry(p.spells, sp.id) }))} />
+      <EntryActions name={sp.name} canEdit={edit} onEdit={onEdit} onRemove={() => update((p) => removeSpell(p, sp.id))} />
     </div>
   );
 }

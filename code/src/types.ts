@@ -21,7 +21,8 @@ export interface Spell {
 }
 export interface Feature { id: string; g: FeatureGroup; name: string; desc: string }
 export interface Concentration { id: string; name: string }
-export interface HpSnapshot { hp: number; temp: number; ds: number; df: number; conds: Record<string, boolean>; conc: Concentration | null }
+// hdUsed is set only by a Hit Die heal, so undoing it refunds the die.
+export interface HpSnapshot { hp: number; temp: number; ds: number; df: number; conds: Record<string, boolean>; conc: Concentration | null; hdUsed?: number }
 
 export interface Character {
   ch: Details;

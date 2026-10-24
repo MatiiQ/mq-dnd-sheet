@@ -102,8 +102,10 @@ export const ProfDot = ({ level }: { level: number }) => <span aria-hidden="true
 // ---------- number input: keeps the raw text while typing, commits valid numbers ----------
 type NumInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange' | 'min' | 'max'> & {
   value: number; min: number; max: number; onCommit: (n: number) => void; initialDraft?: string | null;
+  // Committed when the field is cleared, so a blank field never keeps a hidden number. Off by default.
+  emptyValue?: number;
 };
-export function NumInput({ value, min, max, onCommit, initialDraft = null, onBlur, ...rest }: NumInputProps) {
+export function NumInput({ value, min, max, onCommit, initialDraft = null, emptyValue, onBlur, ...rest }: NumInputProps) {
   const [draft, setDraft] = useState<string | null>(initialDraft);
   return (
     <input type="text" inputMode="numeric" {...rest} value={draft ?? String(value)}
@@ -112,6 +114,7 @@ export function NumInput({ value, min, max, onCommit, initialDraft = null, onBlu
         setDraft(raw);
         const n = parseInt(raw, 10);
         if (!isNaN(n)) onCommit(clamp(n, min, max));
+        else if (raw === '' && emptyValue !== undefined) onCommit(emptyValue);
       }}
       onBlur={(e) => { setDraft(null); onBlur?.(e); }} />
   );

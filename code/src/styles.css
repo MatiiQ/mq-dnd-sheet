@@ -26,6 +26,11 @@
   --cond-fg: #F5C9A4;
   --dead-bg: #4A2416;
   --dead-fg: #FAD3BE;
+  --avatar: #262C38;
+  --coin-cp: #D9A27A;
+  --coin-sp: #C8CCD2;
+  --coin-ep: #B9C7A4;
+  --coin-pp: #D7D3E8;
   --serif: Cinzel, Georgia, serif;
   --sans: Inter, system-ui, sans-serif;
   --gutter: 20px;
@@ -144,7 +149,7 @@ select.input { padding: 0 10px; }
   background: var(--bg); border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 2px;
 }
 .avatar {
-  width: 40px; height: 40px; border-radius: 50%; background: #262C38; border: 2px solid var(--accent);
+  width: 40px; height: 40px; border-radius: 50%; background: var(--avatar); border: 2px solid var(--accent);
   display: flex; align-items: center; justify-content: center; font-family: var(--serif); font-weight: 700;
   font-size: 15px; color: var(--accent); flex: none;
 }
@@ -218,6 +223,7 @@ select.input { padding: 0 10px; }
   border: 1px solid var(--accent); border-radius: 10px; min-height: 44px; padding: 0 10px; color: var(--accent);
 }
 .rest-btn.long { background: var(--accent); color: var(--bg); }
+.rest-btn.long.armed { background: var(--orange); border-color: var(--orange); }
 .char-btn {
   font-weight: 600; cursor: pointer; min-height: 44px; padding: 0 12px; border-radius: 10px; display: flex;
   align-items: center; gap: 8px; border: 1px solid var(--line-2); background: var(--raised); color: var(--text);

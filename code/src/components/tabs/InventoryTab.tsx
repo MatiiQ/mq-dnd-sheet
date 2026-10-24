@@ -3,7 +3,7 @@ import { patchEntry, removeEntry, saveEntry, useEntryForm, useSheet } from '../.
 import type { Coin, Item } from '../../types';
 import { AddButton, EntryActions, EntryForm, NumInput, TextField } from '../ui';
 
-const COINS: [Coin, string, string][] = [['cp', 'CP', '#D9A27A'], ['sp', 'SP', '#C8CCD2'], ['ep', 'EP', '#B9C7A4'], ['gp', 'GP', 'var(--accent)'], ['pp', 'PP', '#D7D3E8']];
+const COINS: [Coin, string, string][] = [['cp', 'CP', 'var(--coin-cp)'], ['sp', 'SP', 'var(--coin-sp)'], ['ep', 'EP', 'var(--coin-ep)'], ['gp', 'GP', 'var(--accent)'], ['pp', 'PP', 'var(--coin-pp)']];
 const BLANK = { name: '' };
 
 export function InventoryTab() {

@@ -16,9 +16,9 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
   const delta = c.maxHp - c.origHp;
   const hdUsed = hdSpent(c);
   const hdLeft = c.level - hdUsed;
-  const canSpendHD = hdLeft > 0 && c.hp > 0;
-  const hdRoll = hitDieRoll(c);
   const dead = isDead(c);
+  const canSpendHD = hdLeft > 0 && c.hp > 0 && !dead;
+  const hdRoll = hitDieRoll(c);
   const deltaColor = delta < 0 ? 'var(--orange)' : delta > 0 ? 'var(--blue)' : 'var(--muted)';
 
   // The undo row hides itself after a few seconds; a newer HP action restarts the wait.
@@ -74,7 +74,7 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
         <div className="row" style={{ border: '1px solid var(--line-2)', borderRadius: 10, overflow: 'hidden' }}>
           <button type="button" className="step" style={{ border: 'none', borderRadius: 0 }} aria-label="Decrease amount" onClick={() => setAmount(Math.max(1, c.amount - 1))}>−</button>
           <label className="col" style={{ alignItems: 'center', width: 64, fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>AMOUNT
-            <NumInput key={amtKey} id="hp-amount" value={c.amount} min={0} max={999} initialDraft={hdPrompt ? '' : null} onCommit={(v) => update({ amount: v })}
+            <NumInput key={amtKey} id="hp-amount" value={c.amount} min={0} max={999} initialDraft={hdPrompt && !c.amount ? '' : null} emptyValue={0} onCommit={(v) => update({ amount: v })}
               style={{ width: 56, font: '700 18px var(--sans)', textAlign: 'center', background: 'transparent', border: 'none', padding: 0 }} />
           </label>
           <button type="button" className="step" style={{ border: 'none', borderRadius: 0 }} aria-label="Increase amount" onClick={() => setAmount(Math.min(999, c.amount + 1))}>+</button>
@@ -145,8 +145,9 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
               <MarkPips n={c.df} color="var(--orange)" noun="failure" onChange={(n) => update({ df: n })} />
             </div>
           </div>
-          {c.ds >= 3 && c.df < 3 && <div role="status" className="notice notice-stable">Stable. Stop rolling death saves. You stay at 0 HP, unconscious, and regain 1 HP after 1d4 hours unless healed sooner.</div>}
-          {isDead(c) && <div role="status" className="notice notice-dead">Dead. Three failed death saves. Only magic such as Revivify can bring the character back: clear the failures, then Heal.</div>}
+          {c.ds >= 3 && c.df < 3 && !dead && <div role="status" className="notice notice-stable">Stable. Stop rolling death saves. You stay at 0 HP, unconscious, and regain 1 HP after 1d4 hours unless healed sooner.</div>}
+          {/* At Exhaustion 6 with HP above 0, only the Conditions card shows the death. */}
+          {dead && <div role="status" className="notice notice-dead">Dead. {c.exh >= 6 ? 'Exhaustion level 6.' : 'Three failed death saves.'} Only magic such as Revivify can bring the character back: {c.exh >= 6 ? 'lower Exhaustion' : 'clear the failures'}, then Heal.</div>}
         </div>
       )}
     </section>

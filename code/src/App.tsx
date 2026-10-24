@@ -37,6 +37,7 @@ export default function App() {
   };
   const onRest = (kind: 'short' | 'long') => {
     update(kind === 'long' ? longRest : shortRest);
+    setHdPrompt(false);
     setMenuOpen(false);
     setActiveSec('sec-hp');
   };

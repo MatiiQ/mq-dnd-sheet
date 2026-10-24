@@ -17,7 +17,20 @@ function writeJSON(key: string, v: unknown): boolean {
   try { localStorage.setItem(key, JSON.stringify(v)); return true; } catch { return false; }
 }
 
-const load = (id: string): Character => migrate(readJSON(sheetKey(id)));
+// A sheet that doesn't parse falls back to the sample, and the save effect then writes the sample over it.
+// So the raw text is copied to `<key>:unreadable` first. Only into an empty key: the first copy is never
+// overwritten, which also makes this safe to repeat inside setS updaters (StrictMode runs them twice).
+// Deleting the character leaves the copy behind on purpose, as it is the only copy of that data.
+export function load(id: string): Character {
+  const key = sheetKey(id), data = readJSON(key);
+  if (data === null) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw && localStorage.getItem(key + ':unreadable') === null) localStorage.setItem(key + ':unreadable', raw);
+    } catch { /* ignore */ }
+  }
+  return migrate(data);
+}
 export const charName = (c: Character) => c.ch.name || 'Unnamed character';
 const charInfo = (c: Character) => [c.ch.species, (c.ch.cls || 'Level') + ' ' + c.level].filter((x) => x).join(' · ');
 const entryOf = (id: string, c: Character): IndexEntry => ({ id, name: charName(c), info: charInfo(c) });
@@ -71,6 +84,18 @@ export async function saveBackupFile(data: unknown): Promise<string | null> {
   return 'Backup downloaded.';
 }
 
+// Saves a backup's characters under new ids. Returns the ones that were saved and how many the browser refused
+// (storage full), so the index never lists a character that has no sheet.
+export function writeBackup(data: unknown): { added: { id: string; c: Character }[]; failed: number } {
+  const d = data as { app?: string; characters?: unknown[] } | null;
+  if (!d || d.app !== BACKUP_APP || !Array.isArray(d.characters)) throw new Error('Not a character sheet backup file.');
+  const chars = d.characters.filter((x) => x && typeof x === 'object' && (x as Character).ch).map(migrate);
+  if (!chars.length) throw new Error('The backup has no characters.');
+  const added = chars.map((c) => ({ id: newId(), c })).filter((a) => writeJSON(sheetKey(a.id), a.c));
+  if (!added.length) throw new Error('The backup could not be saved: storage is full.');
+  return { added, failed: chars.length - added.length };
+}
+
 // All characters, the active one, and every way to change them. Saves on each change.
 export function useCharacters() {
   const [s, setS] = useState(initial);
@@ -103,16 +128,11 @@ export function useCharacters() {
     resetCurrent: () => setS((p) => ({ ...p, c: blankCharacter() })),
 
     exportAll: () => backup(list.map((x) => (x.id === s.id ? s.c : load(x.id)))),
-    // Adds the backup's characters next to the existing ones; returns how many were added.
-    importAll: (data: unknown): number => {
-      const d = data as { app?: string; characters?: unknown[] } | null;
-      if (!d || d.app !== BACKUP_APP || !Array.isArray(d.characters)) throw new Error('Not a character sheet backup file.');
-      const chars = d.characters.filter((x) => x && typeof x === 'object' && (x as Character).ch).map(migrate);
-      if (!chars.length) throw new Error('The backup has no characters.');
-      const added = chars.map((c) => ({ id: newId(), c }));
-      added.forEach((a) => writeJSON(sheetKey(a.id), a.c));
+    // Adds the backup's characters next to the existing ones; returns how many were added and how many failed.
+    importAll: (data: unknown): { added: number; failed: number } => {
+      const { added, failed } = writeBackup(data);
       setS((p) => addToStore(p, added));
-      return added.length;
+      return { added: added.length, failed };
     }
   };
 }

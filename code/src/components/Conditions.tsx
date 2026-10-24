@@ -1,4 +1,4 @@
-import { CONDITIONS, CONDITION_RULES, toggleCondition } from '../logic';
+import { CONDITIONS, CONDITION_RULES, setExhaustion, toggleCondition } from '../logic';
 import { useSheet } from '../sheet';
 
 export function Conditions() {
@@ -18,8 +18,8 @@ export function Conditions() {
       ))}
       <div className="row gap-6" style={{ marginLeft: 'auto', border: '1px solid var(--line-2)', borderRadius: 10, paddingLeft: 12 }}>
         <span style={{ fontSize: 14, color: 'var(--text-2)' }}>Exhaustion <strong style={{ color: 'var(--accent)' }}>{c.exh}</strong> / 6</span>
-        <button type="button" className="step" style={{ border: 'none', borderRadius: 0 }} aria-label="Decrease exhaustion" onClick={() => update((p) => ({ exh: Math.max(0, p.exh - 1) }))}>−</button>
-        <button type="button" className="step" style={{ border: 'none', borderRadius: '0 10px 10px 0' }} aria-label="Increase exhaustion" onClick={() => update((p) => ({ exh: Math.min(6, p.exh + 1) }))}>+</button>
+        <button type="button" className="step" style={{ border: 'none', borderRadius: 0 }} aria-label="Decrease exhaustion" onClick={() => update((p) => setExhaustion(p, p.exh - 1))}>−</button>
+        <button type="button" className="step" style={{ border: 'none', borderRadius: '0 10px 10px 0' }} aria-label="Increase exhaustion" onClick={() => update((p) => setExhaustion(p, p.exh + 1))}>+</button>
       </div>
       {rules.length > 0 && (
         <ul aria-label="Active condition effects" className="col gap-6" style={{ flex: '1 1 100%', listStyle: 'none', margin: '4px 0 0', padding: 0 }}>

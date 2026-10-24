@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { sampleCharacter } from './defaults';
 import {
-  applyDamage, applyHeal, applySetTemp, castSpell, clearHpUndo, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, initiative, isDead, longRest, migrate, passiveScore, preparedCount, saveMod, setMaxHp, shortRest, skillMod, slotsLeft,
-  speedNow, spellAttack, spellSaveDC, spellUsable, spendHitDie, toggleCondition, undoHp
+  applyDamage, applyHeal, applySetTemp, castSpell, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, initiative, isDead, longRest, migrate, passiveScore, preparedCount, removeSpell, saveMod, setMaxHp, shortRest, skillMod, slotsLeft,
+  setExhaustion, speedNow, spellAttack, spellSaveDC, spellUsable, spendHitDie, toggleCondition, undoHp
 } from './logic';
 import type { Character, Spell } from './types';
 
@@ -292,7 +292,7 @@ describe('loading saves and backups', () => {
     expect(c.attacks.map((a) => a.name)).toEqual(['Sling']);
     expect(c.attacks[0].id).toBeTruthy();
     expect(c.def).toEqual({ res: ['Fire'], vul: [], imm: [] });
-    expect(c.attune).toEqual(['Ring']);
+    expect(c.attune).toEqual(['Ring', '', '']);
     expect(c.slotUsed).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
   });
   it('rejects a spellcasting ability that is only an inherited key', () => {
@@ -314,5 +314,141 @@ describe('loading saves and backups', () => {
   it('lists the old sample consumables in Inventory', () => {
     const c = migrate({ res: [{ id: 'arrows', name: 'Arrows', count: 5 }, { id: 'n1', name: 'Rations', count: 3 }] });
     expect(c.res.map((r) => !!r.inv)).toEqual([true, false]);
+  });
+});
+
+describe('exhaustion 6', () => {
+  it('is death even above 0 HP', () => {
+    expect(isDead(make({ hp: 10, exh: 6 }))).toBe(true);
+    expect(isDead(make({ hp: 10, exh: 5 }))).toBe(false);
+  });
+  it('blocks healing', () => {
+    const c = make({ hp: 10, exh: 6, amount: 5 });
+    expect(applyHeal(c)).toBe(c);
+  });
+  it('blocks both rests', () => {
+    const l = longRest(make({ hp: 10, exh: 6 }));
+    expect(l.exh).toBe(6);
+    expect(l.hp).toBe(10);
+    expect(l.restMsg?.body).toMatch(/dead/);
+    const res = [{ id: 'r', name: 'Second Wind', count: 0, max: 1, recharge: 'short' as const }];
+    const s = shortRest(make({ hp: 10, exh: 6, res }));
+    expect(s.res[0].count).toBe(0);
+    expect(s.restMsg?.body).toMatch(/dead/);
+  });
+  it('blocks spending a hit die', () => {
+    expect(spendHitDie(make({ hp: 10, exh: 6, hdUsed: 0 })).hdUsed).toBe(0);
+  });
+});
+
+describe('concentration notice', () => {
+  const spell = (c: boolean): Spell => ({ id: 's1', name: 'Bless', lvl: 1, time: 'Action', range: '30 ft', source: 'PHB', c });
+  const check = { concCheck: 'Concentration on Hunter’s Mark: CON save DC 10', conc: { id: 'hm', name: 'Hunter’s Mark' } };
+  it('is cleared by casting a Concentration spell', () => {
+    const c = make({ ...check, slotMax: [0, 2, 0, 0, 0, 0, 0, 0, 0, 0], slotUsed: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0] });
+    expect(castSpell(c, spell(true), 1).concCheck).toBeNull();
+  });
+  it('stays when casting a spell without Concentration', () => {
+    const c = make({ ...check, slotMax: [0, 2, 0, 0, 0, 0, 0, 0, 0, 0], slotUsed: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0] });
+    expect(castSpell(c, spell(false), 1).concCheck).toBeUndefined();
+  });
+  it('is cleared when a condition ends Concentration', () => {
+    expect(toggleCondition(make(check), 'Incapacitated').concCheck).toBeNull();
+    expect(toggleCondition(make(check), 'Prone').concCheck).toBe(check.concCheck);
+  });
+  it('survives damage that drops the character to 0 HP', () => {
+    const c = applyDamage(make({ ...check, hp: 5, temp: 0, amount: 8 }));
+    expect(c.concCheck).toMatch(/ended \(dropped to 0 HP\)/);
+  });
+  it('Exhaustion 6 ends Concentration (PHB p.363, p.366)', () => {
+    const c = make({ ...check, exh: 5 });
+    expect(setExhaustion(c, 6)).toMatchObject({ exh: 6, conc: null, concCheck: null });
+    expect(setExhaustion(c, 4)).toEqual({ exh: 4 });
+    expect(setExhaustion(c, 9).exh).toBe(6);
+    expect(setExhaustion(c, -1).exh).toBe(0);
+  });
+});
+
+describe('editing and removing the concentrated spell', () => {
+  const bless: Spell = { id: 's1', name: 'Bless', lvl: 1, time: 'Action', range: '30 ft', source: 'PHB', c: true };
+  const other: Spell = { ...bless, id: 's2', name: 'Shield', c: false };
+  const conc = make({ spells: [bless, other], conc: { id: 's1', name: 'Bless' }, concCheck: 'CON save DC 10', free: { s1: true, s2: true } });
+  it('removing it ends Concentration and drops its free cast', () => {
+    const c = removeSpell(conc, 's1');
+    expect(c.spells.map((x) => x.id)).toEqual(['s2']);
+    expect(c.conc).toBeNull();
+    expect(c.concCheck).toBeNull();
+    expect(c.free).toEqual({ s2: true });
+  });
+  it('removing another spell keeps Concentration', () => {
+    const c = removeSpell(conc, 's2');
+    expect(c.conc).toEqual({ id: 's1', name: 'Bless' });
+    expect(c.free).toEqual({ s1: true });
+  });
+  it('renaming it renames the Concentration', () => {
+    expect(concAfterEdit(conc, { ...bless, name: 'Bless (upcast)' })).toEqual({ conc: { id: 's1', name: 'Bless (upcast)' }, concCheck: null });
+  });
+  it('unticking Concentration ends it', () => {
+    expect(concAfterEdit(conc, { ...bless, c: false })).toEqual({ conc: null, concCheck: null });
+  });
+  it('editing another spell, or with no change, keeps it', () => {
+    expect(concAfterEdit(conc, { ...other, name: 'Shield+' })).toEqual({});
+    expect(concAfterEdit(conc, bless)).toEqual({});
+  });
+  it('a save whose Concentration points at a missing spell loads without it', () => {
+    expect(migrate({ ...conc, conc: { id: 'gone', name: 'Old' } }).conc).toBeNull();
+    expect(migrate(conc).conc).toEqual({ id: 's1', name: 'Bless' });
+    expect(migrate({ ...conc, spells: [{ id: 's1' }, other] }).conc).toBeNull();
+  });
+});
+
+describe('Stable and damage', () => {
+  it('a Stable character starts counting failures from zero (PHB p.29)', () => {
+    const c = applyDamage(make({ hp: 0, ds: 3, df: 2, amount: 3 }));
+    expect(c.df).toBe(1);
+    expect(c.ds).toBe(0);
+    expect(isDead(c)).toBe(false);
+  });
+});
+
+describe('loading out-of-range counts', () => {
+  it('clamps values that size lists of buttons', () => {
+    const c = migrate({ ...sampleCharacter(), level: 1e9, slotMax: [0, 1e9], slotUsed: [0, 50], exh: 99, ds: -1, df: 7, hdUsed: 1e9, attune: [] });
+    expect(c.level).toBe(20);
+    expect(c.slotMax[1]).toBe(9);
+    expect(c.slotUsed[1]).toBe(9);
+    expect(c.exh).toBe(6);
+    expect(c.ds).toBe(0);
+    expect(c.df).toBe(3);
+    expect(c.hdUsed).toBe(20);
+    expect(c.attune).toEqual(['', '', '']);
+  });
+  it('keeps exactly three attunement slots', () => {
+    expect(migrate({ attune: ['a', 'b', 'c', 'd'] }).attune).toEqual(['a', 'b', 'c']);
+  });
+});
+
+describe('undoing a Hit Die heal', () => {
+  const start = make({ hp: 10, maxHp: 40, hdUsed: 1, level: 5 });
+  it('gives the die back', () => {
+    const healed = healHitDie({ ...spendHitDie(start), amount: 6 });
+    expect(healed.hdUsed).toBe(2);
+    const undone = undoHp(healed);
+    expect(undone.hp).toBe(10);
+    expect(undone.hdUsed).toBe(1);
+  });
+  it('leaves Hit Dice alone for other HP actions', () => {
+    expect(undoHp(applyHeal({ ...start, amount: 5 })).hdUsed).toBe(1);
+    expect(undoHp(applyDamage({ ...start, amount: 5 })).hdUsed).toBe(1);
+    expect('hdUsed' in applyHeal({ ...start, amount: 5 }).hpUndo!.prev).toBe(false);
+  });
+  it('spending another die drops the old undo, so only one die is ever refunded', () => {
+    const healed = healHitDie({ ...spendHitDie(start), amount: 6 });
+    const again = spendHitDie(healed);
+    expect(again.hpUndo).toBeNull();
+    expect(undoHp(again).hdUsed).toBe(3);
+  });
+  it('a refused heal (dead) sets no undo', () => {
+    expect(healHitDie(make({ hp: 10, exh: 6, amount: 4 })).hpUndo).toBeNull();
   });
 });
