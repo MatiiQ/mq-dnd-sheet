@@ -88,7 +88,10 @@ h1, h2, h3 { margin: 0; }
   background: var(--die); color: var(--die-ink); font-family: var(--serif); font-size: 17px; font-weight: 700; white-space: nowrap;
   clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
 }
-.die.long { clip-path: none; width: auto; min-width: 44px; border-radius: 12px; padding: 0 10px; }
+.die.long {
+  clip-path: none; flex: 0 1 auto; width: auto; height: auto; min-width: 44px; min-height: 44px; max-width: 100%;
+  border-radius: 12px; padding: 4px 10px; white-space: normal; text-align: center;
+}
 
 /* ---------- type ---------- */
 .label { font-size: 13px; font-weight: 600; color: var(--muted); }

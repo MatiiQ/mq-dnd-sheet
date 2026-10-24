@@ -19,11 +19,6 @@ export const StarIcon = (p: IconProps) => <Svg strokeWidth={1.5} fill="currentCo
 export const MenuIcon = (p: IconProps) => <Svg strokeWidth={2.2} {...p}><path d="M4 7h16M4 12h16M4 17h16" /></Svg>;
 export const ChevronDown = (p: IconProps) => <Svg strokeWidth={2.5} {...p}><path d="M6 9l6 6 6-6" /></Svg>;
 export const ChevronRight = (p: IconProps) => <Svg strokeWidth={2.5} {...p}><path d="M9 6l6 6-6 6" /></Svg>;
-export const ShieldIcon = (p: IconProps) => <Svg {...p}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></Svg>;
-export const BoltIcon = (p: IconProps) => <Svg {...p}><path d="M13 2L4 14h7l-1 8 9-12h-7z" /></Svg>;
-export const BootIcon = (p: IconProps) => <Svg {...p}><path d="M4 17c3 0 4-2 4-5s1-6 4-6 4 3 4 6 1 5 4 5" /><path d="M3 21h18" /></Svg>;
-export const MedalIcon = (p: IconProps) => <Svg {...p}><circle cx="12" cy="8" r="5" /><path d="M8.5 12.5L7 22l5-3 5 3-1.5-9.5" /></Svg>;
-export const EyeIcon = (p: IconProps) => <Svg {...p}><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></Svg>;
 
 // ---------- double-tap to confirm: first tap arms for 3 s, second tap acts ----------
 export function useArmed(ms = 3000) {

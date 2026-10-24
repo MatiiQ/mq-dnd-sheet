@@ -36,7 +36,7 @@ export function ActionsTab() {
             {a.info && <span className="muted">{a.info}</span>}
             {a.mastery && <span style={{ fontSize: 13, color: 'var(--text-2)' }}><strong style={{ color: 'var(--accent)' }}>Mastery</strong> · {a.mastery}</span>}
           </div>
-          <div className="row gap-10">
+          <div className="row wrap gap-10" style={{ minWidth: 0 }}>
             <span className="sr-only">To hit</span><DieBadge value={a.hit} />
             <span className="sr-only">Damage</span><span style={{ fontSize: 16, fontWeight: 600 }}>{a.dmg || '—'}</span>
           </div>
