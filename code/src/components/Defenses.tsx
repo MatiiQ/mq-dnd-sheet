@@ -13,7 +13,7 @@ export function Defenses() {
   return (
     <section id="sec-defenses" aria-label="Defenses" className="block section">
       <div className="row wrap between" style={{ alignItems: 'baseline', gap: '6px 12px' }}>
-        <h2 className="block-title">Defenses</h2>
+        <h2 className="block-title area-title">Defenses</h2>
         {!empty && <span className="muted">Resistance halves damage · Vulnerability doubles it · Immunity ignores damage or the condition</span>}
       </div>
       {empty ? <span className="muted">No resistances, vulnerabilities or immunities</span> : (

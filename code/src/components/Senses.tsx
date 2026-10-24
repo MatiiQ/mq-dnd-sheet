@@ -22,7 +22,7 @@ export function Senses() {
 
   return (
     <section id="sec-senses" aria-label="Senses" className="block section">
-      <h2 className="block-title">Senses</h2>
+      <h2 className="block-title area-title">Senses</h2>
       <div className="row wrap gap-8">
         {passive('Passive Perception', passiveScore(c, 'perception'))}
         {passive('Passive Investigation', passiveScore(c, 'investigation'))}

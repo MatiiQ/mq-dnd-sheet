@@ -96,9 +96,11 @@ h1, h2, h3 { margin: 0; }
 /* ---------- type ---------- */
 .label { font-size: 13px; font-weight: 600; color: var(--muted); }
 .block-title { font-family: var(--serif); font-size: 19px; font-weight: 700; color: var(--text); line-height: 1.2; }
+/* Top-level area headings (Hit points, Senses, Defenses, Conditions) take the accent, like the tab title and ability names. */
+.block-title.area-title { color: var(--accent); }
 .muted { font-size: 13px; color: var(--muted); }
 .small { font-size: 12px; color: var(--muted); }
-.tab-title { margin-top: 4px; font-family: var(--serif); font-size: 22px; font-weight: 700; color: var(--text); }
+.tab-title { margin-top: 4px; font-family: var(--serif); font-size: 22px; font-weight: 700; color: var(--accent); }
 
 /* ---------- buttons ---------- */
 .btn {

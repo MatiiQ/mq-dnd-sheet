@@ -12,7 +12,7 @@ export function Conditions() {
 
   return (
     <section id="sec-conditions" aria-label="Conditions" className="block section">
-      <h2 className="block-title">Conditions</h2>
+      <h2 className="block-title area-title">Conditions</h2>
       <div className="row wrap gap-8">
         {CONDITIONS.map((n) => (
           <button key={n} type="button" className="chip" aria-pressed={!!c.conds[n]} onClick={() => update((p) => toggleCondition(p, n))}>{n}</button>

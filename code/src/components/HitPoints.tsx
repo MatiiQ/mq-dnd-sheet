@@ -61,7 +61,7 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
           <span className="hp-now" style={{ color: hpColor(c) }}>{c.hp}</span>
         </div>
         <div className="col grow" style={{ gap: 2 }}>
-          <div className="block-title">Hit points</div>
+          <div className="block-title area-title">Hit points</div>
           <span className="hp-max">/ {c.maxHp}</span>
           {c.temp > 0 && <span style={{ color: 'var(--blue)', fontWeight: 600 }}>+{c.temp} temp</span>}
           {!edit && c.origOn && delta !== 0 && <span className="hp-delta" style={{ color: deltaColor }}>max {fmt(delta)} (original {c.origHp})</span>}
