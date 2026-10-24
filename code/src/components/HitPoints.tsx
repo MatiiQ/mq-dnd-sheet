@@ -79,9 +79,9 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
           </label>
           <button type="button" className="step" style={{ border: 'none', borderRadius: 0 }} aria-label="Increase amount" onClick={() => setAmount(Math.min(999, c.amount + 1))}>+</button>
         </div>
-        <button type="button" className="btn" style={{ flex: '1 1 80px', border: 'none', background: 'var(--orange)', color: 'var(--bg)', padding: '0 12px' }} onClick={() => act(applyDamage)}>Damage</button>
-        <button type="button" className="btn" style={dead ? { flex: '1 1 80px', padding: '0 12px' } : { flex: '1 1 80px', border: 'none', background: 'var(--blue)', color: 'var(--bg)', padding: '0 12px' }} aria-disabled={dead} onClick={() => act(hdPrompt ? healHitDie : applyHeal)}>Heal</button>
-        <button type="button" className="btn" style={{ flex: '1 1 80px', padding: '0 12px' }} onClick={() => act(applySetTemp)}>Set Temp</button>
+        <button type="button" className="btn btn-act" style={{ border: 'none', background: 'var(--orange)', color: 'var(--bg)' }} onClick={() => act(applyDamage)}>Damage</button>
+        <button type="button" className="btn btn-act" style={dead ? undefined : { border: 'none', background: 'var(--blue)', color: 'var(--bg)' }} aria-disabled={dead} onClick={() => act(hdPrompt ? healHitDie : applyHeal)}>Heal</button>
+        <button type="button" className="btn btn-act" onClick={() => act(applySetTemp)}>Set Temp</button>
       </div>
 
       {c.hpUndo && (

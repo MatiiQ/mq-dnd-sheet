@@ -186,10 +186,6 @@ function StatCard({ label, value }: { label: string; value: string | number }) {
   );
 }
 
-const smallBtn = (border: string, bg: string, color: string): CSSProperties => ({
-  fontSize: 13, fontWeight: 600, minHeight: 40, padding: '0 12px', borderRadius: 8, cursor: 'pointer', border: '1px solid ' + border, background: bg, color
-});
-
 function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boolean; setPicking: (on: boolean) => void; onEdit: () => void }) {
   const { c, update, edit } = useSheet();
   const lvl = sp.lvl || 0;
@@ -249,12 +245,12 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
 
       {sp.c && (lvl === 0 || usable) && (
         <button type="button" aria-pressed={concOn} aria-label={concOn ? 'Stop concentrating on ' + sp.name : 'Concentrate on ' + sp.name}
-          style={{ ...smallBtn('var(--blue)', concOn ? 'var(--blue)' : 'transparent', concOn ? 'var(--bg)' : 'var(--blue)'), borderRadius: 10 }}
+          className="btn btn-sm" style={{ border: '1px solid var(--blue)', background: concOn ? 'var(--blue)' : 'transparent', color: concOn ? 'var(--bg)' : 'var(--blue)', borderRadius: 10 }}
           onClick={() => update({ conc: concOn ? null : { id: sp.id, name: sp.name } })}>{concOn ? 'Conc. ✓' : 'Conc.'}</button>
       )}
       {sp.free && usable && (
         <button type="button" aria-pressed={freeUsed} aria-label={freeUsed ? 'Free cast of ' + sp.name + ' used; tap to restore' : 'Use free cast of ' + sp.name}
-          style={smallBtn(freeUsed ? 'var(--line-2)' : 'var(--accent)', 'transparent', freeUsed ? 'var(--muted)' : 'var(--accent)')}
+          className="btn btn-sm" style={{ border: '1px solid ' + (freeUsed ? 'var(--line-2)' : 'var(--accent)'), background: 'transparent', color: freeUsed ? 'var(--muted)' : 'var(--accent)' }}
           onClick={() => update((p) => {
             const used = !p.free[sp.id];
             return { free: { ...p.free, [sp.id]: used }, ...(used && sp.c ? { conc: { id: sp.id, name: sp.name } } : {}) };
@@ -263,10 +259,10 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
       {anyLeft && usable && (
         <div role="group" aria-label={'Spell slots for ' + sp.name} className="row wrap gap-6">
           <button type="button" aria-label={'Cast ' + sp.name + ' with a level ' + casts[firstIdx].l + ' slot, ' + casts[firstIdx].left + ' left'}
-            style={smallBtn('var(--accent)', 'transparent', 'var(--accent)')} onClick={() => castWith(casts[firstIdx].l)}>Cast {ORDINAL[casts[firstIdx].l]}</button>
+            className="btn btn-sm" style={{ border: '1px solid var(--accent)', background: 'transparent', color: 'var(--accent)' }} onClick={() => castWith(casts[firstIdx].l)}>Cast {ORDINAL[casts[firstIdx].l]}</button>
           {upcasts.length > 0 && (
-            <button type="button" aria-expanded={picking} aria-label={'Upcast ' + sp.name + ' with a higher slot'} className="row gap-4"
-              style={smallBtn('var(--line-2)', 'transparent', 'var(--text-2)')} onClick={() => setPicking(!picking)}>
+            <button type="button" aria-expanded={picking} aria-label={'Upcast ' + sp.name + ' with a higher slot'} className="btn btn-sm row gap-4"
+              style={{ border: '1px solid var(--line-2)', background: 'transparent', color: 'var(--text-2)' }} onClick={() => setPicking(!picking)}>
               Up<ChevronDown size={12} style={{ transform: picking ? 'rotate(180deg)' : undefined }} />
             </button>
           )}
@@ -277,7 +273,7 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
           <span className="muted" style={{ flex: '1 1 100%' }}>Cast {sp.name} with a higher slot:</span>
           {upcasts.map(({ l, left }) => (
             <button key={l} type="button" aria-disabled={!left} aria-label={'Cast ' + sp.name + ' with a level ' + l + ' slot, ' + left + ' left'}
-              style={{ ...smallBtn(left ? 'var(--line-2)' : 'var(--line)', left ? 'var(--raised)' : 'transparent', left ? 'var(--text)' : 'var(--off)'), cursor: left ? 'pointer' : 'not-allowed', textDecoration: left ? undefined : 'line-through' }}
+              className="btn btn-sm" style={{ border: '1px solid ' + (left ? 'var(--line-2)' : 'var(--line)'), background: left ? 'var(--raised)' : 'transparent', color: left ? 'var(--text)' : 'var(--off)', cursor: left ? 'pointer' : 'not-allowed', textDecoration: left ? undefined : 'line-through' }}
               onClick={() => { if (left) castWith(l); }}>{ORDINAL[l]} ({left})</button>
           ))}
         </div>

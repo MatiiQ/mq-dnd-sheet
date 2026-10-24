@@ -81,7 +81,8 @@ h1, h2 { margin: 0; }
 }
 .btn-primary { border: none; background: var(--accent); color: var(--bg); }
 .btn-add { align-self: flex-start; color: var(--accent); border: 1px dashed var(--dash); background: transparent; padding: 0 16px; }
-.btn-sm { font-size: 13px; min-height: 40px; padding: 0 12px; }
+.btn-sm { font-size: 13px; min-height: 40px; padding: 0 12px; border-radius: 8px; }
+.btn-act { flex: 1 1 80px; padding: 0 12px; }
 .btn-danger { border-color: var(--orange); background: transparent; color: var(--orange); }
 .btn-danger.armed { background: var(--orange); color: var(--bg); }
 .btn[aria-disabled="true"] { cursor: not-allowed; border-color: var(--line); background: transparent; color: var(--off); }
