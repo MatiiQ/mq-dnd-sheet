@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react';
 import { CONDITIONS } from '../logic';
 import { useSheet } from '../sheet';
 import type { DefenseKind } from '../types';
-import { XIcon, useArmed } from './ui';
+import { TextField, XIcon, useArmed } from './ui';
 
 const DAMAGE_TYPES = ['Acid', 'Bludgeoning', 'Cold', 'Fire', 'Force', 'Lightning', 'Necrotic', 'Piercing', 'Poison', 'Psychic', 'Radiant', 'Slashing', 'Thunder'];
 const CONDITION_OPTIONS = [...CONDITIONS.slice(0, 3), 'Exhaustion', ...CONDITIONS.slice(3)];
@@ -23,10 +23,8 @@ export function Defenses() {
           <DefenseGroup kind="imm" title="Immunities" noun="immunity" color="var(--accent)" withConditions addLabel="Add an immunity" />
         </div>
       )}
-      <label className="field" style={{ borderTop: '1px solid var(--line)', paddingTop: 10 }}>Save notes
-        <input type="text" className="input" value={c.saveNotes} placeholder="e.g. Advantage on saves against being Charmed"
-          onChange={(e) => update({ saveNotes: e.target.value })} />
-      </label>
+      <TextField label="Save notes" style={{ borderTop: '1px solid var(--line)', paddingTop: 10 }} value={c.saveNotes} placeholder="e.g. Advantage on saves against being Charmed"
+        onChange={(v) => update({ saveNotes: v })} />
     </section>
   );
 }
