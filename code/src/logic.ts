@@ -159,6 +159,9 @@ export function spendHitDie(c: Character): Character {
   return { ...c, hdUsed: used + 1, amount: 0 };
 }
 
+// Spending a Hit Die: roll it and add the Con modifier (PHB p.373).
+export const hitDieRoll = (c: Character) => '1d' + c.hdDie + ' ' + fmt(abilityMod(c, 'con'));
+
 // Each spent Hit Die restores at least 1 HP, even with a negative Con modifier (PHB p.373).
 export const healHitDie = (c: Character) => applyHeal({ ...c, amount: Math.max(1, c.amount) });
 
@@ -212,7 +215,7 @@ export function shortRest(c: Character): Character {
     restMsg: {
       title: 'Short Rest',
       body: (refilled.length ? 'Refilled: ' + refilled.join(', ') + '. ' : 'No resources recharge on a Short Rest. ') +
-        'Spend Hit Dice below: roll 1d' + c.hdDie + ' ' + fmt(abilityMod(c, 'con')) + ' each (minimum 1), then Heal (' + left + ' left).'
+        'Spend Hit Dice below: roll ' + hitDieRoll(c) + ' each (minimum 1), then Heal (' + left + ' left).'
     }
   };
 }

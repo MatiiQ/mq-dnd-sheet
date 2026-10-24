@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { sampleCharacter } from './defaults';
 import {
-  applyDamage, applyHeal, applySetTemp, clearHpUndo, fmt, hdSpent, healHitDie, hpColor, initiative, longRest, migrate, passiveScore, saveMod, setMaxHp, shortRest, skillMod, slotsLeft,
+  applyDamage, applyHeal, applySetTemp, clearHpUndo, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, initiative, longRest, migrate, passiveScore, saveMod, setMaxHp, shortRest, skillMod, slotsLeft,
   speedNow, spellAttack, spellSaveDC, spendHitDie, toggleCondition, undoHp
 } from './logic';
 import type { Character } from './types';
@@ -52,6 +52,9 @@ describe('derived numbers', () => {
     expect(passiveScore(c, 'perception')).toBe(15);
     expect(passiveScore(c, 'insight')).toBe(15);
     expect(passiveScore(c, 'investigation')).toBe(10);
+  });
+  it('builds the Hit Die roll text', () => {
+    expect(hitDieRoll(make())).toBe('1d10 +2'); // Ranger d10, CON 14
   });
   it('sets max HP to at least 1 and keeps HP at or under it', () => {
     expect(setMaxHp(make({ hp: 40, maxHp: 44 }), 30)).toEqual({ maxHp: 30, hp: 30 });
