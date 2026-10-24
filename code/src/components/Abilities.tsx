@@ -33,6 +33,7 @@ function AbilityCard({ k, name }: { k: Ability; name: string }) {
     return next < 1 || next > 30 ? {} : { abilAdj: { ...p.abilAdj, [k]: adj + d } };
   });
   const saveText = fmt(saveMod(c, k));
+  const saveRow = <><ProfDot level={saveProf ? 1 : 0} /><span className="grow" style={{ fontWeight: 600 }}>Saving Throw</span><span style={{ fontWeight: 700 }}>{saveText}</span></>;
 
   return (
     <div className="card" style={{ gap: 2 }}>
@@ -67,28 +68,29 @@ function AbilityCard({ k, name }: { k: Ability; name: string }) {
       {edit ? (
         <button type="button" aria-pressed={saveProf} className="btn row gap-10" style={{ border: '1px dashed var(--dash)', padding: '0 10px', textAlign: 'left', fontWeight: 400 }}
           onClick={() => update((p) => ({ saveProf: { ...p.saveProf, [k]: !p.saveProf[k] } }))}>
-          <ProfDot level={saveProf ? 1 : 0} /><span className="grow" style={{ fontWeight: 600 }}>Saving Throw</span><span style={{ fontWeight: 700 }}>{saveText}</span>
+          {saveRow}
         </button>
       ) : (
         <div className="row gap-10 save-row">
-          <ProfDot level={saveProf ? 1 : 0} /><span className="grow" style={{ fontWeight: 600 }}>Saving Throw</span><span style={{ fontWeight: 700 }}>{saveText}</span>
+          {saveRow}
         </div>
       )}
 
       {SKILLS.filter((s) => s[2] === k).map(([key, skill]) => {
         const lv = c.skillProf[key] || 0;
         const modText = fmt(skillMod(c, key, k));
+        const label = <><ProfDot level={lv} /><span className="grow">{skill}</span></>;
         return edit ? (
           <button key={key} type="button" aria-label={skill + ': ' + LEVEL_NAMES[lv] + '. Tap to change.'} className="row gap-10"
             style={{ cursor: 'pointer', background: 'transparent', border: 'none', borderBottom: '1px dashed var(--line)', minHeight: 44, padding: '0 2px', textAlign: 'left' }}
             onClick={() => update((p) => ({ skillProf: { ...p.skillProf, [key]: ((p.skillProf[key] || 0) + 1) % 3 } }))}>
-            <ProfDot level={lv} /><span className="grow">{skill}</span>
+            {label}
             <span className="small">{LEVEL_NAMES[lv]}</span>
             <span style={{ fontWeight: 600, minWidth: 28, textAlign: 'right' }}>{modText}</span>
           </button>
         ) : (
           <div key={key} className="row gap-10 skill-row">
-            <ProfDot level={lv} /><span className="grow">{skill}</span><span style={{ fontWeight: 600 }}>{modText}</span>
+            {label}<span style={{ fontWeight: 600 }}>{modText}</span>
           </div>
         );
       })}
