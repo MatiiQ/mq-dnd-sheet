@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { setLayoutMode, useLayoutMode, useWide, type LayoutMode } from '../layout';
 import { CONDITIONS, hpColor } from '../logic';
 import { useSheet } from '../sheet';
-import { saveBackupFile, type CharacterStore } from '../storage';
+import { charName, saveBackupFile, type CharacterStore } from '../storage';
 import type { Tab } from '../types';
 import { CheckIcon, ChevronRight, MenuIcon, PencilIcon, StarIcon, XIcon, useArmed } from './ui';
 
@@ -62,7 +62,7 @@ export function TopBar({ store, activeSec, setActiveSec, menuOpen, setMenuOpen, 
       <div className="row gap-10">
         <div aria-hidden="true" className="avatar">{initials}</div>
         <div className="col grow">
-          <h1 className="char-name">{ch.name || 'Unnamed character'}</h1>
+          <h1 className="char-name">{charName(c)}</h1>
           <span className="small ellipsis">{subtitle}</span>
         </div>
         <a href="#sec-hp" className="pill" onClick={(e) => { if (wide) e.preventDefault(); }} aria-label={'Hit points ' + c.hp + ' of ' + c.maxHp + (c.temp ? ', plus ' + c.temp + ' temporary' : '') + '. Jump to Hit Points.'}>

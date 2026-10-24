@@ -21,25 +21,26 @@ const load = (id: string): Character => migrate(readJSON(sheetKey(id)));
 const charId = () => 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
 export const charName = (c: Character) => c.ch.name || 'Unnamed character';
 export const charInfo = (c: Character) => [c.ch.species, (c.ch.cls || 'Level') + ' ' + c.level].filter((x) => x).join(' · ');
+const entryOf = (id: string, c: Character): IndexEntry => ({ id, name: charName(c), info: charInfo(c) });
 
 export interface Store { id: string; list: IndexEntry[]; c: Character }
 
 // The index with the active character's entry brought up to date. Use it before the active character changes,
 // or that character keeps the name it had when the list was loaded.
 export const freshList = (s: Store): IndexEntry[] =>
-  s.list.map((x) => (x.id === s.id ? { id: x.id, name: charName(s.c), info: charInfo(s.c) } : x));
+  s.list.map((x) => (x.id === s.id ? entryOf(x.id, s.c) : x));
 export const switchStore = (s: Store, id: string, c: Character): Store => ({ id, list: freshList(s), c });
 export const addToStore = (s: Store, added: { id: string; c: Character }[]): Store => ({
   id: added[0].id, c: added[0].c,
-  list: [...freshList(s), ...added.map((a) => ({ id: a.id, name: charName(a.c), info: charInfo(a.c) }))]
+  list: [...freshList(s), ...added.map((a) => entryOf(a.id, a.c))]
 });
 
 function initial(): Store {
   const idx = readJSON(INDEX_KEY) as { active?: string; list?: IndexEntry[] } | null;
   const saved = Array.isArray(idx?.list) ? idx.list.filter((x) => x && typeof x.id === 'string' && typeof x.name === 'string') : [];
   if (!saved.length) {
-    const id = charId();
-    return { id, list: [{ id, name: 'Ilyra Moonbrook' }], c: sampleCharacter() };
+    const id = charId(), c = sampleCharacter();
+    return { id, list: [entryOf(id, c)], c };
   }
   const id = saved.some((x) => x.id === idx?.active) ? idx!.active! : saved[0].id;
   return { id, list: saved, c: load(id) };
