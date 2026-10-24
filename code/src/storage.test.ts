@@ -11,15 +11,13 @@ describe('character list', () => {
   it('shows the active character as it is now', () => {
     expect(freshList(renamed())[0]).toEqual({ id: 'a', name: 'Bob', info: 'Wood Elf · Ranger 5' });
   });
-  it('keeps the renamed entry after switching to another character', () => {
+  it('keeps the renamed entry after switching to or adding another character', () => {
     const s = switchStore(renamed(), 'b', blankCharacter());
     expect(s.id).toBe('b');
     expect(s.list[0].name).toBe('Bob');
-  });
-  it('keeps the renamed entry after adding a character', () => {
-    const s = addToStore(renamed(), [{ id: 'c', c: blankCharacter() }]);
-    expect(s.id).toBe('c');
-    expect(s.list.map((x) => x.name)).toEqual(['Bob', 'Other', 'New character']);
+    const a = addToStore(renamed(), [{ id: 'c', c: blankCharacter() }]);
+    expect(a.id).toBe('c');
+    expect(a.list.map((x) => x.name)).toEqual(['Bob', 'Other', 'New character']);
   });
 });
 
@@ -57,17 +55,13 @@ describe('backup import', () => {
 
 describe('unreadable sheet', () => {
   afterEach(() => { vi.unstubAllGlobals(); });
-  it('keeps a copy of the raw text before falling back to the sample', () => {
+  it('keeps a copy of the raw text before falling back to the sample, never overwriting an earlier copy', () => {
     const m = stubStorage();
     m.set('dnd-sheet-v3:x', '{not json');
     expect(load('x').ch.name).toBe(sampleCharacter().ch.name);
     expect(m.get('dnd-sheet-v3:x:unreadable')).toBe('{not json');
-  });
-  it('does not overwrite an earlier copy', () => {
-    const m = stubStorage();
-    m.set('dnd-sheet-v3:x:unreadable', 'first');
     m.set('dnd-sheet-v3:x', '{second');
     load('x');
-    expect(m.get('dnd-sheet-v3:x:unreadable')).toBe('first');
+    expect(m.get('dnd-sheet-v3:x:unreadable')).toBe('{not json');
   });
 });
