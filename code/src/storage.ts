@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { blankCharacter, sampleCharacter } from './defaults';
-import { migrate } from './logic';
+import { migrate, newId } from './logic';
 import type { Character } from './types';
 
 const INDEX_KEY = 'dnd-index-v3';
@@ -18,7 +18,6 @@ function writeJSON(key: string, v: unknown): boolean {
 }
 
 const load = (id: string): Character => migrate(readJSON(sheetKey(id)));
-const charId = () => 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
 export const charName = (c: Character) => c.ch.name || 'Unnamed character';
 export const charInfo = (c: Character) => [c.ch.species, (c.ch.cls || 'Level') + ' ' + c.level].filter((x) => x).join(' · ');
 const entryOf = (id: string, c: Character): IndexEntry => ({ id, name: charName(c), info: charInfo(c) });
@@ -39,7 +38,7 @@ function initial(): Store {
   const idx = readJSON(INDEX_KEY) as { active?: string; list?: IndexEntry[] } | null;
   const saved = Array.isArray(idx?.list) ? idx.list.filter((x) => x && typeof x.id === 'string' && typeof x.name === 'string') : [];
   if (!saved.length) {
-    const id = charId(), c = sampleCharacter();
+    const id = newId(), c = sampleCharacter();
     return { id, list: [entryOf(id, c)], c };
   }
   const id = saved.some((x) => x.id === idx?.active) ? idx!.active! : saved[0].id;
@@ -83,7 +82,7 @@ export function useCharacters() {
     setSaveFailed(!ok);
   }, [s]);
 
-  const add = (c: Character) => setS((p) => addToStore(p, [{ id: charId(), c }]));
+  const add = (c: Character) => setS((p) => addToStore(p, [{ id: newId(), c }]));
 
   return {
     c: s.c, charId: s.id, list, saveFailed,
@@ -110,7 +109,7 @@ export function useCharacters() {
       if (!d || d.app !== BACKUP_APP || !Array.isArray(d.characters)) throw new Error('Not a character sheet backup file.');
       const chars = d.characters.filter((x) => x && typeof x === 'object' && (x as Character).ch).map(migrate);
       if (!chars.length) throw new Error('The backup has no characters.');
-      const added = chars.map((c) => ({ id: charId(), c }));
+      const added = chars.map((c) => ({ id: newId(), c }));
       added.forEach((a) => writeJSON(sheetKey(a.id), a.c));
       setS((p) => addToStore(p, added));
       return added.length;
