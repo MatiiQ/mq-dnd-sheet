@@ -179,7 +179,7 @@ export const hitDieRoll = (c: Character) => '1d' + c.hdDie + ' ' + fmt(abilityMo
 // Each spent Hit Die restores at least 1 HP, even with a negative Con modifier (PHB p.373).
 export const healHitDie = (c: Character) => applyHeal({ ...c, amount: Math.max(1, c.amount) });
 
-export const rechargeOf = (r: Resource) => r.recharge || (r.refill ? 'long' : 'none');
+export const rechargeOf = (r: Resource) => r.recharge || 'none';
 
 // Refills resources for a rest; returns the new list and the names that went up.
 export function refillFor(res: Resource[], kind: 'short' | 'long'): [Resource[], string[]] {
@@ -283,6 +283,8 @@ export function migrate(data: unknown): Character {
   // Older saves had no prepared flags: treat their levelled spells as prepared.
   c.spells = c.spells.map((x) => (x.prep === undefined && x.always === undefined ? { ...x, prep: true } : x));
   c.res = c.res.map((r) => (r.inv === undefined && OLD_INVENTORY_RESOURCES.includes(r.id) ? { ...r, inv: true } : r));
+  // Older saves had a `refill` flag that meant a Long Rest recharge.
+  c.res = c.res.map((r) => ({ ...r, recharge: r.recharge || (r.refill ? 'long' : 'none') }));
   return c;
 }
 

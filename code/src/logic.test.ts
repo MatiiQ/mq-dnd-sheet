@@ -304,6 +304,10 @@ describe('loading saves and backups', () => {
     expect(migrate(null)).toEqual(sampleCharacter());
     expect(migrate('x')).toEqual(sampleCharacter());
   });
+  it('turns the old refill flag into a recharge', () => {
+    const c = migrate({ res: [{ id: 'a', name: 'Ki', count: 1, refill: true }, { id: 'b', name: 'Rage', count: 1, refill: true, recharge: 'short' }, { id: 'c', name: 'Gold', count: 1 }] });
+    expect(c.res.map((r) => r.recharge)).toEqual(['long', 'short', 'none']);
+  });
   it('lists the old sample consumables in Inventory', () => {
     const c = migrate({ res: [{ id: 'arrows', name: 'Arrows', count: 5 }, { id: 'n1', name: 'Rations', count: 3 }] });
     expect(c.res.map((r) => !!r.inv)).toEqual([true, false]);

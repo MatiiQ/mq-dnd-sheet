@@ -42,7 +42,7 @@ export function ResourcesTab() {
                 <>
                   <label className="row gap-8 muted">Recharges on
                     <select className="input grow" style={{ fontSize: 14, padding: '0 8px' }} value={rc}
-                      onChange={(e) => patch(r.id, { recharge: e.target.value as Recharge, refill: false })}>
+                      onChange={(e) => patch(r.id, { recharge: e.target.value as Recharge })}>
                       <option value="none">Never (manual)</option><option value="short">Short or Long Rest</option><option value="long">Long Rest</option>
                     </select>
                   </label>
