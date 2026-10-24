@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { sampleCharacter } from './defaults';
 import {
-  applyDamage, applyHeal, applySetTemp, castSpell, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, passiveScore, preparedCount, removeSpell, saveMod, setMaxHp, shortRest, skillMod, slotsLeft,
+  applyDamage, applyHeal, applySetTemp, castSpell, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, passiveScore, preparedCount, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
   setExhaustion, speedNow, spellAttack, spellSaveDC, spellUsable, spendHitDie, toggleCondition, undoHp
 } from './logic';
 import type { Character, Spell } from './types';
@@ -177,6 +177,15 @@ describe('healing, temp HP and undo', () => {
     expect(applySetTemp(make({ temp: 3, amount: 5 })).temp).toBe(5);
     const zero = make({ temp: 0, amount: 0 });
     expect(applySetTemp(zero)).toBe(zero);
+  });
+  it('sets current HP directly: kept between 0 and max, undoable, leaving 0 resets death saves', () => {
+    const c = setHp(make({ hp: 20, conc: hm }), 99);
+    expect(c).toMatchObject({ hp: 44, concCheck: null });
+    expect(undoHp(c).hp).toBe(20);
+    expect(setHp(make({ hp: 20 }), -5).hp).toBe(0);
+    const same = make({ hp: 20 });
+    expect(setHp(same, 20)).toBe(same);
+    expect(setHp(make({ hp: 0, ds: 2, df: 1 }), 5)).toMatchObject({ hp: 5, ds: 0, df: 0 });
   });
   it('undoes the last HP change; the undo row clears only while it is still the one shown', () => {
     const undone = undoHp(applyDamage(make({ hp: 20, amount: 7 })));

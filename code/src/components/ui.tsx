@@ -121,6 +121,16 @@ export function NumInput({ value, min, max, onCommit, initialDraft = null, empty
   );
 }
 
+// ---------- notice with a close button in its top right corner ----------
+export function Notice({ className, label, onClose, children }: { className: string; label: string; onClose: () => void; children: ReactNode }) {
+  return (
+    <div role="status" className={'notice notice-close ' + className}>
+      <span className="grow">{children}</span>
+      <button type="button" className="icon-btn" aria-label={label} onClick={onClose}><XIcon /></button>
+    </div>
+  );
+}
+
 // ---------- add / edit form shell ----------
 export function EntryForm({ kind, title, saveLabel, onSave, onCancel, inline, children }: {
   kind: string; title: string; saveLabel: string; onSave: () => void; onCancel: () => void; inline?: boolean; children: ReactNode;

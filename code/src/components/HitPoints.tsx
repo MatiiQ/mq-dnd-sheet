@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { applyDamage, applyHeal, applySetTemp, clearHpUndo, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, isDead, setMaxHp, spendHitDie, undoHp } from '../logic';
+import { flushSync } from 'react-dom';
+import { applyDamage, applyHeal, applySetTemp, clearHpUndo, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, isDead, setHp, setMaxHp, spendHitDie, undoHp } from '../logic';
 import { useWide } from '../layout';
 import { useSheet } from '../sheet';
 import type { Character } from '../types';
-import { MarkPips, NumInput, Step, UsePips, XIcon } from './ui';
+import { MarkPips, Notice, NumInput, Step, UsePips, XIcon } from './ui';
 
 const HP_UNDO_MS = 5000;
 
@@ -12,6 +13,8 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
   const wide = useWide();
   // Bumping the key remounts the amount field, dropping whatever was half-typed.
   const [amtKey, setAmtKey] = useState(0);
+  // What is being typed into current HP; null while the field isn't focused.
+  const [hpDraft, setHpDraft] = useState<string | null>(null);
   const ring = hpRingStops(c);
   const delta = c.maxHp - c.origHp;
   const hdUsed = hdSpent(c);
@@ -19,6 +22,11 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
   const dead = isDead(c);
   const canSpendHD = hdLeft > 0 && c.hp > 0 && !dead;
   const hdRoll = hitDieRoll(c);
+  const stable = c.hp === 0 && c.ds >= 3 && c.df < 3 && !dead;
+  // A closed Stable or Dead notice stays hidden until that state ends; it isn't saved.
+  const stateNotice = c.hp === 0 && dead ? 'dead' : stable ? 'stable' : null;
+  const [closedNotice, setClosedNotice] = useState<string | null>(null);
+  useEffect(() => { if (closedNotice !== stateNotice) setClosedNotice(null); }, [stateNotice]);
   const deltaColor = delta < 0 ? 'var(--danger)' : delta > 0 ? 'var(--blue)' : 'var(--muted)';
 
   // The undo row hides itself after a few seconds; a newer HP action restarts the wait.
@@ -31,17 +39,23 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
 
   const act = (fn: (c: Character) => Character) => { update(fn); setAmtKey((k) => k + 1); setHdPrompt(false); };
   const setAmount = (v: number) => { update({ amount: v }); setAmtKey((k) => k + 1); };
+  const commitHp = () => {
+    const n = parseInt(hpDraft ?? '', 10);
+    if (!isNaN(n)) update((p) => setHp(p, n));
+    setHpDraft(null);
+  };
   const spendHD = () => {
     if (!canSpendHD) return;
-    update(spendHitDie);
-    setHdPrompt(true);
-    setAmtKey((k) => k + 1);
-    setTimeout(() => {
-      const el = document.getElementById('hp-amount');
-      // In two columns the card is always in view, so scrolling would only jump the page.
-      el?.focus({ preventScroll: wide });
-      if (!wide) el?.scrollIntoView({ block: 'center', behavior: 'smooth' });
-    }, 60);
+    // Render the emptied Amount field now, so it can be focused within the tap: iPad only opens the keypad then.
+    flushSync(() => {
+      update(spendHitDie);
+      setHdPrompt(true);
+      setAmtKey((k) => k + 1);
+    });
+    const el = document.getElementById('hp-amount');
+    // In two columns the card is always in view, so scrolling would only jump the page.
+    el?.focus({ preventScroll: wide });
+    if (!wide) el?.scrollIntoView({ block: 'center', behavior: 'smooth' });
   };
 
   return (
@@ -58,14 +72,19 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
 
       <div className="row gap-12">
         <div className="hp-ring" style={{ background: `conic-gradient(${hpColor(c)} 0 ${ring.hp}%, var(--blue) ${ring.hp}% ${ring.hp + ring.temp}%, var(--well) ${ring.hp + ring.temp}% 100%)` }}>
-          <span className="hp-now" style={{ color: hpColor(c) }}>{c.hp}</span>
+          <input type="text" inputMode="numeric" className="hp-now hp-input" aria-label="Current HP" style={{ color: hpColor(c) }}
+            value={hpDraft ?? String(c.hp)} placeholder={String(c.hp)}
+            onFocus={() => setHpDraft('')}
+            onChange={(e) => setHpDraft(e.target.value.replace(/[^0-9]/g, '').slice(0, 3))}
+            onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+            onBlur={commitHp} />
         </div>
         <div className="col grow" style={{ gap: 2 }}>
-          <div className="block-title area-title">Hit points</div>
+          <div className="block-title area-title hp-title">Hit points</div>
           <span className="hp-max">/ {c.maxHp}</span>
-          {c.temp > 0 && <span style={{ color: 'var(--blue)', fontWeight: 600 }}>+{c.temp} temp</span>}
           {!edit && c.origOn && delta !== 0 && <span className="hp-delta" style={{ color: deltaColor }}>max {fmt(delta)} (original {c.origHp})</span>}
         </div>
+        {c.temp > 0 && <div className="hp-temp"><strong>+{c.temp}</strong>temp HP</div>}
       </div>
 
       <div className="row wrap gap-8">
@@ -77,8 +96,8 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
           </label>
           <button type="button" className="step" aria-label="Increase amount" onClick={() => setAmount(Math.min(999, c.amount + 1))}>+</button>
         </div>
-        <button type="button" className="btn btn-act btn-primary" onClick={() => act(applyDamage)}>Damage</button>
-        <button type="button" className="btn btn-act" aria-disabled={dead} onClick={() => act(hdPrompt ? healHitDie : applyHeal)}>Heal</button>
+        <button type="button" className="btn btn-act btn-damage" onClick={() => act(applyDamage)}>Damage</button>
+        <button type="button" className="btn btn-act btn-heal" aria-disabled={dead} onClick={() => act(hdPrompt ? healHitDie : applyHeal)}>Heal</button>
         <button type="button" className="btn btn-act" onClick={() => act(applySetTemp)}>Set Temp</button>
       </div>
 
@@ -88,7 +107,7 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
           <button type="button" className="btn" style={{ color: 'var(--accent)', padding: '0 16px' }} onClick={() => update(undoHp)}>Undo</button>
         </div>
       )}
-      {c.concCheck && <div role="status" className="notice notice-blue">{c.concCheck}</div>}
+      {c.concCheck && <Notice className="notice-blue" label="Dismiss concentration check" onClose={() => update({ concCheck: null })}>{c.concCheck}</Notice>}
 
       {edit && (
         <div className="dashed-box">
@@ -125,7 +144,7 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
         </div>
         <button type="button" className="btn" style={{ fontSize: 14, padding: '0 12px' }} aria-disabled={!canSpendHD} onClick={spendHD}>Spend Hit Die · {hdRoll}</button>
       </div>
-      {hdPrompt && <div role="status" className="notice notice-blue">Hit Die spent. Roll {hdRoll} (minimum 1), type the total in Amount above, then tap Heal.</div>}
+      {hdPrompt && <Notice className="notice-blue" label="Dismiss Hit Die note" onClose={() => setHdPrompt(false)}>Hit Die spent. Roll {hdRoll} (minimum 1), type the total in Amount above, then tap Heal.</Notice>}
 
       {c.hp === 0 && (
         <div className="col gap-6" style={{ borderTop: '1px solid var(--line)', paddingTop: 10 }}>
@@ -143,9 +162,9 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
               <MarkPips n={c.df} color="var(--danger)" noun="failure" onChange={(n) => update({ df: n })} />
             </div>
           </div>
-          {c.ds >= 3 && c.df < 3 && !dead && <div role="status" className="notice notice-stable">Stable. Stop rolling death saves. You stay at 0 HP, unconscious, and regain 1 HP after 1d4 hours unless healed sooner.</div>}
+          {stable && closedNotice !== 'stable' && <Notice className="notice-stable" label="Dismiss Stable notice" onClose={() => setClosedNotice('stable')}>Stable. Stop rolling death saves. You stay at 0 HP, unconscious, and regain 1 HP after 1d4 hours unless healed sooner.</Notice>}
           {/* At Exhaustion 6 with HP above 0, only the Conditions card shows the death. */}
-          {dead && <div role="status" className="notice notice-dead">Dead. {c.exh >= 6 ? 'Exhaustion level 6.' : 'Three failed death saves.'} Only magic such as Revivify can bring the character back: {c.exh >= 6 ? 'lower Exhaustion' : 'clear the failures'}, then Heal.</div>}
+          {dead && closedNotice !== 'dead' && <Notice className="notice-dead" label="Dismiss Dead notice" onClose={() => setClosedNotice('dead')}>Dead. {c.exh >= 6 ? 'Exhaustion level 6.' : 'Three failed death saves.'} Only magic such as Revivify can bring the character back: {c.exh >= 6 ? 'lower Exhaustion' : 'clear the failures'}, then Heal.</Notice>}
         </div>
       )}
     </section>

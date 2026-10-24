@@ -182,6 +182,14 @@ export function applySetTemp(c: Character): Character {
   return { ...c, temp: c.amount, hpUndo: { prev: snapshot(c), text } };
 }
 
+// Typing a new current HP is a correction, not damage or healing: no concentration check, no conditions change.
+// Leaving 0 HP still resets the death saves, as regaining any HP does (PHB p.29). Kept between 0 and max HP.
+export function setHp(c: Character, n: number): Character {
+  const hp = clamp(n, 0, c.maxHp);
+  if (hp === c.hp) return c;
+  return { ...c, hp, ...(c.hp === 0 ? { ds: 0, df: 0 } : {}), hpUndo: { prev: snapshot(c), text: 'HP set to ' + hp + ' (was ' + c.hp + ').' } };
+}
+
 export function undoHp(c: Character): Character {
   if (!c.hpUndo) return c;
   return { ...c, ...c.hpUndo.prev, hpUndo: null, concCheck: null };
