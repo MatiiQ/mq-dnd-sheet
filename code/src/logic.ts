@@ -1,6 +1,6 @@
 // D&D 2024 rules used by the sheet. Pure functions: each takes a character and returns the next one.
 import { blankCharacter, sampleCharacter } from './defaults';
-import type { Ability, Character, HpSnapshot, Resource, Tab } from './types';
+import type { Ability, Character, HpSnapshot, Resource, Spell, Tab } from './types';
 
 export const ABILITIES: [Ability, string][] = [
   ['str', 'STRENGTH'], ['dex', 'DEXTERITY'], ['con', 'CONSTITUTION'],
@@ -53,6 +53,10 @@ export const spellSaveDC = (c: Character) => (c.castAb === 'none' ? null : 8 + a
 export const spellAttack = (c: Character) => (c.castAb === 'none' ? null : abilityMod(c, c.castAb) + profBonus(c.level));
 // Initiative is a Dexterity check (PHB p.23); initMisc holds extra bonuses from features or items.
 export const initiative = (c: Character) => abilityMod(c, 'dex') + c.initMisc;
+// A levelled spell can be cast when it is prepared or always prepared; always-prepared spells don't count
+// toward the prepared limit (PHB p.235). With tracking off (classes that know their spells), every spell can be cast.
+export const spellUsable = (c: Character, sp: Spell) => !c.usePrep || !!sp.always || !!sp.prep;
+export const preparedCount = (c: Character) => c.spells.filter((x) => (x.lvl || 0) > 0 && !x.always && x.prep).length;
 export const slotsLeft = (c: Character, level: number) => Math.max(0, c.slotMax[level] - c.slotUsed[level]);
 
 export const zeroSpeedBy = (c: Character) => CONDITIONS.filter((n) => c.conds[n] && ZERO_SPEED.includes(n));

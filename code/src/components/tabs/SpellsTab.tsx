@@ -1,5 +1,5 @@
 import { useState, type CSSProperties } from 'react';
-import { fmt, slotsLeft, spellAttack, spellSaveDC } from '../../logic';
+import { fmt, preparedCount, slotsLeft, spellAttack, spellSaveDC, spellUsable } from '../../logic';
 import { patchEntry, removeEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { Character, Spell } from '../../types';
 import { AddButton, ChevronDown, EntryActions, EntryForm, Step, TextField, UsePips } from '../ui';
@@ -22,7 +22,7 @@ export function SpellsTab() {
   const f = useEntryForm('spell', BLANK, 'spell', 'ADD A SPELL');
   const usePrep = c.usePrep;
   const dc = spellSaveDC(c), atk = spellAttack(c);
-  const prepCount = c.spells.filter((x) => (x.lvl || 0) > 0 && !x.always && x.prep).length;
+  const prepCount = preparedCount(c);
 
   const save = () => {
     const d = f.draft, name = d.name.trim();
@@ -38,7 +38,7 @@ export function SpellsTab() {
   const groups = [];
   for (let l = 0; l <= 9; l++) {
     const list = c.spells
-      .filter((x) => (x.lvl || 0) === l && (!usePrep || c.spellFilter !== 'prepared' || l === 0 || x.always || x.prep))
+      .filter((x) => (x.lvl || 0) === l && (c.spellFilter !== 'prepared' || l === 0 || spellUsable(c, x)))
       .sort((a, b) => a.name.localeCompare(b.name));
     if (list.length) groups.push({ l, list });
   }
@@ -192,7 +192,7 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
   const usePrep = c.usePrep;
   const isAlways = usePrep && !!sp.always;
   const prepOn = !usePrep || !!sp.prep;
-  const usable = isAlways || prepOn;
+  const usable = spellUsable(c, sp);
   const concOn = c.conc?.id === sp.id;
   const freeUsed = !!c.free[sp.id];
 

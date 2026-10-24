@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { sampleCharacter } from './defaults';
 import {
-  applyDamage, applyHeal, applySetTemp, clearHpUndo, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, initiative, isDead, longRest, migrate, passiveScore, saveMod, setMaxHp, shortRest, skillMod, slotsLeft,
-  speedNow, spellAttack, spellSaveDC, spendHitDie, toggleCondition, undoHp
+  applyDamage, applyHeal, applySetTemp, clearHpUndo, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, initiative, isDead, longRest, migrate, passiveScore, preparedCount, saveMod, setMaxHp, shortRest, skillMod, slotsLeft,
+  speedNow, spellAttack, spellSaveDC, spellUsable, spendHitDie, toggleCondition, undoHp
 } from './logic';
-import type { Character } from './types';
+import type { Character, Spell } from './types';
 
 const make = (p: Partial<Character> = {}): Character => ({ ...sampleCharacter(), ...p });
 
@@ -60,6 +60,16 @@ describe('derived numbers', () => {
     expect(isDead(make({ hp: 0, df: 3 }))).toBe(true);
     expect(isDead(make({ hp: 0, df: 2 }))).toBe(false);
     expect(isDead(make({ hp: 1, df: 3 }))).toBe(false);
+  });
+  it('lets prepared and always-prepared spells be cast, or any spell when tracking is off', () => {
+    const sp = (p: Partial<Spell>): Spell => ({ id: 's', name: 'Bless', lvl: 1, time: 'Action', range: '30 ft', source: 'Cleric', ...p });
+    expect(spellUsable(make(), sp({ prep: true }))).toBe(true);
+    expect(spellUsable(make(), sp({ always: true }))).toBe(true);
+    expect(spellUsable(make(), sp({}))).toBe(false);
+    expect(spellUsable(make({ usePrep: false }), sp({}))).toBe(true);
+  });
+  it('counts prepared levelled spells, leaving out always-prepared ones and cantrips', () => {
+    expect(preparedCount(make())).toBe(5);
   });
   it('sets max HP to at least 1 and keeps HP at or under it', () => {
     expect(setMaxHp(make({ hp: 40, maxHp: 44 }), 30)).toEqual({ maxHp: 30, hp: 30 });
