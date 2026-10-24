@@ -121,6 +121,24 @@ export function NumInput({ value, min, max, onCommit, initialDraft = null, empty
   );
 }
 
+// ---------- number typed in fresh: empty on focus, commits once on blur or Enter ----------
+// For values where each keystroke would act on its own, e.g. typing 45 into max HP would first cut current HP to 4.
+type TypeInProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange' | 'onFocus' | 'onBlur' | 'onKeyDown'> & { value: number; onCommit: (v: number) => void };
+export function TypeInNumber({ value, onCommit, ...rest }: TypeInProps) {
+  const [draft, setDraft] = useState<string | null>(null);
+  return (
+    <input type="text" inputMode="numeric" {...rest} value={draft ?? String(value)} placeholder={String(value)}
+      onFocus={() => setDraft('')}
+      onChange={(e) => setDraft(e.target.value.replace(/[^0-9]/g, '').slice(0, 3))}
+      onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+      onBlur={() => {
+        const n = parseInt(draft ?? '', 10);
+        if (!isNaN(n)) onCommit(n);
+        setDraft(null);
+      }} />
+  );
+}
+
 // ---------- notice with a close button in its top right corner ----------
 export function Notice({ className, label, onClose, children }: { className: string; label: string; onClose: () => void; children: ReactNode }) {
   return (

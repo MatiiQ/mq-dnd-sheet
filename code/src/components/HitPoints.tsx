@@ -4,7 +4,7 @@ import { applyDamage, applyHeal, applySetTemp, clearHpUndo, fmt, hdSpent, healHi
 import { useWide } from '../layout';
 import { useSheet } from '../sheet';
 import type { Character } from '../types';
-import { MarkPips, Notice, NumInput, Step, UsePips, XIcon } from './ui';
+import { MarkPips, Notice, NumInput, Step, TypeInNumber, UsePips, XIcon } from './ui';
 
 const HP_UNDO_MS = 5000;
 
@@ -13,8 +13,6 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
   const wide = useWide();
   // Bumping the key remounts the amount field, dropping whatever was half-typed.
   const [amtKey, setAmtKey] = useState(0);
-  // What is being typed into current HP; null while the field isn't focused.
-  const [hpDraft, setHpDraft] = useState<string | null>(null);
   const ring = hpRingStops(c);
   const delta = c.maxHp - c.origHp;
   const hdUsed = hdSpent(c);
@@ -39,11 +37,6 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
 
   const act = (fn: (c: Character) => Character) => { update(fn); setAmtKey((k) => k + 1); setHdPrompt(false); };
   const setAmount = (v: number) => { update({ amount: v }); setAmtKey((k) => k + 1); };
-  const commitHp = () => {
-    const n = parseInt(hpDraft ?? '', 10);
-    if (!isNaN(n)) update((p) => setHp(p, n));
-    setHpDraft(null);
-  };
   const spendHD = () => {
     if (!canSpendHD) return;
     // Render the emptied Amount field now, so it can be focused within the tap: iPad only opens the keypad then.
@@ -72,12 +65,7 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
 
       <div className="row gap-12">
         <div className="hp-ring" style={{ background: `conic-gradient(${hpColor(c)} 0 ${ring.hp}%, var(--blue) ${ring.hp}% ${ring.hp + ring.temp}%, var(--well) ${ring.hp + ring.temp}% 100%)` }}>
-          <input type="text" inputMode="numeric" className="hp-now hp-input" aria-label="Current HP" style={{ color: hpColor(c) }}
-            value={hpDraft ?? String(c.hp)} placeholder={String(c.hp)}
-            onFocus={() => setHpDraft('')}
-            onChange={(e) => setHpDraft(e.target.value.replace(/[^0-9]/g, '').slice(0, 3))}
-            onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
-            onBlur={commitHp} />
+          <TypeInNumber className="hp-now hp-input" aria-label="Current HP" style={{ color: hpColor(c) }} value={c.hp} onCommit={(n) => update((p) => setHp(p, n))} />
         </div>
         <div className="col grow" style={{ gap: 2 }}>
           <div className="block-title area-title hp-title">Hit points</div>
@@ -114,7 +102,7 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
           <div className="row gap-6">
             <span className="muted">Max HP</span>
             <Step label="Decrease max HP" onClick={() => update((p) => setMaxHp(p, p.maxHp - 1))}>−</Step>
-            <span style={{ minWidth: 36, textAlign: 'center', fontSize: 18, fontWeight: 700 }}>{c.maxHp}</span>
+            <TypeInNumber className="input input-num" aria-label="Max HP" value={c.maxHp} onCommit={(n) => update((p) => setMaxHp(p, n))} />
             <Step label="Increase max HP" onClick={() => update((p) => setMaxHp(p, p.maxHp + 1))}>+</Step>
           </div>
           {!c.origOn && (
