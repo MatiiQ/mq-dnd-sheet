@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { saveEntry, useEntryForm, useSheet } from '../../sheet';
+import { removeEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { Feature, FeatureGroup } from '../../types';
 import { AddButton, EntryActions, EntryForm, TextField } from '../ui';
 
@@ -35,7 +35,7 @@ export function FeaturesTab() {
                     {x.desc && <div className="muted">{x.desc}</div>}
                   </div>
                   <EntryActions name={x.name} canEdit={edit} onEdit={() => f.openEdit(x.id, { g: x.g || 'other', name: x.name, desc: x.desc || '' })}
-                    onRemove={() => update((p) => ({ feats: p.feats.filter((y) => y.id !== x.id) }))} />
+                    onRemove={() => update((p) => ({ feats: removeEntry(p.feats, x.id) }))} />
                 </div>
               ))}
             </div>

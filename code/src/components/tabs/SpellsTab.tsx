@@ -1,6 +1,6 @@
 import { useState, type CSSProperties } from 'react';
 import { abilityMod, fmt, profBonus } from '../../logic';
-import { saveEntry, useEntryForm, useSheet } from '../../sheet';
+import { patchEntry, removeEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { Character, Spell } from '../../types';
 import { AddButton, ChevronDown, EntryActions, EntryForm, Step, TextField, UsePips } from '../ui';
 
@@ -224,7 +224,7 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
     <div className="row wrap" style={{ gap: '8px 10px', borderTop: '1px solid var(--line)', padding: '8px 0' }}>
       {usePrep && lvl > 0 && !isAlways && (
         <button type="button" aria-pressed={prepOn} aria-label={prepOn ? sp.name + ' is prepared; tap to unprepare' : 'Prepare ' + sp.name} title="Prepared"
-          onClick={() => update((p) => ({ spells: p.spells.map((x) => (x.id === sp.id ? { ...x, prep: !x.prep } : x)) }))}
+          onClick={() => update((p) => ({ spells: patchEntry(p.spells, sp.id, (x) => ({ prep: !x.prep })) }))}
           style={{
             flex: 'none', width: 40, height: 40, padding: 0, cursor: 'pointer', borderRadius: 10, font: '700 15px var(--sans)',
             border: '2px solid ' + (prepOn ? 'var(--accent)' : 'var(--dash)'), background: prepOn ? 'var(--accent)' : 'transparent', color: prepOn ? 'var(--bg)' : '#8A8478'
@@ -285,7 +285,7 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
         </div>
       )}
       {lvl > 0 && !sp.free && !anyLeft && usable && <span style={{ fontSize: 13, color: 'var(--orange)' }}>No slots of this level or higher</span>}
-      <EntryActions name={sp.name} canEdit={edit} onEdit={onEdit} onRemove={() => update((p) => ({ spells: p.spells.filter((x) => x.id !== sp.id) }))} />
+      <EntryActions name={sp.name} canEdit={edit} onEdit={onEdit} onRemove={() => update((p) => ({ spells: removeEntry(p.spells, sp.id) }))} />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { skillMod } from '../logic';
-import { saveEntry, useEntryForm, useSheet } from '../sheet';
+import { removeEntry, saveEntry, useEntryForm, useSheet } from '../sheet';
 import type { Sense } from '../types';
 import { AddButton, EntryActions, EntryForm, EyeIcon } from './ui';
 
@@ -36,7 +36,7 @@ export function Senses() {
             <strong style={{ fontSize: 17 }}>{se.range}</strong>
             <EntryActions name={se.name} canEdit={edit}
               onEdit={() => f.openEdit(se.id, { name: se.name, range: se.range === '—' ? '' : se.range })}
-              onRemove={() => update((p) => ({ senses: p.senses.filter((x) => x.id !== se.id) }))} />
+              onRemove={() => update((p) => ({ senses: removeEntry(p.senses, se.id) }))} />
           </div>
         ))}
       </div>

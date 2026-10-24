@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { saveEntry, useEntryForm, useSheet } from '../../sheet';
+import { patchEntry, removeEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { Coin, Item } from '../../types';
 import { AddButton, EntryActions, EntryForm, NumInput, TextField } from '../ui';
 
@@ -9,7 +9,7 @@ const BLANK = { name: '' };
 export function InventoryTab() {
   const { c, update, edit } = useSheet();
   const f = useEntryForm('item', BLANK, 'item', 'ADD AN ITEM');
-  const patch = (id: string, p: Partial<Item>) => update((s) => ({ inv: s.inv.map((x) => (x.id === id ? { ...x, ...p } : x)) }));
+  const patch = (id: string, p: Partial<Item>) => update((s) => ({ inv: patchEntry(s.inv, id, p) }));
   const save = () => {
     const name = f.draft.name.trim();
     if (!name) return;
@@ -53,7 +53,7 @@ export function InventoryTab() {
               <button type="button" className="step" style={{ fontSize: 18 }} aria-label={'Increase ' + it.name} onClick={() => patch(it.id, { qty: it.qty + 1 })}>+</button>
             </div>
             <EntryActions name={it.name} canEdit={edit} onEdit={() => f.openEdit(it.id, { name: it.name })}
-              onRemove={() => update((p) => ({ inv: p.inv.filter((x) => x.id !== it.id) }))} />
+              onRemove={() => update((p) => ({ inv: removeEntry(p.inv, it.id) }))} />
           </li>
         ))}
         {c.res.filter((r) => r.inv).map((r) => (

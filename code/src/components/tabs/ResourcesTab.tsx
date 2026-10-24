@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 import { rechargeOf } from '../../logic';
-import { saveEntry, useEntryForm, useSheet } from '../../sheet';
+import { patchEntry, removeEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { Recharge, Resource } from '../../types';
 import { AddButton, EntryActions, EntryForm, Step, TextField } from '../ui';
 
@@ -11,7 +11,7 @@ export function ResourcesTab() {
   const { c, update, edit } = useSheet();
   const f = useEntryForm('res', BLANK, 'resource', 'ADD A RESOURCE');
   const patch = (id: string, p: Partial<Resource> | ((r: Resource) => Partial<Resource>)) =>
-    update((s) => ({ res: s.res.map((r) => (r.id === id ? { ...r, ...(typeof p === 'function' ? p(r) : p) } : r)) }));
+    update((s) => ({ res: patchEntry(s.res, id, p) }));
   const bump = (id: string, d: number) => patch(id, (r) => {
     let n = Math.max(0, r.count + d);
     if (r.max) n = Math.min(r.max, n);
@@ -34,7 +34,7 @@ export function ResourcesTab() {
               <div className="row between gap-4" style={{ alignItems: 'flex-start' }}>
                 <span className="grow" style={{ fontWeight: 700, paddingTop: 10 }}>{r.name}</span>
                 <EntryActions name={r.name} canEdit={edit} onEdit={() => f.openEdit(r.id, { name: r.name, note: r.note || '', inv: !!r.inv })}
-                  onRemove={() => update((p) => ({ res: p.res.filter((x) => x.id !== r.id) }))} />
+                  onRemove={() => update((p) => ({ res: removeEntry(p.res, r.id) }))} />
               </div>
               <span className="muted">{r.note || 'Custom resource'}</span>
               {!edit && <span className="small">{RECHARGE_TEXT[rc]}</span>}

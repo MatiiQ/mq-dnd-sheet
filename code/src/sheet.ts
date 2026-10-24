@@ -57,6 +57,15 @@ export function useEntryForm<D extends object>(kind: FormKind, blank: D, noun: s
 
 // Adds a new entry, or merges the edit into the entry being edited.
 export function saveEntry<E extends { id: string }>(list: E[], built: Omit<E, 'id'> | Partial<E>, editingId: string | null, extra: Partial<E> = {}): E[] {
-  if (editingId) return list.map((x) => (x.id === editingId ? { ...x, ...built } : x));
+  if (editingId) return patchEntry(list, editingId, built as Partial<E>);
   return [...list, { id: newId(), ...extra, ...built } as E];
+}
+
+export function removeEntry<E extends { id: string }>(list: E[], id: string): E[] {
+  return list.filter((x) => x.id !== id);
+}
+
+// Merges a patch, or a function of the current entry, into the entry with this id.
+export function patchEntry<E extends { id: string }>(list: E[], id: string, p: Partial<E> | ((e: E) => Partial<E>)): E[] {
+  return list.map((x) => (x.id === id ? { ...x, ...(typeof p === 'function' ? p(x) : p) } : x));
 }

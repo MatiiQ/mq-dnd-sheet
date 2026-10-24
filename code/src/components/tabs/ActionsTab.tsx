@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { saveEntry, useEntryForm, useSheet } from '../../sheet';
+import { removeEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { Attack, Rider } from '../../types';
 import { AddButton, EntryActions, EntryForm, TextField } from '../ui';
 
@@ -40,7 +40,7 @@ export function ActionsTab() {
           <div className="stat-box" style={{ minWidth: 140 }}><span className="k">DAMAGE</span><span style={{ fontSize: 16, fontWeight: 700 }}>{a.dmg || '—'}</span></div>
           <EntryActions name={a.name} canEdit={edit}
             onEdit={() => fa.openEdit(a.id, { name: a.name, hit: a.hit || '', dmg: a.dmg || '', info: a.info || '', mastery: a.mastery || '' })}
-            onRemove={() => update((p) => ({ attacks: p.attacks.filter((x) => x.id !== a.id) }))} />
+            onRemove={() => update((p) => ({ attacks: removeEntry(p.attacks, a.id) }))} />
         </div>
       ))}
       {!fa.isOpen && <AddButton onClick={fa.openAdd}>+ Add attack</AddButton>}
@@ -62,7 +62,7 @@ export function ActionsTab() {
           <div key={r.id} className="list-row">
             <span className="grow">{r.name}</span><strong style={{ marginRight: 4 }}>{r.dice}</strong>
             <EntryActions name={r.name} canEdit={edit} onEdit={() => fr.openEdit(r.id, { name: r.name, dice: r.dice || '' })}
-              onRemove={() => update((p) => ({ riders: p.riders.filter((x) => x.id !== r.id) }))} />
+              onRemove={() => update((p) => ({ riders: removeEntry(p.riders, r.id) }))} />
           </div>
         ))}
         {!fr.isOpen && <AddButton style={{ marginTop: 8 }} onClick={fr.openAdd}>+ Add extra damage</AddButton>}
