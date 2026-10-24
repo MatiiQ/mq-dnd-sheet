@@ -13,7 +13,7 @@ function serviceWorker(): Plugin {
     apply: 'build',
     generateBundle(_, bundle) {
       const built = Object.keys(bundle).filter((f) => !f.endsWith('.map') && !f.endsWith('.woff') && f !== 'index.html');
-      const files = ['./', './index.html', ...PUBLIC_FILES.map((f) => './' + f), ...built.map((f) => './' + f)];
+      const files = ['./index.html', ...PUBLIC_FILES.map((f) => './' + f), ...built.map((f) => './' + f)];
       const version = createHash('sha256').update(files.join('\n')).digest('hex').slice(0, 12);
       const source = `const CACHE = 'dnd-sheet-${version}';
 const PRECACHE = ${JSON.stringify(files)};

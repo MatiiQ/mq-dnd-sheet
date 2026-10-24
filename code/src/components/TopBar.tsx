@@ -48,7 +48,10 @@ export function TopBar({ store, activeSec, setActiveSec, menuOpen, setMenuOpen, 
   useEffect(() => {
     const el = navRef.current;
     if (!el) return;
-    const sync = () => setFade({ l: el.scrollLeft > 4, r: el.scrollLeft + el.clientWidth < el.scrollWidth - 4 });
+    const sync = () => {
+      const l = el.scrollLeft > 4, r = el.scrollLeft + el.clientWidth < el.scrollWidth - 4;
+      setFade((p) => (p.l === l && p.r === r ? p : { l, r }));
+    };
     sync();
     el.addEventListener('scroll', sync, { passive: true });
     window.addEventListener('resize', sync);
