@@ -295,6 +295,9 @@ describe('loading saves and backups', () => {
     expect(c.attune).toEqual(['Ring']);
     expect(c.slotUsed).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
   });
+  it('rejects a spellcasting ability that is only an inherited key', () => {
+    expect(migrate({ ...sampleCharacter(), castAb: 'toString' }).castAb).toBe('none');
+  });
   it('pads short slot arrays to 10 levels', () => {
     const c = migrate({ ...sampleCharacter(), slotMax: [0, 4], slotUsed: [0, 'x'] });
     expect(c.slotMax).toEqual([0, 4, 0, 0, 0, 0, 0, 0, 0, 0]);

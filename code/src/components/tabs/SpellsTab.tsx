@@ -1,11 +1,10 @@
 import { useState, type CSSProperties } from 'react';
-import { castSpell, fmt, preparedCount, setSlotUsed, slotsLeft, spellAttack, spellSaveDC, spellUsable } from '../../logic';
+import { CAST_NAMES, castSpell, fmt, preparedCount, setSlotUsed, slotsLeft, spellAttack, spellSaveDC, spellUsable } from '../../logic';
 import { patchEntry, removeEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { Spell } from '../../types';
 import { AddButton, ChevronDown, EntryActions, EntryForm, Step, TextField, UsePips } from '../ui';
 
 const ORDINAL = ['Cantrip', '1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th'];
-const CAST_NAMES = { none: 'None', int: 'Intelligence', wis: 'Wisdom', cha: 'Charisma' };
 const BLANK = { name: '', lvl: '1', time: 'Action', range: '', dice: '', conc: false, source: '', dur: '', comp: '', always: false };
 type Draft = typeof BLANK;
 

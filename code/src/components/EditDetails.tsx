@@ -1,3 +1,4 @@
+import { CAST_NAMES } from '../logic';
 import { useSheet } from '../sheet';
 import type { CastAbility, Details } from '../types';
 import { NumInput, TextField, useArmed } from './ui';
@@ -35,7 +36,7 @@ export function EditDetails({ onReset }: { onReset: () => void }) {
         </label>
         <label className="field">Spellcasting ability
           <select className="input" value={c.castAb} onChange={(e) => update({ castAb: e.target.value as CastAbility })}>
-            <option value="none">None</option><option value="int">Intelligence</option><option value="wis">Wisdom</option><option value="cha">Charisma</option>
+            {Object.entries(CAST_NAMES).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
           </select>
         </label>
       </div>
