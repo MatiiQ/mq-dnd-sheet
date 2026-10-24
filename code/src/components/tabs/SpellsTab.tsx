@@ -40,6 +40,9 @@ export function SpellsTab() {
     if (list.length) groups.push({ l, list });
   }
   const slotLevels = [1, 2, 3, 4, 5, 6, 7, 8, 9].filter((l) => edit || c.slotMax[l] > 0);
+  const slotPips = (l: number, max: number) => (
+    <UsePips used={c.slotUsed[l]} max={max} color="var(--accent)" size={20} noun={'level ' + l + ' slot'} onChange={(n) => update((p) => setSlotUsed(p, l, n))} />
+  );
   const filterStyle = (on: boolean): CSSProperties => ({
     fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none', minHeight: 40, padding: '0 14px',
     background: on ? 'var(--accent)' : 'var(--raised)', color: on ? 'var(--bg)' : 'var(--text-2)'
@@ -103,7 +106,7 @@ export function SpellsTab() {
             <div key={l} className="row wrap" style={{ gap: '4px 10px', minHeight: 44, borderTop: '1px solid var(--line)' }}>
               <span style={{ minWidth: 64, fontWeight: 700, color: 'var(--accent)' }}>Level {l}</span>
               <div className="row wrap">
-                <UsePips used={c.slotUsed[l]} max={max} color="var(--accent)" size={20} noun={'level ' + l + ' slot'} onChange={(n) => update((p) => setSlotUsed(p, l, n))} />
+                {slotPips(l, max)}
               </div>
               <span className="muted">{max ? left + ' of ' + max + ' left' : 'none'}</span>
               {edit && (
@@ -133,7 +136,7 @@ export function SpellsTab() {
               {max > 0 && (
                 <div role="group" aria-label={'Level ' + l + ' spell slots'} className="row wrap">
                   <span style={{ fontSize: 13, color: left ? 'var(--muted)' : 'var(--orange)', marginRight: 4 }}>{left} of {max} slots left</span>
-                  <UsePips used={c.slotUsed[l]} max={max} color="var(--accent)" size={20} noun={'level ' + l + ' slot'} onChange={(n) => update((p) => setSlotUsed(p, l, n))} />
+                  {slotPips(l, max)}
                 </div>
               )}
               {l > 0 && max === 0 && <span style={{ fontSize: 13, color: 'var(--dim)' }}>No level {l} slots</span>}
@@ -200,9 +203,8 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
       if (c.slotMax[l]) casts.push({ l, left: slotsLeft(c, l) });
     }
   }
-  const firstIdx = casts.findIndex((x) => x.left > 0);
-  const anyLeft = firstIdx >= 0;
-  const upcasts = anyLeft ? casts.slice(firstIdx + 1) : [];
+  const first = casts.find((x) => x.left > 0);
+  const upcasts = first ? casts.filter((x) => x.l > first.l) : [];
   const castWith = (l: number) => {
     update((p) => castSpell(p, sp, l));
     setPicking(false);
@@ -250,10 +252,10 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
             return { free: { ...p.free, [sp.id]: used }, ...(used && sp.c ? { conc: concOf } : {}) };
           })}>{freeUsed ? 'Free used' : 'Free'}</button>
       )}
-      {anyLeft && usable && (
+      {!!first && usable && (
         <div role="group" aria-label={'Spell slots for ' + sp.name} className="row wrap gap-6">
-          <button type="button" aria-label={'Cast ' + sp.name + ' with a level ' + casts[firstIdx].l + ' slot, ' + casts[firstIdx].left + ' left'}
-            className="btn btn-sm" style={{ border: '1px solid var(--accent)', background: 'transparent', color: 'var(--accent)' }} onClick={() => castWith(casts[firstIdx].l)}>Cast {ORDINAL[casts[firstIdx].l]}</button>
+          <button type="button" aria-label={'Cast ' + sp.name + ' with a level ' + first.l + ' slot, ' + first.left + ' left'}
+            className="btn btn-sm" style={{ border: '1px solid var(--accent)', background: 'transparent', color: 'var(--accent)' }} onClick={() => castWith(first.l)}>Cast {ORDINAL[first.l]}</button>
           {upcasts.length > 0 && (
             <button type="button" aria-expanded={picking} aria-label={'Upcast ' + sp.name + ' with a higher slot'} className="btn btn-sm row gap-4"
               style={{ border: '1px solid var(--line-2)', background: 'transparent', color: 'var(--text-2)' }} onClick={() => setPicking(!picking)}>
@@ -272,7 +274,7 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
           ))}
         </div>
       )}
-      {lvl > 0 && !sp.free && !anyLeft && usable && <span style={{ fontSize: 13, color: 'var(--orange)' }}>No slots of this level or higher</span>}
+      {lvl > 0 && !sp.free && !first && usable && <span style={{ fontSize: 13, color: 'var(--orange)' }}>No slots of this level or higher</span>}
       <EntryActions name={sp.name} canEdit={edit} onEdit={onEdit} onRemove={() => update((p) => ({ spells: removeEntry(p.spells, sp.id) }))} />
     </div>
   );
