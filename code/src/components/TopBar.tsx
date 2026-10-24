@@ -1,15 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { setLayoutMode, useLayoutMode, useWide, type LayoutMode } from '../layout';
-import { CONDITIONS, hpColor } from '../logic';
+import { CONDITIONS, TABS, hpColor } from '../logic';
 import { useSheet } from '../sheet';
 import { charName, saveBackupFile, type CharacterStore } from '../storage';
-import type { Tab } from '../types';
 import { CheckIcon, ChevronRight, MenuIcon, PencilIcon, StarIcon, XIcon, useArmed } from './ui';
 
 export const SECTION_IDS = ['sec-hp', 'sec-abilities', 'sec-senses', 'sec-defenses', 'sec-conditions', 'sec-tabs'];
 const SECTION_LINKS = [['sec-hp', 'Hit Points'], ['sec-abilities', 'Abilities'], ['sec-senses', 'Senses'], ['sec-defenses', 'Defenses'], ['sec-conditions', 'Conditions']];
 const LAYOUTS: [LayoutMode, string][] = [['auto', 'Auto'], ['one', '1 column'], ['two', '2 columns']];
-export const TABS: [Tab, string][] = [['actions', 'Actions'], ['resources', 'Resources'], ['spells', 'Spells'], ['inventory', 'Inventory'], ['features', 'Features & Traits'], ['notes', 'Notes']];
 
 interface Props {
   store: CharacterStore;

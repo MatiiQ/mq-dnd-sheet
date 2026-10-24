@@ -1,6 +1,6 @@
 // D&D 2024 rules used by the sheet. Pure functions: each takes a character and returns the next one.
 import { blankCharacter, sampleCharacter } from './defaults';
-import type { Ability, Character, HpSnapshot, Resource } from './types';
+import type { Ability, Character, HpSnapshot, Resource, Tab } from './types';
 
 export const ABILITIES: [Ability, string][] = [
   ['str', 'STRENGTH'], ['dex', 'DEXTERITY'], ['con', 'CONSTITUTION'],
@@ -14,6 +14,8 @@ export const SKILLS: [string, string, Ability][] = [
   ['animal', 'Animal Handling', 'wis'], ['insight', 'Insight', 'wis'], ['medicine', 'Medicine', 'wis'], ['perception', 'Perception', 'wis'], ['survival', 'Survival', 'wis'],
   ['deception', 'Deception', 'cha'], ['intimidation', 'Intimidation', 'cha'], ['performance', 'Performance', 'cha'], ['persuasion', 'Persuasion', 'cha']
 ];
+
+export const TABS: [Tab, string][] = [['actions', 'Actions'], ['resources', 'Resources'], ['spells', 'Spells'], ['inventory', 'Inventory'], ['features', 'Features & Traits'], ['notes', 'Notes']];
 
 export const CONDITION_RULES: Record<string, string> = {
   Blinded: 'You can’t see and fail checks that need sight. Attacks against you have Advantage; your attacks have Disadvantage.',
@@ -226,7 +228,6 @@ const FIXED_RECORDS = ['ch', 'abil', 'speeds', 'coins', 'notes', 'def'] as const
 const ENTRY_LISTS = ['senses', 'res', 'attacks', 'riders', 'inv', 'spells', 'feats'] as const;
 const isEntry = (x: unknown): x is Record<string, unknown> =>
   isObj(x) && typeof x.name === 'string' && Object.values(x).every((v) => v === null || typeof v !== 'object');
-const TABS: Character['tab'][] = ['actions', 'resources', 'spells', 'inventory', 'features', 'notes'];
 const CAST_ABILITIES: Character['castAb'][] = ['none', 'int', 'wis', 'cha'];
 // Resources the Inventory tab echoed before `inv` existed.
 const OLD_INVENTORY_RESOURCES = ['arrows', 'potions'];
@@ -252,7 +253,7 @@ export function migrate(data: unknown): Character {
   c.attune = strings(c.attune);
   c.slotMax = slots(c.slotMax);
   c.slotUsed = slots(c.slotUsed);
-  if (!TABS.includes(c.tab)) c.tab = def.tab;
+  if (!TABS.some(([t]) => t === c.tab)) c.tab = def.tab;
   if (!CAST_ABILITIES.includes(c.castAb)) c.castAb = 'none';
   if (c.spellFilter !== 'prepared') c.spellFilter = 'all';
   // Nullable fields: keep only well-formed values. The undo row lasts seconds, so it never survives a reload.

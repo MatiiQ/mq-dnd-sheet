@@ -5,7 +5,7 @@ import { Defenses } from './components/Defenses';
 import { EditDetails } from './components/EditDetails';
 import { HitPoints } from './components/HitPoints';
 import { Senses } from './components/Senses';
-import { SECTION_IDS, TABS, TopBar } from './components/TopBar';
+import { SECTION_IDS, TopBar } from './components/TopBar';
 import { Vitals } from './components/Vitals';
 import { ActionsTab } from './components/tabs/ActionsTab';
 import { FeaturesTab } from './components/tabs/FeaturesTab';
@@ -14,7 +14,7 @@ import { NotesTab } from './components/tabs/NotesTab';
 import { ResourcesTab } from './components/tabs/ResourcesTab';
 import { SpellsTab } from './components/tabs/SpellsTab';
 import { useWide } from './layout';
-import { longRest, shortRest } from './logic';
+import { TABS, longRest, shortRest } from './logic';
 import { Sheet, type FormState } from './sheet';
 import { useCharacters } from './storage';
 
@@ -56,7 +56,7 @@ export default function App() {
 
   // Two columns: HP sits above the tab in the right column, so it stays in view.
   const hitPoints = <HitPoints hdPrompt={hdPrompt} setHdPrompt={setHdPrompt} />;
-  const tabTitle = (TABS.find(([t]) => t === c.tab) || TABS[0])[1];
+  const tabTitle = TABS.find(([t]) => t === c.tab)![1];
 
   return (
     <Sheet.Provider value={{ c, update, edit, form, setForm }}>
