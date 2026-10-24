@@ -252,7 +252,7 @@ button.vital { cursor: pointer; }
 .hp-now { font-size: 40px; font-weight: 700; }
 .hp-max { color: var(--muted); font-size: 18px; }
 .hp-delta { font-size: 13px; }
-.abil-grid { --min: 300px; gap: 12px; align-items: start; }
+.abil-grid { --min: 300px; gap: 12px; } /* cards stretch to the tallest in their row */
 .save-row { border-bottom: 1px solid var(--line); min-height: 36px; padding: 0 2px; }
 .skill-row { min-height: 34px; padding: 0 2px; }
 .list-row { display: flex; align-items: center; gap: 8px; min-height: 44px; border-bottom: 1px solid var(--line); }
