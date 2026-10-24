@@ -50,7 +50,7 @@ export function useEntryForm<D extends object>(kind: FormKind, blank: D, noun: s
     openAdd: () => { setDraft(blank); setForm({ kind, id: null }); scroll(); },
     openEdit: (id: string, d: D) => { setDraft(d); setForm({ kind, id }); scroll(); },
     close: () => setForm(null),
-    title: editingId ? 'EDIT ' + noun.toUpperCase() : addTitle,
+    title: editingId ? 'Edit ' + noun : addTitle,
     saveLabel: editingId ? 'Save changes' : 'Add ' + noun
   };
 }

@@ -97,6 +97,12 @@ export function MarkPips({ n, color, noun, onChange }: { n: number; color: strin
   );
 }
 
+// Ivory d20 badge for an attack bonus, spell attack or save DC. Free text longer than 3 characters becomes a pill.
+export function DieBadge({ value }: { value: string }) {
+  const long = value.length > 3;
+  return <span className={'die' + (long ? ' long' : '')}>{value || '—'}</span>;
+}
+
 export const ProfDot = ({ level }: { level: number }) => <span aria-hidden="true" className={'dot dot-' + level} />;
 
 // ---------- number input: keeps the raw text while typing, commits valid numbers ----------
@@ -126,7 +132,7 @@ export function EntryForm({ kind, title, saveLabel, onSave, onCancel, inline, ch
 }) {
   return (
     <div id={'form-' + kind} className={inline ? 'entry-form inline' : 'entry-form'}>
-      <span className="caps">{title}</span>
+      <span className="label">{title}</span>
       {children}
       <div className="row gap-8">
         <button type="button" className="btn btn-primary" onClick={onSave}>{saveLabel}</button>

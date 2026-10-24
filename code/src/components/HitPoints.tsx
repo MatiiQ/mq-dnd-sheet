@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { applyDamage, applyHeal, applySetTemp, clearHpUndo, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, isDead, setMaxHp, spendHitDie, undoHp } from '../logic';
+import { applyDamage, applyHeal, applySetTemp, clearHpUndo, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, isDead, setMaxHp, spendHitDie, undoHp } from '../logic';
 import { useWide } from '../layout';
 import { useSheet } from '../sheet';
 import type { Character } from '../types';
@@ -12,14 +12,14 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
   const wide = useWide();
   // Bumping the key remounts the amount field, dropping whatever was half-typed.
   const [amtKey, setAmtKey] = useState(0);
-  const total = Math.max(1, c.maxHp + c.temp);
+  const ring = hpRingStops(c);
   const delta = c.maxHp - c.origHp;
   const hdUsed = hdSpent(c);
   const hdLeft = c.level - hdUsed;
   const dead = isDead(c);
   const canSpendHD = hdLeft > 0 && c.hp > 0 && !dead;
   const hdRoll = hitDieRoll(c);
-  const deltaColor = delta < 0 ? 'var(--orange)' : delta > 0 ? 'var(--blue)' : 'var(--muted)';
+  const deltaColor = delta < 0 ? 'var(--danger)' : delta > 0 ? 'var(--blue)' : 'var(--muted)';
 
   // The undo row hides itself after a few seconds; a newer HP action restarts the wait.
   useEffect(() => {
@@ -56,38 +56,36 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
         </div>
       )}
 
-      <div className="row wrap between gap-12" style={{ alignItems: 'baseline' }}>
-        <div className="caps">HIT POINTS</div>
-        <div className="row wrap" style={{ alignItems: 'baseline', gap: '4px 10px' }}>
+      <div className="row gap-12">
+        <div className="hp-ring" style={{ background: `conic-gradient(${hpColor(c)} 0 ${ring.hp}%, var(--blue) ${ring.hp}% ${ring.hp + ring.temp}%, var(--well) ${ring.hp + ring.temp}% 100%)` }}>
           <span className="hp-now" style={{ color: hpColor(c) }}>{c.hp}</span>
+        </div>
+        <div className="col grow" style={{ gap: 2 }}>
+          <div className="block-title">Hit points</div>
           <span className="hp-max">/ {c.maxHp}</span>
           {c.temp > 0 && <span style={{ color: 'var(--blue)', fontWeight: 600 }}>+{c.temp} temp</span>}
           {!edit && c.origOn && delta !== 0 && <span className="hp-delta" style={{ color: deltaColor }}>max {fmt(delta)} (original {c.origHp})</span>}
         </div>
       </div>
-      <div aria-hidden="true" className="hp-bar">
-        <div style={{ width: Math.round((c.hp / total) * 100) + '%', background: hpColor(c) }} />
-        <div style={{ width: Math.round((c.temp / total) * 100) + '%', background: 'var(--blue)' }} />
-      </div>
 
       <div className="row wrap gap-8">
-        <div className="row" style={{ border: '1px solid var(--line-2)', borderRadius: 10, overflow: 'hidden' }}>
-          <button type="button" className="step" style={{ border: 'none', borderRadius: 0 }} aria-label="Decrease amount" onClick={() => setAmount(Math.max(1, c.amount - 1))}>−</button>
-          <label className="col" style={{ alignItems: 'center', width: 64, fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>AMOUNT
+        <div className="row amount">
+          <button type="button" className="step" aria-label="Decrease amount" onClick={() => setAmount(Math.max(1, c.amount - 1))}>−</button>
+          <label className="col" style={{ alignItems: 'center', width: 64, fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>Amount
             <NumInput key={amtKey} id="hp-amount" value={c.amount} min={0} max={999} initialDraft={hdPrompt && !c.amount ? '' : null} emptyValue={0} onCommit={(v) => update({ amount: v })}
               style={{ width: 56, font: '700 18px var(--sans)', textAlign: 'center', background: 'transparent', border: 'none', padding: 0 }} />
           </label>
-          <button type="button" className="step" style={{ border: 'none', borderRadius: 0 }} aria-label="Increase amount" onClick={() => setAmount(Math.min(999, c.amount + 1))}>+</button>
+          <button type="button" className="step" aria-label="Increase amount" onClick={() => setAmount(Math.min(999, c.amount + 1))}>+</button>
         </div>
-        <button type="button" className="btn btn-act" style={{ border: 'none', background: 'var(--orange)', color: 'var(--bg)' }} onClick={() => act(applyDamage)}>Damage</button>
-        <button type="button" className="btn btn-act" style={dead ? undefined : { border: 'none', background: 'var(--blue)', color: 'var(--bg)' }} aria-disabled={dead} onClick={() => act(hdPrompt ? healHitDie : applyHeal)}>Heal</button>
+        <button type="button" className="btn btn-act btn-primary" onClick={() => act(applyDamage)}>Damage</button>
+        <button type="button" className="btn btn-act" aria-disabled={dead} onClick={() => act(hdPrompt ? healHitDie : applyHeal)}>Heal</button>
         <button type="button" className="btn btn-act" onClick={() => act(applySetTemp)}>Set Temp</button>
       </div>
 
       {c.hpUndo && (
         <div role="status" className="row wrap" style={{ gap: '8px 12px', borderRadius: 10, padding: '6px 6px 6px 12px', background: 'var(--raised)' }}>
           <span style={{ flex: '1 1 200px', fontSize: 14 }}>{c.hpUndo.text}</span>
-          <button type="button" className="btn" style={{ color: 'var(--accent)', borderColor: 'var(--accent)', background: 'transparent', padding: '0 16px' }} onClick={() => update(undoHp)}>Undo</button>
+          <button type="button" className="btn" style={{ color: 'var(--accent)', padding: '0 16px' }} onClick={() => update(undoHp)}>Undo</button>
         </div>
       )}
       {c.concCheck && <div role="status" className="notice notice-blue">{c.concCheck}</div>}
@@ -132,7 +130,7 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
       {c.hp === 0 && (
         <div className="col gap-6" style={{ borderTop: '1px solid var(--line)', paddingTop: 10 }}>
           <div className="row wrap" style={{ gap: '4px 12px' }}>
-            <span className="caps" style={{ color: 'var(--orange)' }}>DEATH SAVES</span>
+            <span className="label" style={{ color: 'var(--danger)' }}>Death saves</span>
             <span className="muted">Roll <strong style={{ color: 'var(--text)' }}>d20</strong> · 10+ success · 1 = two failures · 20 = regain 1 HP</span>
           </div>
           <div className="row wrap" style={{ gap: '4px 16px' }}>
@@ -142,7 +140,7 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
             </div>
             <div className="row">
               <span className="muted" style={{ marginRight: 2 }}>Failures</span>
-              <MarkPips n={c.df} color="var(--orange)" noun="failure" onChange={(n) => update({ df: n })} />
+              <MarkPips n={c.df} color="var(--danger)" noun="failure" onChange={(n) => update({ df: n })} />
             </div>
           </div>
           {c.ds >= 3 && c.df < 3 && !dead && <div role="status" className="notice notice-stable">Stable. Stop rolling death saves. You stay at 0 HP, unconscious, and regain 1 HP after 1d4 hours unless healed sooner.</div>}

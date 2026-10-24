@@ -7,10 +7,10 @@ const BLANK = { g: 'class' as FeatureGroup, name: '', desc: '' };
 
 export function FeaturesTab() {
   const { c, update, edit } = useSheet();
-  const f = useEntryForm('feat', BLANK, 'feature', 'ADD A FEATURE OR TRAIT');
+  const f = useEntryForm('feat', BLANK, 'feature', 'Add a feature or trait');
   const titles: [FeatureGroup, string][] = [
-    ['class', 'CLASS · ' + (c.ch.cls || 'Class').toUpperCase() + ' ' + c.level], ['sub', 'SUBCLASS · ' + (c.ch.sub || '').toUpperCase()], ['feat', 'FEATS'],
-    ['species', 'SPECIES · ' + (c.ch.species || '').toUpperCase()], ['training', 'TRAINING & PROFICIENCIES'], ['other', 'OTHER']
+    ['class', 'Class · ' + (c.ch.cls || 'Class') + ' ' + c.level], ['sub', 'Subclass · ' + (c.ch.sub || '')], ['feat', 'Feats'],
+    ['species', 'Species · ' + (c.ch.species || '')], ['training', 'Training & proficiencies'], ['other', 'Other']
   ];
   const save = () => {
     const name = f.draft.name.trim();
@@ -26,10 +26,10 @@ export function FeaturesTab() {
           const items = c.feats.filter((x) => x.g === g);
           if (!items.length) return null;
           return (
-            <div key={g} className="card gap-6">
-              <span className="group-title" style={{ fontSize: 13 }}>{title}</span>
+            <div key={g} className="block">
+              <h3 className="block-title">{title}</h3>
               {items.map((x) => (
-                <div key={x.id} className="row" style={{ alignItems: 'flex-start', gap: 2 }}>
+                <div key={x.id} className="well row" style={{ alignItems: 'flex-start', gap: 2, padding: '0 12px 10px' }}>
                   <div className="grow" style={{ paddingTop: 10 }}>
                     <strong>{x.name}</strong>
                     {x.desc && <div className="muted">{x.desc}</div>}

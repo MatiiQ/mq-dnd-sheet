@@ -12,9 +12,9 @@ export function EditDetails({ onReset }: { onReset: () => void }) {
   const { c, update } = useSheet();
   const [resetArmed, tapReset] = useArmed();
   return (
-    <section aria-label="Edit character" className="card gap-12" style={{ borderColor: 'var(--accent)' }}>
+    <section aria-label="Edit character" className="block edit-details">
       <div className="row wrap between gap-8">
-        <span className="caps" style={{ color: 'var(--accent)' }}>EDITING CHARACTER · changes save automatically</span>
+        <h2 className="block-title">Editing character <span className="muted" style={{ fontFamily: 'var(--sans)', fontWeight: 400 }}>· changes save automatically</span></h2>
         <button type="button" className={'btn btn-danger' + (resetArmed ? ' armed' : '')} style={{ fontSize: 14, padding: '0 14px' }} onClick={() => tapReset(onReset)}>
           {resetArmed ? 'Tap again to clear everything' : 'Clear this character'}
         </button>

@@ -1,15 +1,15 @@
 import { passiveScore } from '../logic';
 import { removeEntry, saveEntry, useEntryForm, useSheet } from '../sheet';
 import type { Sense } from '../types';
-import { AddButton, EntryActions, EntryForm, EyeIcon } from './ui';
+import { AddButton, EntryActions, EntryForm } from './ui';
 
 const BLANK = { name: '', range: '' };
 
 export function Senses() {
   const { c, update, edit } = useSheet();
-  const f = useEntryForm('sense', BLANK, 'sense', 'ADD A SENSE');
+  const f = useEntryForm('sense', BLANK, 'sense', 'Add a sense');
   const passive = (label: string, value: number) => (
-    <div className="row gap-8" style={{ minHeight: 44 }}><span>{label}</span><strong style={{ fontSize: 17 }}>{value}</strong></div>
+    <div className="well tight"><span>{label}</span><strong style={{ fontSize: 17 }}>{value}</strong></div>
   );
   const save = () => {
     const name = f.draft.name.trim();
@@ -21,16 +21,14 @@ export function Senses() {
   };
 
   return (
-    <section id="sec-senses" aria-label="Senses" className="card section gap-4">
-      <div className="row gap-8" style={{ marginBottom: 2, color: 'var(--muted)' }}>
-        <EyeIcon size={18} /><span className="caps">SENSES</span>
-      </div>
-      <div className="row wrap" style={{ gap: '0 32px' }}>
+    <section id="sec-senses" aria-label="Senses" className="block section">
+      <h2 className="block-title">Senses</h2>
+      <div className="row wrap gap-8">
         {passive('Passive Perception', passiveScore(c, 'perception'))}
         {passive('Passive Investigation', passiveScore(c, 'investigation'))}
         {passive('Passive Insight', passiveScore(c, 'insight'))}
         {c.senses.map((se) => (
-          <div key={se.id} className="row gap-8" style={{ minHeight: 44 }}>
+          <div key={se.id} className="well tight">
             <span>{se.name}</span>
             <strong style={{ fontSize: 17 }}>{se.range}</strong>
             <EntryActions name={se.name} canEdit={edit}
@@ -39,7 +37,7 @@ export function Senses() {
           </div>
         ))}
       </div>
-      {!f.isOpen && <AddButton style={{ marginTop: 4 }} onClick={f.openAdd}>+ Add sense</AddButton>}
+      {!f.isOpen && <AddButton onClick={f.openAdd}>+ Add sense</AddButton>}
       {f.isOpen && (
         <EntryForm kind="sense" inline title={f.title} saveLabel={f.saveLabel} onSave={save} onCancel={f.close}>
           <div className="row wrap gap-6">

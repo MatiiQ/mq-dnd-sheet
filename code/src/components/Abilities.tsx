@@ -26,7 +26,7 @@ function AbilityCard({ k, name }: { k: Ability; name: string }) {
   const { c, update, edit } = useSheet();
   const cur = effScore(c, k), base = c.abil[k], changed = cur !== base;
   const saveProf = !!c.saveProf[k];
-  const scoreColor = cur > base ? 'var(--blue)' : cur < base ? 'var(--orange)' : 'var(--text)';
+  const scoreColor = cur > base ? 'var(--blue)' : cur < base ? 'var(--danger)' : 'var(--text)';
   const lower = name.toLowerCase();
   const adjust = (d: number) => update((p) => {
     const adj = p.abilAdj[k] || 0, next = p.abil[k] + adj + d;
@@ -37,19 +37,19 @@ function AbilityCard({ k, name }: { k: Ability; name: string }) {
 
   return (
     <div className="card" style={{ gap: 2 }}>
-      <div className="row between gap-8" style={{ paddingBottom: 6 }}>
+      <div className="row between gap-8 abil-head">
         <div className="col" style={{ gap: 2 }}>
-          <span className="caps" style={{ fontSize: 14, color: 'var(--accent)' }}>{name}</span>
-          {!edit && (
-            <span className="muted">Score <strong style={{ color: scoreColor }}>{cur}</strong>{changed && ' · original ' + base}</span>
-          )}
+          <span className="abil-name">{name}</span>
+          {changed && !edit && <span className="small">Was {base}</span>}
           {edit && (
             <label className="row gap-6 small">Original score
               <NumInput className="input input-num" style={{ width: 56 }} value={base} min={1} max={30} onCommit={(v) => update((p) => ({ abil: { ...p.abil, [k]: v } }))} />
             </label>
           )}
         </div>
-        <div className="mod-box">{fmt(abilityMod(c, k))}</div>
+        <div role="img" aria-label={name + ' modifier ' + fmt(abilityMod(c, k)) + ', score ' + cur} className={'mod-token' + (saveProf ? ' prof' : '')}>
+          {fmt(abilityMod(c, k))}<span className="score-coin" style={{ color: scoreColor }}>{cur}</span>
+        </div>
       </div>
 
       {edit && (

@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
 import { removeEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { Attack, Rider } from '../../types';
-import { AddButton, EntryActions, EntryForm, TextField } from '../ui';
+import { AddButton, DieBadge, EntryActions, EntryForm, TextField } from '../ui';
 
 const ATTACK_BLANK = { name: '', hit: '', dmg: '', info: '', mastery: '' };
 const RIDER_BLANK = { name: '', dice: '' };
@@ -9,8 +9,8 @@ const COMBAT_ACTIONS = ['Attack', 'Dash', 'Disengage', 'Dodge', 'Help', 'Hide', 
 
 export function ActionsTab() {
   const { c, update, edit } = useSheet();
-  const fa = useEntryForm('attack', ATTACK_BLANK, 'attack', 'ADD AN ATTACK');
-  const fr = useEntryForm('rider', RIDER_BLANK, 'extra damage', 'ADD EXTRA DAMAGE');
+  const fa = useEntryForm('attack', ATTACK_BLANK, 'attack', 'Add an attack');
+  const fr = useEntryForm('rider', RIDER_BLANK, 'extra damage', 'Add extra damage');
 
   const saveAttack = () => {
     const d = fa.draft, name = d.name.trim();
@@ -30,14 +30,16 @@ export function ActionsTab() {
   return (
     <div className="col gap-12">
       {c.attacks.map((a) => (
-        <div key={a.id} className="card row wrap gap-12" style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <div key={a.id} className="well row wrap gap-12">
           <div className="col" style={{ flex: '1 1 220px', minWidth: 0, gap: 2 }}>
             <span style={{ fontWeight: 700, fontSize: 16 }}>{a.name}</span>
             {a.info && <span className="muted">{a.info}</span>}
             {a.mastery && <span style={{ fontSize: 13, color: 'var(--text-2)' }}><strong style={{ color: 'var(--accent)' }}>Mastery</strong> · {a.mastery}</span>}
           </div>
-          <div className="stat-box" style={{ minWidth: 96 }}><span className="k">TO HIT</span><span style={{ fontSize: 18, fontWeight: 700 }}>{a.hit ? 'd20 ' + a.hit : '—'}</span></div>
-          <div className="stat-box" style={{ minWidth: 140 }}><span className="k">DAMAGE</span><span style={{ fontSize: 16, fontWeight: 700 }}>{a.dmg || '—'}</span></div>
+          <div className="row gap-10">
+            <span className="sr-only">To hit</span><DieBadge value={a.hit} />
+            <span className="sr-only">Damage</span><span style={{ fontSize: 16, fontWeight: 600 }}>{a.dmg || '—'}</span>
+          </div>
           <EntryActions name={a.name} canEdit={edit}
             onEdit={() => fa.openEdit(a.id, { name: a.name, hit: a.hit || '', dmg: a.dmg || '', info: a.info || '', mastery: a.mastery || '' })}
             onRemove={() => update((p) => ({ attacks: removeEntry(p.attacks, a.id) }))} />
@@ -56,16 +58,16 @@ export function ActionsTab() {
         </EntryForm>
       )}
 
-      <div className="card gap-4">
-        <span className="caps">EXTRA DAMAGE ON A HIT</span>
+      <div className="block">
+        <h3 className="block-title">Extra damage on a hit</h3>
         {c.riders.map((r) => (
-          <div key={r.id} className="list-row">
+          <div key={r.id} className="well tight">
             <span className="grow">{r.name}</span><strong style={{ marginRight: 4 }}>{r.dice}</strong>
             <EntryActions name={r.name} canEdit={edit} onEdit={() => fr.openEdit(r.id, { name: r.name, dice: r.dice || '' })}
               onRemove={() => update((p) => ({ riders: removeEntry(p.riders, r.id) }))} />
           </div>
         ))}
-        {!fr.isOpen && <AddButton style={{ marginTop: 8 }} onClick={fr.openAdd}>+ Add extra damage</AddButton>}
+        {!fr.isOpen && <AddButton onClick={fr.openAdd}>+ Add extra damage</AddButton>}
         {fr.isOpen && (
           <EntryForm kind="rider" inline title={fr.title} saveLabel={fr.saveLabel} onSave={saveRider} onCancel={fr.close}>
             <div className="row wrap gap-6">
@@ -78,8 +80,8 @@ export function ActionsTab() {
         )}
       </div>
 
-      <div className="col gap-8">
-        <span className="caps">ACTIONS IN COMBAT</span>
+      <div className="block">
+        <h3 className="block-title">Actions in combat</h3>
         <ul className="row wrap gap-6" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
           {COMBAT_ACTIONS.map((a) => <li key={a} style={pillStyle}>{a}</li>)}
         </ul>
@@ -88,4 +90,4 @@ export function ActionsTab() {
   );
 }
 
-const pillStyle: CSSProperties = { fontSize: 13, background: 'var(--raised)', borderRadius: 8, padding: '6px 10px' };
+const pillStyle: CSSProperties = { fontSize: 13, background: 'var(--well)', borderRadius: 16, padding: '6px 12px' };

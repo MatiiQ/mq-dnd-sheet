@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { sampleCharacter } from './defaults';
 import {
-  applyDamage, applyHeal, applySetTemp, castSpell, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, initiative, isDead, longRest, migrate, passiveScore, preparedCount, removeSpell, saveMod, setMaxHp, shortRest, skillMod, slotsLeft,
+  applyDamage, applyHeal, applySetTemp, castSpell, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, passiveScore, preparedCount, removeSpell, saveMod, setMaxHp, shortRest, skillMod, slotsLeft,
   setExhaustion, speedNow, spellAttack, spellSaveDC, spellUsable, spendHitDie, toggleCondition, undoHp
 } from './logic';
 import type { Character, Spell } from './types';
@@ -298,5 +298,17 @@ describe('loading saves and backups', () => {
     expect(c.res.map((r) => r.recharge)).toEqual(['long', 'short', 'none']);
     const inv = migrate({ res: [{ id: 'arrows', name: 'Arrows', count: 5 }, { id: 'n1', name: 'Rations', count: 3 }] });
     expect(inv.res.map((r) => !!r.inv)).toEqual([true, false]);
+  });
+});
+
+describe('hpRingStops', () => {
+  it('splits HP and temp over max + temp', () => expect(hpRingStops(make({ hp: 31, maxHp: 44, temp: 0 }))).toEqual({ hp: 70.5, temp: 0 }));
+  it('fills fully at max', () => expect(hpRingStops(make({ hp: 44, maxHp: 44, temp: 0 }))).toEqual({ hp: 100, temp: 0 }));
+  it('shares the ring with temp', () => expect(hpRingStops(make({ hp: 44, maxHp: 44, temp: 11 }))).toEqual({ hp: 80, temp: 20 }));
+  it('handles temp above max', () => expect(hpRingStops(make({ hp: 0, maxHp: 10, temp: 30 }))).toEqual({ hp: 0, temp: 75 }));
+  it('handles max 0', () => expect(hpRingStops(make({ hp: 0, maxHp: 0, temp: 0 }))).toEqual({ hp: 0, temp: 0 }));
+  it('never passes 100 after rounding', () => {
+    const s = hpRingStops(make({ hp: 1, maxHp: 1, temp: 1999 }));
+    expect(s.hp + s.temp).toBeLessThanOrEqual(100);
   });
 });

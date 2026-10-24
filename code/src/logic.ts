@@ -3,8 +3,8 @@ import { blankCharacter, sampleCharacter } from './defaults';
 import type { Ability, CastAbility, Character, Concentration, HpSnapshot, Resource, Spell, Tab } from './types';
 
 export const ABILITIES: [Ability, string][] = [
-  ['str', 'STRENGTH'], ['dex', 'DEXTERITY'], ['con', 'CONSTITUTION'],
-  ['int', 'INTELLIGENCE'], ['wis', 'WISDOM'], ['cha', 'CHARISMA']
+  ['str', 'Strength'], ['dex', 'Dexterity'], ['con', 'Constitution'],
+  ['int', 'Intelligence'], ['wis', 'Wisdom'], ['cha', 'Charisma']
 ];
 
 export const SKILLS: [string, string, Ability][] = [
@@ -90,6 +90,15 @@ export const speedNow = (c: Character) => speedOf(c, c.speedBase);
 // Current HP against max, temp HP ignored: green from 65%, yellow from 30%, red below.
 export const hpColor = (c: Character) =>
   (c.hp * 100 >= c.maxHp * 65 ? 'var(--hp-high)' : c.hp * 100 >= c.maxHp * 30 ? 'var(--hp-mid)' : 'var(--hp-low)');
+
+// Display geometry for the HP ring, not a rule: HP and temp HP as percentages of max + temp.
+// The cumulative stop is rounded, not each segment, so the two never add up past 100.
+export function hpRingStops(c: Character): { hp: number; temp: number } {
+  const total = Math.max(1, c.maxHp + c.temp);
+  const r = (x: number) => Math.round(x * 10) / 10;
+  const hp = r((c.hp / total) * 100);
+  return { hp, temp: r(r(((c.hp + c.temp) / total) * 100) - hp) };
+}
 
 export function toggleCondition(c: Character, name: string): Character {
   const conds = { ...c.conds, [name]: !c.conds[name] };

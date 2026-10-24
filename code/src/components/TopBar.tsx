@@ -167,7 +167,7 @@ function Menu({ store, onClose, onSwitched, onRest }: { store: CharacterStore; o
     <>
       <button type="button" className="scrim" aria-label="Close menu" onClick={onClose} />
       <div id="sheet-menu" className="menu">
-        <span className="caps">RESTS</span>
+        <span className="label">Rests</span>
         <div className="row gap-8">
           <a href="#sec-hp" className="rest-btn" onClick={() => onRest('short')}>Short Rest</a>
           {/* Long Rest resets a lot and has no undo, so it takes two taps. Only the second one follows the link. */}
@@ -177,7 +177,7 @@ function Menu({ store, onClose, onSwitched, onRest }: { store: CharacterStore; o
           </a>
         </div>
 
-        <span className="caps">CHARACTERS</span>
+        <span className="label">Characters</span>
         {store.list.map((x) => {
           const cur = x.id === store.charId;
           return (
@@ -193,7 +193,7 @@ function Menu({ store, onClose, onSwitched, onRest }: { store: CharacterStore; o
         })}
         <button type="button" className="menu-btn" style={{ color: 'var(--accent)' }} onClick={() => { store.newBlank(); onSwitched(true); }}>+ New blank character</button>
         <button type="button" className="menu-btn" onClick={() => { store.newSample(); onSwitched(); }}>+ New sample character (Ilyra, Ranger 5)</button>
-        <button type="button" className="menu-btn" style={{ borderStyle: 'solid', borderColor: 'var(--line-2)', background: 'var(--raised)' }}
+        <button type="button" className="menu-btn plain"
           onClick={() => { store.duplicate(); onSwitched(); }}>Duplicate this character</button>
         {store.list.length > 1 && (
           <button type="button" className={'btn btn-danger' + (delArmed ? ' armed' : '')} style={{ textAlign: 'left', padding: '0 12px' }}
@@ -202,7 +202,7 @@ function Menu({ store, onClose, onSwitched, onRest }: { store: CharacterStore; o
           </button>
         )}
 
-        <span className="caps">LAYOUT</span>
+        <span className="label">Layout</span>
         <div role="group" aria-label="Layout" className="seg">
           {LAYOUTS.map(([m, label]) => (
             <button key={m} type="button" aria-pressed={layout === m} onClick={() => setLayoutMode(m)}>{label}</button>
@@ -210,7 +210,7 @@ function Menu({ store, onClose, onSwitched, onRest }: { store: CharacterStore; o
         </div>
         <span className="small">Auto shows two columns on a landscape iPad Air or larger. Saved on this device only.</span>
 
-        <span className="caps">BACKUP</span>
+        <span className="label">Backup</span>
         <div className="row gap-8">
           <button type="button" className="btn grow" style={{ padding: '0 10px' }} onClick={exportBackup}>Export all</button>
           <button type="button" className="btn grow" style={{ padding: '0 10px' }} onClick={() => fileRef.current?.click()}>Import</button>

@@ -8,7 +8,7 @@ const BLANK = { name: '' };
 
 export function InventoryTab() {
   const { c, update, edit } = useSheet();
-  const f = useEntryForm('item', BLANK, 'item', 'ADD AN ITEM');
+  const f = useEntryForm('item', BLANK, 'item', 'Add an item');
   const patch = (id: string, p: Partial<Item>) => update((s) => ({ inv: patchEntry(s.inv, id, p) }));
   const save = () => {
     const name = f.draft.name.trim();
@@ -19,8 +19,8 @@ export function InventoryTab() {
 
   return (
     <div className="col gap-12">
-      <div className="card gap-8">
-        <span className="caps">MAGIC ITEM ATTUNEMENT · {c.attune.filter((x) => x && x.trim()).length} / 3</span>
+      <div className="block">
+        <h3 className="block-title">Magic item attunement <span className="muted">· {c.attune.filter((x) => x && x.trim()).length} / 3</span></h3>
         <div className="grid" style={{ '--min': '200px', gap: 8 } as CSSProperties}>
           {c.attune.map((v, i) => (
             <input key={i} type="text" className="input" aria-label={'Attunement slot ' + (i + 1)} value={v} placeholder="Empty slot"
@@ -30,21 +30,21 @@ export function InventoryTab() {
         </div>
       </div>
 
-      <div className="card" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 8 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 8 }}>
         {COINS.map(([k, label, color]) => (
-          <label key={k} className="col gap-4" style={{ alignItems: 'center', fontSize: 12, fontWeight: 700, color }}>{label}
-            <NumInput className="input" value={c.coins[k]} min={0} max={999999} style={{ font: '700 18px var(--sans)', textAlign: 'center', padding: '0 4px' }}
+          <label key={k} className="well col gap-4" style={{ alignItems: 'center', padding: '8px 6px', fontSize: 12, fontWeight: 700, color }}>{label}
+            <NumInput className="input" value={c.coins[k]} min={0} max={999999} style={{ font: '700 18px var(--serif)', textAlign: 'center', padding: '0 4px' }}
               onCommit={(v) => update((p) => ({ coins: { ...p.coins, [k]: v } }))} />
           </label>
         ))}
       </div>
 
-      <ul style={{ listStyle: 'none', margin: 0, padding: 0, background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 16, overflow: 'hidden' }}>
+      <ul className="col gap-6" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
         {c.inv.map((it) => (
-          <li key={it.id} className="row wrap gap-8" style={{ padding: '6px 6px 6px 14px', borderBottom: '1px solid var(--line)' }}>
+          <li key={it.id} className="well row wrap gap-8" style={{ padding: '6px 6px 6px 14px' }}>
             <span style={{ flex: '1 1 160px', minWidth: 0 }}>{it.name}</span>
             <button type="button" aria-pressed={it.eq} onClick={() => patch(it.id, { eq: !it.eq })} style={{
-              fontSize: 13, fontWeight: 600, cursor: 'pointer', minHeight: 44, minWidth: 92, padding: '0 10px', borderRadius: 10,
+              fontSize: 13, fontWeight: 600, cursor: 'pointer', minHeight: 44, minWidth: 92, padding: '0 10px', borderRadius: 22,
               border: '1px solid ' + (it.eq ? 'var(--accent)' : 'var(--line-2)'), background: 'transparent', color: it.eq ? 'var(--accent)' : 'var(--muted)'
             }}>{it.eq ? 'Equipped' : 'Carried'}</button>
             <div className="row gap-4">
@@ -57,7 +57,7 @@ export function InventoryTab() {
           </li>
         ))}
         {c.res.filter((r) => r.inv).map((r) => (
-          <li key={r.id} className="row between gap-8" style={{ padding: '12px 14px', borderBottom: '1px solid var(--line)' }}>
+          <li key={r.id} className="well row between gap-8" style={{ padding: '12px 14px' }}>
             <span>{r.name} <span className="muted">· tracked in Resources</span></span><span style={{ fontWeight: 700 }}>{r.count}</span>
           </li>
         ))}

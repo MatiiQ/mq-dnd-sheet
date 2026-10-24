@@ -3,8 +3,8 @@
 import { writeFileSync } from 'node:fs';
 import { deflateSync } from 'node:zlib';
 
-const BG = [0x10, 0x13, 0x18];
-const FG = [0xe3, 0xb2, 0x60];
+const BG = [0x1a, 0x1c, 0x2e];
+const FG = [0xf2, 0xa6, 0x5a];
 
 function segments(n) {
   const cx = n / 2, cy = n / 2, r = n * 0.36;

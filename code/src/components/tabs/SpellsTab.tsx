@@ -1,8 +1,8 @@
-import { useState, type CSSProperties } from 'react';
+import { useState } from 'react';
 import { CAST_NAMES, castSpell, concAfterEdit, fmt, preparedCount, removeSpell, setConc, setSlotUsed, slotsLeft, spellAttack, spellSaveDC, spellUsable } from '../../logic';
 import { patchEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { Spell } from '../../types';
-import { AddButton, ChevronDown, EntryActions, EntryForm, Step, TextField, UsePips } from '../ui';
+import { AddButton, ChevronDown, DieBadge, EntryActions, EntryForm, Step, TextField, UsePips } from '../ui';
 
 const ORDINAL = ['Cantrip', '1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th'];
 const BLANK = { name: '', lvl: '1', time: 'Action', range: '', dice: '', conc: false, source: '', dur: '', comp: '', always: false };
@@ -16,7 +16,7 @@ const toDraft = (e: Spell): Draft => ({
 export function SpellsTab() {
   const { c, update, edit } = useSheet();
   const [castPick, setCastPick] = useState<string | null>(null);
-  const f = useEntryForm('spell', BLANK, 'spell', 'ADD A SPELL');
+  const f = useEntryForm('spell', BLANK, 'spell', 'Add a spell');
   const usePrep = c.usePrep;
   const dc = spellSaveDC(c), atk = spellAttack(c);
   const prepCount = preparedCount(c);
@@ -44,21 +44,17 @@ export function SpellsTab() {
   const slotPips = (l: number, max: number) => (
     <UsePips used={c.slotUsed[l]} max={max} color="var(--accent)" size={20} noun={'level ' + l + ' slot'} onChange={(n) => update((p) => setSlotUsed(p, l, n))} />
   );
-  const filterStyle = (on: boolean): CSSProperties => ({
-    fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none', minHeight: 40, padding: '0 14px',
-    background: on ? 'var(--accent)' : 'var(--raised)', color: on ? 'var(--bg)' : 'var(--text-2)'
-  });
 
   return (
     <div className="col gap-12">
       <div className="row wrap gap-12" style={{ alignItems: 'stretch' }}>
         <StatCard label="Spellcasting ability" value={CAST_NAMES[c.castAb]} />
-        <StatCard label="Spell save DC" value={dc ?? '—'} />
-        <StatCard label="Spell attack" value={atk === null ? '—' : 'd20 ' + fmt(atk)} />
+        <DieStat label="Spell save DC" value={dc === null ? '' : String(dc)} />
+        <DieStat label="Spell attack" value={atk === null ? '' : fmt(atk)} />
         {usePrep && (
-          <div className="card" style={{ flex: '1 1 140px', padding: '10px 14px' }}>
+          <div className="well col" style={{ flex: '1 1 140px' }}>
             <span className="small">Prepared spells</span>
-            <span style={{ fontSize: 20, fontWeight: 700, color: c.prepMax && prepCount > c.prepMax ? 'var(--orange)' : 'var(--text)' }}>
+            <span style={{ fontSize: 20, fontWeight: 700, color: c.prepMax && prepCount > c.prepMax ? 'var(--danger)' : 'var(--text)' }}>
               {prepCount + (c.prepMax ? ' / ' + c.prepMax : '')}
             </span>
             {edit && (
@@ -77,15 +73,15 @@ export function SpellsTab() {
         <button type="button" role="switch" aria-checked={usePrep} className="btn row gap-10" style={{ fontSize: 14, padding: '0 12px 0 8px' }}
           onClick={() => update({ usePrep: !usePrep })}>
           <span aria-hidden="true" style={{ position: 'relative', flex: 'none', width: 40, height: 24, borderRadius: 12, background: usePrep ? 'var(--accent)' : 'var(--line-2)' }}>
-            <span style={{ position: 'absolute', top: 3, left: usePrep ? 19 : 3, width: 18, height: 18, borderRadius: '50%', background: usePrep ? 'var(--bg)' : 'var(--muted)' }} />
+            <span style={{ position: 'absolute', top: 3, left: usePrep ? 19 : 3, width: 18, height: 18, borderRadius: '50%', background: usePrep ? 'var(--on-accent)' : 'var(--muted)' }} />
           </span>
           Track prepared spells
         </button>
         {usePrep && (
-          <div role="group" aria-label="Which spells to show" className="row" style={{ border: '1px solid var(--line-2)', borderRadius: 10, overflow: 'hidden' }}>
+          <div role="group" aria-label="Which spells to show" className="row gap-4">
             {([['all', 'All spells'], ['prepared', 'Prepared only']] as const).map(([k, label]) => {
               const on = c.spellFilter === k;
-              return <button key={k} type="button" aria-pressed={on} style={filterStyle(on)} onClick={() => update({ spellFilter: k })}>{label}</button>;
+              return <button key={k} type="button" aria-pressed={on} className="filter-btn" onClick={() => update({ spellFilter: k })}>{label}</button>;
             })}
           </div>
         )}
@@ -96,16 +92,16 @@ export function SpellsTab() {
         </span>
       </div>
 
-      <div className="card gap-4">
+      <div className="block">
         <div className="row wrap between gap-6">
-          <span className="caps">SPELL SLOTS</span>
+          <h3 className="block-title">Spell slots</h3>
           <span className="muted">Tap a circle to mark a slot used or restore it</span>
         </div>
         {slotLevels.map((l) => {
           const max = c.slotMax[l], left = slotsLeft(c, l);
           return (
-            <div key={l} className="row wrap" style={{ gap: '4px 10px', minHeight: 44, borderTop: '1px solid var(--line)' }}>
-              <span style={{ minWidth: 64, fontWeight: 700, color: 'var(--accent)' }}>Level {l}</span>
+            <div key={l} className="well row wrap" style={{ gap: '4px 10px', minHeight: 44, padding: '0 12px' }}>
+              <span style={{ minWidth: 64, fontWeight: 700 }}>Level {l}</span>
               <div className="row wrap">
                 {slotPips(l, max)}
               </div>
@@ -131,12 +127,12 @@ export function SpellsTab() {
       {groups.map(({ l, list }) => {
         const max = l ? c.slotMax[l] : 0, left = slotsLeft(c, l);
         return (
-          <div key={l} className="card" style={{ gap: 2 }}>
-            <div className="row wrap between" style={{ gap: '4px 10px', paddingBottom: 4 }}>
-              <span className="group-title">{l === 0 ? 'Cantrips' : 'Level ' + l}</span>
+          <div key={l} className="block">
+            <div className="row wrap between" style={{ gap: '4px 10px' }}>
+              <h3 className="block-title">{l === 0 ? 'Cantrips' : 'Level ' + l}</h3>
               {max > 0 && (
                 <div role="group" aria-label={'Level ' + l + ' spell slots'} className="row wrap">
-                  <span style={{ fontSize: 13, color: left ? 'var(--muted)' : 'var(--orange)', marginRight: 4 }}>{left} of {max} slots left</span>
+                  <span style={{ fontSize: 13, color: left ? 'var(--muted)' : 'var(--danger)', marginRight: 4 }}>{left} of {max} slots left</span>
                   {slotPips(l, max)}
                 </div>
               )}
@@ -181,8 +177,16 @@ export function SpellsTab() {
 
 function StatCard({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="card" style={{ flex: '1 1 140px', padding: '10px 14px' }}>
+    <div className="well col" style={{ flex: '1 1 140px' }}>
       <span className="small">{label}</span><span style={{ fontSize: 20, fontWeight: 700 }}>{value}</span>
+    </div>
+  );
+}
+
+function DieStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="well row gap-10" style={{ flex: '1 1 140px' }}>
+      <DieBadge value={value} /><span className="small">{label}</span>
     </div>
   );
 }
@@ -212,13 +216,13 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
   };
 
   return (
-    <div className="row wrap" style={{ gap: '8px 10px', borderTop: '1px solid var(--line)', padding: '8px 0' }}>
+    <div className="well row wrap" style={{ gap: '8px 10px' }}>
       {usePrep && lvl > 0 && !isAlways && (
         <button type="button" aria-pressed={prepOn} aria-label={prepOn ? sp.name + ' is prepared; tap to unprepare' : 'Prepare ' + sp.name} title="Prepared"
           onClick={() => update((p) => ({ spells: patchEntry(p.spells, sp.id, (x) => ({ prep: !x.prep })) }))}
           style={{
             flex: 'none', width: 40, height: 40, padding: 0, cursor: 'pointer', borderRadius: 10, font: '700 15px var(--sans)',
-            border: '2px solid ' + (prepOn ? 'var(--accent)' : 'var(--dash)'), background: prepOn ? 'var(--accent)' : 'transparent', color: prepOn ? 'var(--bg)' : 'var(--off)'
+            border: '2px solid ' + (prepOn ? 'var(--accent)' : 'var(--dash)'), background: prepOn ? 'var(--accent)' : 'transparent', color: prepOn ? 'var(--on-accent)' : 'var(--off)'
           }}>P</button>
       )}
       {lvl > 0 && isAlways && (
@@ -242,7 +246,7 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
 
       {sp.c && (lvl === 0 || usable) && (
         <button type="button" aria-pressed={concOn} aria-label={concOn ? 'Stop concentrating on ' + sp.name : 'Concentrate on ' + sp.name}
-          className="btn btn-sm" style={{ border: '1px solid var(--blue)', background: concOn ? 'var(--blue)' : 'transparent', color: concOn ? 'var(--bg)' : 'var(--blue)', borderRadius: 10 }}
+          className="btn btn-sm" style={{ border: '1px solid var(--blue)', background: concOn ? 'var(--blue)' : 'transparent', color: concOn ? 'var(--on-accent)' : 'var(--blue)' }}
           onClick={() => update(setConc(concOn ? null : concOf))}>{concOn ? 'Conc. ✓' : 'Conc.'}</button>
       )}
       {sp.free && usable && (
@@ -275,7 +279,7 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
           ))}
         </div>
       )}
-      {lvl > 0 && !sp.free && !first && usable && <span style={{ fontSize: 13, color: 'var(--orange)' }}>No slots of this level or higher</span>}
+      {lvl > 0 && !sp.free && !first && usable && <span style={{ fontSize: 13, color: 'var(--danger)' }}>No slots of this level or higher</span>}
       <EntryActions name={sp.name} canEdit={edit} onEdit={onEdit} onRemove={() => update((p) => removeSpell(p, sp.id))} />
     </div>
   );

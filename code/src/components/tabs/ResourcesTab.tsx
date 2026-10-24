@@ -9,7 +9,7 @@ const RECHARGE_TEXT: Record<Recharge, string> = { none: 'Manual only', short: 'R
 
 export function ResourcesTab() {
   const { c, update, edit } = useSheet();
-  const f = useEntryForm('res', BLANK, 'resource', 'ADD A RESOURCE');
+  const f = useEntryForm('res', BLANK, 'resource', 'Add a resource');
   const patch = (id: string, p: Partial<Resource> | ((r: Resource) => Partial<Resource>)) =>
     update((s) => ({ res: patchEntry(s.res, id, p) }));
   const bump = (id: string, d: number) => patch(id, (r) => {
@@ -30,7 +30,7 @@ export function ResourcesTab() {
         {c.res.map((r) => {
           const rc = rechargeOf(r);
           return (
-            <div key={r.id} className="card gap-6">
+            <div key={r.id} className="well col gap-6">
               <div className="row between gap-4" style={{ alignItems: 'flex-start' }}>
                 <span className="grow" style={{ fontWeight: 700, paddingTop: 10 }}>{r.name}</span>
                 <EntryActions name={r.name} canEdit={edit} onEdit={() => f.openEdit(r.id, { name: r.name, note: r.note || '', inv: !!r.inv })}
@@ -57,7 +57,7 @@ export function ResourcesTab() {
                   </div>
                 </>
               )}
-              {rc !== 'none' && !r.max && <span style={{ fontSize: 12, color: 'var(--orange)' }}>Set a maximum (Edit) so a rest can refill it.</span>}
+              {rc !== 'none' && !r.max && <span style={{ fontSize: 12, color: 'var(--danger)' }}>Set a maximum (Edit) so a rest can refill it.</span>}
               <div className="row gap-8">
                 <Step label={'Decrease ' + r.name} onClick={() => bump(r.id, -1)}>−</Step>
                 <span style={{ fontSize: 22, fontWeight: 700, minWidth: 36, textAlign: 'center' }}>

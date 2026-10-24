@@ -11,18 +11,20 @@ export function Conditions() {
   });
 
   return (
-    <section id="sec-conditions" aria-label="Conditions" className="card section row wrap gap-8" style={{ flexDirection: 'row', alignItems: 'center', padding: '10px 14px' }}>
-      <span className="caps" style={{ marginRight: 4 }}>CONDITIONS</span>
-      {CONDITIONS.map((n) => (
-        <button key={n} type="button" className="chip" aria-pressed={!!c.conds[n]} onClick={() => update((p) => toggleCondition(p, n))}>{n}</button>
-      ))}
-      <div className="row gap-6" style={{ marginLeft: 'auto', border: '1px solid var(--line-2)', borderRadius: 10, paddingLeft: 12 }}>
-        <span style={{ fontSize: 14, color: 'var(--text-2)' }}>Exhaustion <strong style={{ color: 'var(--accent)' }}>{c.exh}</strong> / 6</span>
-        <button type="button" className="step" style={{ border: 'none', borderRadius: 0 }} aria-label="Decrease exhaustion" onClick={() => update((p) => setExhaustion(p, p.exh - 1))}>−</button>
-        <button type="button" className="step" style={{ border: 'none', borderRadius: '0 10px 10px 0' }} aria-label="Increase exhaustion" onClick={() => update((p) => setExhaustion(p, p.exh + 1))}>+</button>
+    <section id="sec-conditions" aria-label="Conditions" className="block section">
+      <h2 className="block-title">Conditions</h2>
+      <div className="row wrap gap-8">
+        {CONDITIONS.map((n) => (
+          <button key={n} type="button" className="chip" aria-pressed={!!c.conds[n]} onClick={() => update((p) => toggleCondition(p, n))}>{n}</button>
+        ))}
+        <div className="row amount" style={{ marginLeft: 'auto', paddingLeft: 14 }}>
+          <span style={{ fontSize: 14, color: 'var(--text-2)' }}>Exhaustion <strong style={{ color: 'var(--accent)' }}>{c.exh}</strong> / 6</span>
+          <button type="button" className="step" aria-label="Decrease exhaustion" onClick={() => update((p) => setExhaustion(p, p.exh - 1))}>−</button>
+          <button type="button" className="step" aria-label="Increase exhaustion" onClick={() => update((p) => setExhaustion(p, p.exh + 1))}>+</button>
+        </div>
       </div>
       {rules.length > 0 && (
-        <ul aria-label="Active condition effects" className="col gap-6" style={{ flex: '1 1 100%', listStyle: 'none', margin: '4px 0 0', padding: 0 }}>
+        <ul aria-label="Active condition effects" className="col gap-6" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
           {rules.map((r) => (
             <li key={r.name} className="notice" style={{ background: r.dead ? 'var(--dead-bg)' : 'var(--cond-bg)', color: r.dead ? 'var(--dead-fg)' : 'var(--cond-fg)' }}>
               <strong>{r.name}</strong> · {r.text}

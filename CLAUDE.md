@@ -4,7 +4,7 @@ Interactive D&D 2024 (Player's Handbook 2024) character sheet for iPad. It's a s
 
 - Live: https://matiiq.github.io/mq-dnd-sheet/
 - Repo: https://github.com/MatiiQ/mq-dnd-sheet (public, branch `main`)
-- Design source: Claude Design canvas https://claude.ai/code/artifact/14f009f2-87d8-4f14-8590-3c89bac0558f (`project/Main.dc.html` = landscape sheet, `project/Portrait.dc.html` = portrait). The app reproduces its look and behaviour; read it with the Artifact tool, not WebFetch.
+- Design source: Claude Design canvas https://claude.ai/code/artifact/14f009f2-87d8-4f14-8590-3c89bac0558f (`project/Main.dc.html` = landscape sheet, `project/Portrait.dc.html` = portrait). The app reproduces its behaviour; read it with the Artifact tool, not WebFetch. Since the 2026-10-24 restyle the app's look (Tabletop tokens, Midnight & candlelight) no longer follows the canvas, which still documents behaviour.
 
 ## Layout
 
@@ -27,7 +27,7 @@ npm run preview  # serve dist/ with the service worker active
 npm run icons    # regenerate public/icons/*.png (dependency-free PNG writer)
 ```
 
-Toolchain: Node 22+ (CI uses 22), React 19, Vite 8, TypeScript 7, Vitest 5. The app has no other runtime dependencies besides `@fontsource` (Cinzel and Inter, latin subsets, bundled so they work offline).
+Toolchain: Node 22+ (CI uses 22), React 19, Vite 8, TypeScript 7, Vitest 5. The app has no other runtime dependencies besides `@fontsource` (Fraunces and Figtree, latin subsets, bundled so they work offline).
 
 ## Deploy
 
@@ -47,7 +47,7 @@ Every push to `main` runs `.github/workflows/deploy.yml` (test → build → dep
 | `components/` | `TopBar` (bar, nav, menu with rests/characters/backup), `EditDetails`, `Vitals`, `HitPoints`, `Abilities`, `Senses`, `Defenses`, `Conditions` |
 | `components/tabs/` | `ActionsTab`, `ResourcesTab`, `SpellsTab`, `InventoryTab`, `FeaturesTab`, `NotesTab` |
 | `components/ui.tsx` | Shared bits: icons, `RemoveButton` (tap twice to confirm), `EntryActions`, `Step`, `UsePips`/`MarkPips`, `ProfDot`, `NumInput`, `EntryForm`, `TextField`, `useArmed` |
-| `styles.css` | Colour tokens on `:root` (dark theme, gold `--accent`), layout utilities, component classes |
+| `styles.css` | Colour tokens on `:root` (indigo theme, amber `--accent`), layout utilities, component classes |
 
 Conventions:
 - State changes go through `update(patch)` from `useSheet()`. A patch is a partial `Character` or a function of the current one. Put rule logic in `logic.ts`, not in components.

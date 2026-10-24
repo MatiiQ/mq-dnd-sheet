@@ -11,19 +11,19 @@ export function Defenses() {
   const { c, update, edit } = useSheet();
   const empty = !edit && !c.def.res.length && !c.def.vul.length && !c.def.imm.length;
   return (
-    <section id="sec-defenses" aria-label="Defenses" className="card section gap-10">
+    <section id="sec-defenses" aria-label="Defenses" className="block section">
       <div className="row wrap between" style={{ alignItems: 'baseline', gap: '6px 12px' }}>
-        <span className="caps">DEFENSES</span>
+        <h2 className="block-title">Defenses</h2>
         {!empty && <span className="muted">Resistance halves damage · Vulnerability doubles it · Immunity ignores damage or the condition</span>}
       </div>
       {empty ? <span className="muted">No resistances, vulnerabilities or immunities</span> : (
         <div className="grid" style={{ '--min': '240px', gap: 12 } as CSSProperties}>
           <DefenseGroup kind="res" title="Resistances" noun="resistance" color="var(--blue)" withConditions addLabel="Add a resistance" />
-          <DefenseGroup kind="vul" title="Vulnerabilities" noun="vulnerability" color="var(--orange)" addLabel="Add a vulnerability" />
+          <DefenseGroup kind="vul" title="Vulnerabilities" noun="vulnerability" color="var(--danger)" addLabel="Add a vulnerability" />
           <DefenseGroup kind="imm" title="Immunities" noun="immunity" color="var(--accent)" withConditions addLabel="Add an immunity" />
         </div>
       )}
-      <TextField label="Save notes" style={{ borderTop: '1px solid var(--line)', paddingTop: 10 }} value={c.saveNotes} placeholder="e.g. Advantage on saves against being Charmed"
+      <TextField label="Save notes" style={{ paddingTop: 4 }} value={c.saveNotes} placeholder="e.g. Advantage on saves against being Charmed"
         onChange={(v) => update({ saveNotes: v })} />
     </section>
   );
@@ -70,7 +70,7 @@ function DefenseChip({ name, noun, color, onRemove }: { name: string; noun: stri
     <button type="button" onClick={() => tap(onRemove)} aria-label={armed ? 'Tap again to remove ' + name + ' ' + noun : 'Remove ' + name + ' ' + noun}
       className="row gap-6" style={{
         fontSize: 13, fontWeight: 600, cursor: 'pointer', minHeight: 44, padding: '0 10px 0 12px', borderRadius: 22,
-        border: '1px solid ' + color, background: armed ? color : 'transparent', color: armed ? 'var(--bg)' : color
+        border: '1px solid ' + color, background: armed ? color : 'transparent', color: armed ? 'var(--on-accent)' : color
       }}>
       {armed ? 'Remove ' + name + '?' : name}<XIcon size={14} strokeWidth={2.5} />
     </button>

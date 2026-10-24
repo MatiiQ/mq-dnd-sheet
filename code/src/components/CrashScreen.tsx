@@ -13,8 +13,8 @@ export class CrashScreen extends Component<{ children: ReactNode }, { error: Err
 function CrashMessage({ error }: { error: Error }) {
   const [msg, setMsg] = useState<string | null>(null);
   return (
-    <main className="card gap-12" style={{ maxWidth: 560, margin: '40px auto' }}>
-      <h1 className="caps" style={{ color: 'var(--orange)' }}>The sheet couldn’t open</h1>
+    <main className="block" style={{ maxWidth: 560, margin: '40px auto', padding: '0 20px', gap: 12 }}>
+      <h1 className="block-title" style={{ color: 'var(--danger)' }}>The sheet couldn’t open</h1>
       <span className="muted">{error.message}</span>
       <span>Your characters are still saved on this device. Export a backup to keep them safe, then try again.</span>
       <div className="row gap-8">
