@@ -29,6 +29,7 @@
   --serif: Cinzel, Georgia, serif;
   --sans: Inter, system-ui, sans-serif;
   --gutter: 20px;
+  --topbar-h: 110px; /* replaced at runtime by TopBar with the bar's real height */
   color-scheme: dark;
 }
 
@@ -51,7 +52,8 @@ h1, h2 { margin: 0; }
   padding: 0 var(--gutter) calc(32px + env(safe-area-inset-bottom));
   display: flex; flex-direction: column; gap: 16px;
 }
-.section { scroll-margin-top: 130px; }
+.sheet-body, .sheet-left, .sheet-right { display: flex; flex-direction: column; gap: 16px; }
+.section { scroll-margin-top: calc(var(--topbar-h) + 20px); }
 .row { display: flex; align-items: center; }
 .wrap { flex-wrap: wrap; }
 .col { display: flex; flex-direction: column; }
@@ -238,5 +240,33 @@ button.vital { cursor: pointer; }
 .stat-box .k { font-size: 11px; font-weight: 600; color: var(--muted); }
 .hp-bar { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; display: flex; }
 .hp-bar div { height: 8px; }
+.hp-card { padding: 14px 16px; }
+.hp-now { font-size: 40px; font-weight: 700; }
+.hp-max { color: var(--muted); font-size: 18px; }
+.hp-delta { font-size: 13px; }
+.abil-grid { --min: 300px; gap: 12px; align-items: start; }
+.save-row { border-bottom: 1px solid var(--line); min-height: 36px; padding: 0 2px; }
+.skill-row { min-height: 34px; padding: 0 2px; }
 .list-row { display: flex; align-items: center; gap: 8px; min-height: 44px; border-bottom: 1px solid var(--line); }
 .dashed-box { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; border: 1px dashed var(--dash); border-radius: 12px; padding: 6px 10px; }
+
+/* ---------- two-column landscape (same query as WIDE_QUERY in layout.ts) ---------- */
+@media (min-width: 1100px) and (min-height: 780px) {
+  .sheet-body { display: grid; grid-template-columns: minmax(0, 62fr) minmax(0, 38fr); align-items: start; }
+  /* Right column: HP stays put under the top bar, the open tab scrolls below it. */
+  .sheet-right {
+    position: sticky; top: var(--topbar-h); max-height: calc(100dvh - var(--topbar-h));
+    overflow-y: auto; overscroll-behavior: contain; /* only scrolls if the HP card alone outgrows the screen */
+  }
+  .sheet-right > .hp-card { flex-shrink: 0; }
+  .tab-col {
+    flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
+  }
+  .nav a.first-tab { margin-left: 0; box-shadow: none; }
+
+  /* Compact core, so vitals and all six abilities fit on screen. */
+  .hp-card { padding: 10px 14px; gap: 6px; }
+  .abil-grid { --min: 200px; }
+  .save-row, .skill-row { min-height: 24px; }
+}

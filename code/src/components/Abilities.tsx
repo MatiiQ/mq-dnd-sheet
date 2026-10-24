@@ -1,4 +1,3 @@
-import type { CSSProperties } from 'react';
 import { ABILITIES, SKILLS, abilityMod, effScore, fmt, profBonus, skillMod } from '../logic';
 import { useSheet } from '../sheet';
 import type { Ability } from '../types';
@@ -16,7 +15,7 @@ export function Abilities() {
           ? 'Editing: set the original score, use − / + for temporary changes, tap Saving Throw to toggle proficiency, tap a skill to cycle Not proficient → Proficient → Expertise.'
           : 'Checks and saves: roll d20 + the bonus shown.'}
       </div>
-      <div className="grid" style={{ '--min': '300px', gap: 12, alignItems: 'start' } as CSSProperties}>
+      <div className="grid abil-grid">
         {ABILITIES.map(([k, name]) => <AbilityCard key={k} k={k} name={name} />)}
       </div>
     </section>
@@ -71,7 +70,7 @@ function AbilityCard({ k, name }: { k: Ability; name: string }) {
           <ProfDot level={saveProf ? 1 : 0} /><span className="grow" style={{ fontWeight: 600 }}>Saving Throw</span><span style={{ fontWeight: 700 }}>{saveMod}</span>
         </button>
       ) : (
-        <div className="row gap-10" style={{ borderBottom: '1px solid var(--line)', minHeight: 36, padding: '0 2px' }}>
+        <div className="row gap-10 save-row">
           <ProfDot level={saveProf ? 1 : 0} /><span className="grow" style={{ fontWeight: 600 }}>Saving Throw</span><span style={{ fontWeight: 700 }}>{saveMod}</span>
         </div>
       )}
@@ -88,7 +87,7 @@ function AbilityCard({ k, name }: { k: Ability; name: string }) {
             <span style={{ fontWeight: 600, minWidth: 28, textAlign: 'right' }}>{modText}</span>
           </button>
         ) : (
-          <div key={key} className="row gap-10" style={{ minHeight: 34, padding: '0 2px' }}>
+          <div key={key} className="row gap-10 skill-row">
             <ProfDot level={lv} /><span className="grow">{skill}</span><span style={{ fontWeight: 600 }}>{modText}</span>
           </div>
         );

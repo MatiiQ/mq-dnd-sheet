@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useWide } from '../layout';
 import { CONDITIONS, hpColor } from '../logic';
 import { useSheet } from '../sheet';
 import type { CharacterStore } from '../storage';
@@ -29,6 +30,18 @@ export function TopBar({ store, activeSec, setActiveSec, menuOpen, setMenuOpen, 
   const condParts = CONDITIONS.filter((n) => c.conds[n]);
   if (c.exh > 0) condParts.push('Exhaustion ' + c.exh);
   const inTabs = activeSec === 'sec-tabs';
+  // Two columns: the tabs sit beside the core, so the nav holds only tabs and a tap doesn't scroll the page.
+  const wide = useWide();
+
+  // Publish the bar's height for sticky offsets and scroll margins; it grows when the chip row shows.
+  const barRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const el = barRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => document.documentElement.style.setProperty('--topbar-h', el.offsetHeight + 'px'));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   // Fade the nav edges when there is more to scroll.
   const navRef = useRef<HTMLElement>(null);
@@ -44,14 +57,14 @@ export function TopBar({ store, activeSec, setActiveSec, menuOpen, setMenuOpen, 
   }, []);
 
   return (
-    <header className="topbar">
+    <header ref={barRef} className="topbar">
       <div className="row gap-10">
         <div aria-hidden="true" className="avatar">{initials}</div>
         <div className="col grow">
           <h1 className="char-name">{ch.name || 'Unnamed character'}</h1>
           <span className="small ellipsis">{subtitle}</span>
         </div>
-        <a href="#sec-hp" className="pill" aria-label={'Hit points ' + c.hp + ' of ' + c.maxHp + (c.temp ? ', plus ' + c.temp + ' temporary' : '') + '. Jump to Hit Points.'}>
+        <a href="#sec-hp" className="pill" onClick={(e) => { if (wide) e.preventDefault(); }} aria-label={'Hit points ' + c.hp + ' of ' + c.maxHp + (c.temp ? ', plus ' + c.temp + ' temporary' : '') + '. Jump to Hit Points.'}>
           HP <strong style={{ color: hpColor(c) }}>{c.hp}</strong><span style={{ color: 'var(--muted)' }}>/{c.maxHp}</span>
           {c.temp > 0 && <span style={{ color: 'var(--blue)', fontWeight: 600 }}>+{c.temp}</span>}
         </a>
@@ -86,7 +99,7 @@ export function TopBar({ store, activeSec, setActiveSec, menuOpen, setMenuOpen, 
 
       <div className="nav-wrap">
         <nav ref={navRef} className="nav" aria-label="Sheet sections">
-          {SECTION_LINKS.map(([id, label]) => {
+          {!wide && SECTION_LINKS.map(([id, label]) => {
             const on = activeSec === id;
             return (
               <a key={id} href={'#' + id} aria-current={on ? 'location' : undefined} className={on ? 'on-screen' : undefined}
@@ -97,8 +110,13 @@ export function TopBar({ store, activeSec, setActiveSec, menuOpen, setMenuOpen, 
             const sel = c.tab === t;
             return (
               <a key={t} href="#sec-tabs" aria-current={sel ? 'page' : undefined}
-                className={['tab', i === 0 && 'first-tab', sel && 'open', sel && inTabs && 'on-screen'].filter(Boolean).join(' ')}
-                onClick={() => { update({ tab: t }); setActiveSec('sec-tabs'); }}><span>{label}</span></a>
+                className={['tab', i === 0 && 'first-tab', sel && 'open', sel && (inTabs || wide) && 'on-screen'].filter(Boolean).join(' ')}
+                onClick={(e) => {
+                  update({ tab: t });
+                  if (!wide) { setActiveSec('sec-tabs'); return; }
+                  e.preventDefault();
+                  document.getElementById('sec-tabs')?.scrollTo({ top: 0 });
+                }}><span>{label}</span></a>
             );
           })}
         </nav>

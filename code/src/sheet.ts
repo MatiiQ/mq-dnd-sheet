@@ -22,13 +22,27 @@ export function useSheet(): SheetCtx {
   return ctx;
 }
 
+// Centres a form on screen. In the two-column layout the tab column scrolls on its own, so scroll it, not the page.
+export function scrollToForm(el: HTMLElement): void {
+  const col = el.closest<HTMLElement>('#sec-tabs');
+  if (col && col.scrollHeight > col.clientHeight) {
+    const top = col.scrollTop + el.getBoundingClientRect().top - col.getBoundingClientRect().top - (col.clientHeight - el.offsetHeight) / 2;
+    col.scrollTo({ top, behavior: 'smooth' });
+  } else {
+    el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
+}
+
 // Draft state and open/close for one kind of add/edit form.
 export function useEntryForm<D extends object>(kind: FormKind, blank: D, noun: string, label: string, addTitle: string) {
   const { form, setForm } = useSheet();
   const [draft, setDraft] = useState<D>(blank);
   const isOpen = form?.kind === kind;
   const editingId = isOpen ? form.id : null;
-  const scroll = () => setTimeout(() => document.getElementById('form-' + kind)?.scrollIntoView({ block: 'center', behavior: 'smooth' }), 60);
+  const scroll = () => setTimeout(() => {
+    const el = document.getElementById('form-' + kind);
+    if (el) scrollToForm(el);
+  }, 60);
   return {
     isOpen, editingId, draft,
     set: (p: Partial<D>) => setDraft((d) => ({ ...d, ...p })),

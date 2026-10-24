@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { sampleCharacter } from './defaults';
 import {
-  applyDamage, applyHeal, applySetTemp, conSave, fmt, hpColor, longRest, shortRest, skillMod,
+  applyDamage, applyHeal, applySetTemp, clearHpUndo, conSave, fmt, hpColor, longRest, shortRest, skillMod,
   speedNow, spendHitDie, toggleCondition, undoHp
 } from './logic';
 import type { Character } from './types';
@@ -100,6 +100,14 @@ describe('healing and temp HP', () => {
     const c = undoHp(applyDamage(before));
     expect(c.hp).toBe(20);
     expect(c.hpUndo).toBeNull();
+  });
+  it('clears the undo row only while it is still the one shown', () => {
+    const c = applyDamage(make({ hp: 20, amount: 7, conc: { id: 'sp4', name: 'Hunter’s Mark' } }));
+    const cleared = clearHpUndo(c, c.hpUndo);
+    expect(cleared.hpUndo).toBeNull();
+    expect(cleared.concCheck).toBe(c.concCheck);
+    const newer = applyHeal(c);
+    expect(clearHpUndo(newer, c.hpUndo).hpUndo).toBe(newer.hpUndo);
   });
 });
 

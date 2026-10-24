@@ -114,6 +114,11 @@ export function undoHp(c: Character): Character {
   return { ...c, ...c.hpUndo.prev, hpUndo: null, concCheck: null };
 }
 
+// Hides the undo row, unless a newer HP action has replaced it since `shown`.
+export function clearHpUndo(c: Character, shown: Character['hpUndo']): Character {
+  return c.hpUndo === shown ? { ...c, hpUndo: null } : c;
+}
+
 export function spendHitDie(c: Character): Character {
   const used = Math.min(c.hdUsed, c.level);
   if (used >= c.level) return c;

@@ -1,11 +1,15 @@
-import { useState } from 'react';
-import { abilityMod, applyDamage, applyHeal, applySetTemp, fmt, hpColor, spendHitDie, undoHp } from '../logic';
+import { useEffect, useState } from 'react';
+import { abilityMod, applyDamage, applyHeal, applySetTemp, clearHpUndo, fmt, hpColor, spendHitDie, undoHp } from '../logic';
+import { useWide } from '../layout';
 import { useSheet } from '../sheet';
 import type { Character } from '../types';
 import { MarkPips, NumInput, Step, UsePips, XIcon } from './ui';
 
+const HP_UNDO_MS = 5000;
+
 export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdPrompt: (on: boolean) => void }) {
   const { c, update, edit } = useSheet();
+  const wide = useWide();
   // Bumping the key remounts the amount field, dropping whatever was half-typed.
   const [amtKey, setAmtKey] = useState(0);
   const total = Math.max(1, c.maxHp + c.temp);
@@ -16,6 +20,14 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
   const deltaText = delta > 0 ? '+' + delta : '−' + Math.abs(delta);
   const deltaColor = delta < 0 ? 'var(--orange)' : delta > 0 ? 'var(--blue)' : 'var(--muted)';
 
+  // The undo row hides itself after a few seconds; a newer HP action restarts the wait.
+  useEffect(() => {
+    const shown = c.hpUndo;
+    if (!shown) return;
+    const t = setTimeout(() => update((p) => clearHpUndo(p, shown)), HP_UNDO_MS);
+    return () => clearTimeout(t);
+  }, [c.hpUndo]);
+
   const act = (fn: (c: Character) => Character) => { update(fn); setAmtKey((k) => k + 1); setHdPrompt(false); };
   const setAmount = (v: number) => { update({ amount: v }); setAmtKey((k) => k + 1); };
   const spendHD = () => {
@@ -25,13 +37,14 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
     setAmtKey((k) => k + 1);
     setTimeout(() => {
       const el = document.getElementById('hp-amount');
-      el?.focus();
-      el?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      // In two columns the card is always in view, so scrolling would only jump the page.
+      el?.focus({ preventScroll: wide });
+      if (!wide) el?.scrollIntoView({ block: 'center', behavior: 'smooth' });
     }, 60);
   };
 
   return (
-    <section id="sec-hp" aria-label="Hit points" className="card section gap-10" style={{ padding: '14px 16px' }}>
+    <section id="sec-hp" aria-label="Hit points" className="card section gap-10 hp-card">
       {c.restMsg && (
         <div role="status" className="row gap-8" style={{ alignItems: 'flex-start', borderRadius: 10, padding: '8px 4px 8px 12px', background: 'var(--warm-bg)', color: 'var(--warm-fg)' }}>
           <div className="col grow gap-4" style={{ paddingTop: 4, gap: 2 }}>
@@ -45,10 +58,10 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
       <div className="row wrap between gap-12" style={{ alignItems: 'baseline' }}>
         <div className="caps">HIT POINTS</div>
         <div className="row wrap" style={{ alignItems: 'baseline', gap: '4px 10px' }}>
-          <span style={{ fontSize: 40, fontWeight: 700, color: hpColor(c) }}>{c.hp}</span>
-          <span style={{ color: 'var(--muted)', fontSize: 18 }}>/ {c.maxHp}</span>
+          <span className="hp-now" style={{ color: hpColor(c) }}>{c.hp}</span>
+          <span className="hp-max">/ {c.maxHp}</span>
           {c.temp > 0 && <span style={{ color: 'var(--blue)', fontWeight: 600 }}>+{c.temp} temp</span>}
-          {!edit && c.origOn && delta !== 0 && <span style={{ fontSize: 13, color: deltaColor }}>max {deltaText} (original {c.origHp})</span>}
+          {!edit && c.origOn && delta !== 0 && <span className="hp-delta" style={{ color: deltaColor }}>max {deltaText} (original {c.origHp})</span>}
         </div>
       </div>
       <div aria-hidden="true" className="hp-bar">
