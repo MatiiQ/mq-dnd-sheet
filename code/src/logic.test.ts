@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { sampleCharacter } from './defaults';
 import {
-  applyDamage, applyHeal, applySetTemp, clearHpUndo, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, initiative, isDead, longRest, migrate, passiveScore, preparedCount, saveMod, setMaxHp, shortRest, skillMod, slotsLeft,
+  applyDamage, applyHeal, applySetTemp, castSpell, clearHpUndo, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, initiative, isDead, longRest, migrate, passiveScore, preparedCount, saveMod, setMaxHp, shortRest, skillMod, slotsLeft,
   speedNow, spellAttack, spellSaveDC, spellUsable, spendHitDie, toggleCondition, undoHp
 } from './logic';
 import type { Character, Spell } from './types';
@@ -70,6 +70,20 @@ describe('derived numbers', () => {
   });
   it('counts prepared levelled spells, leaving out always-prepared ones and cantrips', () => {
     expect(preparedCount(make())).toBe(5);
+  });
+  describe('casting a spell', () => {
+    const slots = { slotMax: [0, 4, 2, 0, 0, 0, 0, 0, 0, 0], slotUsed: [0, 1, 2, 0, 0, 0, 0, 0, 0, 0], conc: null };
+    const sp = (p: Partial<Spell>): Spell => ({ id: 's1', name: 'Bless', lvl: 1, time: 'Action', range: '30 ft', source: 'Cleric', ...p });
+    it('uses one slot of that level', () => {
+      expect(castSpell(make(slots), sp({}), 1).slotUsed).toEqual([0, 2, 2, 0, 0, 0, 0, 0, 0, 0]);
+    });
+    it('does nothing with no slots left', () => {
+      expect(castSpell(make(slots), sp({}), 2)).toEqual({});
+    });
+    it('starts Concentration only for a Concentration spell', () => {
+      expect(castSpell(make(slots), sp({ c: true }), 1).conc).toEqual({ id: 's1', name: 'Bless' });
+      expect(castSpell(make(slots), sp({}), 1)).not.toHaveProperty('conc');
+    });
   });
   it('sets max HP to at least 1 and keeps HP at or under it', () => {
     expect(setMaxHp(make({ hp: 40, maxHp: 44 }), 30)).toEqual({ maxHp: 30, hp: 30 });

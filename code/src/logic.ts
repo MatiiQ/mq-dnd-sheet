@@ -58,6 +58,13 @@ export const initiative = (c: Character) => abilityMod(c, 'dex') + c.initMisc;
 export const spellUsable = (c: Character, sp: Spell) => !c.usePrep || !!sp.always || !!sp.prep;
 export const preparedCount = (c: Character) => c.spells.filter((x) => (x.lvl || 0) > 0 && !x.always && x.prep).length;
 export const slotsLeft = (c: Character, level: number) => Math.max(0, c.slotMax[level] - c.slotUsed[level]);
+export const setSlotUsed = (c: Character, l: number, n: number) => { const u = c.slotUsed.slice(); u[l] = n; return { slotUsed: u }; };
+
+// Casting with a slot uses one slot of that level. A Concentration spell starts Concentration, which ends any other (PHB p.363).
+export function castSpell(c: Character, sp: Spell, level: number): Partial<Character> {
+  if (!slotsLeft(c, level)) return {};
+  return { ...setSlotUsed(c, level, c.slotUsed[level] + 1), ...(sp.c ? { conc: { id: sp.id, name: sp.name } } : {}) };
+}
 
 export const zeroSpeedBy = (c: Character) => CONDITIONS.filter((n) => c.conds[n] && ZERO_SPEED.includes(n));
 export const speedOf = (c: Character, base: number) => (zeroSpeedBy(c).length ? 0 : Math.max(0, base - 5 * c.exh));

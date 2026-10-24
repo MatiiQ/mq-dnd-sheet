@@ -1,7 +1,7 @@
 import { useState, type CSSProperties } from 'react';
-import { fmt, preparedCount, slotsLeft, spellAttack, spellSaveDC, spellUsable } from '../../logic';
+import { castSpell, fmt, preparedCount, setSlotUsed, slotsLeft, spellAttack, spellSaveDC, spellUsable } from '../../logic';
 import { patchEntry, removeEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
-import type { Character, Spell } from '../../types';
+import type { Spell } from '../../types';
 import { AddButton, ChevronDown, EntryActions, EntryForm, Step, TextField, UsePips } from '../ui';
 
 const ORDINAL = ['Cantrip', '1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th'];
@@ -13,8 +13,6 @@ const toDraft = (e: Spell): Draft => ({
   name: e.name, lvl: String(e.lvl || 0), time: e.time || 'Action', range: e.range || '', dice: e.dice || '',
   conc: !!e.c, source: e.source || '', dur: e.dur || '', comp: e.comp || '', always: !!e.always
 });
-
-const setSlotUsed = (c: Character, l: number, n: number) => { const u = c.slotUsed.slice(); u[l] = n; return { slotUsed: u }; };
 
 export function SpellsTab() {
   const { c, update, edit } = useSheet();
@@ -195,6 +193,7 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
   const usable = spellUsable(c, sp);
   const concOn = c.conc?.id === sp.id;
   const freeUsed = !!c.free[sp.id];
+  const concOf = { id: sp.id, name: sp.name };
 
   const casts: { l: number; left: number }[] = [];
   if (lvl > 0) {
@@ -206,11 +205,7 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
   const anyLeft = firstIdx >= 0;
   const upcasts = anyLeft ? casts.slice(firstIdx + 1) : [];
   const castWith = (l: number) => {
-    update((p) => {
-      const max = p.slotMax[l], used = p.slotUsed[l];
-      if (used >= max) return {};
-      return { ...setSlotUsed(p, l, used + 1), ...(sp.c ? { conc: { id: sp.id, name: sp.name } } : {}) };
-    });
+    update((p) => castSpell(p, sp, l));
     setPicking(false);
   };
 
@@ -246,14 +241,14 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
       {sp.c && (lvl === 0 || usable) && (
         <button type="button" aria-pressed={concOn} aria-label={concOn ? 'Stop concentrating on ' + sp.name : 'Concentrate on ' + sp.name}
           className="btn btn-sm" style={{ border: '1px solid var(--blue)', background: concOn ? 'var(--blue)' : 'transparent', color: concOn ? 'var(--bg)' : 'var(--blue)', borderRadius: 10 }}
-          onClick={() => update({ conc: concOn ? null : { id: sp.id, name: sp.name } })}>{concOn ? 'Conc. ✓' : 'Conc.'}</button>
+          onClick={() => update({ conc: concOn ? null : concOf })}>{concOn ? 'Conc. ✓' : 'Conc.'}</button>
       )}
       {sp.free && usable && (
         <button type="button" aria-pressed={freeUsed} aria-label={freeUsed ? 'Free cast of ' + sp.name + ' used; tap to restore' : 'Use free cast of ' + sp.name}
           className="btn btn-sm" style={{ border: '1px solid ' + (freeUsed ? 'var(--line-2)' : 'var(--accent)'), background: 'transparent', color: freeUsed ? 'var(--muted)' : 'var(--accent)' }}
           onClick={() => update((p) => {
             const used = !p.free[sp.id];
-            return { free: { ...p.free, [sp.id]: used }, ...(used && sp.c ? { conc: { id: sp.id, name: sp.name } } : {}) };
+            return { free: { ...p.free, [sp.id]: used }, ...(used && sp.c ? { conc: concOf } : {}) };
           })}>{freeUsed ? 'Free used' : 'Free'}</button>
       )}
       {anyLeft && usable && (
