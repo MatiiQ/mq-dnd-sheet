@@ -193,6 +193,7 @@ function Menu({ store, onClose, onSwitched, onRest }: { store: CharacterStore; o
         })}
         <button type="button" className="menu-btn" style={{ color: 'var(--accent)' }} onClick={() => { store.newBlank(); onSwitched(true); }}>+ New blank character</button>
         <button type="button" className="menu-btn" onClick={() => { store.newSample(); onSwitched(); }}>+ New sample character (Ilyra, Ranger 5)</button>
+        <button type="button" className="menu-btn" onClick={() => { store.newDruid(); onSwitched(); }}>+ New sample character (Seren, Druid 12)</button>
         <button type="button" className="menu-btn plain"
           onClick={() => { store.duplicate(); onSwitched(); }}>Duplicate this character</button>
         {store.list.length > 1 && (

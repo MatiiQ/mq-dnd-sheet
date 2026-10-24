@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { sampleCharacter } from './defaults';
+import { druidSample, sampleCharacter } from './defaults';
 import {
   applyDamage, applyHeal, applySetTemp, castSpell, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, passiveScore, preparedCount, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
   setExhaustion, speedNow, spellAttack, spellSaveDC, spellUsable, spendHitDie, toggleCondition, undoHp
@@ -265,6 +265,14 @@ describe('rests and Hit Dice', () => {
 });
 
 describe('loading saves and backups', () => {
+  it('loads the druid sample unchanged, with its derived numbers', () => {
+    const c = druidSample(); // Seren: Druid 12 (PB 4), WIS 20, CON 16 (PHB p.80)
+    expect(migrate(c)).toEqual(c);
+    expect([spellSaveDC(c), spellAttack(c), saveMod(c, 'wis'), passiveScore(c, 'perception')]).toEqual([17, 9, 9, 19]);
+    expect(c.maxHp).toBe(8 + 11 * 5 + 12 * 3); // fixed Hit Points (PHB p.42)
+    expect(c.slotMax).toEqual([0, 4, 3, 3, 3, 2, 1, 0, 0, 0]);
+    expect(preparedCount(c)).toBe(c.prepMax);
+  });
   it('fills missing fields from the sample and marks old levelled spells prepared', () => {
     const c = migrate({ ch: { name: 'Bob' }, spells: [{ id: 's', name: 'Bless', lvl: 1 }] });
     expect(c.ch.name).toBe('Bob');

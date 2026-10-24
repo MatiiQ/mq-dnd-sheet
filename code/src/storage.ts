@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { blankCharacter, sampleCharacter } from './defaults';
+import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import { migrate, newId } from './logic';
 import type { Character } from './types';
 
@@ -115,6 +115,7 @@ export function useCharacters() {
     switchTo: (id: string) => setS((p) => switchStore(p, id, load(id))),
     newBlank: () => add(blankCharacter()),
     newSample: () => add(sampleCharacter()),
+    newDruid: () => add(druidSample()),
     duplicate: () => {
       const copy: Character = JSON.parse(JSON.stringify(s.c));
       add({ ...copy, ch: { ...copy.ch, name: (copy.ch.name || 'Character') + ' (copy)' } });
