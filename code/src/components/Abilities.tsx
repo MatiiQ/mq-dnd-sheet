@@ -47,7 +47,7 @@ function AbilityCard({ k, name }: { k: Ability; name: string }) {
             </label>
           )}
         </div>
-        <div role="img" aria-label={name + ' modifier ' + fmt(abilityMod(c, k)) + ', score ' + cur} className={'mod-token' + (saveProf ? ' prof' : '')}>
+        <div role="img" aria-label={name + ' modifier ' + fmt(abilityMod(c, k)) + ', score ' + cur} className="mod-token">
           {fmt(abilityMod(c, k))}<span className="score-coin" style={{ color: scoreColor }}>{cur}</span>
         </div>
       </div>

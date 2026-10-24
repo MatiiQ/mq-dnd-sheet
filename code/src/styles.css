@@ -71,7 +71,7 @@ h1, h2, h3 { margin: 0; }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--min, 170px), 1fr)); gap: 10px; }
 .between { justify-content: space-between; }
 
-/* Three surfaces: raised tokens (.card: vitals, abilities, HP), bare blocks with a heading, and recessed wells for entries. */
+/* Three surfaces: raised tokens (.card: stat bar, abilities, HP), bare blocks with a heading, and recessed wells for entries. */
 .card {
   background: var(--card); border-radius: 18px; box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.22);
   padding: 12px 14px; display: flex; flex-direction: column;
@@ -261,23 +261,20 @@ select.input { padding: 0 10px; }
 .char-btn[aria-current="true"] { box-shadow: inset 0 0 0 2px var(--accent); color: var(--accent); }
 
 /* ---------- vitals ---------- */
-.vitals { display: flex; flex-wrap: wrap; justify-content: space-around; align-items: flex-start; gap: 12px 8px; }
-.vital {
-  flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 88px;
-  padding: 0; border: none; background: transparent; color: var(--text); font: inherit;
+/* One raised stat bar: four equal cells split by thin dividers; the Movement panel opens below it. */
+.vitals { display: flex; flex-direction: column; gap: 16px; }
+.stat-bar { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 10px 6px; }
+.stat {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 44px; padding: 4px 6px;
+  border: none; background: transparent; color: var(--text); font: inherit; text-align: center;
 }
-button.vital { cursor: pointer; }
-/* Round stat tokens, with a pressed bottom edge. */
-.coin {
-  width: 76px; height: 76px; border-radius: 50%; background: var(--card); box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.22);
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
-}
-.coin.open { box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.22), 0 0 0 2px var(--accent); }
-.coin-value { font-family: var(--serif); font-weight: 700; font-size: 26px; line-height: 1; white-space: nowrap; }
-.coin-unit { font-family: var(--sans); font-size: 12px; font-weight: 600; color: var(--muted); }
-.coin-label { font-size: 11px; font-weight: 600; color: var(--muted); line-height: 1.1; }
-.vital-hint { font-size: 12px; font-weight: 600; min-height: 16px; }
-#speed-panel { flex: 1 1 100%; }
+.stat + .stat { box-shadow: -1px 0 0 var(--line); }
+button.stat { cursor: pointer; border-radius: 12px; }
+button.stat.open { box-shadow: inset 0 0 0 2px var(--accent); }
+.stat-value { font-family: var(--serif); font-weight: 700; font-size: 28px; line-height: 1; white-space: nowrap; }
+.stat-unit { font-family: var(--sans); font-size: 12px; font-weight: 600; color: var(--muted); }
+.stat-label { font-size: 13px; font-weight: 600; color: var(--accent); line-height: 1.1; }
+.stat-hint { font-size: 11px; font-weight: 600; color: var(--muted); line-height: 1.2; }
 .tile { background: var(--well); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
 .speed-grid { --min: 150px; }
 .speed-value { font-size: 22px; font-weight: 700; }
@@ -285,12 +282,11 @@ button.vital { cursor: pointer; }
 /* ---------- boxes ---------- */
 /* Ability card header: modifier token, with the score in a small coin on its lower edge. */
 .abil-head { min-height: 56px; padding-bottom: 12px; }
-.abil-name { font-family: var(--serif); font-size: 19px; font-weight: 700; color: var(--text); }
+.abil-name { font-family: var(--serif); font-size: 19px; font-weight: 700; color: var(--accent); }
 .mod-token {
   position: relative; flex: none; width: 60px; height: 52px; border-radius: 14px; background: var(--well);
   display: flex; align-items: center; justify-content: center; font-family: var(--serif); font-size: 26px; font-weight: 700;
 }
-.mod-token.prof { color: var(--accent); }
 .score-coin {
   position: absolute; bottom: -11px; left: 50%; transform: translateX(-50%); min-width: 28px; height: 22px; padding: 0 4px;
   border-radius: 11px; background: var(--bg); box-shadow: 0 0 0 2px var(--card);

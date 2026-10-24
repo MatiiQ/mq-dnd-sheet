@@ -18,16 +18,16 @@ export function Vitals() {
 
   return (
     <section aria-label="Combat vitals" className="vitals">
-      <div className="vital"><div className="coin"><span className="coin-value">{c.ac}</span><span className="coin-label">Armor class</span></div></div>
-      <div className="vital"><div className="coin"><span className="coin-value">{fmt(initiative(c))}</span><span className="coin-label">Initiative</span></div></div>
-      <button type="button" className="vital" onClick={() => update({ speedOpen: !c.speedOpen })} aria-expanded={c.speedOpen} aria-controls="speed-panel">
-        <span className={'coin' + (c.speedOpen ? ' open' : '')}>
-          <span className="coin-value" style={{ color: zeroBy.length ? 'var(--danger)' : undefined }}>{speedNow(c)}<span className="coin-unit"> ft</span></span>
-          <span className="coin-label">Speed</span>
-        </span>
-        <span className="row gap-4 vital-hint" style={{ color: zeroBy.length ? 'var(--danger)' : 'var(--accent)' }}>{hint}<ChevronDown size={12} style={{ transform: c.speedOpen ? 'rotate(180deg)' : undefined }} /></span>
-      </button>
-      <div className="vital"><div className="coin"><span className="coin-value">+{profBonus(c.level)}</span><span className="coin-label">Proficiency</span></div></div>
+      <div className="card stat-bar">
+        <div className="stat"><span className="stat-value">{c.ac}</span><span className="stat-label">Armor class</span></div>
+        <div className="stat"><span className="stat-value">{fmt(initiative(c))}</span><span className="stat-label">Initiative</span></div>
+        <button type="button" className={'stat' + (c.speedOpen ? ' open' : '')} onClick={() => update({ speedOpen: !c.speedOpen })} aria-expanded={c.speedOpen} aria-controls="speed-panel">
+          <span className="stat-value" style={{ color: zeroBy.length ? 'var(--danger)' : undefined }}>{speedNow(c)}<span className="stat-unit"> ft</span></span>
+          <span className="row gap-4 stat-label">Speed<ChevronDown size={12} style={{ transform: c.speedOpen ? 'rotate(180deg)' : undefined }} /></span>
+          <span className="stat-hint" style={{ color: zeroBy.length ? 'var(--danger)' : undefined }}>{hint}</span>
+        </button>
+        <div className="stat"><span className="stat-value">+{profBonus(c.level)}</span><span className="stat-label">Proficiency</span></div>
+      </div>
 
       {c.speedOpen && (
         <div id="speed-panel" className="block">
