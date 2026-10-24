@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { abilityMod, applyDamage, applyHeal, applySetTemp, clearHpUndo, fmt, healHitDie, hpColor, spendHitDie, undoHp } from '../logic';
+import { abilityMod, applyDamage, applyHeal, applySetTemp, clearHpUndo, fmt, healHitDie, hpColor, setMaxHp, spendHitDie, undoHp } from '../logic';
 import { useWide } from '../layout';
 import { useSheet } from '../sheet';
 import type { Character } from '../types';
@@ -96,9 +96,9 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
         <div className="dashed-box">
           <div className="row gap-6">
             <span className="muted">Max HP</span>
-            <Step label="Decrease max HP" onClick={() => update((p) => { const m = Math.max(1, p.maxHp - 1); return { maxHp: m, hp: Math.min(p.hp, m) }; })}>−</Step>
+            <Step label="Decrease max HP" onClick={() => update((p) => setMaxHp(p, p.maxHp - 1))}>−</Step>
             <span style={{ minWidth: 36, textAlign: 'center', fontSize: 18, fontWeight: 700 }}>{c.maxHp}</span>
-            <Step label="Increase max HP" onClick={() => update((p) => ({ maxHp: p.maxHp + 1 }))}>+</Step>
+            <Step label="Increase max HP" onClick={() => update((p) => setMaxHp(p, p.maxHp + 1))}>+</Step>
           </div>
           {!c.origOn && (
             <button type="button" className="btn btn-add" style={{ fontSize: 14, padding: '0 12px' }} onClick={() => update((p) => ({ origOn: true, origHp: p.maxHp }))}>+ Original max HP</button>
@@ -111,7 +111,7 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
               <span style={{ fontSize: 13, fontWeight: 600, color: deltaColor }}>{delta === 0 ? 'Matches original' : fmt(delta) + ' from original'}</span>
               {delta !== 0 && (
                 <button type="button" className="btn" style={{ fontSize: 14, padding: '0 12px' }}
-                  onClick={() => update((p) => { const m = Math.max(1, p.origHp); return { maxHp: m, hp: Math.min(p.hp, m) }; })}>Reset to original</button>
+                  onClick={() => update((p) => setMaxHp(p, p.origHp))}>Reset to original</button>
               )}
               <button type="button" className="icon-btn faint" aria-label="Hide original max HP field" onClick={() => update({ origOn: false })}><XIcon /></button>
             </div>

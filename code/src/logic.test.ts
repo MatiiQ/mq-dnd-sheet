@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { sampleCharacter } from './defaults';
 import {
-  applyDamage, applyHeal, applySetTemp, clearHpUndo, conSave, fmt, healHitDie, hpColor, longRest, migrate, shortRest, skillMod,
-  speedNow, spendHitDie, toggleCondition, undoHp
+  applyDamage, applyHeal, applySetTemp, clearHpUndo, fmt, healHitDie, hpColor, longRest, migrate, saveMod, setMaxHp, shortRest, skillMod,
+  speedNow, spellAttack, spellSaveDC, spendHitDie, toggleCondition, undoHp
 } from './logic';
 import type { Character } from './types';
 
@@ -20,8 +20,24 @@ describe('derived numbers', () => {
     expect(skillMod(c, 'survival', 'wis')).toBe(8);
     expect(skillMod(c, 'medicine', 'wis')).toBe(2);
   });
-  it('uses temporary ability changes', () => {
-    expect(conSave(make({ abilAdj: { con: 2 } }))).toBe(3);
+  it('adds proficiency to proficient saves only', () => {
+    const c = make(); // Ilyra: Ranger 5 (PB 3), STR 12 proficient, CON 14 not
+    expect(saveMod(c, 'str')).toBe(4);
+    expect(saveMod(c, 'con')).toBe(2);
+    expect(saveMod(make({ abilAdj: { con: 2 } }), 'con')).toBe(3);
+  });
+  it('derives spell save DC and attack from the casting ability', () => {
+    const c = make(); // WIS 14, PB 3
+    expect(spellSaveDC(c)).toBe(13);
+    expect(spellAttack(c)).toBe(5);
+    expect(spellSaveDC(make({ castAb: 'none' }))).toBeNull();
+    expect(spellAttack(make({ castAb: 'none' }))).toBeNull();
+  });
+  it('sets max HP to at least 1 and keeps HP at or under it', () => {
+    expect(setMaxHp(make({ hp: 40, maxHp: 44 }), 30)).toEqual({ maxHp: 30, hp: 30 });
+    expect(setMaxHp(make({ hp: 10, maxHp: 44 }), 30)).toEqual({ maxHp: 30, hp: 10 });
+    expect(setMaxHp(make({ hp: 5 }), 0)).toEqual({ maxHp: 1, hp: 1 });
+    expect(setMaxHp(make({ hp: 44, maxHp: 44 }), 45)).toEqual({ maxHp: 45, hp: 44 });
   });
 });
 

@@ -42,7 +42,11 @@ export const profBonus = (level: number) => 2 + Math.floor((level - 1) / 4);
 export const effScore = (c: Character, k: Ability) => clamp(c.abil[k] + (c.abilAdj[k] || 0), 1, 30);
 export const abilityMod = (c: Character, k: Ability) => mod(effScore(c, k));
 export const skillMod = (c: Character, key: string, ab: Ability) => abilityMod(c, ab) + profBonus(c.level) * (c.skillProf[key] || 0);
-export const conSave = (c: Character) => abilityMod(c, 'con') + (c.saveProf.con ? profBonus(c.level) : 0);
+// Saving throw: d20 + ability modifier, + Proficiency Bonus if proficient (PHB p.11).
+export const saveMod = (c: Character, k: Ability) => abilityMod(c, k) + (c.saveProf[k] ? profBonus(c.level) : 0);
+// Spell save DC = 8 + spellcasting ability modifier + PB; spell attack = modifier + PB (PHB p.41). null without a spellcasting ability.
+export const spellSaveDC = (c: Character) => (c.castAb === 'none' ? null : 8 + abilityMod(c, c.castAb) + profBonus(c.level));
+export const spellAttack = (c: Character) => (c.castAb === 'none' ? null : abilityMod(c, c.castAb) + profBonus(c.level));
 
 export const zeroSpeedBy = (c: Character) => CONDITIONS.filter((n) => c.conds[n] && ZERO_SPEED.includes(n));
 export const speedOf = (c: Character, base: number) => (zeroSpeedBy(c).length ? 0 : Math.max(0, base - 5 * c.exh));
@@ -82,7 +86,7 @@ export function applyDamage(c: Character): Character {
   }
   if (c.conc) {
     const dc = clamp(Math.floor(c.amount / 2), 10, 30);
-    next.concCheck = 'Concentration on ' + c.conc.name + ': CON save DC ' + dc + ' · roll d20 ' + fmt(conSave(c)) + '. If you fail, tap the blue chip in the top bar to end it.';
+    next.concCheck = 'Concentration on ' + c.conc.name + ': CON save DC ' + dc + ' · roll d20 ' + fmt(saveMod(c, 'con')) + '. If you fail, tap the blue chip in the top bar to end it.';
     if (next.hp === 0) {
       next.conc = null;
       next.concCheck = 'Concentration on ' + c.conc.name + ' ended (dropped to 0 HP).';
@@ -130,6 +134,12 @@ export function undoHp(c: Character): Character {
 // Hides the undo row, unless a newer HP action has replaced it since `shown`.
 export function clearHpUndo(c: Character, shown: Character['hpUndo']): Character {
   return c.hpUndo === shown ? { ...c, hpUndo: null } : c;
+}
+
+// A patch for a new HP maximum: at least 1, and current HP never above it.
+export function setMaxHp(c: Character, maxHp: number): Pick<Character, 'maxHp' | 'hp'> {
+  const m = Math.max(1, maxHp);
+  return { maxHp: m, hp: Math.min(c.hp, m) };
 }
 
 // Hit Dice are spent during a Short Rest, which needs at least 1 HP (PHB p.373).

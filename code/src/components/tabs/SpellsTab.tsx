@@ -1,5 +1,5 @@
 import { useState, type CSSProperties } from 'react';
-import { abilityMod, fmt, profBonus } from '../../logic';
+import { fmt, spellAttack, spellSaveDC } from '../../logic';
 import { patchEntry, removeEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { Character, Spell } from '../../types';
 import { AddButton, ChevronDown, EntryActions, EntryForm, Step, TextField, UsePips } from '../ui';
@@ -21,8 +21,7 @@ export function SpellsTab() {
   const [castPick, setCastPick] = useState<string | null>(null);
   const f = useEntryForm('spell', BLANK, 'spell', 'ADD A SPELL');
   const usePrep = c.usePrep !== false;
-  const castMod = c.castAb === 'none' ? null : abilityMod(c, c.castAb);
-  const prof = profBonus(c.level);
+  const dc = spellSaveDC(c), atk = spellAttack(c);
   const prepCount = c.spells.filter((x) => (x.lvl || 0) > 0 && !x.always && x.prep).length;
 
   const save = () => {
@@ -53,8 +52,8 @@ export function SpellsTab() {
     <div className="col gap-12">
       <div className="row wrap gap-12" style={{ alignItems: 'stretch' }}>
         <StatCard label="Spellcasting ability" value={CAST_NAMES[c.castAb]} />
-        <StatCard label="Spell save DC" value={castMod === null ? '—' : 8 + prof + castMod} />
-        <StatCard label="Spell attack" value={castMod === null ? '—' : 'd20 ' + fmt(prof + castMod)} />
+        <StatCard label="Spell save DC" value={dc ?? '—'} />
+        <StatCard label="Spell attack" value={atk === null ? '—' : 'd20 ' + fmt(atk)} />
         {usePrep && (
           <div className="card" style={{ flex: '1 1 140px', padding: '10px 14px' }}>
             <span className="small">Prepared spells</span>

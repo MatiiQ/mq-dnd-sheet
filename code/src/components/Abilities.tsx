@@ -1,4 +1,4 @@
-import { ABILITIES, SKILLS, abilityMod, effScore, fmt, profBonus, skillMod } from '../logic';
+import { ABILITIES, SKILLS, abilityMod, effScore, fmt, saveMod, skillMod } from '../logic';
 import { useSheet } from '../sheet';
 import type { Ability } from '../types';
 import { NumInput, ProfDot, Step } from './ui';
@@ -32,7 +32,7 @@ function AbilityCard({ k, name }: { k: Ability; name: string }) {
     const adj = p.abilAdj[k] || 0, next = p.abil[k] + adj + d;
     return next < 1 || next > 30 ? {} : { abilAdj: { ...p.abilAdj, [k]: adj + d } };
   });
-  const saveMod = fmt(abilityMod(c, k) + (saveProf ? profBonus(c.level) : 0));
+  const saveText = fmt(saveMod(c, k));
 
   return (
     <div className="card" style={{ gap: 2 }}>
@@ -67,11 +67,11 @@ function AbilityCard({ k, name }: { k: Ability; name: string }) {
       {edit ? (
         <button type="button" aria-pressed={saveProf} className="btn row gap-10" style={{ border: '1px dashed var(--dash)', padding: '0 10px', textAlign: 'left', fontWeight: 400 }}
           onClick={() => update((p) => ({ saveProf: { ...p.saveProf, [k]: !p.saveProf[k] } }))}>
-          <ProfDot level={saveProf ? 1 : 0} /><span className="grow" style={{ fontWeight: 600 }}>Saving Throw</span><span style={{ fontWeight: 700 }}>{saveMod}</span>
+          <ProfDot level={saveProf ? 1 : 0} /><span className="grow" style={{ fontWeight: 600 }}>Saving Throw</span><span style={{ fontWeight: 700 }}>{saveText}</span>
         </button>
       ) : (
         <div className="row gap-10 save-row">
-          <ProfDot level={saveProf ? 1 : 0} /><span className="grow" style={{ fontWeight: 600 }}>Saving Throw</span><span style={{ fontWeight: 700 }}>{saveMod}</span>
+          <ProfDot level={saveProf ? 1 : 0} /><span className="grow" style={{ fontWeight: 600 }}>Saving Throw</span><span style={{ fontWeight: 700 }}>{saveText}</span>
         </div>
       )}
 
