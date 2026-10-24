@@ -6,3 +6,9 @@ dist/
 # Player's Handbook source material: copyrighted, keep out of the public repo
 resources/
 reference/
+
+# Local working notes and plans
+/docs/
+
+# Brainstorm mockups (superpowers visual companion)
+.superpowers/
