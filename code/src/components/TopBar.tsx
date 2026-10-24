@@ -5,8 +5,8 @@ import { useSheet } from '../sheet';
 import { charName, saveBackupFile, type CharacterStore } from '../storage';
 import { CheckIcon, ChevronRight, MenuIcon, PencilIcon, StarIcon, XIcon, useArmed } from './ui';
 
-export const SECTION_IDS = ['sec-hp', 'sec-abilities', 'sec-senses', 'sec-defenses', 'sec-conditions', 'sec-tabs'];
 const SECTION_LINKS = [['sec-hp', 'Hit Points'], ['sec-abilities', 'Abilities'], ['sec-senses', 'Senses'], ['sec-defenses', 'Defenses'], ['sec-conditions', 'Conditions']];
+export const SECTION_IDS = [...SECTION_LINKS.map(([id]) => id), 'sec-tabs'];
 const LAYOUTS: [LayoutMode, string][] = [['auto', 'Auto'], ['one', '1 column'], ['two', '2 columns']];
 
 interface Props {
