@@ -143,9 +143,12 @@ export function setMaxHp(c: Character, maxHp: number): Pick<Character, 'maxHp' |
   return { maxHp: m, hp: Math.min(c.hp, m) };
 }
 
+// A character has one Hit Die per level (PHB p.41–42).
+export const hdSpent = (c: Character) => Math.min(c.hdUsed, c.level);
+
 // Hit Dice are spent during a Short Rest, which needs at least 1 HP (PHB p.373).
 export function spendHitDie(c: Character): Character {
-  const used = Math.min(c.hdUsed, c.level);
+  const used = hdSpent(c);
   if (used >= c.level || c.hp === 0) return c;
   return { ...c, hdUsed: used + 1, amount: 0 };
 }
@@ -197,7 +200,7 @@ export function longRest(c: Character): Character {
 export function shortRest(c: Character): Character {
   if (c.hp === 0) return restBlocked(c, 'No Short Rest');
   const [res, refilled] = refillFor(c.res, 'short');
-  const left = c.level - Math.min(c.hdUsed, c.level);
+  const left = c.level - hdSpent(c);
   return {
     ...c, res,
     restMsg: {

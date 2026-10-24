@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { abilityMod, applyDamage, applyHeal, applySetTemp, clearHpUndo, fmt, healHitDie, hpColor, setMaxHp, spendHitDie, undoHp } from '../logic';
+import { abilityMod, applyDamage, applyHeal, applySetTemp, clearHpUndo, fmt, hdSpent, healHitDie, hpColor, setMaxHp, spendHitDie, undoHp } from '../logic';
 import { useWide } from '../layout';
 import { useSheet } from '../sheet';
 import type { Character } from '../types';
@@ -14,7 +14,7 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
   const [amtKey, setAmtKey] = useState(0);
   const total = Math.max(1, c.maxHp + c.temp);
   const delta = c.maxHp - c.origHp;
-  const hdUsed = Math.min(c.hdUsed, c.level);
+  const hdUsed = hdSpent(c);
   const hdLeft = c.level - hdUsed;
   const canSpendHD = hdLeft > 0 && c.hp > 0;
   const hdRoll = '1d' + c.hdDie + ' ' + fmt(abilityMod(c, 'con'));
