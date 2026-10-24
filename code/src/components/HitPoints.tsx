@@ -18,7 +18,6 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
   const hdLeft = c.level - hdUsed;
   const canSpendHD = hdLeft > 0 && c.hp > 0;
   const hdRoll = '1d' + c.hdDie + ' ' + fmt(abilityMod(c, 'con'));
-  const deltaText = delta > 0 ? '+' + delta : '−' + Math.abs(delta);
   const dead = c.hp === 0 && c.df >= 3;
   const deltaColor = delta < 0 ? 'var(--orange)' : delta > 0 ? 'var(--blue)' : 'var(--muted)';
 
@@ -63,7 +62,7 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
           <span className="hp-now" style={{ color: hpColor(c) }}>{c.hp}</span>
           <span className="hp-max">/ {c.maxHp}</span>
           {c.temp > 0 && <span style={{ color: 'var(--blue)', fontWeight: 600 }}>+{c.temp} temp</span>}
-          {!edit && c.origOn && delta !== 0 && <span className="hp-delta" style={{ color: deltaColor }}>max {deltaText} (original {c.origHp})</span>}
+          {!edit && c.origOn && delta !== 0 && <span className="hp-delta" style={{ color: deltaColor }}>max {fmt(delta)} (original {c.origHp})</span>}
         </div>
       </div>
       <div aria-hidden="true" className="hp-bar">
@@ -109,7 +108,7 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
               <label className="row gap-6 muted">Original max
                 <NumInput className="input input-num" value={c.origHp} min={0} max={999} onCommit={(v) => update({ origHp: v })} />
               </label>
-              <span style={{ fontSize: 13, fontWeight: 600, color: deltaColor }}>{delta === 0 ? 'Matches original' : deltaText + ' from original'}</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: deltaColor }}>{delta === 0 ? 'Matches original' : fmt(delta) + ' from original'}</span>
               {delta !== 0 && (
                 <button type="button" className="btn" style={{ fontSize: 14, padding: '0 12px' }}
                   onClick={() => update((p) => { const m = Math.max(1, p.origHp); return { maxHp: m, hp: Math.min(p.hp, m) }; })}>Reset to original</button>
