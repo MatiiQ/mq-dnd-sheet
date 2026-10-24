@@ -107,9 +107,12 @@ export function applyDamage(c: Character): Character {
   return next;
 }
 
+// Three failed death saves: the character dies (PHB p.29).
+export const isDead = (c: Character) => c.hp === 0 && c.df >= 3;
+
 export function applyHeal(c: Character): Character {
   // Healing can't bring back a dead character; clear the failures first (e.g. after Revivify).
-  if (!c.amount || (c.hp === 0 && c.df >= 3)) return c;
+  if (!c.amount || isDead(c)) return c;
   const hp = Math.min(c.maxHp, c.hp + c.amount);
   const next: Character = { ...c, hp, hpUndo: { prev: snapshot(c), text: 'Healed ' + (hp - c.hp) + ' HP.' } };
   if (c.hp === 0 && hp > 0) {

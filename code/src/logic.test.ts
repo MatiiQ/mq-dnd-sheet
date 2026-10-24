@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { sampleCharacter } from './defaults';
 import {
-  applyDamage, applyHeal, applySetTemp, clearHpUndo, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, initiative, longRest, migrate, passiveScore, saveMod, setMaxHp, shortRest, skillMod, slotsLeft,
+  applyDamage, applyHeal, applySetTemp, clearHpUndo, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, initiative, isDead, longRest, migrate, passiveScore, saveMod, setMaxHp, shortRest, skillMod, slotsLeft,
   speedNow, spellAttack, spellSaveDC, spendHitDie, toggleCondition, undoHp
 } from './logic';
 import type { Character } from './types';
@@ -55,6 +55,11 @@ describe('derived numbers', () => {
   });
   it('builds the Hit Die roll text', () => {
     expect(hitDieRoll(make())).toBe('1d10 +2'); // Ranger d10, CON 14
+  });
+  it('is dead at 0 HP with three failed death saves only', () => {
+    expect(isDead(make({ hp: 0, df: 3 }))).toBe(true);
+    expect(isDead(make({ hp: 0, df: 2 }))).toBe(false);
+    expect(isDead(make({ hp: 1, df: 3 }))).toBe(false);
   });
   it('sets max HP to at least 1 and keeps HP at or under it', () => {
     expect(setMaxHp(make({ hp: 40, maxHp: 44 }), 30)).toEqual({ maxHp: 30, hp: 30 });

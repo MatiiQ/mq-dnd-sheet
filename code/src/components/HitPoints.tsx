@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { applyDamage, applyHeal, applySetTemp, clearHpUndo, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, setMaxHp, spendHitDie, undoHp } from '../logic';
+import { applyDamage, applyHeal, applySetTemp, clearHpUndo, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, isDead, setMaxHp, spendHitDie, undoHp } from '../logic';
 import { useWide } from '../layout';
 import { useSheet } from '../sheet';
 import type { Character } from '../types';
@@ -18,7 +18,7 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
   const hdLeft = c.level - hdUsed;
   const canSpendHD = hdLeft > 0 && c.hp > 0;
   const hdRoll = hitDieRoll(c);
-  const dead = c.hp === 0 && c.df >= 3;
+  const dead = isDead(c);
   const deltaColor = delta < 0 ? 'var(--orange)' : delta > 0 ? 'var(--blue)' : 'var(--muted)';
 
   // The undo row hides itself after a few seconds; a newer HP action restarts the wait.
@@ -146,7 +146,7 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
             </div>
           </div>
           {c.ds >= 3 && c.df < 3 && <div role="status" className="notice notice-stable">Stable. Stop rolling death saves. You stay at 0 HP, unconscious, and regain 1 HP after 1d4 hours unless healed sooner.</div>}
-          {c.df >= 3 && <div role="status" className="notice notice-dead">Dead. Three failed death saves. Only magic such as Revivify can bring the character back: clear the failures, then Heal.</div>}
+          {isDead(c) && <div role="status" className="notice notice-dead">Dead. Three failed death saves. Only magic such as Revivify can bring the character back: clear the failures, then Heal.</div>}
         </div>
       )}
     </section>
