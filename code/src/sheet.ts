@@ -22,10 +22,11 @@ export function useSheet(): SheetCtx {
   return ctx;
 }
 
-// Centres a form on screen. In the two-column layout the tab column scrolls on its own, so scroll it, not the page.
+// Centres a form on screen. In the two-column layout the tab column scrolls on its own, so scroll it, not the page,
+// even when it is too short to move.
 export function scrollToForm(el: HTMLElement): void {
   const col = el.closest<HTMLElement>('#sec-tabs');
-  if (col && col.scrollHeight > col.clientHeight) {
+  if (col && getComputedStyle(col).overflowY !== 'visible') {
     const top = col.scrollTop + el.getBoundingClientRect().top - col.getBoundingClientRect().top - (col.clientHeight - el.offsetHeight) / 2;
     col.scrollTo({ top, behavior: 'smooth' });
   } else {

@@ -252,6 +252,10 @@ button.vital { cursor: pointer; }
 
 /* ---------- two-column landscape (same query as WIDE_QUERY in layout.ts) ---------- */
 @media (min-width: 1100px) and (min-height: 780px) {
+  /* The bottom padding moves into the left column: on .sheet it would end the sticky column's range early,
+     pushing the HP card under the top bar at the end of the page. */
+  .sheet { padding-bottom: 0; }
+  .sheet-left { padding-bottom: calc(32px + env(safe-area-inset-bottom)); }
   .sheet-body { display: grid; grid-template-columns: minmax(0, 62fr) minmax(0, 38fr); align-items: start; }
   /* Right column: HP stays put under the top bar, the open tab scrolls below it. */
   .sheet-right {
