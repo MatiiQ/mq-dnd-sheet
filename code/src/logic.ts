@@ -47,6 +47,7 @@ export const saveMod = (c: Character, k: Ability) => abilityMod(c, k) + (c.saveP
 // Spell save DC = 8 + spellcasting ability modifier + PB; spell attack = modifier + PB (PHB p.41). null without a spellcasting ability.
 export const spellSaveDC = (c: Character) => (c.castAb === 'none' ? null : 8 + abilityMod(c, c.castAb) + profBonus(c.level));
 export const spellAttack = (c: Character) => (c.castAb === 'none' ? null : abilityMod(c, c.castAb) + profBonus(c.level));
+export const slotsLeft = (c: Character, level: number) => Math.max(0, c.slotMax[level] - c.slotUsed[level]);
 
 export const zeroSpeedBy = (c: Character) => CONDITIONS.filter((n) => c.conds[n] && ZERO_SPEED.includes(n));
 export const speedOf = (c: Character, base: number) => (zeroSpeedBy(c).length ? 0 : Math.max(0, base - 5 * c.exh));
@@ -210,6 +211,8 @@ export function shortRest(c: Character): Character {
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 const sameType = (def: unknown, v: unknown) => (Array.isArray(def) ? Array.isArray(v) : isObj(def) ? isObj(v) : typeof v === typeof def);
 const strings = (v: unknown[]) => v.filter((x): x is string => typeof x === 'string');
+// Spell slot counts for levels 0–9; anything missing or damaged counts as 0.
+const slots = (v: unknown[]) => Array.from({ length: 10 }, (_, i) => (typeof v[i] === 'number' ? (v[i] as number) : 0));
 // Records with fixed keys: a missing or damaged key falls back to the blank character's value.
 const FIXED_RECORDS = ['ch', 'abil', 'speeds', 'coins', 'notes', 'def'] as const;
 // Lists of entries: each needs a name and holds only plain values.
@@ -240,8 +243,8 @@ export function migrate(data: unknown): Character {
   const c = d as unknown as Character;
   c.def = { res: strings(c.def.res), vul: strings(c.def.vul), imm: strings(c.def.imm) };
   c.attune = strings(c.attune);
-  c.slotMax = c.slotMax.map((n) => (typeof n === 'number' ? n : 0));
-  c.slotUsed = c.slotUsed.map((n) => (typeof n === 'number' ? n : 0));
+  c.slotMax = slots(c.slotMax);
+  c.slotUsed = slots(c.slotUsed);
   if (!TABS.includes(c.tab)) c.tab = def.tab;
   if (!CAST_ABILITIES.includes(c.castAb)) c.castAb = 'none';
   if (c.spellFilter !== 'prepared') c.spellFilter = 'all';

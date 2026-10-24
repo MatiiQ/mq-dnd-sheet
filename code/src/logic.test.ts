@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { sampleCharacter } from './defaults';
 import {
-  applyDamage, applyHeal, applySetTemp, clearHpUndo, fmt, healHitDie, hpColor, longRest, migrate, saveMod, setMaxHp, shortRest, skillMod,
+  applyDamage, applyHeal, applySetTemp, clearHpUndo, fmt, healHitDie, hpColor, longRest, migrate, saveMod, setMaxHp, shortRest, skillMod, slotsLeft,
   speedNow, spellAttack, spellSaveDC, spendHitDie, toggleCondition, undoHp
 } from './logic';
 import type { Character } from './types';
@@ -32,6 +32,12 @@ describe('derived numbers', () => {
     expect(spellAttack(c)).toBe(5);
     expect(spellSaveDC(make({ castAb: 'none' }))).toBeNull();
     expect(spellAttack(make({ castAb: 'none' }))).toBeNull();
+  });
+  it('counts slots left, never below 0', () => {
+    const c = make({ slotMax: [0, 4, 2, 0, 0, 0, 0, 0, 0, 0], slotUsed: [0, 1, 3, 0, 0, 0, 0, 0, 0, 0] });
+    expect(slotsLeft(c, 1)).toBe(3);
+    expect(slotsLeft(c, 2)).toBe(0);
+    expect(slotsLeft(c, 5)).toBe(0);
   });
   it('sets max HP to at least 1 and keeps HP at or under it', () => {
     expect(setMaxHp(make({ hp: 40, maxHp: 44 }), 30)).toEqual({ maxHp: 30, hp: 30 });
@@ -241,7 +247,12 @@ describe('loading saves and backups', () => {
     expect(c.attacks[0].id).toBeTruthy();
     expect(c.def).toEqual({ res: ['Fire'], vul: [], imm: [] });
     expect(c.attune).toEqual(['Ring']);
-    expect(c.slotUsed).toEqual([0, 0]);
+    expect(c.slotUsed).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+  });
+  it('pads short slot arrays to 10 levels', () => {
+    const c = migrate({ ...sampleCharacter(), slotMax: [0, 4], slotUsed: [0, 'x'] });
+    expect(c.slotMax).toEqual([0, 4, 0, 0, 0, 0, 0, 0, 0, 0]);
+    expect(c.slotUsed).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
   });
   it('returns the sample for data that is not an object', () => {
     expect(migrate(null)).toEqual(sampleCharacter());

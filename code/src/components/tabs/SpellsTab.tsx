@@ -1,5 +1,5 @@
 import { useState, type CSSProperties } from 'react';
-import { fmt, spellAttack, spellSaveDC } from '../../logic';
+import { fmt, slotsLeft, spellAttack, spellSaveDC } from '../../logic';
 import { patchEntry, removeEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { Character, Spell } from '../../types';
 import { AddButton, ChevronDown, EntryActions, EntryForm, Step, TextField, UsePips } from '../ui';
@@ -42,7 +42,7 @@ export function SpellsTab() {
       .sort((a, b) => a.name.localeCompare(b.name));
     if (list.length) groups.push({ l, list });
   }
-  const slotLevels = [1, 2, 3, 4, 5, 6, 7, 8, 9].filter((l) => edit || (c.slotMax[l] || 0) > 0);
+  const slotLevels = [1, 2, 3, 4, 5, 6, 7, 8, 9].filter((l) => edit || c.slotMax[l] > 0);
   const filterStyle = (on: boolean): CSSProperties => ({
     fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none', minHeight: 40, padding: '0 14px',
     background: on ? 'var(--accent)' : 'var(--raised)', color: on ? 'var(--bg)' : 'var(--text-2)'
@@ -101,12 +101,12 @@ export function SpellsTab() {
           <span className="muted">Tap a circle to mark a slot used or restore it</span>
         </div>
         {slotLevels.map((l) => {
-          const max = c.slotMax[l] || 0, left = Math.max(0, max - (c.slotUsed[l] || 0));
+          const max = c.slotMax[l], left = slotsLeft(c, l);
           return (
             <div key={l} className="row wrap" style={{ gap: '4px 10px', minHeight: 44, borderTop: '1px solid var(--line)' }}>
               <span style={{ minWidth: 64, fontWeight: 700, color: 'var(--accent)' }}>Level {l}</span>
               <div className="row wrap">
-                <UsePips used={c.slotUsed[l] || 0} max={max} color="var(--accent)" size={20} noun={'level ' + l + ' slot'} onChange={(n) => update((p) => setSlotUsed(p, l, n))} />
+                <UsePips used={c.slotUsed[l]} max={max} color="var(--accent)" size={20} noun={'level ' + l + ' slot'} onChange={(n) => update((p) => setSlotUsed(p, l, n))} />
               </div>
               <span className="muted">{max ? left + ' of ' + max + ' left' : 'none'}</span>
               {edit && (
@@ -128,7 +128,7 @@ export function SpellsTab() {
       </div>
 
       {groups.map(({ l, list }) => {
-        const max = l ? c.slotMax[l] || 0 : 0, left = Math.max(0, max - (c.slotUsed[l] || 0));
+        const max = l ? c.slotMax[l] : 0, left = slotsLeft(c, l);
         return (
           <div key={l} className="card" style={{ gap: 2 }}>
             <div className="row wrap between" style={{ gap: '4px 10px', paddingBottom: 4 }}>
@@ -136,7 +136,7 @@ export function SpellsTab() {
               {max > 0 && (
                 <div role="group" aria-label={'Level ' + l + ' spell slots'} className="row wrap">
                   <span style={{ fontSize: 13, color: left ? 'var(--muted)' : 'var(--orange)', marginRight: 4 }}>{left} of {max} slots left</span>
-                  <UsePips used={c.slotUsed[l] || 0} max={max} color="var(--accent)" size={20} noun={'level ' + l + ' slot'} onChange={(n) => update((p) => setSlotUsed(p, l, n))} />
+                  <UsePips used={c.slotUsed[l]} max={max} color="var(--accent)" size={20} noun={'level ' + l + ' slot'} onChange={(n) => update((p) => setSlotUsed(p, l, n))} />
                 </div>
               )}
               {l > 0 && max === 0 && <span style={{ fontSize: 13, color: 'var(--dim)' }}>No level {l} slots</span>}
@@ -203,8 +203,7 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
   const casts: { l: number; left: number }[] = [];
   if (lvl > 0) {
     for (let l = lvl; l <= 9; l++) {
-      const max = c.slotMax[l] || 0;
-      if (max) casts.push({ l, left: Math.max(0, max - (c.slotUsed[l] || 0)) });
+      if (c.slotMax[l]) casts.push({ l, left: slotsLeft(c, l) });
     }
   }
   const firstIdx = casts.findIndex((x) => x.left > 0);
@@ -212,7 +211,7 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
   const upcasts = anyLeft ? casts.slice(firstIdx + 1) : [];
   const castWith = (l: number) => {
     update((p) => {
-      const max = p.slotMax[l] || 0, used = p.slotUsed[l] || 0;
+      const max = p.slotMax[l], used = p.slotUsed[l];
       if (used >= max) return {};
       return { ...setSlotUsed(p, l, used + 1), ...(sp.c ? { conc: { id: sp.id, name: sp.name } } : {}) };
     });
