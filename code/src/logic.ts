@@ -47,6 +47,8 @@ export const saveMod = (c: Character, k: Ability) => abilityMod(c, k) + (c.saveP
 // Spell save DC = 8 + spellcasting ability modifier + PB; spell attack = modifier + PB (PHB p.41). null without a spellcasting ability.
 export const spellSaveDC = (c: Character) => (c.castAb === 'none' ? null : 8 + abilityMod(c, c.castAb) + profBonus(c.level));
 export const spellAttack = (c: Character) => (c.castAb === 'none' ? null : abilityMod(c, c.castAb) + profBonus(c.level));
+// Initiative is a Dexterity check (PHB p.23); initMisc holds extra bonuses from features or items.
+export const initiative = (c: Character) => abilityMod(c, 'dex') + c.initMisc;
 export const slotsLeft = (c: Character, level: number) => Math.max(0, c.slotMax[level] - c.slotUsed[level]);
 
 export const zeroSpeedBy = (c: Character) => CONDITIONS.filter((n) => c.conds[n] && ZERO_SPEED.includes(n));

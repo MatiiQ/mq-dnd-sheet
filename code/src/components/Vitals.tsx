@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { abilityMod, fmt, profBonus, speedNow, speedOf, zeroSpeedBy } from '../logic';
+import { fmt, initiative, profBonus, speedNow, speedOf, zeroSpeedBy } from '../logic';
 import { useSheet } from '../sheet';
 import type { SpeedKind } from '../types';
 import { BoltIcon, BootIcon, ChevronDown, MedalIcon, ShieldIcon, Step } from './ui';
@@ -19,7 +19,7 @@ export function Vitals() {
   return (
     <section aria-label="Combat vitals" className="row wrap gap-12 vitals" style={{ alignItems: 'stretch' }}>
       <div className="vital"><ShieldIcon size={22} /><div className="vital-value">{c.ac}</div><div className="vital-label">ARMOR CLASS</div></div>
-      <div className="vital"><BoltIcon size={22} /><div className="vital-value">{fmt(abilityMod(c, 'dex') + c.initMisc)}</div><div className="vital-label">INITIATIVE</div></div>
+      <div className="vital"><BoltIcon size={22} /><div className="vital-value">{fmt(initiative(c))}</div><div className="vital-label">INITIATIVE</div></div>
       <button type="button" className="vital" style={{ borderColor: c.speedOpen ? 'var(--accent)' : undefined }}
         onClick={() => update({ speedOpen: !c.speedOpen })} aria-expanded={c.speedOpen} aria-controls="speed-panel">
         <BootIcon size={22} />

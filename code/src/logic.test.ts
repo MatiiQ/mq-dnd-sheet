@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { sampleCharacter } from './defaults';
 import {
-  applyDamage, applyHeal, applySetTemp, clearHpUndo, fmt, hdSpent, healHitDie, hpColor, longRest, migrate, saveMod, setMaxHp, shortRest, skillMod, slotsLeft,
+  applyDamage, applyHeal, applySetTemp, clearHpUndo, fmt, hdSpent, healHitDie, hpColor, initiative, longRest, migrate, saveMod, setMaxHp, shortRest, skillMod, slotsLeft,
   speedNow, spellAttack, spellSaveDC, spendHitDie, toggleCondition, undoHp
 } from './logic';
 import type { Character } from './types';
@@ -42,6 +42,10 @@ describe('derived numbers', () => {
   it('counts spent Hit Dice, never more than the level', () => {
     expect(hdSpent(make({ level: 5, hdUsed: 2 }))).toBe(2);
     expect(hdSpent(make({ level: 3, hdUsed: 5 }))).toBe(3);
+  });
+  it('adds extra initiative bonuses to the Dex modifier', () => {
+    expect(initiative(make())).toBe(4); // DEX 18
+    expect(initiative(make({ initMisc: 2, abilAdj: { dex: -4 } }))).toBe(4); // DEX 14 +2
   });
   it('sets max HP to at least 1 and keeps HP at or under it', () => {
     expect(setMaxHp(make({ hp: 40, maxHp: 44 }), 30)).toEqual({ maxHp: 30, hp: 30 });
