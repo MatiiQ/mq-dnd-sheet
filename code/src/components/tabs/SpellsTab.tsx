@@ -20,7 +20,7 @@ export function SpellsTab() {
   const { c, update, edit } = useSheet();
   const [castPick, setCastPick] = useState<string | null>(null);
   const f = useEntryForm('spell', BLANK, 'spell', 'ADD A SPELL');
-  const usePrep = c.usePrep !== false;
+  const usePrep = c.usePrep;
   const dc = spellSaveDC(c), atk = spellAttack(c);
   const prepCount = c.spells.filter((x) => (x.lvl || 0) > 0 && !x.always && x.prep).length;
 
@@ -63,9 +63,9 @@ export function SpellsTab() {
             {edit && (
               <div className="row gap-6" style={{ marginTop: 4 }}>
                 <span className="small">Max</span>
-                <Step small label="Lower maximum prepared spells" onClick={() => update((p) => ({ prepMax: Math.max(0, (p.prepMax || 0) - 1) }))}>−</Step>
-                <span style={{ minWidth: 24, textAlign: 'center', fontWeight: 700 }}>{c.prepMax || 0}</span>
-                <Step small label="Raise maximum prepared spells" onClick={() => update((p) => ({ prepMax: Math.min(40, (p.prepMax || 0) + 1) }))}>+</Step>
+                <Step small label="Lower maximum prepared spells" onClick={() => update((p) => ({ prepMax: Math.max(0, p.prepMax - 1) }))}>−</Step>
+                <span style={{ minWidth: 24, textAlign: 'center', fontWeight: 700 }}>{c.prepMax}</span>
+                <Step small label="Raise maximum prepared spells" onClick={() => update((p) => ({ prepMax: Math.min(40, p.prepMax + 1) }))}>+</Step>
               </div>
             )}
           </div>
@@ -83,7 +83,7 @@ export function SpellsTab() {
         {usePrep && (
           <div role="group" aria-label="Which spells to show" className="row" style={{ border: '1px solid var(--line-2)', borderRadius: 10, overflow: 'hidden' }}>
             {([['all', 'All spells'], ['prepared', 'Prepared only']] as const).map(([k, label]) => {
-              const on = (c.spellFilter || 'all') === k;
+              const on = c.spellFilter === k;
               return <button key={k} type="button" aria-pressed={on} style={filterStyle(on)} onClick={() => update({ spellFilter: k })}>{label}</button>;
             })}
           </div>
@@ -193,7 +193,7 @@ const smallBtn = (border: string, bg: string, color: string): CSSProperties => (
 function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boolean; setPicking: (on: boolean) => void; onEdit: () => void }) {
   const { c, update, edit } = useSheet();
   const lvl = sp.lvl || 0;
-  const usePrep = c.usePrep !== false;
+  const usePrep = c.usePrep;
   const isAlways = usePrep && !!sp.always;
   const prepOn = !usePrep || !!sp.prep;
   const usable = isAlways || prepOn;
