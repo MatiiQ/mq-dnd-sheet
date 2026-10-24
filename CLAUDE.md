@@ -58,7 +58,7 @@ Conventions:
 
 ## Storage and offline
 
-- localStorage keys: `dnd-index-v3` (`{active, list:[{id,name,info}]}`) and `dnd-sheet-v3:<id>` (one `Character` per key). These match the design prototype's keys. Changing the `Character` shape needs a step in `migrate()`, because existing saves are merged over `sampleCharacter()`.
+- localStorage keys: `dnd-index-v3` (`{active, list:[{id,name,info}]}`) and `dnd-sheet-v3:<id>` (one `Character` per key). These match the design prototype's keys. `dnd-layout` (`auto`/`one`/`two`) holds the menu's layout override per device; it isn't part of a `Character` or the backup. Changing the `Character` shape needs a step in `migrate()`, because existing saves are merged over `sampleCharacter()`.
 - Backup file: `{app:'dnd-character-sheet', version:1, exportedAt, characters:[Character…]}`. Import adds the characters next to the existing ones (new ids). Export uses the share sheet on iPad, or a download elsewhere.
 - `vite.config.ts` contains an inline plugin that writes `dist/sw.js`. That service worker precaches every built file plus `public/` files (listed in `PUBLIC_FILES`). Pages load network-first; hashed assets are served cache-first. Add new `public/` files to `PUBLIC_FILES`.
 

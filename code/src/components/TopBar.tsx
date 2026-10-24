@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useWide } from '../layout';
+import { setLayoutMode, useLayoutMode, useWide, type LayoutMode } from '../layout';
 import { CONDITIONS, hpColor } from '../logic';
 import { useSheet } from '../sheet';
 import type { CharacterStore } from '../storage';
@@ -8,6 +8,7 @@ import { CheckIcon, ChevronRight, MenuIcon, PencilIcon, StarIcon, XIcon, useArme
 
 export const SECTION_IDS = ['sec-hp', 'sec-abilities', 'sec-senses', 'sec-defenses', 'sec-conditions', 'sec-tabs'];
 const SECTION_LINKS = [['sec-hp', 'Hit Points'], ['sec-abilities', 'Abilities'], ['sec-senses', 'Senses'], ['sec-defenses', 'Defenses'], ['sec-conditions', 'Conditions']];
+const LAYOUTS: [LayoutMode, string][] = [['auto', 'Auto'], ['one', '1 column'], ['two', '2 columns']];
 export const TABS: [Tab, string][] = [['actions', 'Actions'], ['resources', 'Resources'], ['spells', 'Spells'], ['inventory', 'Inventory'], ['features', 'Features & Traits'], ['notes', 'Notes']];
 
 interface Props {
@@ -133,6 +134,7 @@ function Menu({ store, onClose, onSwitched, onRest }: { store: CharacterStore; o
   const { c } = useSheet();
   const [delArmed, tapDelete] = useArmed();
   const [backupMsg, setBackupMsg] = useState<string | null>(null);
+  const layout = useLayoutMode();
   const fileRef = useRef<HTMLInputElement>(null);
   const name = c.ch.name || 'this character';
 
@@ -197,6 +199,14 @@ function Menu({ store, onClose, onSwitched, onRest }: { store: CharacterStore; o
             {delArmed ? 'Tap again to delete ' + name : 'Delete this character'}
           </button>
         )}
+
+        <span className="caps">LAYOUT</span>
+        <div role="group" aria-label="Layout" className="seg">
+          {LAYOUTS.map(([m, label]) => (
+            <button key={m} type="button" aria-pressed={layout === m} onClick={() => setLayoutMode(m)}>{label}</button>
+          ))}
+        </div>
+        <span className="small">Auto shows two columns on a landscape iPad Air or larger. Saved on this device only.</span>
 
         <span className="caps">BACKUP</span>
         <div className="row gap-8">

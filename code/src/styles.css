@@ -202,6 +202,12 @@ select.input { padding: 0 10px; }
 }
 .menu .caps { margin-top: 6px; }
 .menu .caps:first-child { margin-top: 0; }
+.seg { display: flex; border: 1px solid var(--line-2); border-radius: 10px; overflow: hidden; }
+.seg button {
+  flex: 1; min-height: 44px; padding: 0 10px; border: none; cursor: pointer; font-size: 14px; font-weight: 600;
+  background: var(--raised); color: var(--text-2);
+}
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--bg); }
 .menu-btn {
   font-weight: 600; cursor: pointer; min-height: 44px; padding: 0 12px; border-radius: 10px; text-align: left;
   border: 1px dashed var(--dash); background: transparent; color: var(--text);
@@ -250,27 +256,25 @@ button.vital { cursor: pointer; }
 .list-row { display: flex; align-items: center; gap: 8px; min-height: 44px; border-bottom: 1px solid var(--line); }
 .dashed-box { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; border: 1px dashed var(--dash); border-radius: 12px; padding: 6px 10px; }
 
-/* ---------- two-column landscape (same query as WIDE_QUERY in layout.ts) ---------- */
-@media (min-width: 1100px) and (min-height: 780px) {
-  /* The bottom padding moves into the left column: on .sheet it would end the sticky column's range early,
-     pushing the HP card under the top bar at the end of the page. */
-  .sheet { padding-bottom: 0; }
-  .sheet-left { padding-bottom: calc(32px + env(safe-area-inset-bottom)); }
-  .sheet-body { display: grid; grid-template-columns: minmax(0, 62fr) minmax(0, 38fr); align-items: start; }
-  /* Right column: HP stays put under the top bar, the open tab scrolls below it. */
-  .sheet-right {
-    position: sticky; top: var(--topbar-h); max-height: calc(100dvh - var(--topbar-h));
-    overflow-y: auto; overscroll-behavior: contain; /* only scrolls if the HP card alone outgrows the screen */
-  }
-  .sheet-right > .hp-card { flex-shrink: 0; }
-  .tab-col {
-    flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
-    padding-bottom: calc(16px + env(safe-area-inset-bottom));
-  }
-  .nav a.first-tab { margin-left: 0; box-shadow: none; }
-
-  /* Compact core, so vitals and all six abilities fit on screen. */
-  .hp-card { padding: 10px 14px; gap: 6px; }
-  .abil-grid { --min: 200px; }
-  .save-row, .skill-row { min-height: 24px; }
+/* ---------- two-column layout (.sheet.wide: auto via WIDE_QUERY in layout.ts, or set in the menu) ---------- */
+/* The bottom padding moves into the left column: on .sheet it would end the sticky column's range early,
+   pushing the HP card under the top bar at the end of the page. */
+.sheet.wide { padding-bottom: 0; }
+.wide .sheet-left { padding-bottom: calc(32px + env(safe-area-inset-bottom)); }
+.wide .sheet-body { display: grid; grid-template-columns: minmax(0, 62fr) minmax(0, 38fr); align-items: start; }
+/* Right column: HP stays put under the top bar, the open tab scrolls below it. */
+.wide .sheet-right {
+  position: sticky; top: var(--topbar-h); max-height: calc(100dvh - var(--topbar-h));
+  overflow-y: auto; overscroll-behavior: contain; /* only scrolls if the HP card alone outgrows the screen */
 }
+.wide .sheet-right > .hp-card { flex-shrink: 0; }
+.wide .tab-col {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom));
+}
+.wide .nav a.first-tab { margin-left: 0; box-shadow: none; }
+
+/* Compact core, so vitals and all six abilities fit on screen. */
+.wide .hp-card { padding: 10px 14px; gap: 6px; }
+.wide .abil-grid { --min: 200px; }
+.wide .save-row, .wide .skill-row { min-height: 24px; }

@@ -60,7 +60,7 @@ export default function App() {
 
   return (
     <Sheet.Provider value={{ c, update, edit, form, setForm }}>
-      <div className="sheet">
+      <div className={'sheet' + (wide ? ' wide' : '')}>
         <TopBar store={store} activeSec={activeSec} setActiveSec={setActiveSec} menuOpen={menuOpen} setMenuOpen={setMenuOpen}
           onToggleEdit={() => { setEdit(!edit); setForm(null); }} onSwitched={onSwitched} onRest={onRest} />
         <div className="sheet-body">
