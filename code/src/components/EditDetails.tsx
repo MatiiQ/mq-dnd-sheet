@@ -25,7 +25,7 @@ export function EditDetails({ onReset }: { onReset: () => void }) {
         {NUM_FIELDS.map(([label, key, min, max]) => (
           <label key={key} className="field">{label}
             <NumInput className="input" value={c[key]} min={min} max={max}
-              onCommit={(v) => update((p) => (key === 'level' ? { level: v, hdUsed: Math.min(p.hdUsed, v) } : { [key]: v }))} />
+              onCommit={(v) => update({ [key]: v })} />
           </label>
         ))}
         <label className="field">Hit die

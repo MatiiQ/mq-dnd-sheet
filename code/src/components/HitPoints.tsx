@@ -18,6 +18,7 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
   const hdLeft = c.level - hdUsed;
   const hdRoll = '1d' + c.hdDie + ' ' + fmt(abilityMod(c, 'con'));
   const deltaText = delta > 0 ? '+' + delta : '−' + Math.abs(delta);
+  const dead = c.hp === 0 && c.df >= 3;
   const deltaColor = delta < 0 ? 'var(--orange)' : delta > 0 ? 'var(--blue)' : 'var(--muted)';
 
   // The undo row hides itself after a few seconds; a newer HP action restarts the wait.
@@ -79,8 +80,8 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
           <button type="button" className="step" style={{ border: 'none', borderRadius: 0 }} aria-label="Increase amount" onClick={() => setAmount(Math.min(999, c.amount + 1))}>+</button>
         </div>
         <button type="button" className="btn" style={{ flex: '1 1 80px', border: 'none', background: 'var(--orange)', color: 'var(--bg)', padding: '0 12px' }} onClick={() => act(applyDamage)}>Damage</button>
-        <button type="button" className="btn" style={{ flex: '1 1 80px', border: 'none', background: 'var(--blue)', color: 'var(--bg)', padding: '0 12px' }} onClick={() => act(applyHeal)}>Heal</button>
-        <button type="button" className="btn" style={{ flex: '1 1 80px', padding: '0 12px' }} onClick={() => update(applySetTemp)}>Set Temp</button>
+        <button type="button" className="btn" style={dead ? { flex: '1 1 80px', padding: '0 12px' } : { flex: '1 1 80px', border: 'none', background: 'var(--blue)', color: 'var(--bg)', padding: '0 12px' }} aria-disabled={dead} onClick={() => act(applyHeal)}>Heal</button>
+        <button type="button" className="btn" style={{ flex: '1 1 80px', padding: '0 12px' }} onClick={() => act(applySetTemp)}>Set Temp</button>
       </div>
 
       {c.hpUndo && (
@@ -145,7 +146,7 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
             </div>
           </div>
           {c.ds >= 3 && c.df < 3 && <div role="status" className="notice notice-stable">Stable. Stop rolling death saves. You stay at 0 HP, unconscious, and regain 1 HP after 1d4 hours unless healed sooner.</div>}
-          {c.df >= 3 && <div role="status" className="notice notice-dead">Dead. Three failed death saves. Only magic such as Revivify can bring the character back.</div>}
+          {c.df >= 3 && <div role="status" className="notice notice-dead">Dead. Three failed death saves. Only magic such as Revivify can bring the character back: clear the failures, then Heal.</div>}
         </div>
       )}
     </section>

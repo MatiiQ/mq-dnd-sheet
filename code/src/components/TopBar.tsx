@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { setLayoutMode, useLayoutMode, useWide, type LayoutMode } from '../layout';
 import { CONDITIONS, hpColor } from '../logic';
 import { useSheet } from '../sheet';
-import type { CharacterStore } from '../storage';
+import { saveBackupFile, type CharacterStore } from '../storage';
 import type { Tab } from '../types';
 import { CheckIcon, ChevronRight, MenuIcon, PencilIcon, StarIcon, XIcon, useArmed } from './ui';
 
@@ -98,6 +98,12 @@ export function TopBar({ store, activeSec, setActiveSec, menuOpen, setMenuOpen, 
         </div>
       )}
 
+      {store.saveFailed && (
+        <div role="alert" className="notice notice-dead" style={{ marginTop: 4 }}>
+          Changes aren’t being saved: this device refused to store them. Export a backup from the menu now.
+        </div>
+      )}
+
       <div className="nav-wrap">
         <nav ref={navRef} className="nav" aria-label="Sheet sections">
           {!wide && SECTION_LINKS.map(([id, label]) => {
@@ -139,19 +145,8 @@ function Menu({ store, onClose, onSwitched, onRest }: { store: CharacterStore; o
   const name = c.ch.name || 'this character';
 
   const exportBackup = async () => {
-    const json = JSON.stringify(store.exportAll(), null, 2);
-    const fileName = 'character-sheet-backup-' + new Date().toISOString().slice(0, 10) + '.json';
-    const file = new File([json], fileName, { type: 'application/json' });
-    // On iPad the share sheet offers Save to Files / iCloud Drive.
-    if (navigator.canShare?.({ files: [file] })) {
-      try { await navigator.share({ files: [file] }); setBackupMsg('Backup shared.'); } catch { /* share cancelled */ }
-      return;
-    }
-    const url = URL.createObjectURL(file);
-    const a = document.createElement('a');
-    a.href = url; a.download = fileName; a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-    setBackupMsg('Backup downloaded.');
+    const msg = await saveBackupFile(store.exportAll());
+    if (msg) setBackupMsg(msg);
   };
 
   const importBackup = async (file: File | undefined) => {

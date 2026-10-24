@@ -4,8 +4,6 @@ import type { Coin, Item } from '../../types';
 import { AddButton, EntryActions, EntryForm, NumInput, TextField } from '../ui';
 
 const COINS: [Coin, string, string][] = [['cp', 'CP', '#D9A27A'], ['sp', 'SP', '#C8CCD2'], ['ep', 'EP', '#B9C7A4'], ['gp', 'GP', 'var(--accent)'], ['pp', 'PP', '#D7D3E8']];
-// The sample character's consumables are counted in Resources and echoed here.
-const TRACKED_RESOURCES = ['arrows', 'potions'];
 const BLANK = { name: '' };
 
 export function InventoryTab() {
@@ -58,7 +56,7 @@ export function InventoryTab() {
               onRemove={() => update((p) => ({ inv: p.inv.filter((x) => x.id !== it.id) }))} />
           </li>
         ))}
-        {c.res.filter((r) => TRACKED_RESOURCES.includes(r.id)).map((r) => (
+        {c.res.filter((r) => r.inv).map((r) => (
           <li key={r.id} className="row between gap-8" style={{ padding: '12px 14px', borderBottom: '1px solid var(--line)' }}>
             <span>{r.name} <span className="muted">· tracked in Resources</span></span><span style={{ fontWeight: 700 }}>{r.count}</span>
           </li>

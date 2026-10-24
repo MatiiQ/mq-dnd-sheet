@@ -4,7 +4,7 @@ import { saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { Recharge, Resource } from '../../types';
 import { AddButton, EntryActions, EntryForm, Step, TextField } from '../ui';
 
-const BLANK = { name: '', note: '' };
+const BLANK = { name: '', note: '', inv: false };
 const RECHARGE_TEXT: Record<Recharge, string> = { none: 'Manual only', short: 'Refills on Short or Long Rest', long: 'Refills on Long Rest' };
 
 export function ResourcesTab() {
@@ -20,7 +20,7 @@ export function ResourcesTab() {
   const save = () => {
     const name = f.draft.name.trim();
     if (!name) return;
-    update((p) => ({ res: saveEntry<Resource>(p.res, { name, note: f.draft.note.trim() }, f.editingId, { count: 0 }) }));
+    update((p) => ({ res: saveEntry<Resource>(p.res, { name, note: f.draft.note.trim(), inv: f.draft.inv }, f.editingId, { count: 0 }) }));
     f.close();
   };
 
@@ -33,7 +33,7 @@ export function ResourcesTab() {
             <div key={r.id} className="card gap-6">
               <div className="row between gap-4" style={{ alignItems: 'flex-start' }}>
                 <span className="grow" style={{ fontWeight: 700, paddingTop: 10 }}>{r.name}</span>
-                <EntryActions name={r.name} canEdit={edit} onEdit={() => f.openEdit(r.id, { name: r.name, note: r.note || '' })}
+                <EntryActions name={r.name} canEdit={edit} onEdit={() => f.openEdit(r.id, { name: r.name, note: r.note || '', inv: !!r.inv })}
                   onRemove={() => update((p) => ({ res: p.res.filter((x) => x.id !== r.id) }))} />
               </div>
               <span className="muted">{r.note || 'Custom resource'}</span>
@@ -75,6 +75,7 @@ export function ResourcesTab() {
           <div className="grid" style={{ '--min': '200px' } as CSSProperties}>
             <TextField label="Name" value={f.draft.name} placeholder="e.g. Rations, Torches, Ki points" onChange={(v) => f.set({ name: v })} />
             <TextField label="Note (optional)" value={f.draft.note} placeholder="What it's for" onChange={(v) => f.set({ note: v })} />
+            <label className="check"><input type="checkbox" checked={f.draft.inv} onChange={(e) => f.set({ inv: e.target.checked })} />Also list in Inventory</label>
           </div>
         </EntryForm>
       )}

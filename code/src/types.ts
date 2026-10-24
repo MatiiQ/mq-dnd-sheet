@@ -10,7 +10,7 @@ export type NoteKey = 'appearance' | 'personality' | 'backstory' | 'session';
 
 export interface Details { name: string; species: string; cls: string; sub: string; bg: string; align: string }
 export interface Sense { id: string; name: string; range: string }
-export interface Resource { id: string; name: string; note?: string; count: number; max?: number; recharge?: Recharge; refill?: boolean }
+export interface Resource { id: string; name: string; note?: string; count: number; max?: number; recharge?: Recharge; refill?: boolean; inv?: boolean }
 export interface Attack { id: string; name: string; hit: string; dmg: string; info: string; mastery: string }
 export interface Rider { id: string; name: string; dice: string }
 export interface Item { id: string; name: string; qty: number; eq: boolean }

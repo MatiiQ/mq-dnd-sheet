@@ -1,4 +1,5 @@
 // D&D 2024 rules used by the sheet. Pure functions: each takes a character and returns the next one.
+import { blankCharacter, sampleCharacter } from './defaults';
 import type { Ability, Character, HpSnapshot, Resource } from './types';
 
 export const ABILITIES: [Ability, string][] = [
@@ -64,9 +65,17 @@ export function applyDamage(c: Character): Character {
   const amt = c.amount - absorbed;
   const next: Character = { ...c, temp: c.temp - absorbed, hp: Math.max(0, c.hp - amt), concCheck: null };
   let text = 'Took ' + c.amount + ' damage' + (absorbed ? ' (' + absorbed + ' absorbed by temp HP)' : '') + '.';
-  if (amt > 0 && c.hp === 0) {
+  // Damage at 0 HP (PHB p.29): one failure, or death if it equals or exceeds max HP. A Stable character starts rolling again.
+  if (amt > 0 && c.hp === 0 && amt >= c.maxHp) {
+    next.df = 3;
+    text += ' Damage at 0 HP equals or exceeds max HP, so the character dies instantly.';
+  } else if (amt > 0 && c.hp === 0) {
     next.df = Math.min(3, c.df + 1);
     text += ' Damage at 0 HP: 1 death save failure marked (mark one more if it was a critical hit).';
+    if (c.ds >= 3) {
+      next.ds = 0;
+      text += ' No longer Stable: roll death saves again.';
+    }
   } else if (amt > 0 && amt - c.hp >= c.maxHp) {
     next.df = 3;
     text += ' Massive damage: the leftover damage equals or exceeds max HP, so the character dies instantly.';
@@ -88,7 +97,8 @@ export function applyDamage(c: Character): Character {
 }
 
 export function applyHeal(c: Character): Character {
-  if (!c.amount) return c;
+  // Healing can't bring back a dead character; clear the failures first (e.g. after Revivify).
+  if (!c.amount || (c.hp === 0 && c.df >= 3)) return c;
   const hp = Math.min(c.maxHp, c.hp + c.amount);
   const next: Character = { ...c, hp, hpUndo: { prev: snapshot(c), text: 'Healed ' + (hp - c.hp) + ' HP.' } };
   if (c.hp === 0 && hp > 0) {
@@ -103,6 +113,7 @@ export function applyHeal(c: Character): Character {
 }
 
 export function applySetTemp(c: Character): Character {
+  if (!c.amount) return c;
   const text = c.amount > c.temp
     ? 'Temp HP set to ' + c.amount + '.'
     : 'Temp HP unchanged (' + c.temp + ' is already higher; temp HP doesn’t stack).';
@@ -140,7 +151,12 @@ export function refillFor(res: Resource[], kind: 'short' | 'long'): [Resource[],
   return [list, names];
 }
 
+// Either rest needs at least 1 HP to start (PHB p.370, p.373).
+const restBlocked = (c: Character, title: string): Character =>
+  ({ ...c, restMsg: { title, body: 'A rest can only start with at least 1 HP. Heal first.' } });
+
 export function longRest(c: Character): Character {
+  if (c.hp === 0) return restBlocked(c, 'No Long Rest');
   const [res, refilled] = refillFor(c.res, 'long');
   return {
     ...c, hp: c.maxHp, temp: 0, slotUsed: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], hdUsed: 0, ds: 0, df: 0, free: {},
@@ -154,6 +170,7 @@ export function longRest(c: Character): Character {
 }
 
 export function shortRest(c: Character): Character {
+  if (c.hp === 0) return restBlocked(c, 'No Short Rest');
   const [res, refilled] = refillFor(c.res, 'short');
   const left = c.level - Math.min(c.hdUsed, c.level);
   return {
@@ -166,14 +183,55 @@ export function shortRest(c: Character): Character {
   };
 }
 
-// Older saves had no prepared flags: treat their levelled spells as prepared.
-export function migrate(data: unknown): Partial<Character> {
-  if (!data || typeof data !== 'object') return {};
-  const d = { ...(data as Partial<Character>) };
-  if (Array.isArray(d.spells)) {
-    d.spells = d.spells.map((x) => (x.prep === undefined && x.always === undefined ? { ...x, prep: true } : x));
+const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
+const sameType = (def: unknown, v: unknown) => (Array.isArray(def) ? Array.isArray(v) : isObj(def) ? isObj(v) : typeof v === typeof def);
+const strings = (v: unknown[]) => v.filter((x): x is string => typeof x === 'string');
+// Records with fixed keys: a missing or damaged key falls back to the blank character's value.
+const FIXED_RECORDS = ['ch', 'abil', 'speeds', 'coins', 'notes', 'def'] as const;
+// Lists of entries: each needs a name and holds only plain values.
+const ENTRY_LISTS = ['senses', 'res', 'attacks', 'riders', 'inv', 'spells', 'feats'] as const;
+const isEntry = (x: unknown): x is Record<string, unknown> =>
+  isObj(x) && typeof x.name === 'string' && Object.values(x).every((v) => v === null || typeof v !== 'object');
+const TABS: Character['tab'][] = ['actions', 'resources', 'spells', 'inventory', 'features', 'notes'];
+const CAST_ABILITIES: Character['castAb'][] = ['none', 'int', 'wis', 'cha'];
+// Resources the Inventory tab echoed before `inv` existed.
+const OLD_INVENTORY_RESOURCES = ['arrows', 'potions'];
+
+// Builds a full character from a save or a backup. Missing fields come from the sample character, as before;
+// values of the wrong type fall back too, so damaged data can't crash the sheet on every launch.
+export function migrate(data: unknown): Character {
+  const def = sampleCharacter(), blank = blankCharacter();
+  if (!isObj(data)) return def;
+  const d = { ...def } as Record<string, unknown>;
+  for (const [k, dv] of Object.entries(def)) {
+    if (data[k] !== undefined && (dv === null || sameType(dv, data[k]))) d[k] = data[k];
   }
-  return d;
+  for (const k of FIXED_RECORDS) {
+    const v = d[k] as Record<string, unknown>, base = blank[k] as Record<string, unknown>;
+    d[k] = Object.fromEntries(Object.entries(base).map(([kk, bv]) => [kk, sameType(bv, v[kk]) ? v[kk] : bv]));
+  }
+  for (const k of ENTRY_LISTS) {
+    d[k] = (d[k] as unknown[]).filter(isEntry).map((x) => (typeof x.id === 'string' ? x : { ...x, id: newId() }));
+  }
+  const c = d as unknown as Character;
+  c.def = { res: strings(c.def.res), vul: strings(c.def.vul), imm: strings(c.def.imm) };
+  c.attune = strings(c.attune);
+  c.slotMax = c.slotMax.map((n) => (typeof n === 'number' ? n : 0));
+  c.slotUsed = c.slotUsed.map((n) => (typeof n === 'number' ? n : 0));
+  if (!TABS.includes(c.tab)) c.tab = def.tab;
+  if (!CAST_ABILITIES.includes(c.castAb)) c.castAb = 'none';
+  if (c.spellFilter !== 'prepared') c.spellFilter = 'all';
+  // Nullable fields: keep only well-formed values. The undo row lasts seconds, so it never survives a reload.
+  const conc = c.conc as unknown;
+  c.conc = isObj(conc) && typeof conc.id === 'string' && typeof conc.name === 'string' ? c.conc : null;
+  c.hpUndo = null;
+  if (typeof c.concCheck !== 'string') c.concCheck = null;
+  const msg = c.restMsg as unknown;
+  c.restMsg = isObj(msg) && typeof msg.title === 'string' && typeof msg.body === 'string' ? c.restMsg : null;
+  // Older saves had no prepared flags: treat their levelled spells as prepared.
+  c.spells = c.spells.map((x) => (x.prep === undefined && x.always === undefined ? { ...x, prep: true } : x));
+  c.res = c.res.map((r) => (r.inv === undefined && OLD_INVENTORY_RESOURCES.includes(r.id) ? { ...r, inv: true } : r));
+  return c;
 }
 
 export const newId = () => 'n' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);

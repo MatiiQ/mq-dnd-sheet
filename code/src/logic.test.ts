@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { sampleCharacter } from './defaults';
 import {
-  applyDamage, applyHeal, applySetTemp, clearHpUndo, conSave, fmt, hpColor, longRest, shortRest, skillMod,
+  applyDamage, applyHeal, applySetTemp, clearHpUndo, conSave, fmt, hpColor, longRest, migrate, shortRest, skillMod,
   speedNow, spendHitDie, toggleCondition, undoHp
 } from './logic';
 import type { Character } from './types';
@@ -67,6 +67,18 @@ describe('damage', () => {
     const c = applyDamage(make({ hp: 10, maxHp: 44, amount: 54 }));
     expect(c.df).toBe(3);
   });
+  it('kills at 0 HP when the damage equals max HP', () => {
+    expect(applyDamage(make({ hp: 0, maxHp: 44, amount: 44 })).df).toBe(3);
+    expect(applyDamage(make({ hp: 0, maxHp: 44, amount: 43 })).df).toBe(1);
+  });
+  it('ends Stable when hit at 0 HP', () => {
+    const c = applyDamage(make({ hp: 0, ds: 3, amount: 2 }));
+    expect(c).toMatchObject({ ds: 0, df: 1 });
+    expect(c.hpUndo?.text).toContain('No longer Stable');
+  });
+  it('keeps death save successes when not Stable', () => {
+    expect(applyDamage(make({ hp: 0, ds: 2, amount: 2 })).ds).toBe(2);
+  });
   it('asks for a concentration save at half the damage, minimum DC 10', () => {
     const conc = { id: 'sp4', name: 'Hunter’s Mark' };
     expect(applyDamage(make({ hp: 30, amount: 8, conc })).concCheck).toContain('DC 10');
@@ -90,6 +102,14 @@ describe('healing and temp HP', () => {
     const c = applyHeal(make({ hp: 0, ds: 2, df: 1, amount: 3, conds: { Unconscious: true } }));
     expect(c).toMatchObject({ hp: 3, ds: 0, df: 0 });
     expect(c.conds.Unconscious).toBe(false);
+  });
+  it('does not heal a dead character', () => {
+    const dead = make({ hp: 0, df: 3, amount: 5 });
+    expect(applyHeal(dead)).toBe(dead);
+  });
+  it('ignores Set Temp with an amount of 0', () => {
+    const c = make({ temp: 0, amount: 0 });
+    expect(applySetTemp(c)).toBe(c);
   });
   it('does not stack temp HP', () => {
     expect(applySetTemp(make({ temp: 8, amount: 5 })).temp).toBe(8);
@@ -126,6 +146,18 @@ describe('rests', () => {
     expect(c.res.find((r) => r.id === 'x')?.count).toBe(2);
     expect(c.res.find((r) => r.id === 'favored')?.count).toBe(2);
   });
+  it('long rest also refills short-rest resources', () => {
+    const base = make();
+    base.res = [...base.res, { id: 'x', name: 'Second Wind', count: 0, max: 2, recharge: 'short' }];
+    expect(longRest(base).res.find((r) => r.id === 'x')?.count).toBe(2);
+  });
+  it('neither rest starts at 0 HP', () => {
+    for (const rest of [longRest, shortRest]) {
+      const c = rest(make({ hp: 0, hdUsed: 3, conds: { Unconscious: true } }));
+      expect(c).toMatchObject({ hp: 0, hdUsed: 3 });
+      expect(c.restMsg?.body).toContain('at least 1 HP');
+    }
+  });
   it('spends a hit die', () => {
     expect(spendHitDie(make({ hdUsed: 1 }))).toMatchObject({ hdUsed: 2, amount: 0 });
     const spent = make({ level: 2, hdUsed: 2 });
@@ -139,8 +171,50 @@ describe('conditions and speed', () => {
     expect(c.conds.Stunned).toBe(true);
     expect(c.conc).toBeNull();
   });
+  it('ending a condition keeps concentration', () => {
+    const conc = { id: 'sp4', name: 'Hunter’s Mark' };
+    expect(toggleCondition(make({ conds: { Stunned: true }, conc }), 'Stunned').conc).toEqual(conc);
+  });
   it('exhaustion lowers speed and grappled sets it to 0', () => {
     expect(speedNow(make({ exh: 2 }))).toBe(25);
     expect(speedNow(make({ conds: { Grappled: true } }))).toBe(0);
+  });
+});
+
+describe('loading saves and backups', () => {
+  it('fills missing fields from the sample and marks old levelled spells prepared', () => {
+    const c = migrate({ ch: { name: 'Bob' }, spells: [{ id: 's', name: 'Bless', lvl: 1 }] });
+    expect(c.ch.name).toBe('Bob');
+    expect(c.ch.species).toBe('');
+    expect(c.spells[0].prep).toBe(true);
+    expect(c.attacks).toEqual(sampleCharacter().attacks);
+  });
+  it('keeps partial records as saved', () => {
+    expect(migrate({ ...sampleCharacter(), saveProf: {}, skillProf: { arcana: 1 } })).toMatchObject({ saveProf: {}, skillProf: { arcana: 1 } });
+  });
+  it('replaces values of the wrong type so the sheet can render', () => {
+    const c = migrate({
+      ...sampleCharacter(), spells: 'x', conds: null, abil: { str: '12', dex: 14 }, tab: 'nope', castAb: 'str',
+      attacks: [{ id: 'a', name: 'Club', hit: {} }, { name: 'Sling', hit: '+4' }, 7],
+      def: { res: ['Fire', 3], vul: 'x' }, attune: ['Ring', null], slotUsed: [0, 'x'],
+      conc: { name: 'Bless' }, hpUndo: { prev: 1 }, restMsg: { title: 1 }
+    });
+    expect(c.spells.map((x) => x.id)).toEqual(sampleCharacter().spells.map((x) => x.id));
+    expect(c.conds).toEqual({});
+    expect(c.abil).toMatchObject({ str: 10, dex: 14 });
+    expect(c).toMatchObject({ tab: 'actions', castAb: 'none', conc: null, hpUndo: null, restMsg: null });
+    expect(c.attacks.map((a) => a.name)).toEqual(['Sling']);
+    expect(c.attacks[0].id).toBeTruthy();
+    expect(c.def).toEqual({ res: ['Fire'], vul: [], imm: [] });
+    expect(c.attune).toEqual(['Ring']);
+    expect(c.slotUsed).toEqual([0, 0]);
+  });
+  it('returns the sample for data that is not an object', () => {
+    expect(migrate(null)).toEqual(sampleCharacter());
+    expect(migrate('x')).toEqual(sampleCharacter());
+  });
+  it('lists the old sample consumables in Inventory', () => {
+    const c = migrate({ res: [{ id: 'arrows', name: 'Arrows', count: 5 }, { id: 'n1', name: 'Rations', count: 3 }] });
+    expect(c.res.map((r) => !!r.inv)).toEqual([true, false]);
   });
 });

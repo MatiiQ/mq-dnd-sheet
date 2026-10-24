@@ -16,8 +16,8 @@ export function sampleCharacter(): Character {
     senses: [{ id: 'se1', name: 'Darkvision', range: '60 ft' }],
     res: [
       { id: 'favored', name: 'Favored Enemy', note: 'Cast Hunter’s Mark without a slot', count: 2, max: 3, recharge: 'long' },
-      { id: 'arrows', name: 'Arrows', note: 'Tap − after each Longbow shot', count: 20 },
-      { id: 'potions', name: 'Potion of Healing', note: 'Bonus Action · roll 2d4 +2, then Heal', count: 2 }
+      { id: 'arrows', name: 'Arrows', note: 'Tap − after each Longbow shot', count: 20, inv: true },
+      { id: 'potions', name: 'Potion of Healing', note: 'Bonus Action · roll 2d4 +2, then Heal', count: 2, inv: true }
     ],
     attacks: [
       { id: 'a1', name: 'Longbow', hit: '+9', dmg: '1d8 +4 Piercing', info: '150/600 ft · Ammunition, Heavy, Two-Handed · includes Archery +2', mastery: 'Slow: on a hit, target’s Speed drops 10 ft until your next turn' },
