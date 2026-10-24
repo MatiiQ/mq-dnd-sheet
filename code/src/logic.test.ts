@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { sampleCharacter } from './defaults';
 import {
-  applyDamage, applyHeal, applySetTemp, clearHpUndo, fmt, hdSpent, healHitDie, hpColor, initiative, longRest, migrate, saveMod, setMaxHp, shortRest, skillMod, slotsLeft,
+  applyDamage, applyHeal, applySetTemp, clearHpUndo, fmt, hdSpent, healHitDie, hpColor, initiative, longRest, migrate, passiveScore, saveMod, setMaxHp, shortRest, skillMod, slotsLeft,
   speedNow, spellAttack, spellSaveDC, spendHitDie, toggleCondition, undoHp
 } from './logic';
 import type { Character } from './types';
@@ -46,6 +46,12 @@ describe('derived numbers', () => {
   it('adds extra initiative bonuses to the Dex modifier', () => {
     expect(initiative(make())).toBe(4); // DEX 18
     expect(initiative(make({ initMisc: 2, abilAdj: { dex: -4 } }))).toBe(4); // DEX 14 +2
+  });
+  it('adds 10 to the skill bonus for passive scores', () => {
+    const c = make(); // WIS 14, PB 3, INT 10
+    expect(passiveScore(c, 'perception')).toBe(15);
+    expect(passiveScore(c, 'insight')).toBe(15);
+    expect(passiveScore(c, 'investigation')).toBe(10);
   });
   it('sets max HP to at least 1 and keeps HP at or under it', () => {
     expect(setMaxHp(make({ hp: 40, maxHp: 44 }), 30)).toEqual({ maxHp: 30, hp: 30 });

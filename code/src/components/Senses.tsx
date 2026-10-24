@@ -1,4 +1,4 @@
-import { skillMod } from '../logic';
+import { passiveScore } from '../logic';
 import { removeEntry, saveEntry, useEntryForm, useSheet } from '../sheet';
 import type { Sense } from '../types';
 import { AddButton, EntryActions, EntryForm, EyeIcon } from './ui';
@@ -26,10 +26,9 @@ export function Senses() {
         <EyeIcon size={18} /><span className="caps">SENSES</span>
       </div>
       <div className="row wrap" style={{ gap: '0 32px' }}>
-        {/* The 2024 rules only define Passive Perception (PHB p.372). Passive Investigation and Insight aren't in the rules but are wanted on this sheet. */}
-        {passive('Passive Perception', 10 + skillMod(c, 'perception', 'wis'))}
-        {passive('Passive Investigation', 10 + skillMod(c, 'investigation', 'int'))}
-        {passive('Passive Insight', 10 + skillMod(c, 'insight', 'wis'))}
+        {passive('Passive Perception', passiveScore(c, 'perception'))}
+        {passive('Passive Investigation', passiveScore(c, 'investigation'))}
+        {passive('Passive Insight', passiveScore(c, 'insight'))}
         {c.senses.map((se) => (
           <div key={se.id} className="row gap-8" style={{ minHeight: 44 }}>
             <span>{se.name}</span>
