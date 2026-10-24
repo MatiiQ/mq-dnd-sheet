@@ -19,7 +19,7 @@ function writeJSON(key: string, v: unknown): boolean {
 
 const load = (id: string): Character => migrate(readJSON(sheetKey(id)));
 export const charName = (c: Character) => c.ch.name || 'Unnamed character';
-export const charInfo = (c: Character) => [c.ch.species, (c.ch.cls || 'Level') + ' ' + c.level].filter((x) => x).join(' · ');
+const charInfo = (c: Character) => [c.ch.species, (c.ch.cls || 'Level') + ' ' + c.level].filter((x) => x).join(' · ');
 const entryOf = (id: string, c: Character): IndexEntry => ({ id, name: charName(c), info: charInfo(c) });
 
 export interface Store { id: string; list: IndexEntry[]; c: Character }

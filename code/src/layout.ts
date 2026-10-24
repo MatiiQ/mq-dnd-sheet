@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react';
 
 // Screens that get the two-column layout in auto mode. styles.css keys its two-column rules on `.sheet.wide`.
-export const WIDE_QUERY = '(min-width: 1100px) and (min-height: 780px)';
+const WIDE_QUERY = '(min-width: 1100px) and (min-height: 780px)';
 
 // Manual override from the menu. Saved per device, not per character.
 export type LayoutMode = 'auto' | 'one' | 'two';

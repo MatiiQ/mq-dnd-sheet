@@ -39,7 +39,7 @@ export function useArmed(ms = 3000) {
   return [armed, tap] as const;
 }
 
-export function RemoveButton({ name, onRemove }: { name: string; onRemove: () => void }) {
+function RemoveButton({ name, onRemove }: { name: string; onRemove: () => void }) {
   const [armed, tap] = useArmed();
   return (
     <button type="button" className={armed ? 'remove-armed' : 'icon-btn faint'} onClick={() => tap(onRemove)}
@@ -64,7 +64,7 @@ export function Step({ label, onClick, children, small }: { label: string; onCli
   return <button type="button" className={small ? 'step step-sm' : 'step'} aria-label={label} onClick={onClick}>{children}</button>;
 }
 
-export const nextUsed = (used: number, i: number) => (i < used ? i : i + 1);
+const nextUsed = (used: number, i: number) => (i < used ? i : i + 1);
 
 // Circles where the first `used` are spent; tapping spends or restores up to that circle.
 export function UsePips({ used, max, color, size, noun, onChange, width = 44 }: { used: number; max: number; color: string; size: number; noun: string; onChange: (n: number) => void; width?: number }) {
