@@ -8,7 +8,7 @@ const BLANK = { name: '' };
 
 export function InventoryTab() {
   const { c, update, edit } = useSheet();
-  const f = useEntryForm('item', BLANK, 'item', 'item', 'ADD AN ITEM');
+  const f = useEntryForm('item', BLANK, 'item', 'ADD AN ITEM');
   const patch = (id: string, p: Partial<Item>) => update((s) => ({ inv: s.inv.map((x) => (x.id === id ? { ...x, ...p } : x)) }));
   const save = () => {
     const name = f.draft.name.trim();

@@ -35,7 +35,7 @@ export function scrollToForm(el: HTMLElement): void {
 }
 
 // Draft state and open/close for one kind of add/edit form.
-export function useEntryForm<D extends object>(kind: FormKind, blank: D, noun: string, label: string, addTitle: string) {
+export function useEntryForm<D extends object>(kind: FormKind, blank: D, noun: string, addTitle: string) {
   const { form, setForm } = useSheet();
   const [draft, setDraft] = useState<D>(blank);
   const isOpen = form?.kind === kind;
@@ -51,7 +51,7 @@ export function useEntryForm<D extends object>(kind: FormKind, blank: D, noun: s
     openEdit: (id: string, d: D) => { setDraft(d); setForm({ kind, id }); scroll(); },
     close: () => setForm(null),
     title: editingId ? 'EDIT ' + noun.toUpperCase() : addTitle,
-    saveLabel: editingId ? 'Save changes' : 'Add ' + label
+    saveLabel: editingId ? 'Save changes' : 'Add ' + noun
   };
 }
 

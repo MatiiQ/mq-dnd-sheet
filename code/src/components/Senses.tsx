@@ -7,7 +7,7 @@ const BLANK = { name: '', range: '' };
 
 export function Senses() {
   const { c, update, edit } = useSheet();
-  const f = useEntryForm('sense', BLANK, 'sense', 'sense', 'ADD A SENSE');
+  const f = useEntryForm('sense', BLANK, 'sense', 'ADD A SENSE');
   const passive = (label: string, value: number) => (
     <div className="row gap-8" style={{ minHeight: 44 }}><span>{label}</span><strong style={{ fontSize: 17 }}>{value}</strong></div>
   );

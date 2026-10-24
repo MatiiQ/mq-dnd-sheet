@@ -7,7 +7,7 @@ const BLANK = { g: 'class' as FeatureGroup, name: '', desc: '' };
 
 export function FeaturesTab() {
   const { c, update, edit } = useSheet();
-  const f = useEntryForm('feat', BLANK, 'feature', 'feature', 'ADD A FEATURE OR TRAIT');
+  const f = useEntryForm('feat', BLANK, 'feature', 'ADD A FEATURE OR TRAIT');
   const titles: [FeatureGroup, string][] = [
     ['class', 'CLASS · ' + (c.ch.cls || 'Class').toUpperCase() + ' ' + c.level], ['sub', 'SUBCLASS · ' + (c.ch.sub || '').toUpperCase()], ['feat', 'FEATS'],
     ['species', 'SPECIES · ' + (c.ch.species || '').toUpperCase()], ['training', 'TRAINING & PROFICIENCIES'], ['other', 'OTHER']

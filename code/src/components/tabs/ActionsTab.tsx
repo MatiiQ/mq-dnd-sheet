@@ -9,8 +9,8 @@ const COMBAT_ACTIONS = ['Attack', 'Dash', 'Disengage', 'Dodge', 'Help', 'Hide', 
 
 export function ActionsTab() {
   const { c, update, edit } = useSheet();
-  const fa = useEntryForm('attack', ATTACK_BLANK, 'attack', 'attack', 'ADD AN ATTACK');
-  const fr = useEntryForm('rider', RIDER_BLANK, 'extra damage', 'extra damage', 'ADD EXTRA DAMAGE');
+  const fa = useEntryForm('attack', ATTACK_BLANK, 'attack', 'ADD AN ATTACK');
+  const fr = useEntryForm('rider', RIDER_BLANK, 'extra damage', 'ADD EXTRA DAMAGE');
 
   const saveAttack = () => {
     const d = fa.draft, name = d.name.trim();

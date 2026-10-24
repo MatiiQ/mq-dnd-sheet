@@ -19,7 +19,7 @@ const setSlotUsed = (c: Character, l: number, n: number) => { const u = c.slotUs
 export function SpellsTab() {
   const { c, update, edit } = useSheet();
   const [castPick, setCastPick] = useState<string | null>(null);
-  const f = useEntryForm('spell', BLANK, 'spell', 'spell', 'ADD A SPELL');
+  const f = useEntryForm('spell', BLANK, 'spell', 'ADD A SPELL');
   const usePrep = c.usePrep !== false;
   const castMod = c.castAb === 'none' ? null : abilityMod(c, c.castAb);
   const prof = profBonus(c.level);

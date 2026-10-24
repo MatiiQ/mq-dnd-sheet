@@ -9,7 +9,7 @@ const RECHARGE_TEXT: Record<Recharge, string> = { none: 'Manual only', short: 'R
 
 export function ResourcesTab() {
   const { c, update, edit } = useSheet();
-  const f = useEntryForm('res', BLANK, 'resource', 'resource', 'ADD A RESOURCE');
+  const f = useEntryForm('res', BLANK, 'resource', 'ADD A RESOURCE');
   const patch = (id: string, p: Partial<Resource> | ((r: Resource) => Partial<Resource>)) =>
     update((s) => ({ res: s.res.map((r) => (r.id === id ? { ...r, ...(typeof p === 'function' ? p(r) : p) } : r)) }));
   const bump = (id: string, d: number) => patch(id, (r) => {
