@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { sampleCharacter } from './defaults';
 import {
-  applyDamage, applyHeal, applySetTemp, clearHpUndo, conSave, fmt, hpColor, longRest, migrate, shortRest, skillMod,
+  applyDamage, applyHeal, applySetTemp, clearHpUndo, conSave, fmt, healHitDie, hpColor, longRest, migrate, shortRest, skillMod,
   speedNow, spendHitDie, toggleCondition, undoHp
 } from './logic';
 import type { Character } from './types';
@@ -98,10 +98,10 @@ describe('healing and temp HP', () => {
   it('heals up to max', () => {
     expect(applyHeal(make({ hp: 40, amount: 10 })).hp).toBe(44);
   });
-  it('clears death saves and Unconscious when healed from 0', () => {
+  it('clears death saves and Unconscious when healed from 0, leaving the character Prone', () => {
     const c = applyHeal(make({ hp: 0, ds: 2, df: 1, amount: 3, conds: { Unconscious: true } }));
     expect(c).toMatchObject({ hp: 3, ds: 0, df: 0 });
-    expect(c.conds.Unconscious).toBe(false);
+    expect(c.conds).toMatchObject({ Unconscious: false, Prone: true });
   });
   it('does not heal a dead character', () => {
     const dead = make({ hp: 0, df: 3, amount: 5 });
@@ -111,8 +111,11 @@ describe('healing and temp HP', () => {
     const c = make({ temp: 0, amount: 0 });
     expect(applySetTemp(c)).toBe(c);
   });
-  it('does not stack temp HP', () => {
-    expect(applySetTemp(make({ temp: 8, amount: 5 })).temp).toBe(8);
+  it('does not stack temp HP: the new set replaces the old, Undo keeps the old', () => {
+    const lower = applySetTemp(make({ temp: 8, amount: 5 }));
+    expect(lower.temp).toBe(5);
+    expect(lower.hpUndo?.text).toContain('Undo to keep 8');
+    expect(undoHp(lower).temp).toBe(8);
     expect(applySetTemp(make({ temp: 3, amount: 5 })).temp).toBe(5);
   });
   it('undoes the last HP change', () => {
@@ -139,6 +142,13 @@ describe('rests', () => {
     expect(c.res.find((r) => r.id === 'favored')?.count).toBe(3);
     expect(c.restMsg?.body).toContain('Refilled: Favored Enemy');
   });
+  it('long rest restores a reduced HP maximum and reduced ability scores, not raised ones', () => {
+    const c = longRest(make({ hp: 30, maxHp: 38, origHp: 44, origOn: true, abilAdj: { str: -2, con: 2 } }));
+    expect(c).toMatchObject({ maxHp: 44, hp: 44, abilAdj: { str: 0, con: 2 } });
+    expect(c.restMsg?.body).toContain('HP maximum back to 44');
+    expect(c.restMsg?.body).toContain('reduced ability scores restored');
+    expect(longRest(make({ maxHp: 49, origHp: 44, origOn: true })).maxHp).toBe(49);
+  });
   it('short rest refills only short-rest resources', () => {
     const base = make();
     base.res = [...base.res, { id: 'x', name: 'Second Wind', count: 0, max: 2, recharge: 'short' }];
@@ -162,6 +172,14 @@ describe('rests', () => {
     expect(spendHitDie(make({ hdUsed: 1 }))).toMatchObject({ hdUsed: 2, amount: 0 });
     const spent = make({ level: 2, hdUsed: 2 });
     expect(spendHitDie(spent)).toBe(spent);
+  });
+  it('cannot spend a hit die at 0 HP', () => {
+    const down = make({ hp: 0, hdUsed: 1 });
+    expect(spendHitDie(down)).toBe(down);
+  });
+  it('heals at least 1 per hit die', () => {
+    expect(healHitDie(make({ hp: 20, amount: 0 })).hp).toBe(21);
+    expect(healHitDie(make({ hp: 20, amount: 7 })).hp).toBe(27);
   });
 });
 

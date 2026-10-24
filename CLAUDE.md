@@ -65,6 +65,7 @@ Conventions:
 ## Rules reference
 
 When implementing or checking a rule, use `reference/` (start at `reference/README.md`) instead of memory.
+- **Every new or changed piece of rules logic must be checked against the ruleset in `reference/` before it is committed.** This covers `logic.ts`, rule text shown in the UI (conditions, death saves, rest summaries) and any number the sheet derives (bonuses, DCs, speeds). Cite the page in a comment, as the existing code does (`// ... (PHB p.29)`), and add a test in `logic.test.ts`. If the app deliberately simplifies a rule, say so in the comment.
 - Citations use book pages `(PHB p.N)`; **PDF page = book page − 1**.
 - `reference/source/phb2024-fulltext.txt` is the raw OCR text, with `===== PHB page N (pdf page M) =====` markers. Grep it for exact wording.
 - Spell entries in `07-spells-*.md` use a fixed field layout, so they can be parsed into data later.

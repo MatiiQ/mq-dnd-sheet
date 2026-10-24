@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { abilityMod, applyDamage, applyHeal, applySetTemp, clearHpUndo, fmt, hpColor, spendHitDie, undoHp } from '../logic';
+import { abilityMod, applyDamage, applyHeal, applySetTemp, clearHpUndo, fmt, healHitDie, hpColor, spendHitDie, undoHp } from '../logic';
 import { useWide } from '../layout';
 import { useSheet } from '../sheet';
 import type { Character } from '../types';
@@ -16,6 +16,7 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
   const delta = c.maxHp - c.origHp;
   const hdUsed = Math.min(c.hdUsed, c.level);
   const hdLeft = c.level - hdUsed;
+  const canSpendHD = hdLeft > 0 && c.hp > 0;
   const hdRoll = '1d' + c.hdDie + ' ' + fmt(abilityMod(c, 'con'));
   const deltaText = delta > 0 ? '+' + delta : '−' + Math.abs(delta);
   const dead = c.hp === 0 && c.df >= 3;
@@ -32,7 +33,7 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
   const act = (fn: (c: Character) => Character) => { update(fn); setAmtKey((k) => k + 1); setHdPrompt(false); };
   const setAmount = (v: number) => { update({ amount: v }); setAmtKey((k) => k + 1); };
   const spendHD = () => {
-    if (!hdLeft) return;
+    if (!canSpendHD) return;
     update(spendHitDie);
     setHdPrompt(true);
     setAmtKey((k) => k + 1);
@@ -80,7 +81,7 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
           <button type="button" className="step" style={{ border: 'none', borderRadius: 0 }} aria-label="Increase amount" onClick={() => setAmount(Math.min(999, c.amount + 1))}>+</button>
         </div>
         <button type="button" className="btn" style={{ flex: '1 1 80px', border: 'none', background: 'var(--orange)', color: 'var(--bg)', padding: '0 12px' }} onClick={() => act(applyDamage)}>Damage</button>
-        <button type="button" className="btn" style={dead ? { flex: '1 1 80px', padding: '0 12px' } : { flex: '1 1 80px', border: 'none', background: 'var(--blue)', color: 'var(--bg)', padding: '0 12px' }} aria-disabled={dead} onClick={() => act(applyHeal)}>Heal</button>
+        <button type="button" className="btn" style={dead ? { flex: '1 1 80px', padding: '0 12px' } : { flex: '1 1 80px', border: 'none', background: 'var(--blue)', color: 'var(--bg)', padding: '0 12px' }} aria-disabled={dead} onClick={() => act(hdPrompt ? healHitDie : applyHeal)}>Heal</button>
         <button type="button" className="btn" style={{ flex: '1 1 80px', padding: '0 12px' }} onClick={() => act(applySetTemp)}>Set Temp</button>
       </div>
 
@@ -125,9 +126,9 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
           <UsePips used={hdUsed} max={c.level} color="var(--accent)" size={16} width={40} noun="Hit Die" onChange={(n) => update({ hdUsed: n })} />
           <span style={{ fontSize: 13, color: 'var(--text-2)', marginLeft: 4 }}>{hdLeft} / {c.level}</span>
         </div>
-        <button type="button" className="btn" style={{ fontSize: 14, padding: '0 12px' }} aria-disabled={!hdLeft} onClick={spendHD}>Spend Hit Die · {hdRoll}</button>
+        <button type="button" className="btn" style={{ fontSize: 14, padding: '0 12px' }} aria-disabled={!canSpendHD} onClick={spendHD}>Spend Hit Die · {hdRoll}</button>
       </div>
-      {hdPrompt && <div role="status" className="notice notice-blue">Hit Die spent. Roll {hdRoll}, type the total in Amount above, then tap Heal.</div>}
+      {hdPrompt && <div role="status" className="notice notice-blue">Hit Die spent. Roll {hdRoll} (minimum 1), type the total in Amount above, then tap Heal.</div>}
 
       {c.hp === 0 && (
         <div className="col gap-6" style={{ borderTop: '1px solid var(--line)', paddingTop: 10 }}>

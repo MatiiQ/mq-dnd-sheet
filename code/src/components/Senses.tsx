@@ -26,6 +26,7 @@ export function Senses() {
         <EyeIcon size={18} /><span className="caps">SENSES</span>
       </div>
       <div className="row wrap" style={{ gap: '0 32px' }}>
+        {/* The 2024 rules only define Passive Perception (PHB p.372). Passive Investigation and Insight aren't in the rules but are wanted on this sheet. */}
         {passive('Passive Perception', 10 + skillMod(c, 'perception', 'wis'))}
         {passive('Passive Investigation', 10 + skillMod(c, 'investigation', 'int'))}
         {passive('Passive Insight', 10 + skillMod(c, 'insight', 'wis'))}

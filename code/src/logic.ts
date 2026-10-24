@@ -17,16 +17,16 @@ export const SKILLS: [string, string, Ability][] = [
 
 export const CONDITION_RULES: Record<string, string> = {
   Blinded: 'You can’t see and fail checks that need sight. Attacks against you have Advantage; your attacks have Disadvantage.',
-  Charmed: 'You can’t attack the charmer or target it with harmful abilities. The charmer has Advantage on social checks against you.',
+  Charmed: 'You can’t attack the charmer or target it with damaging abilities or magical effects. The charmer has Advantage on social checks against you.',
   Deafened: 'You can’t hear and fail checks that need hearing.',
   Frightened: 'Disadvantage on ability checks and attack rolls while the source is in sight. You can’t willingly move closer to it.',
-  Grappled: 'Speed 0. Disadvantage on attacks against anyone but the grappler. The grappler can drag you.',
+  Grappled: 'Speed 0 and can’t increase. Disadvantage on attacks against anyone but the grappler. The grappler can drag you.',
   Incapacitated: 'No actions, Bonus Actions or Reactions. Concentration breaks. You can’t speak. Disadvantage on Initiative.',
   Invisible: 'Advantage on Initiative. Attacks against you have Disadvantage; your attacks have Advantage (unless the target can see you).',
   Paralyzed: 'Incapacitated, Speed 0. Auto-fail STR and DEX saves. Attacks against you have Advantage; hits within 5 ft are critical hits.',
   Petrified: 'Turned to stone: Incapacitated, Speed 0. Auto-fail STR and DEX saves. Attacks against you have Advantage. Resistance to all damage; immune to Poisoned.',
   Poisoned: 'Disadvantage on attack rolls and ability checks.',
-  Prone: 'Crawl or spend half your Speed to stand. Disadvantage on your attacks. Attacks against you have Advantage within 5 ft, Disadvantage beyond.',
+  Prone: 'Crawl or spend half your Speed to stand (you can’t stand at Speed 0). Disadvantage on your attacks. Attacks against you have Advantage within 5 ft, Disadvantage beyond.',
   Restrained: 'Speed 0. Attacks against you have Advantage; your attacks have Disadvantage. Disadvantage on DEX saves.',
   Stunned: 'Incapacitated. Auto-fail STR and DEX saves. Attacks against you have Advantage.',
   Unconscious: 'Incapacitated and Prone; you drop what you hold. Speed 0. Auto-fail STR and DEX saves. Attacks against you have Advantage; hits within 5 ft are critical hits.'
@@ -104,20 +104,22 @@ export function applyHeal(c: Character): Character {
   if (c.hp === 0 && hp > 0) {
     next.ds = 0;
     next.df = 0;
+    // Unconscious ends when you regain HP, but you stay Prone (PHB p.377).
     if (c.conds.Unconscious) {
-      next.conds = { ...c.conds, Unconscious: false };
-      next.hpUndo!.text += ' No longer Unconscious.';
+      next.conds = { ...c.conds, Unconscious: false, Prone: true };
+      next.hpUndo!.text += ' No longer Unconscious, still Prone.';
     }
   }
   return next;
 }
 
+// Temp HP don't stack: the new set replaces the old one, and Undo keeps the old one instead (PHB p.29).
 export function applySetTemp(c: Character): Character {
   if (!c.amount) return c;
-  const text = c.amount > c.temp
-    ? 'Temp HP set to ' + c.amount + '.'
-    : 'Temp HP unchanged (' + c.temp + ' is already higher; temp HP doesn’t stack).';
-  return { ...c, temp: Math.max(c.temp, c.amount), hpUndo: { prev: snapshot(c), text } };
+  const text = 'Temp HP set to ' + c.amount + (c.temp && c.temp !== c.amount
+    ? ' (replaced ' + c.temp + '; temp HP don’t stack, tap Undo to keep ' + c.temp + ').'
+    : '.');
+  return { ...c, temp: c.amount, hpUndo: { prev: snapshot(c), text } };
 }
 
 export function undoHp(c: Character): Character {
@@ -130,11 +132,15 @@ export function clearHpUndo(c: Character, shown: Character['hpUndo']): Character
   return c.hpUndo === shown ? { ...c, hpUndo: null } : c;
 }
 
+// Hit Dice are spent during a Short Rest, which needs at least 1 HP (PHB p.373).
 export function spendHitDie(c: Character): Character {
   const used = Math.min(c.hdUsed, c.level);
-  if (used >= c.level) return c;
+  if (used >= c.level || c.hp === 0) return c;
   return { ...c, hdUsed: used + 1, amount: 0 };
 }
+
+// Each spent Hit Die restores at least 1 HP, even with a negative Con modifier (PHB p.373).
+export const healHitDie = (c: Character) => applyHeal({ ...c, amount: Math.max(1, c.amount) });
 
 export const rechargeOf = (r: Resource) => r.recharge || (r.refill ? 'long' : 'none');
 
@@ -155,15 +161,23 @@ export function refillFor(res: Resource[], kind: 'short' | 'long'): [Resource[],
 const restBlocked = (c: Character, title: string): Character =>
   ({ ...c, restMsg: { title, body: 'A rest can only start with at least 1 HP. Heal first.' } });
 
+// A Long Rest also returns a reduced HP maximum and reduced ability scores to normal (PHB p.370).
+// Raised values (from items or spells) are left alone.
 export function longRest(c: Character): Character {
   if (c.hp === 0) return restBlocked(c, 'No Long Rest');
   const [res, refilled] = refillFor(c.res, 'long');
+  const maxHp = c.origOn && c.maxHp < c.origHp ? c.origHp : c.maxHp;
+  const abilAdj = Object.fromEntries(Object.entries(c.abilAdj).map(([k, v]) => [k, Math.max(0, v || 0)]));
+  const restored = [
+    maxHp > c.maxHp ? ', HP maximum back to ' + maxHp : '',
+    Object.values(c.abilAdj).some((v) => (v || 0) < 0) ? ', reduced ability scores restored' : ''
+  ].join('');
   return {
-    ...c, hp: c.maxHp, temp: 0, slotUsed: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], hdUsed: 0, ds: 0, df: 0, free: {},
+    ...c, maxHp, abilAdj, hp: maxHp, temp: 0, slotUsed: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], hdUsed: 0, ds: 0, df: 0, free: {},
     hpUndo: null, concCheck: null, res, exh: Math.max(0, c.exh - 1),
     restMsg: {
       title: 'Long Rest complete',
-      body: 'HP set to max, temp HP cleared, all spell slots, Hit Dice and free casts restored' +
+      body: 'HP set to max, temp HP cleared, all spell slots, Hit Dice and free casts restored' + restored +
         (c.exh ? ', Exhaustion −1' : '') + (refilled.length ? '. Refilled: ' + refilled.join(', ') : '') + '.'
     }
   };
@@ -178,7 +192,7 @@ export function shortRest(c: Character): Character {
     restMsg: {
       title: 'Short Rest',
       body: (refilled.length ? 'Refilled: ' + refilled.join(', ') + '. ' : 'No resources recharge on a Short Rest. ') +
-        'Spend Hit Dice below: roll 1d' + c.hdDie + ' ' + fmt(abilityMod(c, 'con')) + ' each, then Heal (' + left + ' left).'
+        'Spend Hit Dice below: roll 1d' + c.hdDie + ' ' + fmt(abilityMod(c, 'con')) + ' each (minimum 1), then Heal (' + left + ' left).'
     }
   };
 }
