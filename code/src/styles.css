@@ -317,11 +317,17 @@ button.stat.open { box-shadow: inset 0 0 0 2px var(--accent); }
 .hp-card { padding: 14px 16px; }
 .hp-max { color: var(--muted); font-size: 18px; }
 .hp-delta { font-size: 13px; }
+.hd-count { font-family: var(--serif); font-size: 22px; font-weight: 700; }
+.hd-sub { font-weight: 600; white-space: nowrap; }
 .amount { background: var(--well); border-radius: 22px; }
 .amount .step { background: transparent; }
 .abil-grid { --min: 300px; gap: 12px; } /* cards stretch to the tallest in their row */
 .save-row { border-bottom: 1px solid var(--line); min-height: 36px; padding: 0 2px; }
 .skill-row { min-height: 34px; padding: 0 2px; }
+.save-edit { padding: 0 10px; }
+.skill-edit { padding: 0 2px; }
+.skill-edit-mod { font-weight: 600; min-width: 28px; text-align: right; }
+.skill-edit-name { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .dashed-box { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; background: var(--well); border-radius: 12px; padding: 6px 10px; }
 
 /* ---------- two-column layout (.sheet.wide: auto via WIDE_QUERY in layout.ts, or set in the menu) ---------- */
@@ -329,7 +335,7 @@ button.stat.open { box-shadow: inset 0 0 0 2px var(--accent); }
    pushing the HP card under the top bar at the end of the page. */
 .sheet.wide { padding-bottom: 0; }
 .wide .sheet-left { padding-bottom: calc(32px + env(safe-area-inset-bottom)); }
-.wide .sheet-body { display: grid; grid-template-columns: minmax(660px, 1fr) minmax(0, 1fr); /* 660px: three ability cards fit side by side */ align-items: start; }
+.wide .sheet-body { display: grid; grid-template-columns: 560px minmax(0, 1fr); /* 560px: three ability cards with short names; all extra width goes to the tabs */ align-items: start; }
 /* Right column: HP stays put under the top bar, the open tab scrolls below it. */
 .wide .sheet-right {
   position: sticky; top: var(--topbar-h); max-height: calc(100dvh - var(--topbar-h));
@@ -344,10 +350,20 @@ button.stat.open { box-shadow: inset 0 0 0 2px var(--accent); }
 
 /* Compact core, so vitals and all six abilities fit on screen. */
 .wide .hp-card { padding: 10px 14px; gap: 6px; }
-.wide .abil-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.wide .abil-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.wide .abil-grid .card { padding-left: 10px; padding-right: 10px; }
 .wide .abil-grid .mod-token { width: 52px; height: 44px; font-size: 22px; }
 /* Movement panel: five small cells in one row (edit mode keeps room for the − / + buttons). */
 .wide .speed-grid { --min: 100px; gap: 8px; }
 .wide .speed-grid .tile { padding: 6px 10px; gap: 2px; }
 .wide .speed-value { font-size: 17px; }
-.wide .save-row, .wide .skill-row { min-height: 24px; }
+.wide .save-row, .wide .skill-row { min-height: 24px; gap: 6px; }
+.wide .skill-edit-name { flex-direction: column; align-items: flex-start; gap: 0; line-height: 1.15; } /* edit mode: proficiency under the skill name */
+/* Edit mode: the − / + stepper doesn't fit beside "Current" in a 560 px column, so it takes its own line below (Reset stays on the label line). */
+.wide .abil-edit-row { gap: 6px; }
+.wide .save-edit { padding: 0 6px; }
+.wide .skill-edit { padding: 0; }
+.wide .skill-edit-mod { min-width: 0; }
+.wide .abil-cur-label { margin-right: auto; }
+.wide .abil-stepper { order: 1; }
+.wide .stat-hint { display: none; } /* the Speed value still turns red at 0 */

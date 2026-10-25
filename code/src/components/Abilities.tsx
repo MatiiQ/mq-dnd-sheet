@@ -1,7 +1,8 @@
-import { ABILITIES, SKILLS, abilityMod, effScore, fmt, saveMod, skillMod } from '../logic';
+import { ABILITIES, SKILLS, abilityMod, clamp, effScore, fmt, saveMod, skillMod } from '../logic';
+import { useWide } from '../layout';
 import { useSheet } from '../sheet';
 import type { Ability } from '../types';
-import { NumInput, ProfDot, Step } from './ui';
+import { ProfDot, Step, TypeInNumber } from './ui';
 
 const LEVEL_NAMES = ['Not proficient', 'Proficient', 'Expertise'];
 
@@ -24,6 +25,7 @@ export function Abilities() {
 
 function AbilityCard({ k, name }: { k: Ability; name: string }) {
   const { c, update, edit } = useSheet();
+  const wide = useWide();
   const cur = effScore(c, k), base = c.abil[k], changed = cur !== base;
   const saveProf = !!c.saveProf[k];
   const scoreColor = cur > base ? 'var(--blue)' : cur < base ? 'var(--danger)' : 'var(--text)';
@@ -39,11 +41,14 @@ function AbilityCard({ k, name }: { k: Ability; name: string }) {
     <div className="card" style={{ gap: 2 }}>
       <div className="row between gap-8 abil-head">
         <div className="col" style={{ gap: 2 }}>
-          <span className="abil-name">{name}</span>
+          {/* Two columns: short names, so the left column fits in 560 px. */}
+          {wide
+            ? <span className="abil-name"><span aria-hidden="true">{k.toUpperCase()}</span><span className="sr-only">{name}</span></span>
+            : <span className="abil-name">{name}</span>}
           {changed && !edit && <span className="small">Was {base}</span>}
           {edit && (
             <label className="row gap-6 small">Original score
-              <NumInput className="input input-num" style={{ width: 56 }} value={base} min={1} max={30} onCommit={(v) => update((p) => ({ abil: { ...p.abil, [k]: v } }))} />
+              <TypeInNumber className="input input-num" style={{ width: 56 }} aria-label={'Original ' + lower + ' score'} value={base} onCommit={(v) => update((p) => ({ abil: { ...p.abil, [k]: clamp(v, 1, 30) } }))} />
             </label>
           )}
         </div>
@@ -54,10 +59,12 @@ function AbilityCard({ k, name }: { k: Ability; name: string }) {
 
       {edit && (
         <div className="row wrap gap-6" style={{ paddingBottom: 6 }}>
-          <span className="muted">Current</span>
-          <Step label={'Lower current ' + lower + ' score'} onClick={() => adjust(-1)}>−</Step>
-          <span style={{ minWidth: 28, textAlign: 'center', fontSize: 18, fontWeight: 700, color: scoreColor }}>{cur}</span>
-          <Step label={'Raise current ' + lower + ' score'} onClick={() => adjust(1)}>+</Step>
+          <span className="muted abil-cur-label">Current</span>
+          <div className="row gap-6 abil-stepper">
+            <Step label={'Lower current ' + lower + ' score'} onClick={() => adjust(-1)}>−</Step>
+            <span style={{ minWidth: 28, textAlign: 'center', fontSize: 18, fontWeight: 700, color: scoreColor }}>{cur}</span>
+            <Step label={'Raise current ' + lower + ' score'} onClick={() => adjust(1)}>+</Step>
+          </div>
           {changed && (
             <button type="button" className="btn" style={{ fontSize: 13, padding: '0 10px' }} aria-label={'Reset ' + lower + ' to original ' + base}
               onClick={() => update((p) => ({ abilAdj: { ...p.abilAdj, [k]: 0 } }))}>Reset</button>
@@ -66,7 +73,7 @@ function AbilityCard({ k, name }: { k: Ability; name: string }) {
       )}
 
       {edit ? (
-        <button type="button" aria-pressed={saveProf} className="btn row gap-10" style={{ border: '1px dashed var(--dash)', padding: '0 10px', textAlign: 'left', fontWeight: 400 }}
+        <button type="button" aria-pressed={saveProf} className="btn row gap-10 abil-edit-row save-edit" style={{ border: '1px dashed var(--dash)', textAlign: 'left', fontWeight: 400 }}
           onClick={() => update((p) => ({ saveProf: { ...p.saveProf, [k]: !p.saveProf[k] } }))}>
           {saveRow}
         </button>
@@ -81,12 +88,12 @@ function AbilityCard({ k, name }: { k: Ability; name: string }) {
         const modText = fmt(skillMod(c, key, k));
         const label = <><ProfDot level={lv} /><span className="grow">{skill}</span></>;
         return edit ? (
-          <button key={key} type="button" aria-label={skill + ': ' + LEVEL_NAMES[lv] + '. Tap to change.'} className="row gap-10"
-            style={{ cursor: 'pointer', background: 'transparent', border: 'none', borderBottom: '1px dashed var(--line)', minHeight: 44, padding: '0 2px', textAlign: 'left' }}
+          <button key={key} type="button" aria-label={skill + ': ' + LEVEL_NAMES[lv] + '. Tap to change.'} className="row gap-10 abil-edit-row skill-edit"
+            style={{ cursor: 'pointer', background: 'transparent', border: 'none', borderBottom: '1px dashed var(--line)', minHeight: 44, textAlign: 'left' }}
             onClick={() => update((p) => ({ skillProf: { ...p.skillProf, [key]: ((p.skillProf[key] || 0) + 1) % 3 } }))}>
-            {label}
-            <span className="small">{LEVEL_NAMES[lv]}</span>
-            <span style={{ fontWeight: 600, minWidth: 28, textAlign: 'right' }}>{modText}</span>
+            <ProfDot level={lv} />
+            <span className="grow skill-edit-name"><span>{skill}</span><span className="small">{LEVEL_NAMES[lv]}</span></span>
+            <span className="skill-edit-mod">{modText}</span>
           </button>
         ) : (
           <div key={key} className="row gap-10 skill-row">

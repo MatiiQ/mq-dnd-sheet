@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { flushSync } from 'react-dom';
-import { applyDamage, applyHeal, applySetTemp, clearHpUndo, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, isDead, setHp, setMaxHp, spendHitDie, undoHp } from '../logic';
+import { abilityMod, applyDamage, applyHeal, applySetTemp, clearHpUndo, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, isDead, setHp, setMaxHp, spendHitDie, undoHp } from '../logic';
 import { useWide } from '../layout';
 import { useSheet } from '../sheet';
 import type { Character } from '../types';
-import { MarkPips, Notice, NumInput, Step, TypeInNumber, UsePips, XIcon } from './ui';
+import { DieBadge, MarkPips, Notice, NumInput, Step, TypeInNumber, XIcon } from './ui';
 
 const HP_UNDO_MS = 5000;
 
@@ -124,13 +124,18 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
         </div>
       )}
 
-      <div className="row wrap between" style={{ gap: '4px 12px' }}>
-        <div className="row wrap">
-          <span className="muted" style={{ marginRight: 2 }}>Hit Dice</span>
-          <UsePips used={hdUsed} max={c.level} color="var(--accent)" size={16} width={40} noun="Hit Die" onChange={(n) => update({ hdUsed: n })} />
-          <span style={{ fontSize: 13, color: 'var(--text-2)', marginLeft: 4 }}>{hdLeft} / {c.level}</span>
+      {/* A count instead of one pip per die, so it stays on one row up to level 20. */}
+      <div className="row gap-10">
+        <DieBadge value={'d' + c.hdDie} />
+        <div className="col" role="group" aria-label={'Hit Dice: ' + hdLeft + ' of ' + c.level + ' left'} style={{ lineHeight: 1.1 }}>
+          <span><span className="hd-count">{hdLeft}</span> <span className="muted">/ {c.level}</span></span>
+          <span className="small hd-sub">left · CON {fmt(abilityMod(c, 'con'))}</span>
         </div>
-        <button type="button" className="btn" style={{ fontSize: 14, padding: '0 12px' }} aria-disabled={!canSpendHD} onClick={spendHD}>Spend Hit Die · {hdRoll}</button>
+        <div className="row amount">
+          <button type="button" className="step" aria-label="Remove a Hit Die" onClick={() => update({ hdUsed: Math.min(c.level, hdUsed + 1) })}>−</button>
+          <button type="button" className="step" aria-label="Restore a Hit Die" onClick={() => update({ hdUsed: Math.max(0, hdUsed - 1) })}>+</button>
+        </div>
+        <button type="button" className="btn" style={{ fontSize: 14, padding: '0 12px', marginLeft: 'auto' }} aria-disabled={!canSpendHD} onClick={spendHD}>Spend Hit Die</button>
       </div>
       {hdPrompt && <Notice className="notice-blue" label="Dismiss Hit Die note" onClose={() => setHdPrompt(false)}>Hit Die spent. Roll {hdRoll} (minimum 1), type the total in Amount above, then tap Heal.</Notice>}
 
