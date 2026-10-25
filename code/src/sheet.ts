@@ -4,7 +4,7 @@ import type { Patch } from './storage';
 import type { Character } from './types';
 
 // Only one add/edit form is open at a time across the sheet.
-export type FormKind = 'attack' | 'rider' | 'res' | 'spell' | 'item' | 'feat' | 'sense';
+export type FormKind = 'attack' | 'rider' | 'res' | 'spell' | 'item' | 'feat' | 'sense' | 'acmod';
 export type FormState = { kind: FormKind; id: string | null } | null;
 
 export interface SheetCtx {

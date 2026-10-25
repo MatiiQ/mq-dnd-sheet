@@ -39,12 +39,12 @@ Every push to `main` runs `.github/workflows/deploy.yml` (test → build → dep
 |---|---|
 | `types.ts` | `Character` model and its sub-types |
 | `defaults.ts` | `sampleCharacter()` (Ilyra Moonbrook, Wood Elf Ranger 5) and `blankCharacter()` |
-| `logic.ts` | Pure rules functions (`Character → Character`): modifiers, skills, damage/heal/temp HP, death saves, massive damage, concentration DC, rests, hit dice, conditions, exhaustion, speed. Also holds the skill list and condition rule texts, and `migrate()` for old saves |
+| `logic.ts` | Pure rules functions (`Character → Character`): modifiers, skills, damage/heal/temp HP, death saves, massive damage, concentration DC, rests, hit dice, conditions, exhaustion, speed, armor class. Also holds the skill list and condition rule texts, and `migrate()` for old saves |
 | `logic.test.ts` | Tests for `logic.ts`; add one whenever rules behaviour changes |
 | `storage.ts` | `useCharacters()` hook: multi-character list, localStorage persistence, JSON backup export/import |
 | `sheet.ts` | `Sheet` context (`c`, `update`, `edit`, `form`), `useEntryForm()` for add/edit forms (one open at a time), `saveEntry()` |
 | `App.tsx` | Page assembly, UI-only state (edit mode, menu, active section, hit-die prompt), scroll-spy |
-| `components/` | `TopBar` (bar, nav, menu with rests/characters/backup), `EditDetails`, `Vitals`, `HitPoints`, `Abilities`, `Senses`, `Defenses`, `Conditions`, `Resources` |
+| `components/` | `TopBar` (bar, nav, menu with rests/characters/backup), `EditDetails`, `Vitals` (AC and Speed panels), `HitPoints`, `Abilities`, `Senses`, `Defenses`, `Conditions`, `Resources` |
 | `components/tabs/` | `ActionsTab`, `SpellsTab`, `InventoryTab`, `FeaturesTab`, `NotesTab` |
 | `components/ui.tsx` | Shared bits: icons, `RemoveButton` (tap twice to confirm), `EntryActions`, `Step`, `UsePips`/`MarkPips`, `ProfDot`, `NumInput`, `EntryForm`, `TextField`, `useArmed` |
 | `styles.css` | Colour tokens on `:root` (indigo theme, amber `--accent`), layout utilities, component classes |

@@ -1,14 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import {
-  applyDamage, applyHeal, applySetTemp, castSpell, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, passiveScore, pillView, resPill, setPill, preparedCount, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
-  setExhaustion, speedNow, spellAttack, spellSaveDC, spellUsable, spendHitDie, toggleCondition, undoHp
+  applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, passiveScore, pillView, resPill, setPill, preparedCount, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
+  setExhaustion, speedNow, spellAttack, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, toggleFreeCast, undoHp
 } from './logic';
-import type { Character, Spell } from './types';
+import type { Character, Item, Spell } from './types';
 
 const make = (p: Partial<Character> = {}): Character => ({ ...sampleCharacter(), ...p });
 const sp = (p: Partial<Spell> = {}): Spell => ({ id: 's1', name: 'Bless', lvl: 1, time: 'Action', range: '30 ft', source: 'Cleric', ...p });
 const hm = { id: 'sp4', name: 'Hunter’s Mark' };
+const ac = (p: Partial<Character>) => armorClass(make({ inv: [], spells: [], acMods: [], acOn: [], acUnarm: 'none', conc: null, ...p }));
+const it_ = (p: Partial<Item>): Item => ({ id: 'a', name: 'X', qty: 1, eq: true, ...p });
 
 describe('derived numbers', () => {
   it('adds ability modifiers, proficiency and expertise', () => {
@@ -377,5 +379,178 @@ describe('top bar pills', () => {
     expect(sampleCharacter().pills).toEqual(['hp', 'ac', 'res:favored']);
     expect(druidSample().pills).toEqual(['hp', 'ac', 'res:wild']);
     expect(blankCharacter().pills).toEqual(['hp', 'ac', '']);
+  });
+});
+
+describe('armor class', () => {
+  it('unarmored is 10 + DEX; a +0 DEX makes no tile (PHB p.12)', () => {
+    expect(ac({}).total).toBe(14);
+    expect(ac({}).parts).toEqual([{ label: 'Unarmored', value: 10 }, { label: 'Dexterity', value: 4 }]);
+    const d0 = ac({ abil: { ...make().abil, dex: 10 } });
+    expect(d0.total).toBe(10);
+    expect(d0.parts.map((p) => p.label)).toEqual(['Unarmored']);
+  });
+  it('light armor adds all DEX, medium at most +2, heavy none, negative DEX only without heavy (PHB p.219)', () => {
+    expect(ac({ inv: [it_({ name: 'Studded Leather Armor', armor: 'light', acBase: 12 })] }).total).toBe(16);
+    expect(ac({ inv: [it_({ name: 'Half Plate', armor: 'medium', acBase: 15 })] }).total).toBe(17);
+    expect(ac({ inv: [it_({ name: 'Plate', armor: 'heavy', acBase: 18 })] }).total).toBe(18);
+    const weak = { abil: { ...make().abil, dex: 8 } };
+    expect(ac({ ...weak, inv: [it_({ armor: 'medium', acBase: 14 })] }).total).toBe(13);
+    expect(ac({ ...weak, inv: [it_({ armor: 'heavy', acBase: 16 })] }).total).toBe(16);
+  });
+  it('armor and shield bonuses count; carried items do not; best equipped armor wins', () => {
+    const r = ac({ inv: [
+      it_({ id: 'a', name: '+1 Chain Mail', armor: 'heavy', acBase: 16, acBonus: 1 }),
+      it_({ id: 'b', name: 'Leather', armor: 'light', acBase: 11 }),
+      it_({ id: 's', name: 'Shield', armor: 'shield', acBase: 2 }),
+      it_({ id: 'c', name: 'Cloak of Protection', acBonus: 1 }),
+      it_({ id: 'r', name: 'Ring of Protection', acBonus: 1, eq: false })
+    ] });
+    expect(r.total).toBe(20); // 17 chain beats 15 leather, +2 shield, +1 cloak
+    expect(r.parts.map((p) => [p.label, p.value])).toEqual([['+1 Chain Mail', 17], ['Shield', 2], ['Cloak of Protection', 1]]);
+  });
+  it('Unarmored Defense: Barbarian keeps it with a shield, Monk loses it (PHB p.51, p.101, p.148, p.64)', () => {
+    const shield = [it_({ name: 'Shield', armor: 'shield', acBase: 2 })];
+    expect(ac({ acUnarm: 'barbarian' }).total).toBe(16);
+    expect(ac({ acUnarm: 'barbarian', inv: shield }).total).toBe(18);
+    expect(ac({ acUnarm: 'monk' }).total).toBe(16);
+    expect(ac({ acUnarm: 'monk', inv: shield }).total).toBe(16); // falls back to 10 + DEX + 2
+    expect(ac({ acUnarm: 'monk', inv: shield }).parts.map((p) => p.label)).toEqual(['Unarmored', 'Dexterity', 'Shield']);
+    expect(ac({ acUnarm: 'draconic' }).total).toBe(14); // CHA −1 loses to plain 10 + DEX
+    expect(ac({ acUnarm: 'barbarian', inv: [it_({ armor: 'light', acBase: 11 })] }).total).toBe(15); // armor disables it
+  });
+  it('custom bonuses add, negative ones subtract, zero ones are hidden', () => {
+    const r = ac({ acMods: [{ id: 'm1', name: 'Defense', val: 1 }, { id: 'm2', name: 'Curse', val: -2 }, { id: 'm3', name: 'Nothing', val: 0 }] });
+    expect(r.total).toBe(13);
+    expect(r.parts.map((p) => p.label)).toEqual(['Unarmored', 'Dexterity', 'Defense', 'Curse']);
+  });
+  it('detects armor by name only for real armor names', () => {
+    expect(detectArmor('Studded Leather Armor')).toEqual({ armor: 'light', acBase: 12 });
+    expect(detectArmor('leather')).toEqual({ armor: 'light', acBase: 11 });
+    expect(detectArmor('Plate Armor')).toEqual({ armor: 'heavy', acBase: 18 });
+    expect(detectArmor('Shield')).toEqual({ armor: 'shield', acBase: 2 });
+    expect(detectArmor('+1 Chain Mail')).toEqual({ armor: 'heavy', acBase: 16, acBonus: 1 });
+    for (const n of ['Leather Pouch', 'Shield Badge', 'Plate of Cheese', 'Rope']) expect(detectArmor(n)).toBeNull();
+  });
+  it('sample characters compute their printed AC', () => {
+    expect(armorClass(sampleCharacter()).total).toBe(16);
+    expect(armorClass(druidSample()).total).toBe(14);
+    expect(armorClass(blankCharacter()).total).toBe(10);
+  });
+});
+
+describe('AC spells', () => {
+  const shieldSp = sp({ id: 'sh', name: 'Shield', acFx: 'bonus', acVal: 5 });
+  const faith = sp({ id: 'sf', name: 'Shield of Faith', c: true, acFx: 'bonus', acVal: 2 });
+  const mage = sp({ id: 'ma', name: 'Mage Armor', acFx: 'base', acVal: 13 });
+  const bark = sp({ id: 'bk', name: 'Barkskin', lvl: 2, acFx: 'floor', acVal: 17 });
+  const all = { spells: [shieldSp, faith, mage, bark] };
+  it('Shield +5 while on; Shield of Faith +2 only while concentrating on it (PHB p.316)', () => {
+    expect(ac({ ...all, acOn: ['sh'] }).total).toBe(19);
+    expect(ac({ ...all, acOn: ['sh'] }).parts.at(-1)).toMatchObject({ label: 'Shield', value: 5, active: true });
+    expect(ac({ ...all, conc: { id: 'sf', name: 'Shield of Faith' } }).total).toBe(16);
+    expect(ac({ ...all, acOn: ['sf'] }).total).toBe(14); // a concentration spell in acOn is ignored
+  });
+  it('Mage Armor is a base: beats plain unarmored, loses to better armor (PHB p.293)', () => {
+    expect(ac({ ...all, acOn: ['ma'] }).total).toBe(17);
+    expect(ac({ ...all, acOn: ['ma'] }).parts[0]).toEqual({ label: 'Mage Armor', value: 13, note: 'spell', active: true });
+    expect(ac({ ...all, acOn: ['ma'], inv: [it_({ armor: 'heavy', acBase: 18 })] }).total).toBe(18);
+  });
+  it('Barkskin raises AC to 17 only when lower (PHB p.245)', () => {
+    const low = ac({ ...all, acOn: ['bk'], abil: { ...make().abil, dex: 10 } });
+    expect(low.total).toBe(17);
+    expect(low.parts.at(-1)).toMatchObject({ label: 'Barkskin', value: 7, note: 'AC at least 17', active: true });
+    expect(ac({ ...all, acOn: ['bk', 'sh'] }).total).toBe(19); // already above 17: no Barkskin tile
+    expect(ac({ ...all, acOn: ['bk', 'sh'] }).parts.some((p) => p.label === 'Barkskin')).toBe(false);
+  });
+  it('casting a non-concentration AC spell turns it on once; others change nothing', () => {
+    const c = make({ ...all, acOn: [], slotMax: [0, 4, 2, 0, 0, 0, 0, 0, 0, 0], slotUsed: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0] });
+    expect(castSpell(c, shieldSp, 1).acOn).toEqual(['sh']);
+    const again = { ...c, acOn: ['sh'] };
+    expect({ ...again, ...castSpell(again, shieldSp, 1) }.acOn).toEqual(['sh']);
+    expect(castSpell(c, faith, 1)).not.toHaveProperty('acOn');
+    expect(castSpell(c, sp(), 1)).not.toHaveProperty('acOn');
+  });
+  it('a free cast turns the effect on; restoring it does not turn it off', () => {
+    const c = make({ ...all, acOn: [], free: {} });
+    const used = toggleFreeCast(c, { ...shieldSp, free: true });
+    expect(used).toMatchObject({ free: { sh: true }, acOn: ['sh'] });
+    expect(toggleFreeCast({ ...c, ...used }, shieldSp)).not.toHaveProperty('acOn');
+    expect(toggleFreeCast(c, { ...faith, free: true }).conc).toEqual({ id: 'sf', name: 'Shield of Faith' });
+    const on = { ...c, acOn: ['sh'] }; // already on from a slot cast
+    expect({ ...on, ...toggleFreeCast(on, { ...shieldSp, free: true }) }.acOn).toEqual(['sh']);
+  });
+  it('toggle, edit, removal and Long Rest switch AC spells off', () => {
+    const c = make({ ...all, acOn: ['sh', 'bk'] });
+    expect(toggleAcSpell(c, 'sh').acOn).toEqual(['bk']);
+    expect(toggleAcSpell(c, 'ma').acOn).toEqual(['sh', 'bk', 'ma']);
+    expect(acAfterEdit(c, { id: 'sh', c: true, acFx: 'bonus' }).acOn).toEqual(['bk']);
+    expect(acAfterEdit(c, { id: 'sh', c: false, acFx: undefined }).acOn).toEqual(['bk']);
+    expect(acAfterEdit(c, { id: 'sh', c: false, acFx: 'bonus' })).toEqual({});
+    expect(acAfterEdit(c, { id: 'ma', c: true, acFx: 'base' })).toEqual({}); // not on: nothing to remove
+    expect(removeSpell(c, 'sh').acOn).toEqual(['bk']);
+    const rested = longRest(c);
+    expect(rested.acOn).toEqual([]);
+    expect(rested.restMsg?.body).toContain('Shield, Barkskin ended');
+    expect(longRest(make({ ...all, acOn: [] })).restMsg?.body).not.toContain('ended');
+  });
+  it('detects the four AC spells by name', () => {
+    expect(detectAcSpell('Shield')).toEqual({ acFx: 'bonus', acVal: 5 });
+    expect(detectAcSpell(' mage armor ')).toEqual({ acFx: 'base', acVal: 13 });
+    expect(detectAcSpell('Shield of Faith')).toEqual({ acFx: 'bonus', acVal: 2 });
+    expect(detectAcSpell('Barkskin')).toEqual({ acFx: 'floor', acVal: 17 });
+    expect(detectAcSpell('Shillelagh')).toBeNull();
+  });
+});
+
+describe('AC migration', () => {
+  const old = (p: Record<string, unknown>) => ({ ...blankCharacter(), ...p }) as Record<string, unknown>;
+  it('detects armor and AC spells by name on saves with a typed ac, without switching spells on', () => {
+    const c = migrate(old({ ac: 16, abil: sampleCharacter().abil, inv: [{ id: 'i', name: 'Studded Leather Armor', qty: 1, eq: true }],
+      spells: [{ id: 's', name: 'Shield', lvl: 1, time: 'Reaction', range: 'Self', source: 'Wizard' }] }));
+    expect(c.inv[0]).toMatchObject({ armor: 'light', acBase: 12 });
+    expect(c.spells[0]).toMatchObject({ acFx: 'bonus', acVal: 5 });
+    expect(c.acOn).toEqual([]);
+    expect(c.acMods).toEqual([]);
+    expect(armorClass(c).total).toBe(16);
+  });
+  it('keeps the old number with an adjustment bonus when the parts disagree', () => {
+    const c = migrate(old({ ac: 13, inv: [{ id: 'p', name: 'Leather Pouch', qty: 1, eq: true }] }));
+    expect(c.inv[0].armor).toBeUndefined();
+    expect(c.acMods).toEqual([{ id: expect.any(String), name: 'Adjustment (from old AC)', val: 3 }]);
+    expect(armorClass(c).total).toBe(13);
+  });
+  it('adds no adjustment when the old number already matches', () => {
+    expect(migrate(old({ ac: 10 })).acMods).toEqual([]);
+  });
+  it('never re-detects on saves already in the new shape', () => {
+    const { ac: _, ...fresh } = old({ inv: [{ id: 'i', name: 'Shield', qty: 1, eq: true }] });
+    expect(migrate(fresh).inv[0].armor).toBeUndefined();
+  });
+  it('drops damaged or stale AC state', () => {
+    const c = migrate(old({
+      spells: [{ id: 'sh', name: 'Shield', lvl: 1, time: 'Reaction', range: 'Self', source: 'W', acFx: 'bonus', acVal: 5 },
+        { id: 'sf', name: 'Shield of Faith', lvl: 1, time: 'Bonus Action', range: '60 ft', source: 'C', c: true, acFx: 'bonus', acVal: 2 },
+        { id: 'bl', name: 'Bless', lvl: 1, time: 'Action', range: '30 ft', source: 'C' }],
+      acOn: ['sh', 'sf', 'bl', 'gone', 7], acUnarm: 'wizard', acMods: [{ id: 'm', name: 'Ok', val: 1 }, { id: 'x', name: 'Bad', val: 'two' }]
+    }));
+    expect(c.acOn).toEqual(['sh']);
+    expect(c.acUnarm).toBe('none');
+    expect(c.acMods.map((m) => m.name)).toEqual(['Ok']);
+  });
+  it('drops damaged AC fields on items and spells', () => {
+    const c = migrate(old({
+      inv: [{ id: 'a', name: 'A', qty: 1, eq: true, armor: 'light', acBase: '12' },
+        { id: 'b', name: 'B', qty: 1, eq: true, armor: 'robe', acBase: 11 },
+        { id: 'c', name: 'C', qty: 1, eq: true, armor: 'heavy', acBase: 16, acBonus: '1' },
+        { id: 'd', name: 'D', qty: 1, eq: false, acBonus: 1 }],
+      spells: [{ id: 'x', name: 'X', lvl: 1, time: 'Action', range: 'Self', source: 'W', acFx: 'bonus', acVal: 'x' },
+        { id: 'y', name: 'Y', lvl: 1, time: 'Action', range: 'Self', source: 'W', acFx: 'wall', acVal: 3 }]
+    }));
+    expect(c.inv.map((i) => [i.armor, i.acBase, i.acBonus])).toEqual([
+      [undefined, undefined, undefined], [undefined, undefined, undefined], ['heavy', 16, undefined], [undefined, undefined, 1]
+    ]);
+    expect(c.spells.map((s) => [s.acFx, s.acVal])).toEqual([[undefined, undefined], [undefined, undefined]]);
+    expect(Number.isFinite(armorClass(c).total)).toBe(true);
   });
 });

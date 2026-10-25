@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { setLayoutMode, useLayoutMode, useWide, type LayoutMode } from '../layout';
-import { CONDITIONS, PILL_STATS, TABS, hpColor, pillView, resPill, setConc, setPill, type PillView } from '../logic';
+import { CONDITIONS, PILL_STATS, TABS, fmt, hpColor, pillView, resPill, setConc, setPill, toggleAcSpell, type PillView } from '../logic';
 import { useSheet } from '../sheet';
 import { EXAMPLES, charInfo, charName, saveBackupFile, type CharacterStore } from '../storage';
-import type { Tab } from '../types';
+import type { Spell, Tab } from '../types';
 import { CheckIcon, ChevronDown, ChevronRight, MenuIcon, PencilIcon, StarIcon, XIcon, useArmed } from './ui';
 
 const SECTION_LINKS = [['sec-hp', 'Hit Points'], ['sec-abilities', 'Abilities'], ['sec-senses', 'Senses'], ['sec-defenses', 'Defenses'], ['sec-conditions', 'Conditions'], ['sec-resources', 'Resources']];
 export const SECTION_IDS = [...SECTION_LINKS.map(([id]) => id), 'sec-tabs'];
+const acEffect = (sp: Spell) => (sp.acFx === 'bonus' ? fmt(sp.acVal || 0) + ' AC' : sp.acFx === 'base' ? 'AC ' + sp.acVal + ' + DEX' : 'AC ' + sp.acVal);
 const LAYOUTS: [LayoutMode, string][] = [['auto', 'Auto'], ['one', '1 column'], ['two', '2 columns']];
 
 interface Props {
@@ -152,13 +153,18 @@ export function TopBar({ store, activeSec, setActiveSec, menuOpen, setMenuOpen, 
         </div>
       )}
 
-      {(c.conc || condParts.length > 0 || c.exh > 0) && (
+      {(c.conc || c.acOn.length > 0 || condParts.length > 0 || c.exh > 0) && (
         <div className="row wrap gap-6" style={{ paddingTop: 4 }}>
           {c.conc && (
             <button type="button" className="status-chip" onClick={() => update(setConc(null))} aria-label={'End concentration on ' + c.conc.name}>
               Concentrating · {c.conc.name}<XIcon size={14} strokeWidth={2.5} />
             </button>
           )}
+          {c.acOn.map((id) => c.spells.find((x) => x.id === id)).map((sp) => sp && (
+            <button key={sp.id} type="button" className="status-chip" onClick={() => update((p) => toggleAcSpell(p, sp.id))} aria-label={'End ' + sp.name + ' (' + acEffect(sp) + ')'}>
+              {sp.name} · {acEffect(sp)}<XIcon size={14} strokeWidth={2.5} />
+            </button>
+          ))}
           {condParts.length > 0 && (
             <a href="#sec-conditions" className="cond-chip">{condParts.length > 2 ? condParts.length + ' conditions' : condParts.join(' · ')}</a>
           )}

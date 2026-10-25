@@ -310,6 +310,9 @@ button.stat.open { box-shadow: inset 0 0 0 2px var(--accent); }
 .tile { background: var(--well); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
 .speed-grid { --min: 150px; }
 .speed-value { font-size: 22px; font-weight: 700; }
+/* An AC part from a spell that is on: the blue of other temporary states. */
+.tile.active { background: var(--blue-bg); color: var(--blue-fg); }
+.tile.active .muted { color: var(--blue-fg); }
 
 /* ---------- boxes ---------- */
 /* Ability card header: modifier token, with the score in a small coin on its lower edge. */

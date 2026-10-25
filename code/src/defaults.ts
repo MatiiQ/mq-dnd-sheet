@@ -5,7 +5,8 @@ export function sampleCharacter(): Character {
   return {
     ch: { name: 'Ilyra Moonbrook', species: 'Wood Elf', cls: 'Ranger', sub: 'Hunter', bg: 'Guide', align: 'Neutral Good' },
     speeds: { climb: 0, swim: 0, fly: 0, burrow: 0 }, speedOpen: false,
-    level: 5, ac: 16, speedBase: 35, initMisc: 0, hdDie: 10, castAb: 'wis',
+    acOpen: false, acUnarm: 'none', acOn: [], acMods: [],
+    level: 5, speedBase: 35, initMisc: 0, hdDie: 10, castAb: 'wis',
     abil: { str: 12, dex: 18, con: 14, int: 10, wis: 14, cha: 8 }, abilAdj: {},
     saveProf: { str: true, dex: true },
     skillProf: { stealth: 1, nature: 1, animal: 1, insight: 1, perception: 1, survival: 2 },
@@ -33,7 +34,7 @@ export function sampleCharacter(): Character {
     attune: ['Cloak of Elvenkind', '', ''],
     notes: { appearance: '', personality: '', backstory: '', session: '' },
     inv: [
-      { id: 'i1', name: 'Studded Leather Armor', qty: 1, eq: true },
+      { id: 'i1', name: 'Studded Leather Armor', qty: 1, eq: true, armor: 'light', acBase: 12 },
       { id: 'i2', name: 'Longbow', qty: 1, eq: true },
       { id: 'i3', name: 'Shortsword', qty: 1, eq: true },
       { id: 'i4', name: 'Cartographer’s Tools', qty: 1, eq: false },
@@ -85,7 +86,8 @@ export function druidSample(): Character {
   return {
     ch: { name: 'Seren Vale', species: 'Aasimar', cls: 'Druid', sub: 'Circle of the Stars', bg: 'Sage', align: 'Neutral' },
     speeds: { climb: 0, swim: 0, fly: 0, burrow: 0 }, speedOpen: false,
-    level: 12, ac: 14, speedBase: 30, initMisc: 0, hdDie: 8, castAb: 'wis',
+    acOpen: false, acUnarm: 'none', acOn: [], acMods: [],
+    level: 12, speedBase: 30, initMisc: 0, hdDie: 8, castAb: 'wis',
     abil: { str: 8, dex: 13, con: 16, int: 13, wis: 20, cha: 10 }, abilAdj: {},
     saveProf: { int: true, wis: true },
     skillProf: { arcana: 1, history: 1, medicine: 1, perception: 1 },
@@ -129,8 +131,8 @@ export function druidSample(): Character {
       session: 'Fought the blight-wolves at the ruined observatory. Still poisoned from the hag’s bite. Moonbeam is up on the wolf den.'
     },
     inv: [
-      { id: 'i1', name: 'Leather Armor', qty: 1, eq: true },
-      { id: 'i2', name: 'Shield', qty: 1, eq: true },
+      { id: 'i1', name: 'Leather Armor', qty: 1, eq: true, armor: 'light', acBase: 11 },
+      { id: 'i2', name: 'Shield', qty: 1, eq: true, armor: 'shield', acBase: 2 },
       { id: 'i3', name: 'Quarterstaff', qty: 1, eq: true },
       { id: 'i4', name: 'Star Map (crystal engraved with starry patterns)', qty: 1, eq: true },
       { id: 'i5', name: 'Sickle', qty: 1, eq: false },
@@ -153,7 +155,7 @@ export function druidSample(): Character {
       { id: 'ds8', name: 'Fire Bolt', lvl: 0, time: 'Action', range: '120 ft', source: 'Magic Initiate', dice: 'd20 +9 · 3d10 Fire', dur: 'Instantaneous', comp: 'V, S', prep: true },
       { id: 'ds10', name: 'Mage Hand', lvl: 0, time: 'Action', range: '30 ft', source: 'Magic Initiate', dur: '1 minute', comp: 'V, S', prep: true },
       { id: 'ds11', name: 'Guiding Bolt', lvl: 1, time: 'Action', range: '120 ft', source: 'Star Map', dice: 'd20 +9 · 4d6 Radiant · +1d6 per slot level above 1', dur: '1 round', comp: 'V, S', always: true },
-      { id: 'ds12', name: 'Shield', lvl: 1, time: 'Reaction', range: 'Self', source: 'Magic Initiate', free: true, dice: '+5 AC', dur: '1 round', comp: 'V, S', always: true },
+      { id: 'ds12', name: 'Shield', lvl: 1, time: 'Reaction', range: 'Self', source: 'Magic Initiate', free: true, dice: '+5 AC', dur: '1 round', comp: 'V, S', always: true, acFx: 'bonus', acVal: 5 },
       { id: 'ds13', name: 'Speak with Animals', lvl: 1, time: 'Action or Ritual', range: 'Self', source: 'Druidic', dur: '10 minutes', comp: 'V, S', always: true },
       { id: 'ds14', name: 'Cure Wounds', lvl: 1, time: 'Action', range: 'Touch', source: 'Druid', dice: 'Heal 2d8 +5 · +2d8 per slot level above 1', dur: 'Instantaneous', comp: 'V, S', prep: true },
       { id: 'ds15', name: 'Healing Word', lvl: 1, time: 'Bonus Action', range: '60 ft', source: 'Druid', dice: 'Heal 2d4 +5 · +2d4 per slot level above 1', dur: 'Instantaneous', comp: 'V', prep: true },
@@ -207,7 +209,7 @@ export function blankCharacter(): Character {
   return {
     ...sampleCharacter(),
     ch: { name: 'New character', species: '', cls: '', sub: '', bg: '', align: '' },
-    level: 1, ac: 10, speedBase: 30, initMisc: 0, hdDie: 8, castAb: 'none', insp: false, pills: ['hp', 'ac', ''],
+    level: 1, speedBase: 30, initMisc: 0, hdDie: 8, castAb: 'none', insp: false, pills: ['hp', 'ac', ''],
     abil: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 }, abilAdj: {}, saveProf: {}, skillProf: {},
     hp: 8, maxHp: 8, origHp: 8, hdUsed: 0,
     slotMax: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], slotUsed: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],

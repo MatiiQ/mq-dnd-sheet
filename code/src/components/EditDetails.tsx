@@ -4,8 +4,8 @@ import type { CastAbility, Details } from '../types';
 import { NumInput, TextField, useArmed } from './ui';
 
 const TEXT_FIELDS: [string, keyof Details][] = [['Name', 'name'], ['Species', 'species'], ['Class', 'cls'], ['Subclass', 'sub'], ['Background', 'bg'], ['Alignment', 'align']];
-const NUM_FIELDS: [string, 'level' | 'ac' | 'speedBase' | 'initMisc', number, number][] = [
-  ['Level', 'level', 1, 20], ['Armor Class', 'ac', 0, 40], ['Base speed (ft)', 'speedBase', 0, 200], ['Initiative bonus (extra)', 'initMisc', -20, 20]
+const NUM_FIELDS: [string, 'level' | 'speedBase' | 'initMisc', number, number][] = [
+  ['Level', 'level', 1, 20], ['Base speed (ft)', 'speedBase', 0, 200], ['Initiative bonus (extra)', 'initMisc', -20, 20]
 ];
 
 export function EditDetails({ onReset }: { onReset: () => void }) {

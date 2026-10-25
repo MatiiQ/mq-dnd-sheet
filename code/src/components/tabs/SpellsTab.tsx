@@ -1,16 +1,21 @@
 import { useState } from 'react';
-import { CAST_NAMES, castSpell, concAfterEdit, fmt, preparedCount, removeSpell, setConc, setSlotUsed, slotsLeft, spellAttack, spellSaveDC, spellUsable } from '../../logic';
+import {
+  AC_SPELLS, CAST_NAMES, acAfterEdit, castSpell, concAfterEdit, detectAcSpell, fmt, preparedCount, removeSpell, setConc, setSlotUsed, slotsLeft,
+  spellAttack, spellSaveDC, spellUsable, toggleFreeCast
+} from '../../logic';
 import { patchEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
-import type { Spell } from '../../types';
-import { AddButton, ChevronDown, DieBadge, EntryActions, EntryForm, Step, TextField, UsePips } from '../ui';
+import type { AcEffect, Spell } from '../../types';
+import { AddButton, ChevronDown, DieBadge, EntryActions, EntryForm, NumInput, Step, TextField, UsePips } from '../ui';
 
 const ORDINAL = ['Cantrip', '1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th'];
-const BLANK = { name: '', lvl: '1', time: 'Action', range: '', dice: '', conc: false, source: '', dur: '', comp: '', always: false };
+const BLANK = { name: '', lvl: '1', time: 'Action', range: '', dice: '', conc: false, source: '', dur: '', comp: '', always: false, acFx: '' as AcEffect | '', acVal: 0 };
+const AC_EFFECTS: [AcEffect | '', string][] = [['', 'None'], ['bonus', 'Bonus'], ['base', 'Base (+ DEX)'], ['floor', 'Floor']];
 type Draft = typeof BLANK;
 
 const toDraft = (e: Spell): Draft => ({
   name: e.name, lvl: String(e.lvl || 0), time: e.time || 'Action', range: e.range || '', dice: e.dice || '',
-  conc: !!e.c, source: e.source || '', dur: e.dur || '', comp: e.comp || '', always: !!e.always
+  conc: !!e.c, source: e.source || '', dur: e.dur || '', comp: e.comp || '', always: !!e.always,
+  acFx: e.acFx || '', acVal: e.acVal ?? 0
 });
 
 export function SpellsTab() {
@@ -23,13 +28,20 @@ export function SpellsTab() {
 
   const save = () => {
     const d = f.draft, name = d.name.trim();
-    if (!name) return;
+    if (!name || (d.acFx && !d.acVal)) return;
+    const id = f.editingId;
+    // A new spell named Shield, Mage Armor... fills in its AC effect. Editing never re-detects, so None sticks.
+    const found = !id && !d.acFx ? detectAcSpell(name) : null;
     const built = {
       name, lvl: parseInt(d.lvl, 10) || 0, time: d.time, range: d.range.trim(), dice: d.dice.trim(), c: d.conc,
-      source: d.source.trim() || 'Custom', dur: d.dur.trim(), comp: d.comp.trim(), always: d.always
+      source: d.source.trim() || 'Custom', dur: d.dur.trim(), comp: d.comp.trim(), always: d.always,
+      // Both keys always present: undefined clears the effect when editing.
+      acFx: d.acFx || found?.acFx, acVal: d.acFx ? d.acVal : found?.acVal
     };
-    const id = f.editingId;
-    update((p) => ({ spells: saveEntry<Spell>(p.spells, built, id, { prep: true }), ...(id ? concAfterEdit(p, { ...built, id }) : {}) }));
+    update((p) => ({
+      spells: saveEntry<Spell>(p.spells, built, id, { prep: true }),
+      ...(id ? { ...concAfterEdit(p, { ...built, id }), ...acAfterEdit(p, { ...built, id }) } : {})
+    }));
     f.close();
   };
 
@@ -168,6 +180,20 @@ export function SpellsTab() {
             <TextField label="Components" value={f.draft.comp} placeholder="e.g. V, S, M (a pinch of salt)" onChange={(v) => f.set({ comp: v })} />
             <label className="check"><input type="checkbox" checked={f.draft.conc} onChange={(e) => f.set({ conc: e.target.checked })} />Concentration</label>
             <label className="check"><input type="checkbox" checked={f.draft.always} onChange={(e) => f.set({ always: e.target.checked })} />Always prepared</label>
+            <label className="field">AC effect
+              <select className="input" value={f.draft.acFx} onChange={(e) => {
+                const acFx = e.target.value as AcEffect | '';
+                const known = AC_SPELLS[f.draft.name.trim().toLowerCase()];
+                f.set({ acFx, ...(acFx && known ? { acVal: known[1] } : {}) });
+              }}>
+                {AC_EFFECTS.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+              </select>
+            </label>
+            {f.draft.acFx && (
+              <label className="field">{f.draft.acFx === 'bonus' ? 'AC bonus' : f.draft.acFx === 'base' ? 'Base AC (+ DEX)' : 'AC at least'}
+                <NumInput className="input" value={f.draft.acVal} min={0} max={30} onCommit={(acVal) => f.set({ acVal })} />
+              </label>
+            )}
           </div>
         </EntryForm>
       )}
@@ -252,10 +278,7 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
       {sp.free && usable && (
         <button type="button" aria-pressed={freeUsed} aria-label={freeUsed ? 'Free cast of ' + sp.name + ' used; tap to restore' : 'Use free cast of ' + sp.name}
           className="btn btn-sm" style={{ border: '1px solid ' + (freeUsed ? 'var(--line-2)' : 'var(--accent)'), background: 'transparent', color: freeUsed ? 'var(--muted)' : 'var(--accent)' }}
-          onClick={() => update((p) => {
-            const used = !p.free[sp.id];
-            return { free: { ...p.free, [sp.id]: used }, ...(used && sp.c ? setConc(concOf) : {}) };
-          })}>{freeUsed ? 'Free used' : 'Free'}</button>
+          onClick={() => update((p) => toggleFreeCast(p, sp))}>{freeUsed ? 'Free used' : 'Free'}</button>
       )}
       {!!first && usable && (
         <div role="group" aria-label={'Spell slots for ' + sp.name} className="row wrap gap-6">

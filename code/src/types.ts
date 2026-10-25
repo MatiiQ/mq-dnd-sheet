@@ -7,17 +7,23 @@ export type DefenseKind = 'res' | 'vul' | 'imm';
 export type SpeedKind = 'climb' | 'swim' | 'fly' | 'burrow';
 export type Coin = 'cp' | 'sp' | 'ep' | 'gp' | 'pp';
 export type NoteKey = 'appearance' | 'personality' | 'backstory' | 'session';
+export type ArmorKind = 'light' | 'medium' | 'heavy' | 'shield';
+export type AcEffect = 'bonus' | 'base' | 'floor';
+export type Unarmored = 'none' | 'barbarian' | 'monk' | 'draconic' | 'dance';
 
 export interface Details { name: string; species: string; cls: string; sub: string; bg: string; align: string }
 export interface Sense { id: string; name: string; range: string }
 export interface Resource { id: string; name: string; note?: string; count: number; max?: number; recharge?: Recharge; refill?: boolean; inv?: boolean }
 export interface Attack { id: string; name: string; hit: string; dmg: string; info: string; mastery: string }
 export interface Rider { id: string; name: string; dice: string }
-export interface Item { id: string; name: string; qty: number; eq: boolean }
+// armor/acBase: a suit of armor or a Shield and its table base. acBonus: a magic or other bonus, counted while equipped.
+export interface Item { id: string; name: string; qty: number; eq: boolean; armor?: ArmorKind; acBase?: number; acBonus?: number }
+export interface AcMod { id: string; name: string; val: number }
 export interface Spell {
   id: string; name: string; lvl: number; time: string; range: string; source: string;
   dur?: string; comp?: string; dice?: string;
   c?: boolean; always?: boolean; prep?: boolean; free?: boolean;
+  acFx?: AcEffect; acVal?: number;
 }
 export interface Feature { id: string; g: FeatureGroup; name: string; desc: string }
 export interface Concentration { id: string; name: string }
@@ -26,8 +32,10 @@ export interface HpSnapshot { hp: number; temp: number; ds: number; df: number; 
 
 export interface Character {
   ch: Details;
-  level: number; ac: number; speedBase: number; speeds: Record<SpeedKind, number>; speedOpen: boolean;
+  level: number; speedBase: number; speeds: Record<SpeedKind, number>; speedOpen: boolean;
   initMisc: number; hdDie: number; castAb: CastAbility;
+  /** AC spells switched on (ids of non-Concentration spells with an AC effect), unarmored feature, custom bonuses. */
+  acOpen: boolean; acUnarm: Unarmored; acOn: string[]; acMods: AcMod[];
   abil: Record<Ability, number>; abilAdj: Partial<Record<Ability, number>>;
   saveProf: Partial<Record<Ability, boolean>>; skillProf: Record<string, number>;
   hp: number; maxHp: number; origHp: number; origOn: boolean; temp: number; amount: number; insp: boolean;

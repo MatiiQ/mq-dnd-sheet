@@ -1,6 +1,6 @@
 // D&D 2024 rules used by the sheet. Pure functions: each takes a character and returns the next one.
 import { blankCharacter, sampleCharacter } from './defaults';
-import type { Ability, CastAbility, Character, Concentration, HpSnapshot, Resource, Spell, Tab } from './types';
+import type { AcEffect, Ability, ArmorKind, CastAbility, Character, Concentration, HpSnapshot, Item, Resource, Spell, Tab, Unarmored } from './types';
 
 export const ABILITIES: [Ability, string][] = [
   ['str', 'Strength'], ['dex', 'Dexterity'], ['con', 'Constitution'],
@@ -55,6 +55,91 @@ export const spellSaveDC = (c: Character) => (c.castAb === 'none' ? null : 8 + a
 export const spellAttack = (c: Character) => (c.castAb === 'none' ? null : abilityMod(c, c.castAb) + profBonus(c.level));
 // Initiative is a Dexterity check (PHB p.23); initMisc holds extra bonuses from features or items.
 export const initiative = (c: Character) => abilityMod(c, 'dex') + c.initMisc;
+
+// Armor table: name, category, base AC; a Shield adds 2. One suit of armor and one Shield at a time (PHB p.219).
+export const ARMORS: [string, ArmorKind, number][] = [
+  ['Padded Armor', 'light', 11], ['Leather Armor', 'light', 11], ['Studded Leather Armor', 'light', 12],
+  ['Hide Armor', 'medium', 12], ['Chain Shirt', 'medium', 13], ['Scale Mail', 'medium', 14], ['Breastplate', 'medium', 14], ['Half Plate Armor', 'medium', 15],
+  ['Ring Mail', 'heavy', 14], ['Chain Mail', 'heavy', 16], ['Splint Armor', 'heavy', 17], ['Plate Armor', 'heavy', 18],
+  ['Shield', 'shield', 2]
+];
+// Unarmored base AC features, 10 + DEX + an ability, only without armor: Barbarian (PHB p.51), Monk (p.101),
+// Draconic Sorcerer (p.148), College of Dance (p.64). Monk and Dance also lose it with a Shield.
+export const UNARMORED: Record<Unarmored, [label: string, ability: Ability | null, shieldOk: boolean]> = {
+  none: ['10 + DEX', null, true],
+  barbarian: ['Unarmored Defense (Barbarian)', 'con', true],
+  monk: ['Unarmored Defense (Monk)', 'wis', false],
+  draconic: ['Draconic Resilience', 'cha', true],
+  dance: ['Unarmored Defense (Dance)', 'cha', false]
+};
+
+// Whole-name match against the table, ignoring case, a trailing "Armor" and a leading "+N" (read as a bonus).
+// "Leather Pouch" or "Shield Badge" don't match. A trade item named just "Hide" does; accepted, since this only
+// runs when adding an item or migrating an old save.
+const armorKey = (n: string) => n.toLowerCase().trim().replace(/ armor$/, '');
+export function detectArmor(name: string): Pick<Item, 'armor' | 'acBase' | 'acBonus'> | null {
+  const plus = name.trim().match(/^\+(\d+)\s+(.*)$/);
+  const key = armorKey(plus ? plus[2] : name);
+  const a = ARMORS.find(([n]) => armorKey(n) === key);
+  return a ? { armor: a[1], acBase: a[2], ...(plus ? { acBonus: Number(plus[1]) } : {}) } : null;
+}
+
+// AC spells by name: Shield +5 and Shield of Faith +2 (PHB p.316), Mage Armor base 13 + DEX (p.293), Barkskin AC at least 17 (p.245).
+export const AC_SPELLS: Record<string, [AcEffect, number]> = {
+  shield: ['bonus', 5], 'shield of faith': ['bonus', 2], 'mage armor': ['base', 13], barkskin: ['floor', 17]
+};
+export function detectAcSpell(name: string): Pick<Spell, 'acFx' | 'acVal'> | null {
+  const fx = AC_SPELLS[name.trim().toLowerCase()];
+  return fx ? { acFx: fx[0], acVal: fx[1] } : null;
+}
+
+export interface AcPart { label: string; value: number; note?: string; active?: boolean }
+// A Concentration spell's AC effect is on exactly while concentrating on it; any other is on while in acOn.
+export const acSpellActive = (c: Character, sp: Spell) => !!sp.acFx && (sp.c ? c.conc?.id === sp.id : c.acOn.includes(sp.id));
+const partsSum = (parts: AcPart[]) => parts.reduce((t, p) => t + p.value, 0);
+
+// Armor Class and the parts it is made of. Base AC is 10 + DEX; armor, spells and features give other base
+// calculations, and only one applies (PHB p.12, p.361). The sheet picks the highest legal one.
+// Light armor adds DEX, medium at most +2, heavy none (PHB p.219). Parts worth 0 are left out.
+export function armorClass(c: Character): { total: number; parts: AcPart[] } {
+  const dex = abilityMod(c, 'dex');
+  const dexPart = (cap: number): AcPart => (dex > cap ? { label: 'Dexterity', value: cap, note: 'max +' + cap } : { label: 'Dexterity', value: dex });
+  const armorParts = (it: Item): AcPart[] => [
+    { label: it.name, value: (it.acBase || 0) + (it.acBonus || 0), note: it.armor + ' armor' },
+    ...(it.armor === 'heavy' ? [] : [dexPart(it.armor === 'medium' ? 2 : Infinity)])
+  ];
+  const shields = c.inv.filter((i) => i.eq && i.armor === 'shield');
+  const shield = shields.reduce<Item | null>((b, i) => (!b || (i.acBase || 0) + (i.acBonus || 0) > (b.acBase || 0) + (b.acBonus || 0) ? i : b), null);
+  const worn = c.inv.filter((i) => i.eq && i.armor && i.armor !== 'shield');
+  const spells = c.spells.filter((sp) => acSpellActive(c, sp));
+  const spellPart = (sp: Spell): AcPart => ({ label: sp.name, value: sp.acVal || 0, note: 'spell', active: true });
+  const unarmored: AcPart = { label: 'Unarmored', value: 10 };
+  const candidates: AcPart[][] = worn.map(armorParts);
+  if (!worn.length) {
+    const [note, ab, shieldOk] = UNARMORED[c.acUnarm];
+    if (ab && (shieldOk || !shield)) {
+      candidates.push([unarmored, dexPart(Infinity), { label: ABILITIES.find(([k]) => k === ab)![1], value: abilityMod(c, ab), note }]);
+    }
+    // Mage Armor sets a base AC on a creature not wearing armor (PHB p.293).
+    for (const sp of spells.filter((x) => x.acFx === 'base')) candidates.push([spellPart(sp), dexPart(Infinity)]);
+    candidates.push([unarmored, dexPart(Infinity)]);
+  }
+  // Highest sum wins; on a tie the earlier candidate stays.
+  const base = candidates.reduce((b, p) => (partsSum(p) > partsSum(b) ? p : b));
+  const parts: AcPart[] = [
+    ...base,
+    ...(shield ? [{ label: shield.name, value: (shield.acBase || 0) + (shield.acBonus || 0), note: 'shield' }] : []),
+    ...c.inv.filter((i) => i.eq && !i.armor && i.acBonus).map((i) => ({ label: i.name, value: i.acBonus!, note: 'equipped item' })),
+    ...spells.filter((sp) => sp.acFx === 'bonus').map(spellPart),
+    ...c.acMods.map((m) => ({ label: m.name, value: m.val, note: 'custom' }))
+  ].filter((p) => p.value !== 0);
+  // Barkskin: AC can't be lower than its value, so it comes last and adds only what is missing (PHB p.245).
+  const floor = Math.max(0, ...spells.filter((sp) => sp.acFx === 'floor').map((sp) => sp.acVal || 0));
+  const fl = spells.find((sp) => sp.acFx === 'floor' && sp.acVal === floor);
+  const below = floor - partsSum(parts);
+  if (fl && below > 0) parts.push({ label: fl.name, value: below, note: 'AC at least ' + floor, active: true });
+  return { total: partsSum(parts), parts };
+}
 // A levelled spell can be cast when it is prepared or always prepared; always-prepared spells don't count
 // toward the prepared limit (PHB p.235). With tracking off (classes that know their spells), every spell can be cast.
 export const spellUsable = (c: Character, sp: Spell) => !c.usePrep || !!sp.always || !!sp.prep;
@@ -65,16 +150,38 @@ export const setSlotUsed = (c: Character, l: number, n: number) => { const u = c
 // Starting or ending Concentration makes the old CON save notice out of date, so it goes too.
 export const setConc = (conc: Concentration | null) => ({ conc, concCheck: null });
 
+// Casting a non-Concentration AC spell switches its AC effect on (once). A Concentration one is on through c.conc.
+const acOnCast = (c: Character, sp: Spell): Partial<Character> =>
+  (sp.acFx && !sp.c && !c.acOn.includes(sp.id) ? { acOn: [...c.acOn, sp.id] } : {});
+
 // Casting with a slot uses one slot of that level. A Concentration spell starts Concentration, which ends any other (PHB p.363).
 export function castSpell(c: Character, sp: Spell, level: number): Partial<Character> {
   if (!slotsLeft(c, level)) return {};
-  return { ...setSlotUsed(c, level, c.slotUsed[level] + 1), ...(sp.c ? setConc({ id: sp.id, name: sp.name }) : {}) };
+  return { ...setSlotUsed(c, level, c.slotUsed[level] + 1), ...(sp.c ? setConc({ id: sp.id, name: sp.name }) : {}), ...acOnCast(c, sp) };
 }
 
-// Removing a spell ends Concentration on it and drops its free cast.
+// Using a free cast works like casting; tapping it again restores the cast but leaves the effects alone.
+export function toggleFreeCast(c: Character, sp: Spell): Partial<Character> {
+  const used = !c.free[sp.id];
+  return { free: { ...c.free, [sp.id]: used }, ...(used && sp.c ? setConc({ id: sp.id, name: sp.name }) : {}), ...(used ? acOnCast(c, sp) : {}) };
+}
+
+// Switches a non-Concentration spell's AC effect on or off, without casting it.
+export const toggleAcSpell = (c: Character, id: string): Partial<Character> =>
+  ({ acOn: c.acOn.includes(id) ? c.acOn.filter((x) => x !== id) : [...c.acOn, id] });
+
+// After editing a spell: one that is now Concentration, or has no AC effect, leaves the list of active AC spells.
+export function acAfterEdit(c: Character, sp: Pick<Spell, 'id' | 'c' | 'acFx'>): Partial<Character> {
+  return c.acOn.includes(sp.id) && (sp.c || !sp.acFx) ? { acOn: c.acOn.filter((x) => x !== sp.id) } : {};
+}
+
+// Removing a spell ends Concentration on it, switches its AC effect off and drops its free cast.
 export function removeSpell(c: Character, id: string): Character {
   const { [id]: _, ...free } = c.free;
-  return { ...c, spells: c.spells.filter((x) => x.id !== id), free, ...(c.conc?.id === id ? setConc(null) : {}) };
+  return {
+    ...c, spells: c.spells.filter((x) => x.id !== id), free, acOn: c.acOn.filter((x) => x !== id),
+    ...(c.conc?.id === id ? setConc(null) : {})
+  };
 }
 
 // After editing the concentrated spell: unticking Concentration ends it, and a new name shows in the chip.
@@ -257,17 +364,20 @@ export function longRest(c: Character): Character {
   const [res, refilled] = refillFor(c.res, 'long');
   const maxHp = c.origOn && c.maxHp < c.origHp ? c.origHp : c.maxHp;
   const abilAdj = Object.fromEntries(Object.entries(c.abilAdj).map(([k, v]) => [k, Math.max(0, v || 0)]));
+  // Shield lasts a round, Mage Armor 8 hours, Barkskin 1 hour (PHB p.316, p.293, p.245): none outlasts a Long Rest.
+  const ended = c.acOn.map((id) => c.spells.find((x) => x.id === id)?.name).filter((n): n is string => !!n);
   const restored = [
     maxHp > c.maxHp ? ', HP maximum back to ' + maxHp : '',
     Object.values(c.abilAdj).some((v) => (v || 0) < 0) ? ', reduced ability scores restored' : ''
   ].join('');
   return {
-    ...c, maxHp, abilAdj, hp: maxHp, temp: 0, slotUsed: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], hdUsed: 0, ds: 0, df: 0, free: {},
+    ...c, maxHp, abilAdj, hp: maxHp, temp: 0, slotUsed: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], hdUsed: 0, ds: 0, df: 0, free: {}, acOn: [],
     hpUndo: null, concCheck: null, res, exh: Math.max(0, c.exh - 1),
     restMsg: {
       title: 'Long Rest complete',
       body: 'HP set to max, temp HP cleared, all spell slots, Hit Dice and free casts restored' + restored +
-        (c.exh ? ', Exhaustion −1' : '') + (refilled.length ? '. Refilled: ' + refilled.join(', ') : '') + '.'
+        (c.exh ? ', Exhaustion −1' : '') + (refilled.length ? '. Refilled: ' + refilled.join(', ') : '') +
+        (ended.length ? '. ' + ended.join(', ') + ' ended' : '') + '.'
     }
   };
 }
@@ -295,7 +405,8 @@ const slots = (v: unknown[]) => Array.from({ length: 10 }, (_, i) => (typeof v[i
 // Records with fixed keys: a missing or damaged key falls back to the blank character's value.
 const FIXED_RECORDS = ['ch', 'abil', 'speeds', 'coins', 'notes', 'def'] as const;
 // Lists of entries: each needs a name and holds only plain values.
-const ENTRY_LISTS = ['senses', 'res', 'attacks', 'riders', 'inv', 'spells', 'feats'] as const;
+const ENTRY_LISTS = ['senses', 'res', 'attacks', 'riders', 'inv', 'spells', 'feats', 'acMods'] as const;
+const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 const isEntry = (x: unknown): x is Record<string, unknown> =>
   isObj(x) && typeof x.name === 'string' && Object.values(x).every((v) => v === null || typeof v !== 'object');
 // Resources the Inventory tab echoed before `inv` existed.
@@ -344,6 +455,24 @@ export function migrate(data: unknown): Character {
   c.restMsg = isObj(msg) && typeof msg.title === 'string' && typeof msg.body === 'string' ? c.restMsg : null;
   // Older saves had no prepared flags: treat their levelled spells as prepared.
   c.spells = c.spells.map((x) => (x.prep === undefined && x.always === undefined ? { ...x, prep: true } : x));
+  // AC fields: a damaged one would show NaN or join strings, so it goes, with its partner field.
+  c.acMods = c.acMods.filter((m) => finite(m.val));
+  if (!Object.hasOwn(UNARMORED, c.acUnarm)) c.acUnarm = 'none';
+  c.inv = c.inv.map(({ armor, acBase, acBonus, ...i }) => ({
+    ...i,
+    ...(['light', 'medium', 'heavy', 'shield'].includes(armor as string) && finite(acBase) ? { armor, acBase } : {}),
+    ...(finite(acBonus) ? { acBonus } : {})
+  }));
+  c.spells = c.spells.map(({ acFx, acVal, ...x }) => ({ ...x, ...(['bonus', 'base', 'floor'].includes(acFx as string) && finite(acVal) ? { acFx, acVal } : {}) }));
+  c.acOn = strings(c.acOn).filter((id) => c.spells.some((x) => x.id === id && x.acFx && !x.c));
+  // Old saves had a typed `ac`. Fill armor and AC spells from their names (switching none on), then add the
+  // difference as a custom bonus so the number doesn't move. New saves have no `ac`, so this runs once.
+  if (typeof data.ac === 'number') {
+    c.inv = c.inv.map((i) => (i.armor ? i : { ...i, ...detectArmor(i.name) }));
+    c.spells = c.spells.map((x) => (x.acFx ? x : { ...x, ...detectAcSpell(x.name) }));
+    const total = armorClass(c).total;
+    if (total !== data.ac) c.acMods = [...c.acMods, { id: newId(), name: 'Adjustment (from old AC)', val: data.ac - total }];
+  }
   c.res = c.res.map((r) => (r.inv === undefined && OLD_INVENTORY_RESOURCES.includes(r.id) ? { ...r, inv: true } : r));
   // Older saves had a `refill` flag that meant a Long Rest recharge.
   c.res = c.res.map((r) => ({ ...r, recharge: r.recharge || (r.refill ? 'long' : 'none') }));
@@ -373,7 +502,7 @@ export function pillView(c: Character, key: string): PillView | null {
   const label = stat[2], atk = spellAttack(c);
   switch (stat[0]) {
     case 'hp': return { key, label, value: String(c.hp), max: String(c.maxHp), target: { sec: 'sec-hp' } };
-    case 'ac': return { key, label, value: String(c.ac), target: { sec: 'sec-vitals' } };
+    case 'ac': return { key, label, value: String(armorClass(c).total), target: { sec: 'sec-vitals' } };
     case 'dc': return { key, label, value: String(spellSaveDC(c) ?? '—'), target: { tab: 'spells' } };
     case 'speed': return { key, label, value: String(speedNow(c)), target: { sec: 'sec-vitals' } };
     case 'pp': return { key, label, value: String(passiveScore(c, 'perception')), target: { sec: 'sec-senses' } };
