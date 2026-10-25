@@ -370,7 +370,9 @@ button.stat.open { box-shadow: inset 0 0 0 2px var(--accent); }
   flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
   padding-bottom: calc(16px + env(safe-area-inset-bottom));
 }
-.wide .nav a.first-tab { margin-left: 0; box-shadow: none; }
+/* Tabs sit at the right end, above the tab panel, within reach of the right hand. An auto margin (not justify-content)
+   keeps the first tab reachable when the nav overflows and scrolls. */
+.wide .nav a.first-tab { margin-left: auto; box-shadow: none; }
 
 /* Compact core, so vitals and all six abilities fit on screen. */
 .wide .hp-card { padding: 10px 14px; gap: 6px; }

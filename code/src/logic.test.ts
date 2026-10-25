@@ -308,6 +308,8 @@ describe('loading saves and backups', () => {
     expect(c.attacks[0].id).toBeTruthy();
     expect(c.def).toEqual({ res: ['Fire'], vul: [], imm: [] });
     expect(c.attune).toEqual(['Ring', '', '']);
+    // Resources moved out of the tabs into the left column.
+    expect(migrate({ ...sampleCharacter(), tab: 'resources' }).tab).toBe('actions');
     expect(c.slotMax).toEqual([0, 4, 0, 0, 0, 0, 0, 0, 0, 0]);
     expect(c.slotUsed).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
     expect(migrate({ ...sampleCharacter(), castAb: 'toString' }).castAb).toBe('none'); // only an inherited key
@@ -354,7 +356,7 @@ describe('top bar pills', () => {
     expect(pillView(s, 'insp')).toMatchObject({ value: 'On', target: 'insp' });
   });
   it('resolves a resource, with and without a maximum', () => {
-    expect(pillView(s, resPill('favored'))).toMatchObject({ label: 'Favored Enemy', value: '2', max: '3', target: { tab: 'resources' } });
+    expect(pillView(s, resPill('favored'))).toMatchObject({ label: 'Favored Enemy', value: '2', max: '3', target: { sec: 'sec-resources' } });
     expect(pillView(s, resPill('arrows'))!.max).toBeUndefined();
   });
   it('shows a dash for spell numbers on a non-caster', () => {

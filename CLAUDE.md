@@ -44,8 +44,8 @@ Every push to `main` runs `.github/workflows/deploy.yml` (test → build → dep
 | `storage.ts` | `useCharacters()` hook: multi-character list, localStorage persistence, JSON backup export/import |
 | `sheet.ts` | `Sheet` context (`c`, `update`, `edit`, `form`), `useEntryForm()` for add/edit forms (one open at a time), `saveEntry()` |
 | `App.tsx` | Page assembly, UI-only state (edit mode, menu, active section, hit-die prompt), scroll-spy |
-| `components/` | `TopBar` (bar, nav, menu with rests/characters/backup), `EditDetails`, `Vitals`, `HitPoints`, `Abilities`, `Senses`, `Defenses`, `Conditions` |
-| `components/tabs/` | `ActionsTab`, `ResourcesTab`, `SpellsTab`, `InventoryTab`, `FeaturesTab`, `NotesTab` |
+| `components/` | `TopBar` (bar, nav, menu with rests/characters/backup), `EditDetails`, `Vitals`, `HitPoints`, `Abilities`, `Senses`, `Defenses`, `Conditions`, `Resources` |
+| `components/tabs/` | `ActionsTab`, `SpellsTab`, `InventoryTab`, `FeaturesTab`, `NotesTab` |
 | `components/ui.tsx` | Shared bits: icons, `RemoveButton` (tap twice to confirm), `EntryActions`, `Step`, `UsePips`/`MarkPips`, `ProfDot`, `NumInput`, `EntryForm`, `TextField`, `useArmed` |
 | `styles.css` | Colour tokens on `:root` (indigo theme, amber `--accent`), layout utilities, component classes |
 

@@ -15,7 +15,7 @@ export const SKILLS: [string, string, Ability][] = [
   ['deception', 'Deception', 'cha'], ['intimidation', 'Intimidation', 'cha'], ['performance', 'Performance', 'cha'], ['persuasion', 'Persuasion', 'cha']
 ];
 
-export const TABS: [Tab, string][] = [['actions', 'Actions'], ['resources', 'Resources'], ['spells', 'Spells'], ['inventory', 'Inventory'], ['features', 'Features & Traits'], ['notes', 'Notes']];
+export const TABS: [Tab, string][] = [['actions', 'Actions'], ['spells', 'Spells'], ['inventory', 'Inventory'], ['features', 'Features & Traits'], ['notes', 'Notes']];
 
 export const CAST_NAMES: Record<CastAbility, string> = { none: 'None', int: 'Intelligence', wis: 'Wisdom', cha: 'Charisma' };
 
@@ -359,14 +359,14 @@ export const PILL_STATS: [PillStat, string, string][] = [
   ['init', 'Initiative', 'Init'], ['atk', 'Spell attack', 'Atk'], ['hd', 'Hit Dice left', 'HD'], ['insp', 'Inspiration', 'Insp']
 ];
 export const resPill = (id: string) => 'res:' + id;
-export type PillTarget = { sec: 'sec-hp' | 'sec-vitals' | 'sec-senses' } | { tab: Tab } | 'insp';
+export type PillTarget = { sec: 'sec-hp' | 'sec-vitals' | 'sec-senses' | 'sec-resources' } | { tab: Tab } | 'insp';
 export interface PillView { key: string; label: string; value: string; max?: string; target: PillTarget }
 
 // What a slot shows. Null for an empty slot, an unknown key, or a resource that was deleted.
 export function pillView(c: Character, key: string): PillView | null {
   if (key.startsWith('res:')) {
     const r = c.res.find((x) => resPill(x.id) === key);
-    return r ? { key, label: r.name, value: String(r.count), max: r.max ? String(r.max) : undefined, target: { tab: 'resources' } } : null;
+    return r ? { key, label: r.name, value: String(r.count), max: r.max ? String(r.max) : undefined, target: { sec: 'sec-resources' } } : null;
   }
   const stat = PILL_STATS.find(([k]) => k === key);
   if (!stat) return null;

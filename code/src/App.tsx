@@ -4,6 +4,7 @@ import { Conditions } from './components/Conditions';
 import { Defenses } from './components/Defenses';
 import { EditDetails } from './components/EditDetails';
 import { HitPoints } from './components/HitPoints';
+import { Resources } from './components/Resources';
 import { Senses } from './components/Senses';
 import { SECTION_IDS, TopBar } from './components/TopBar';
 import { Vitals } from './components/Vitals';
@@ -11,7 +12,6 @@ import { ActionsTab } from './components/tabs/ActionsTab';
 import { FeaturesTab } from './components/tabs/FeaturesTab';
 import { InventoryTab } from './components/tabs/InventoryTab';
 import { NotesTab } from './components/tabs/NotesTab';
-import { ResourcesTab } from './components/tabs/ResourcesTab';
 import { SpellsTab } from './components/tabs/SpellsTab';
 import { useWide } from './layout';
 import { TABS, longRest, shortRest } from './logic';
@@ -79,13 +79,13 @@ export default function App() {
             <Senses />
             <Defenses />
             <Conditions />
+            <Resources />
           </div>
           <div className="sheet-right">
             {wide && hitPoints}
             <section id="sec-tabs" aria-label={tabTitle} className="section col gap-12 tab-col">
               <h2 className="tab-title">{tabTitle}</h2>
               {c.tab === 'actions' && <ActionsTab />}
-              {c.tab === 'resources' && <ResourcesTab />}
               {c.tab === 'spells' && <SpellsTab />}
               {c.tab === 'inventory' && <InventoryTab />}
               {c.tab === 'features' && <FeaturesTab />}

@@ -6,7 +6,7 @@ import { EXAMPLES, charInfo, charName, saveBackupFile, type CharacterStore } fro
 import type { Tab } from '../types';
 import { CheckIcon, ChevronDown, ChevronRight, MenuIcon, PencilIcon, StarIcon, XIcon, useArmed } from './ui';
 
-const SECTION_LINKS = [['sec-hp', 'Hit Points'], ['sec-abilities', 'Abilities'], ['sec-senses', 'Senses'], ['sec-defenses', 'Defenses'], ['sec-conditions', 'Conditions']];
+const SECTION_LINKS = [['sec-hp', 'Hit Points'], ['sec-abilities', 'Abilities'], ['sec-senses', 'Senses'], ['sec-defenses', 'Defenses'], ['sec-conditions', 'Conditions'], ['sec-resources', 'Resources']];
 export const SECTION_IDS = [...SECTION_LINKS.map(([id]) => id), 'sec-tabs'];
 const LAYOUTS: [LayoutMode, string][] = [['auto', 'Auto'], ['one', '1 column'], ['two', '2 columns']];
 
@@ -28,7 +28,6 @@ export function TopBar({ store, activeSec, setActiveSec, menuOpen, setMenuOpen, 
   const subtitle = [ch.species, [ch.cls, 'Lv ' + c.level].filter((x) => x).join(' ') + (ch.sub ? ' (' + ch.sub + ')' : ''), ch.align]
     .filter((x) => x && String(x).trim()).join(' · ');
   const condParts = CONDITIONS.filter((n) => c.conds[n]);
-  if (c.exh > 0) condParts.push('Exhaustion ' + c.exh);
   const inTabs = activeSec === 'sec-tabs';
   // Two columns: the tabs sit beside the core, so the nav holds only tabs and a tap doesn't scroll the page.
   const wide = useWide();
@@ -153,7 +152,7 @@ export function TopBar({ store, activeSec, setActiveSec, menuOpen, setMenuOpen, 
         </div>
       )}
 
-      {(c.conc || condParts.length > 0) && (
+      {(c.conc || condParts.length > 0 || c.exh > 0) && (
         <div className="row wrap gap-6" style={{ paddingTop: 4 }}>
           {c.conc && (
             <button type="button" className="status-chip" onClick={() => update(setConc(null))} aria-label={'End concentration on ' + c.conc.name}>
@@ -163,6 +162,7 @@ export function TopBar({ store, activeSec, setActiveSec, menuOpen, setMenuOpen, 
           {condParts.length > 0 && (
             <a href="#sec-conditions" className="cond-chip">{condParts.length > 2 ? condParts.length + ' conditions' : condParts.join(' · ')}</a>
           )}
+          {c.exh > 0 && <a href="#sec-conditions" className="cond-chip">Exhaustion {c.exh}</a>}
         </div>
       )}
 
@@ -199,7 +199,7 @@ export function TopBar({ store, activeSec, setActiveSec, menuOpen, setMenuOpen, 
   );
 }
 
-const SEC_NAMES = { 'sec-hp': 'Hit Points', 'sec-vitals': 'Vitals', 'sec-senses': 'Senses' };
+const SEC_NAMES = { 'sec-hp': 'Hit Points', 'sec-vitals': 'Vitals', 'sec-senses': 'Senses', 'sec-resources': 'Resources' };
 const pillName = (v: PillView) => PILL_STATS.find(([k]) => k === v.key)?.[1] ?? v.label;
 const pillSpoken = (v: PillView) => pillName(v) + ' ' + v.value + (v.max ? ' of ' + v.max : '') + '.';
 

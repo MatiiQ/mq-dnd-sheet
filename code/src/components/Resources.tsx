@@ -1,13 +1,13 @@
 import type { CSSProperties } from 'react';
-import { rechargeOf } from '../../logic';
-import { patchEntry, removeEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
-import type { Recharge, Resource } from '../../types';
-import { AddButton, EntryActions, EntryForm, StarIcon, Step, TextField } from '../ui';
+import { rechargeOf } from '../logic';
+import { patchEntry, removeEntry, saveEntry, useEntryForm, useSheet } from '../sheet';
+import type { Recharge, Resource } from '../types';
+import { AddButton, EntryActions, EntryForm, StarIcon, Step, TextField } from './ui';
 
 const BLANK = { name: '', note: '', inv: false };
 const RECHARGE_TEXT: Record<Recharge, string> = { none: 'Manual only', short: 'Refills on Short or Long Rest', long: 'Refills on Long Rest' };
 
-export function ResourcesTab() {
+export function Resources() {
   const { c, update, edit } = useSheet();
   const f = useEntryForm('res', BLANK, 'resource', 'Add a resource');
   const patch = (id: string, p: Partial<Resource> | ((r: Resource) => Partial<Resource>)) =>
@@ -25,7 +25,8 @@ export function ResourcesTab() {
   };
 
   return (
-    <div className="col gap-12">
+    <section id="sec-resources" aria-label="Resources" className="block section">
+      <h2 className="block-title area-title">Resources</h2>
       {/* Heroic Inspiration (PHB p.13) */}
       <button type="button" className="well row gap-10 insp-toggle" aria-pressed={c.insp} onClick={() => update({ insp: !c.insp })}>
         <span aria-hidden="true" className={'bar-icon' + (c.insp ? ' on' : '')}><StarIcon /></span>
@@ -87,6 +88,6 @@ export function ResourcesTab() {
           </div>
         </EntryForm>
       )}
-    </div>
+    </section>
   );
 }

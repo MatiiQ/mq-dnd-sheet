@@ -1,7 +1,7 @@
 export type Ability = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
 export type CastAbility = 'none' | 'int' | 'wis' | 'cha';
 export type Recharge = 'none' | 'short' | 'long';
-export type Tab = 'actions' | 'resources' | 'spells' | 'inventory' | 'features' | 'notes';
+export type Tab = 'actions' | 'spells' | 'inventory' | 'features' | 'notes';
 export type FeatureGroup = 'class' | 'sub' | 'feat' | 'species' | 'training' | 'other';
 export type DefenseKind = 'res' | 'vul' | 'imm';
 export type SpeedKind = 'climb' | 'swim' | 'fly' | 'burrow';
