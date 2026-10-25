@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react';
 import { rechargeOf } from '../../logic';
 import { patchEntry, removeEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { Recharge, Resource } from '../../types';
-import { AddButton, EntryActions, EntryForm, Step, TextField } from '../ui';
+import { AddButton, EntryActions, EntryForm, StarIcon, Step, TextField } from '../ui';
 
 const BLANK = { name: '', note: '', inv: false };
 const RECHARGE_TEXT: Record<Recharge, string> = { none: 'Manual only', short: 'Refills on Short or Long Rest', long: 'Refills on Long Rest' };
@@ -26,6 +26,14 @@ export function ResourcesTab() {
 
   return (
     <div className="col gap-12">
+      {/* Heroic Inspiration (PHB p.13) */}
+      <button type="button" className="well row gap-10 insp-toggle" aria-pressed={c.insp} onClick={() => update({ insp: !c.insp })}>
+        <span aria-hidden="true" className={'bar-icon' + (c.insp ? ' on' : '')}><StarIcon /></span>
+        <span className="col grow">
+          <strong>Heroic Inspiration</strong>
+          <span className="muted">Expend to reroll any die right after rolling it; use the new roll.</span>
+        </span>
+      </button>
       <div className="grid" style={{ '--min': '240px', gap: 12 } as CSSProperties}>
         {c.res.map((r) => {
           const rc = rechargeOf(r);

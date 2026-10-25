@@ -24,10 +24,13 @@ export function FeaturesTab() {
       <div className="grid" style={{ '--min': '260px', gap: 12 } as CSSProperties}>
         {titles.map(([g, title]) => {
           const items = c.feats.filter((x) => x.g === g);
-          if (!items.length) return null;
+          // The background lives in Edit details; the Class card shows it as its first line.
+          const bg = g === 'class' ? c.ch.bg.trim() : '';
+          if (!items.length && !bg) return null;
           return (
             <div key={g} className="block">
               <h3 className="block-title">{title}</h3>
+              {bg && <div className="well" style={{ padding: '10px 12px' }}><strong>Background</strong> · {bg}</div>}
               {items.map((x) => (
                 <div key={x.id} className="well row" style={{ alignItems: 'flex-start', gap: 2, padding: '0 12px 10px' }}>
                   <div className="grow" style={{ paddingTop: 10 }}>

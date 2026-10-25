@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { druidSample, sampleCharacter } from './defaults';
+import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import {
-  applyDamage, applyHeal, applySetTemp, castSpell, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, passiveScore, preparedCount, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
+  applyDamage, applyHeal, applySetTemp, castSpell, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, passiveScore, pillView, resPill, setPill, preparedCount, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
   setExhaustion, speedNow, spellAttack, spellSaveDC, spellUsable, spendHitDie, toggleCondition, undoHp
 } from './logic';
 import type { Character, Spell } from './types';
@@ -265,6 +265,16 @@ describe('rests and Hit Dice', () => {
 });
 
 describe('loading saves and backups', () => {
+  it('gives old saves the HP and AC pills, not the sample picks', () => {
+    const { pills: _, ...old } = sampleCharacter();
+    expect(migrate(old).pills).toEqual(['hp', 'ac', '']);
+  });
+  it('keeps saved pills and repairs damaged ones', () => {
+    expect(migrate(sampleCharacter()).pills).toEqual(['hp', 'ac', 'res:favored']);
+    expect(migrate({ ...sampleCharacter(), pills: ['x', 'hp', 'hp', 'ac'] }).pills).toEqual(['', 'hp', '']);
+    expect(migrate({ ...sampleCharacter(), pills: [3, 'res:a'] }).pills).toEqual(['', 'res:a', '']);
+    expect(migrate({ ...sampleCharacter(), pills: 'hp' }).pills).toEqual(['hp', 'ac', '']);
+  });
   it('loads the druid sample unchanged, with its derived numbers', () => {
     const c = druidSample(); // Seren: Druid 12 (PB 4), WIS 20, CON 16 (PHB p.80)
     expect(migrate(c)).toEqual(c);
@@ -327,5 +337,43 @@ describe('hpRingStops', () => {
   it('never passes 100 after rounding', () => {
     const s = hpRingStops(make({ hp: 1, maxHp: 1, temp: 1999 }));
     expect(s.hp + s.temp).toBeLessThanOrEqual(100);
+  });
+});
+
+describe('top bar pills', () => {
+  const s = sampleCharacter(); // Ilyra: WIS 14, DEX 18, level 5, Perception proficient, hdUsed 1
+  it('resolves each stat', () => {
+    expect(pillView(s, 'hp')).toMatchObject({ label: 'HP', value: '31', max: '44', target: { sec: 'sec-hp' } });
+    expect(pillView(s, 'ac')).toMatchObject({ value: '16', target: { sec: 'sec-vitals' } });
+    expect(pillView(s, 'dc')).toMatchObject({ label: 'DC', value: '13', target: { tab: 'spells' } });
+    expect(pillView(s, 'atk')!.value).toBe('+5');
+    expect(pillView(s, 'speed')!.value).toBe('35');
+    expect(pillView(s, 'pp')).toMatchObject({ value: '15', target: { sec: 'sec-senses' } });
+    expect(pillView(s, 'init')!.value).toBe('+4');
+    expect(pillView(s, 'hd')).toMatchObject({ value: '4', max: '5' });
+    expect(pillView(s, 'insp')).toMatchObject({ value: 'On', target: 'insp' });
+  });
+  it('resolves a resource, with and without a maximum', () => {
+    expect(pillView(s, resPill('favored'))).toMatchObject({ label: 'Favored Enemy', value: '2', max: '3', target: { tab: 'resources' } });
+    expect(pillView(s, resPill('arrows'))!.max).toBeUndefined();
+  });
+  it('shows a dash for spell numbers on a non-caster', () => {
+    expect(pillView(blankCharacter(), 'dc')!.value).toBe('—');
+    expect(pillView(blankCharacter(), 'atk')!.value).toBe('—');
+  });
+  it('treats an empty slot, an unknown key and a deleted resource as nothing', () => {
+    expect(pillView(s, '')).toBeNull();
+    expect(pillView(s, 'nope')).toBeNull();
+    expect(pillView(s, resPill('gone'))).toBeNull();
+  });
+  it('sets, moves and clears a slot', () => {
+    expect(setPill(['hp', 'ac', ''], 2, 'dc')).toEqual(['hp', 'ac', 'dc']);
+    expect(setPill(['hp', 'ac', 'dc'], 0, 'dc')).toEqual(['dc', 'ac', '']);
+    expect(setPill(['hp', 'ac', 'dc'], 1, '')).toEqual(['hp', '', 'dc']);
+  });
+  it('gives the samples and a blank character their picks', () => {
+    expect(sampleCharacter().pills).toEqual(['hp', 'ac', 'res:favored']);
+    expect(druidSample().pills).toEqual(['hp', 'ac', 'res:wild']);
+    expect(blankCharacter().pills).toEqual(['hp', 'ac', '']);
   });
 });

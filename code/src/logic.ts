@@ -347,7 +347,58 @@ export function migrate(data: unknown): Character {
   c.res = c.res.map((r) => (r.inv === undefined && OLD_INVENTORY_RESOURCES.includes(r.id) ? { ...r, inv: true } : r));
   // Older saves had a `refill` flag that meant a Long Rest recharge.
   c.res = c.res.map((r) => ({ ...r, recharge: r.recharge || (r.refill ? 'long' : 'none') }));
+  // From the raw save, not the sample-merged copy: old saves get today's bar (HP and AC), not the sample's picks.
+  c.pills = sanitizePills(data.pills);
   return c;
+}
+
+// Top bar pills. [key, picker name, short label], in picker order.
+export type PillStat = 'hp' | 'ac' | 'dc' | 'speed' | 'pp' | 'init' | 'atk' | 'hd' | 'insp';
+export const PILL_STATS: [PillStat, string, string][] = [
+  ['hp', 'HP', 'HP'], ['ac', 'AC', 'AC'], ['dc', 'Spell save DC', 'DC'], ['speed', 'Speed', 'Speed'], ['pp', 'Passive Perception', 'Perc'],
+  ['init', 'Initiative', 'Init'], ['atk', 'Spell attack', 'Atk'], ['hd', 'Hit Dice left', 'HD'], ['insp', 'Inspiration', 'Insp']
+];
+export const resPill = (id: string) => 'res:' + id;
+export type PillTarget = { sec: 'sec-hp' | 'sec-vitals' | 'sec-senses' } | { tab: Tab } | 'insp';
+export interface PillView { key: string; label: string; value: string; max?: string; target: PillTarget }
+
+// What a slot shows. Null for an empty slot, an unknown key, or a resource that was deleted.
+export function pillView(c: Character, key: string): PillView | null {
+  if (key.startsWith('res:')) {
+    const r = c.res.find((x) => resPill(x.id) === key);
+    return r ? { key, label: r.name, value: String(r.count), max: r.max ? String(r.max) : undefined, target: { tab: 'resources' } } : null;
+  }
+  const stat = PILL_STATS.find(([k]) => k === key);
+  if (!stat) return null;
+  const label = stat[2], atk = spellAttack(c);
+  switch (stat[0]) {
+    case 'hp': return { key, label, value: String(c.hp), max: String(c.maxHp), target: { sec: 'sec-hp' } };
+    case 'ac': return { key, label, value: String(c.ac), target: { sec: 'sec-vitals' } };
+    case 'dc': return { key, label, value: String(spellSaveDC(c) ?? '—'), target: { tab: 'spells' } };
+    case 'speed': return { key, label, value: String(speedNow(c)), target: { sec: 'sec-vitals' } };
+    case 'pp': return { key, label, value: String(passiveScore(c, 'perception')), target: { sec: 'sec-senses' } };
+    case 'init': return { key, label, value: fmt(initiative(c)), target: { sec: 'sec-vitals' } };
+    case 'atk': return { key, label, value: atk === null ? '—' : fmt(atk), target: { tab: 'spells' } };
+    case 'hd': return { key, label, value: String(c.level - hdSpent(c)), max: String(c.level), target: { sec: 'sec-hp' } };
+    case 'insp': return { key, label, value: c.insp ? 'On' : 'Off', target: 'insp' };
+  }
+}
+
+// Puts `key` in `slot` ('' empties it). A key fills one slot at a time, so it leaves any other slot.
+export function setPill(pills: string[], slot: number, key: string): string[] {
+  return [0, 1, 2].map((i) => (i === slot ? key : pills[i] === key ? '' : pills[i] ?? ''));
+}
+
+// Always 3 slots. Keeps stat keys and resource keys, drops anything else and repeats.
+export function sanitizePills(v: unknown): string[] {
+  if (!Array.isArray(v)) return ['hp', 'ac', ''];
+  const out: string[] = [];
+  for (let i = 0; i < 3; i++) {
+    const x = v[i];
+    const ok = typeof x === 'string' && (PILL_STATS.some(([k]) => k === x) || x.startsWith('res:')) && !out.includes(x);
+    out.push(ok ? x : '');
+  }
+  return out;
 }
 
 export const newId = () => 'n' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);

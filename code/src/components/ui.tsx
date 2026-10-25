@@ -15,7 +15,7 @@ function Svg({ size = 16, strokeWidth = 2, fill = 'none', style, children }: Ico
 export const XIcon = (p: IconProps & { strokeWidth?: number }) => <Svg {...p}><path d="M6 6l12 12M18 6L6 18" /></Svg>;
 export const PencilIcon = (p: IconProps) => <Svg {...p}><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" /></Svg>;
 export const CheckIcon = (p: IconProps) => <Svg strokeWidth={2.5} {...p}><path d="M5 12l5 5L20 7" /></Svg>;
-export const StarIcon = (p: IconProps) => <Svg strokeWidth={1.5} fill="currentColor" {...p}><path d="M12 2l2.9 6.6 7.1.7-5.4 4.8 1.6 7-6.2-3.7-6.2 3.7 1.6-7L2 9.3l7.1-.7z" /></Svg>;
+export const StarIcon = (p: IconProps & { fill?: string }) => <Svg strokeWidth={1.5} fill="currentColor" {...p}><path d="M12 2l2.9 6.6 7.1.7-5.4 4.8 1.6 7-6.2-3.7-6.2 3.7 1.6-7L2 9.3l7.1-.7z" /></Svg>;
 export const MenuIcon = (p: IconProps) => <Svg strokeWidth={2.2} {...p}><path d="M4 7h16M4 12h16M4 17h16" /></Svg>;
 export const ChevronDown = (p: IconProps) => <Svg strokeWidth={2.5} {...p}><path d="M6 9l6 6 6-6" /></Svg>;
 export const ChevronRight = (p: IconProps) => <Svg strokeWidth={2.5} {...p}><path d="M9 6l6 6-6 6" /></Svg>;

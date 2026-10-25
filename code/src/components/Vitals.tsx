@@ -17,7 +17,7 @@ export function Vitals() {
     (edit ? 'Use − / + to set each base speed.' : 'Without a climb or swim speed, each foot costs 1 extra foot.');
 
   return (
-    <section aria-label="Combat vitals" className="vitals">
+    <section id="sec-vitals" aria-label="Combat vitals" className="vitals section">
       <div className="card stat-bar">
         <div className="stat"><span className="stat-value">{c.ac}</span><span className="stat-label">Armor class</span></div>
         <div className="stat"><span className="stat-value">{fmt(initiative(c))}</span><span className="stat-label">Initiative</span></div>

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { blankCharacter, sampleCharacter } from './defaults';
-import { addToStore, freshList, load, switchStore, writeBackup, type Store } from './storage';
+import { blankCharacter, druidSample, sampleCharacter } from './defaults';
+import { addToStore, deleteFromStore, exportStore, freshList, initialStore, load, persistStore, switchStore, writeBackup, type Store } from './storage';
 
 const renamed = (): Store => ({
   id: 'a', list: [{ id: 'a', name: 'Ilyra Moonbrook' }, { id: 'b', name: 'Other' }],
@@ -63,5 +63,49 @@ describe('unreadable sheet', () => {
     m.set('dnd-sheet-v3:x', '{second');
     load('x');
     expect(m.get('dnd-sheet-v3:x:unreadable')).toBe('{not json');
+  });
+});
+
+describe('example characters', () => {
+  afterEach(() => { vi.unstubAllGlobals(); });
+  it('loads an example fresh without reading storage', () => {
+    const m = stubStorage();
+    m.set('dnd-sheet-v3:example:seren', JSON.stringify({ ...druidSample(), hp: 1 }));
+    expect(load('example:seren')).toEqual(druidSample());
+  });
+  it('opens Ilyra as an example on a fresh install and saves no sheet for her', () => {
+    const m = stubStorage();
+    const s = initialStore();
+    expect(s).toMatchObject({ id: 'example:ilyra', list: [] });
+    persistStore(s);
+    expect([...m.keys()]).toEqual(['dnd-index-v3']);
+  });
+  it('reopens an active example fresh after a reload', () => {
+    const m = stubStorage();
+    m.set('dnd-index-v3', JSON.stringify({ active: 'example:seren', list: [{ id: 'a', name: 'Bob' }] }));
+    const s = initialStore();
+    expect(s.id).toBe('example:seren');
+    expect(s.c).toEqual(druidSample());
+    expect(s.list.map((x) => x.id)).toEqual(['a']);
+  });
+  it('reopens an active example after a reload even when your list is empty', () => {
+    const m = stubStorage();
+    m.set('dnd-index-v3', JSON.stringify({ active: 'example:seren', list: [] }));
+    expect(initialStore()).toMatchObject({ id: 'example:seren', list: [] });
+  });
+  it('leaves an open example out of Export all', () => {
+    const m = stubStorage();
+    m.set('dnd-sheet-v3:a', JSON.stringify(blankCharacter()));
+    const data = exportStore({ id: 'example:ilyra', list: [{ id: 'a', name: 'New character' }], c: sampleCharacter() });
+    expect(data.characters).toHaveLength(1);
+    expect((data.characters[0] as { ch: { name: string } }).ch.name).toBe('New character');
+  });
+  it('opens an example after deleting the last own character', () => {
+    const s = deleteFromStore({ id: 'a', list: [{ id: 'a', name: 'Bob' }], c: blankCharacter() });
+    expect(s).toMatchObject({ id: 'example:ilyra', list: [] });
+  });
+  it('never deletes an example', () => {
+    const s: Store = { id: 'example:ilyra', list: [{ id: 'a', name: 'Bob' }], c: sampleCharacter() };
+    expect(deleteFromStore(s)).toBe(s);
   });
 });

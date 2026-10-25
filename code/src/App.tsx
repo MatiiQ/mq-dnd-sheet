@@ -66,6 +66,12 @@ export default function App() {
           onToggleEdit={() => { setEdit(!edit); setForm(null); }} onSwitched={onSwitched} onRest={onRest} />
         <div className="sheet-body">
           <div className="sheet-left">
+            {store.isExample && (
+              <div className="notice notice-blue row gap-8">
+                <span className="grow">Example character: changes reset when you open it again.</span>
+                <button type="button" className="btn" onClick={() => { store.makeCopy(); onSwitched(); }}>Make my copy</button>
+              </div>
+            )}
             {edit && <EditDetails onReset={() => { store.resetCurrent(); onSwitched(true); }} />}
             <Vitals />
             {!wide && hitPoints}
