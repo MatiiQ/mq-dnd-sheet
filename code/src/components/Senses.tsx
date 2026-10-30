@@ -47,7 +47,8 @@ export function Senses() {
   return (
     <section id="sec-senses" aria-label="Senses" className="block section">
       <h2 className="block-title area-title">Senses</h2>
-      {!f.isOpen && <AddButton always onClick={f.openAdd}>+ Add sense</AddButton>}
+      {/* Hidden only by the add form: while an entry below is edited it stays, so the list doesn't shift up. */}
+      {(!f.isOpen || f.editingId) && <AddButton always onClick={f.openAdd}>+ Add sense</AddButton>}
       {f.isOpen && !f.editingId && form}
       <div className="row wrap gap-8">
         {passive('Passive Perception', passiveScore(c, 'perception'))}

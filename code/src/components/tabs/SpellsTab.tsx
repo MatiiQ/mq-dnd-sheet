@@ -177,7 +177,8 @@ export function SpellsTab() {
       </div>
 
       <div className="row wrap between" style={{ gap: '8px 14px' }}>
-        {!f.isOpen ? <AddButton always onClick={f.openAdd}>+ Add spell</AddButton> : <span />}
+        {/* Hidden only by the add form: while a spell below is edited it stays, so the list doesn't shift up. */}
+        {!f.isOpen || f.editingId ? <AddButton always onClick={f.openAdd}>+ Add spell</AddButton> : <span />}
         <div role="group" aria-label="Sort spells" className="row wrap gap-4">
           {SPELL_SORTS.map(([k, label]) => (
             <button key={k} type="button" aria-pressed={c.spellSort === k} className="filter-btn" onClick={() => update({ spellSort: k })}>{label}</button>

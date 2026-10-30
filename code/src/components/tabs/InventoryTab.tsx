@@ -129,7 +129,8 @@ export function InventoryTab() {
         )}
       </div>
 
-      {!f.isOpen && <AddButton always onClick={f.openAdd}>+ Add item</AddButton>}
+      {/* Hidden only by the add form: while an entry below is edited it stays, so the list doesn't shift up. */}
+      {(!f.isOpen || f.editingId) && <AddButton always onClick={f.openAdd}>+ Add item</AddButton>}
       {f.isOpen && !f.editingId && form}
 
       <ul className="col gap-6" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
