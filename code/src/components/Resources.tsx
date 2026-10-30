@@ -2,9 +2,9 @@ import type { CSSProperties } from 'react';
 import { rechargeOf } from '../logic';
 import { patchEntry, removeEntry, saveEntry, useEntryForm, useSheet } from '../sheet';
 import type { Recharge, Resource } from '../types';
-import { AddButton, EntryActions, EntryForm, StarIcon, Step, TextField } from './ui';
+import { AddButton, EntryForm, EntryRow, StarIcon, Step, TextField } from './ui';
 
-const BLANK = { name: '', note: '', inv: false };
+const BLANK = { name: '', note: '' };
 const RECHARGE_TEXT: Record<Recharge, string> = { none: 'Manual only', short: 'Refills on Short or Long Rest', long: 'Refills on Long Rest' };
 
 export function Resources() {
@@ -20,33 +20,51 @@ export function Resources() {
   const save = () => {
     const name = f.draft.name.trim();
     if (!name) return;
-    update((p) => ({ res: saveEntry<Resource>(p.res, { name, note: f.draft.note.trim(), inv: f.draft.inv }, f.editingId, { count: 0 }) }));
+    update((p) => ({ res: saveEntry<Resource>(p.res, { name, note: f.draft.note.trim() }, f.editingId, { count: 0 }) }));
     f.close();
   };
+  const form = f.isOpen && (
+    <EntryForm kind="res" title={f.title} saveLabel={f.saveLabel} onSave={save} onCancel={f.close}>
+      <div className="grid" style={{ '--min': '200px' } as CSSProperties}>
+        <TextField label="Name" value={f.draft.name} placeholder="e.g. Rations, Torches, Ki points" onChange={(v) => f.set({ name: v })} />
+        <TextField label="Note (optional)" value={f.draft.note} placeholder="What it's for" onChange={(v) => f.set({ note: v })} />
+      </div>
+    </EntryForm>
+  );
 
   return (
     <section id="sec-resources" aria-label="Resources" className="block section">
       <h2 className="block-title area-title">Resources</h2>
-      {/* Heroic Inspiration (PHB p.13) */}
-      <button type="button" className="well row gap-10 insp-toggle" aria-pressed={c.insp} onClick={() => update({ insp: !c.insp })}>
+      {/* The table's Inspiration counter (house rule, see migrate()). Heroic Inspiration by the rules is added as a resource. */}
+      <div className="well row gap-10">
         <span aria-hidden="true" className={'bar-icon' + (c.insp ? ' on' : '')}><StarIcon /></span>
         <span className="col grow">
-          <strong>Heroic Inspiration</strong>
-          <span className="muted">Expend to reroll any die right after rolling it; use the new roll.</span>
+          <strong>Inspiration</strong>
+          <span className="muted">The table’s counter, no limit.</span>
         </span>
-      </button>
+        <Step label="Spend Inspiration" onClick={() => update((p) => ({ insp: Math.max(0, p.insp - 1) }))}>−</Step>
+        <span style={{ fontSize: 22, fontWeight: 700, minWidth: 28, textAlign: 'center' }}>{c.insp}</span>
+        <Step label="Gain Inspiration" onClick={() => update((p) => ({ insp: p.insp + 1 }))}>+</Step>
+      </div>
       <div className="grid" style={{ '--min': '240px', gap: 12 } as CSSProperties}>
         {c.res.map((r) => {
           const rc = rechargeOf(r);
           return (
-            <div key={r.id} className="well col gap-6">
-              <div className="row between gap-4" style={{ alignItems: 'flex-start' }}>
-                <span className="grow" style={{ fontWeight: 700, paddingTop: 10 }}>{r.name}</span>
-                <EntryActions name={r.name} canEdit={edit} onEdit={() => f.openEdit(r.id, { name: r.name, note: r.note || '', inv: !!r.inv })}
-                  onRemove={() => update((p) => ({ res: removeEntry(p.res, r.id) }))} />
-              </div>
-              <span className="muted">{r.note || 'Custom resource'}</span>
-              {!edit && <span className="small">{RECHARGE_TEXT[rc]}</span>}
+            f.editingId === r.id ? <div key={r.id}>{form}</div> : (
+            <EntryRow key={r.id} name={r.name}
+              head={<><strong>{r.name}</strong><span className="muted">{r.note || 'Custom resource'}</span></>}
+              side={
+                <div className="row gap-8">
+                  <Step label={'Decrease ' + r.name} onClick={() => bump(r.id, -1)}>−</Step>
+                  <span style={{ fontSize: 22, fontWeight: 700, minWidth: 36, textAlign: 'center' }}>
+                    {r.count}{!!r.max && <span style={{ fontSize: 15, fontWeight: 500, color: 'var(--muted)' }}> / {r.max}</span>}
+                  </span>
+                  <Step label={'Increase ' + r.name} onClick={() => bump(r.id, 1)}>+</Step>
+                </div>
+              }
+              body={<span className="small">{RECHARGE_TEXT[rc]}</span>}
+              onEdit={() => f.openEdit(r.id, { name: r.name, note: r.note || '' })}
+              onRemove={() => update((p) => ({ res: removeEntry(p.res, r.id) }))}>
               {edit && (
                 <>
                   <label className="row gap-8 muted">Recharges on
@@ -67,27 +85,13 @@ export function Resources() {
                 </>
               )}
               {rc !== 'none' && !r.max && <span style={{ fontSize: 12, color: 'var(--danger)' }}>Set a maximum (Edit) so a rest can refill it.</span>}
-              <div className="row gap-8">
-                <Step label={'Decrease ' + r.name} onClick={() => bump(r.id, -1)}>−</Step>
-                <span style={{ fontSize: 22, fontWeight: 700, minWidth: 36, textAlign: 'center' }}>
-                  {r.count}{!!r.max && <span style={{ fontSize: 15, fontWeight: 500, color: 'var(--muted)' }}> / {r.max}</span>}
-                </span>
-                <Step label={'Increase ' + r.name} onClick={() => bump(r.id, 1)}>+</Step>
-              </div>
-            </div>
+            </EntryRow>
+            )
           );
         })}
       </div>
       {!f.isOpen && <AddButton onClick={f.openAdd}>+ Add resource</AddButton>}
-      {f.isOpen && (
-        <EntryForm kind="res" title={f.title} saveLabel={f.saveLabel} onSave={save} onCancel={f.close}>
-          <div className="grid" style={{ '--min': '200px' } as CSSProperties}>
-            <TextField label="Name" value={f.draft.name} placeholder="e.g. Rations, Torches, Ki points" onChange={(v) => f.set({ name: v })} />
-            <TextField label="Note (optional)" value={f.draft.note} placeholder="What it's for" onChange={(v) => f.set({ note: v })} />
-            <label className="check"><input type="checkbox" checked={f.draft.inv} onChange={(e) => f.set({ inv: e.target.checked })} />Also list in Inventory</label>
-          </div>
-        </EntryForm>
-      )}
+      {f.isOpen && !f.editingId && form}
     </section>
   );
 }

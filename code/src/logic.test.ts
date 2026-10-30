@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import {
-  applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, passiveScore, pillView, resPill, setPill, preparedCount, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
-  setExhaustion, speedNow, spellAttack, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, toggleFreeCast, undoHp
+  applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, NEW_FIELDS, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, removeItem, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
+  setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, toggleFreeCast, undoHp
 } from './logic';
 import type { Character, Item, Spell } from './types';
 
@@ -41,6 +41,11 @@ describe('derived numbers', () => {
     expect(spellUsable(make(), sp())).toBe(false);
     expect(spellUsable(make({ usePrep: false }), sp())).toBe(true);
     expect(preparedCount(make())).toBe(5); // leaves out always-prepared spells and cantrips
+  });
+  it('breaks spell save DC and spell attack into their parts (PHB p.41)', () => {
+    expect(spellDcParts(make())).toEqual([{ label: 'Base', value: 8 }, { label: 'Wisdom modifier', value: 2 }, { label: 'Proficiency Bonus', value: 3 }]);
+    expect(spellAttackParts(make())).toEqual([{ label: 'Wisdom modifier', value: 2 }, { label: 'Proficiency Bonus', value: 3 }]);
+    expect(spellDcParts(make({ castAb: 'none' }))).toBeNull();
   });
   it('keeps max HP at least 1, HP at or under it, and spent Hit Dice at most the level', () => {
     expect(setMaxHp(make({ hp: 40, maxHp: 44 }), 30)).toEqual({ maxHp: 30, hp: 30 });
@@ -299,7 +304,7 @@ describe('loading saves and backups', () => {
     const c = migrate({
       ...sampleCharacter(), spells: 'x', conds: null, abil: { str: '12', dex: 14 }, tab: 'nope', castAb: 'str',
       attacks: [{ id: 'a', name: 'Club', hit: {} }, { name: 'Sling', hit: '+4' }, 7],
-      def: { res: ['Fire', 3], vul: 'x' }, attune: ['Ring', null], slotMax: [0, 4], slotUsed: [0, 'x'],
+      def: { res: ['Fire', 3], vul: 'x' }, slotMax: [0, 4], slotUsed: [0, 'x'],
       conc: { name: 'Bless' }, hpUndo: { prev: 1 }, restMsg: { title: 1 }
     });
     expect(c.spells.map((x) => x.id)).toEqual(sampleCharacter().spells.map((x) => x.id));
@@ -308,8 +313,7 @@ describe('loading saves and backups', () => {
     expect(c).toMatchObject({ tab: 'actions', castAb: 'none', conc: null, hpUndo: null, restMsg: null });
     expect(c.attacks.map((a) => a.name)).toEqual(['Sling']);
     expect(c.attacks[0].id).toBeTruthy();
-    expect(c.def).toEqual({ res: ['Fire'], vul: [], imm: [] });
-    expect(c.attune).toEqual(['Ring', '', '']);
+    expect(c.def).toEqual({ res: ['Fire'], vul: [], imm: [], adv: [] });
     // Resources moved out of the tabs into the left column.
     expect(migrate({ ...sampleCharacter(), tab: 'resources' }).tab).toBe('actions');
     expect(c.slotMax).toEqual([0, 4, 0, 0, 0, 0, 0, 0, 0, 0]);
@@ -317,18 +321,28 @@ describe('loading saves and backups', () => {
     expect(migrate({ ...sampleCharacter(), castAb: 'toString' }).castAb).toBe('none'); // only an inherited key
   });
   it('clamps values that size lists of buttons, and keeps exactly three attunement slots', () => {
-    const c = migrate({ ...sampleCharacter(), level: 1e9, slotMax: [0, 1e9], slotUsed: [0, 50], exh: 99, ds: -1, df: 7, hdUsed: 1e9, attune: [] });
+    const c = migrate({ ...sampleCharacter(), level: 1e9, slotMax: [0, 1e9], slotUsed: [0, 50], exh: 99, ds: -1, df: 7, hdUsed: 1e9, attuneIds: [] });
     expect(c).toMatchObject({ level: 20, exh: 6, ds: 0, df: 3, hdUsed: 20 });
     expect(c.slotMax[1]).toBe(9);
     expect(c.slotUsed[1]).toBe(9);
-    expect(c.attune).toEqual(['', '', '']);
-    expect(migrate({ attune: ['a', 'b', 'c', 'd'] }).attune).toEqual(['a', 'b', 'c']);
+    expect(c.attuneIds).toEqual(['', '', '']);
+    expect(migrate({ attuneIds: ['a', 'b', 'c', 'd'] }).attuneIds).toEqual(['', '', '']); // ids of missing items drop
   });
-  it('turns the old refill flag into a recharge and lists old sample consumables in Inventory', () => {
+  it('keeps a sense source kind from the list; any other value becomes other', () => {
+    const c = migrate({ ...sampleCharacter(), senses: [
+      { id: 'x', name: 'Darkvision', range: '60 ft', srcKind: 'race' },
+      { id: 'y', name: 'Blindsight', range: '10 ft', srcKind: 'item', srcName: 'Goggles', desc: 'See without light' },
+      { id: 'z', name: 'Tremorsense', range: '5 ft' }] });
+    expect(c.senses.map((s) => s.srcKind)).toEqual(['other', 'item', undefined]);
+    expect(c.senses[1]).toMatchObject({ srcName: 'Goggles', desc: 'See without light' });
+  });
+  it('turns the old Heroic Inspiration flag into a count with no maximum (house rule)', () => {
+    const vals = [true, false, 3, 2.7, -4, 'x', null, undefined];
+    expect(vals.map((insp) => migrate({ ...sampleCharacter(), insp }).insp)).toEqual([1, 0, 3, 2, 0, 0, 0, 0]);
+  });
+  it('turns the old refill flag into a recharge', () => {
     const c = migrate({ res: [{ id: 'a', name: 'Ki', count: 1, refill: true }, { id: 'b', name: 'Rage', count: 1, refill: true, recharge: 'short' }, { id: 'c', name: 'Gold', count: 1 }] });
     expect(c.res.map((r) => r.recharge)).toEqual(['long', 'short', 'none']);
-    const inv = migrate({ res: [{ id: 'arrows', name: 'Arrows', count: 5 }, { id: 'n1', name: 'Rations', count: 3 }] });
-    expect(inv.res.map((r) => !!r.inv)).toEqual([true, false]);
   });
 });
 
@@ -355,11 +369,11 @@ describe('top bar pills', () => {
     expect(pillView(s, 'pp')).toMatchObject({ value: '15', target: { sec: 'sec-senses' } });
     expect(pillView(s, 'init')!.value).toBe('+4');
     expect(pillView(s, 'hd')).toMatchObject({ value: '4', max: '5' });
-    expect(pillView(s, 'insp')).toMatchObject({ value: 'On', target: 'insp' });
+    expect(pillView(s, 'insp')).toMatchObject({ value: '1', target: { sec: 'sec-resources' } });
   });
   it('resolves a resource, with and without a maximum', () => {
     expect(pillView(s, resPill('favored'))).toMatchObject({ label: 'Favored Enemy', value: '2', max: '3', target: { sec: 'sec-resources' } });
-    expect(pillView(s, resPill('arrows'))!.max).toBeUndefined();
+    expect(pillView({ ...s, res: [{ id: 'x', name: 'Rope', count: 1 }] }, resPill('x'))!.max).toBeUndefined();
   });
   it('shows a dash for spell numbers on a non-caster', () => {
     expect(pillView(blankCharacter(), 'dc')!.value).toBe('—');
@@ -552,5 +566,148 @@ describe('AC migration', () => {
     ]);
     expect(c.spells.map((s) => [s.acFx, s.acVal])).toEqual([[undefined, undefined], [undefined, undefined]]);
     expect(Number.isFinite(armorClass(c).total)).toBe(true);
+  });
+});
+
+describe('saves keep working', () => {
+  it('migrate leaves both samples unchanged', () => {
+    expect(migrate(sampleCharacter())).toEqual(sampleCharacter());
+    expect(migrate(druidSample())).toEqual(druidSample());
+  });
+  it('fills every new field from the blank character, not the sample, when a save lacks it or holds the wrong type', () => {
+    for (const k of NEW_FIELDS) {
+      const raw = { ...sampleCharacter() } as Record<string, unknown>;
+      delete raw[k];
+      expect(migrate(raw)[k]).toEqual(blankCharacter()[k]);
+      expect(migrate({ ...sampleCharacter(), [k]: 7 })[k]).toEqual(blankCharacter()[k]); // no new field is a number
+    }
+  });
+});
+
+describe('spell sort order', () => {
+  const list = [
+    sp({ id: 'a', name: 'Zap', time: '1 hour' }), sp({ id: 'b', name: 'Aid', time: 'Reaction, which you take when hit' }),
+    sp({ id: 'c', name: 'Mend', time: 'bonus action', prep: true }), sp({ id: 'd', name: 'Bolt', time: 'Action or Ritual' }),
+    sp({ id: 'e', name: 'Odd', time: 'Special' }), sp({ id: 'f', name: 'Rest', time: '10 minutes' })
+  ];
+  const ids = (s: 'az' | 'prep' | 'time') => sortSpells(make({ spellSort: s }), list).map((x) => x.id);
+  it('sorts A–Z, prepared first, or by casting time with unknown times last', () => {
+    expect(ids('az')).toEqual(['b', 'd', 'c', 'e', 'f', 'a']);
+    expect(ids('prep')).toEqual(['c', 'b', 'd', 'e', 'f', 'a']);
+    expect(ids('time')).toEqual(['d', 'c', 'b', 'f', 'a', 'e']);
+  });
+  it('falls back to A–Z for an unknown saved sort', () => {
+    expect(migrate({ ...sampleCharacter(), spellSort: 'zz' }).spellSort).toBe('az');
+  });
+});
+
+describe('defenses', () => {
+  const old = { ...sampleCharacter(), def: { res: ['Fire', 'Charmed', 'Exhaustion', 'Mud'], vul: ['Poisoned'], imm: ['Poison', 'Frightened'] }, saveNotes: 'Advantage vs traps' };
+  it('moves save notes and conditions under Resistances to Advantage on saves (PHB p.28)', () => {
+    const c = migrate(old);
+    expect(c.def).toEqual({ res: ['Fire', 'Mud'], vul: ['Poisoned'], imm: ['Poison', 'Frightened'], adv: ['Advantage vs traps', 'vs Charmed', 'vs Exhaustion'] });
+    expect(c).not.toHaveProperty('saveNotes');
+    expect(migrate(c)).toEqual(c);
+  });
+  it('adds nothing for blank save notes and never duplicates an entry', () => {
+    expect(migrate({ ...old, def: { res: [], vul: [], imm: [] }, saveNotes: '  ' }).def.adv).toEqual([]);
+    expect(migrate({ ...old, def: { res: ['Charmed'], vul: [], imm: [], adv: ['vs Charmed'] }, saveNotes: '' }).def.adv).toEqual(['vs Charmed']);
+  });
+});
+
+describe('carrying capacity', () => {
+  const str = (s: number) => ({ abil: { ...sampleCharacter().abil, str: s } });
+  it('carries STR × 15 lb at Small/Medium, ×7.5 Tiny, ×30 Large, ×60 Huge, ×120 Gargantuan; drag/lift/push is twice that (PHB p.363)', () => {
+    expect(carryCapacity(make())).toEqual({ carry: 180, push: 360, size: 'medium' }); // Ilyra STR 12
+    expect(carryCapacity(make({ size: 'tiny' }))).toEqual({ carry: 90, push: 180, size: 'tiny' });
+    expect(carryCapacity(make({ size: 'huge', ...str(10) }))).toEqual({ carry: 600, push: 1200, size: 'huge' });
+  });
+  it('counts one size larger with the carry toggle, never past Gargantuan (Powerful Build, PHB p.192)', () => {
+    expect(carryCapacity(make({ size: 'small', carryUp: true })).size).toBe('medium');
+    expect(carryCapacity(make({ carryUp: true }))).toEqual({ carry: 360, push: 720, size: 'large' });
+    expect(carryCapacity(make({ size: 'gargantuan', carryUp: true })).carry).toBe(1440);
+  });
+  it('uses the effective Strength score and never changes Speed', () => {
+    expect(carryCapacity(make({ abilAdj: { str: -2 } })).carry).toBe(150);
+    const heavy = make({ inv: [it_({ wt: 500 })] });
+    expect(carriedWeight(heavy)).toBeGreaterThan(carryCapacity(heavy).carry);
+    expect(speedNow(heavy)).toBe(35);
+  });
+  it('adds item weight × quantity and 50 coins to the pound (PHB p.213)', () => {
+    const c = make({ inv: [it_({ wt: 2, qty: 3 }), it_({ id: 'b', wt: 0.25, qty: 4 }), it_({ id: 'c' })], coins: { cp: 0, sp: 0, ep: 0, gp: 100, pp: 25 } });
+    expect(carriedWeight(c)).toBe(9.5);
+  });
+  it('reads typed weights with a decimal point or comma', () => {
+    expect(['2', '0,5', ' 1.25 ', '', 'abc', '-1'].map(parseWeight)).toEqual([2, 0.5, 1.25, undefined, undefined, undefined]);
+  });
+  it('drops damaged weights and sizes on load', () => {
+    const c = migrate({ ...sampleCharacter(), size: 'colossal', carryUp: 'yes', inv: [{ id: 'a', name: 'Rope', qty: 1, eq: false, wt: 'x' }, { id: 'b', name: 'Pot', qty: 1, eq: false, wt: -3 }] });
+    expect(c).toMatchObject({ size: 'medium', carryUp: false });
+    expect(c.inv.map((i) => i.wt)).toEqual([undefined, undefined]);
+  });
+});
+
+describe('attunement and resources moving to Inventory', () => {
+  it('turns plain inventory resources into items, keeps ones with a max or a recharge, and empties their pills', () => {
+    const c = migrate({ inv: [], attune: ['', '', ''], pills: ['hp', 'res:r1', 'res:r2'], res: [
+      { id: 'r1', name: 'Arrows', note: 'Tap −', count: 20, inv: true },
+      { id: 'r2', name: 'Wand', count: 3, max: 7, recharge: 'none', inv: true },
+      { id: 'r3', name: 'Herbs', count: 1, refill: true, inv: true },
+      { id: 'r4', name: 'Ki', count: 2, max: 2, recharge: 'short' }] });
+    expect(c.inv).toEqual([{ id: expect.any(String), name: 'Arrows', qty: 20, eq: false, desc: 'Tap −' }]);
+    expect(c.res.map((r) => [r.id, !!r.inv, r.recharge])).toEqual([['r2', true, 'none'], ['r3', true, 'long'], ['r4', false, 'short']]);
+    expect(c.pills).toEqual(['hp', '', 'res:r2']);
+    expect(c.attuneIds).toEqual(['', '', '']);
+  });
+  it('still converts very old saves without the inv flag, and only on saves from before this change', () => {
+    const old = migrate({ inv: [], res: [{ id: 'arrows', name: 'Arrows', count: 5 }, { id: 'n1', name: 'Rations', count: 3 }] });
+    expect(old.inv.map((i) => i.name)).toEqual(['Arrows']);
+    expect(old.res.map((r) => r.id)).toEqual(['n1']);
+    const now = migrate({ attuneIds: ['', '', ''], res: [{ id: 'arrows', name: 'Arrows', count: 5 }, { id: 'w', name: 'Wand', count: 1, inv: true }] });
+    expect(now.res.map((r) => r.id)).toEqual(['arrows', 'w']);
+  });
+  it('links attunement slot names to items: matches, duplicates, unknown text, converted resources', () => {
+    const a = migrate({ attune: [' cloak of elvenkind ', 'Ring', 'Ring'], res: [], inv: [
+      { id: 'i1', name: 'Cloak of Elvenkind', qty: 1, eq: false }, { id: 'i2', name: 'Ring', qty: 1, eq: true }, { id: 'i3', name: 'Ring', qty: 1, eq: true }] });
+    expect(a.attuneIds).toEqual(['i1', 'i2', 'i3']);
+    expect(a.inv[0].eq).toBe(false); // a matched item keeps its eq flag
+    const b = migrate({ attune: ['Pearl of Power', 'Shield', 'Ring'], inv: [{ id: 'i2', name: 'Ring', qty: 1, eq: true }],
+      res: [{ id: 'p', name: 'Pearl of Power', count: 1, inv: true }] });
+    expect(b.attuneIds[2]).toBe('i2');
+    expect(b.inv.find((i) => i.id === b.attuneIds[0])).toMatchObject({ name: 'Pearl of Power', eq: true });
+    expect(b.inv.find((i) => i.id === b.attuneIds[1])).toEqual({ id: b.attuneIds[1], name: 'Shield', qty: 1, eq: true }); // no detectArmor
+    const d = migrate({ attune: ['Ring', 'Ring', '  '], res: [], inv: [{ id: 'i2', name: 'Ring', qty: 1, eq: true }] });
+    expect(d.attuneIds[0]).toBe('i2');
+    expect(d.inv.find((i) => i.id === d.attuneIds[1])).toMatchObject({ name: 'Ring', eq: true });
+    expect(d.attuneIds[2]).toBe('');
+    expect(migrate({ attune: ['Cartographer\'s Tools'], res: [], inv: [{ id: 't', name: 'Cartographer’s Tools', qty: 1, eq: true }] }).attuneIds[0]).toBe('t');
+    const e = migrate({ attune: ['-', 'None', '—'], res: [], inv: [] });
+    expect(e.attuneIds).toEqual(['', '', '']); // placeholder text never becomes an item
+    expect(e.inv).toEqual([]);
+    // Deliberate: a charged item tracked as a resource keeps its charges in Resources and also becomes the attuned item.
+    const w = migrate({ attune: ['Wand of Magic Missiles'], inv: [],
+      res: [{ id: 'w', name: 'Wand of Magic Missiles', count: 7, max: 7, recharge: 'none', inv: true }] });
+    expect(w.res.map((r) => r.id)).toEqual(['w']);
+    expect(w.inv.find((i) => i.id === w.attuneIds[0])).toMatchObject({ name: 'Wand of Magic Missiles', eq: true });
+  });
+  it('turns damaged resource fields into safe item values', () => {
+    const c = migrate({ inv: [], res: [{ id: 'r', name: 'Rope', note: 5, count: 'x', inv: true }, { id: 's', name: 'Bolts', count: 4.6, inv: true }] });
+    expect(c.inv).toEqual([{ id: expect.any(String), name: 'Rope', qty: 1, eq: false }, { id: expect.any(String), name: 'Bolts', qty: 4, eq: false }]);
+  });
+  it('is idempotent on a converted old save', () => {
+    const once = migrate({ attune: ['Pearl', 'Lamp', ''], res: [{ id: 'p', name: 'Pearl', count: 1, inv: true }], inv: [] });
+    expect(migrate(once)).toEqual(once);
+  });
+  it('drops missing, repeated and damaged attunement ids', () => {
+    const inv = [{ id: 'i2', name: 'Ring', qty: 1, eq: true }];
+    expect(migrate({ attuneIds: ['i2', 'gone', 'i2'], inv }).attuneIds).toEqual(['i2', '', '']);
+    expect(migrate({ attuneIds: [3, 'i2'], inv }).attuneIds).toEqual(['', 'i2', '']);
+  });
+  it('removing an item clears its attunement slot; unequipping keeps it attuned', () => {
+    const s = sampleCharacter();
+    const cloak = s.attuneIds[0];
+    expect(removeItem(s, cloak).attuneIds).toEqual(['', '', '']);
+    expect(removeItem(s, cloak).inv.some((i) => i.id === cloak)).toBe(false);
+    expect(migrate({ ...s, inv: s.inv.map((i) => (i.id === cloak ? { ...i, eq: false } : i)) }).attuneIds[0]).toBe(cloak);
   });
 });

@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import {
-  AC_SPELLS, CAST_NAMES, acAfterEdit, castSpell, concAfterEdit, detectAcSpell, fmt, preparedCount, removeSpell, setConc, setSlotUsed, slotsLeft,
-  spellAttack, spellSaveDC, spellUsable, toggleFreeCast
+  AC_SPELLS, CAST_NAMES, SPELL_SORTS, acAfterEdit, castSpell, concAfterEdit, detectAcSpell, fmt, preparedCount, removeSpell, setConc, setSlotUsed,
+  slotsLeft, sortSpells, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, toggleFreeCast, type AcPart
 } from '../../logic';
 import { patchEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { AcEffect, Spell } from '../../types';
-import { AddButton, ChevronDown, DieBadge, EntryActions, EntryForm, NumInput, Step, TextField, UsePips } from '../ui';
+import { AddButton, ChevronDown, DieBadge, EntryForm, EntryRow, NumInput, Step, TextField, UsePips } from '../ui';
 
 const ORDINAL = ['Cantrip', '1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th'];
 const BLANK = { name: '', lvl: '1', time: 'Action', range: '', dice: '', conc: false, source: '', dur: '', comp: '', always: false, acFx: '' as AcEffect | '', acVal: 0 };
@@ -21,10 +21,13 @@ const toDraft = (e: Spell): Draft => ({
 export function SpellsTab() {
   const { c, update, edit } = useSheet();
   const [castPick, setCastPick] = useState<string | null>(null);
+  const [statOpen, setStatOpen] = useState<'dc' | 'atk' | null>(null);
   const f = useEntryForm('spell', BLANK, 'spell', 'Add a spell');
   const usePrep = c.usePrep;
   const dc = spellSaveDC(c), atk = spellAttack(c);
   const prepCount = preparedCount(c);
+  const breakdown = statOpen === 'dc' ? spellDcParts(c) : statOpen === 'atk' ? spellAttackParts(c) : null;
+  const toggleStat = (k: 'dc' | 'atk') => setStatOpen(statOpen === k ? null : k);
 
   const save = () => {
     const d = f.draft, name = d.name.trim();
@@ -44,12 +47,48 @@ export function SpellsTab() {
     }));
     f.close();
   };
+  const form = f.isOpen && (
+    <EntryForm kind="spell" title={f.title} saveLabel={f.saveLabel} onSave={save} onCancel={f.close}>
+      <div className="grid">
+        <TextField label="Name" value={f.draft.name} placeholder="e.g. Misty Step" onChange={(v) => f.set({ name: v })} />
+        <label className="field">Level
+          <select className="input" value={f.draft.lvl} onChange={(e) => f.set({ lvl: e.target.value })}>
+            {ORDINAL.map((_, i) => <option key={i} value={String(i)}>{i === 0 ? 'Cantrip' : 'Level ' + i}</option>)}
+          </select>
+        </label>
+        <label className="field">Casting time
+          <select className="input" value={f.draft.time} onChange={(e) => f.set({ time: e.target.value })}>
+            {['Action', 'Bonus Action', 'Reaction', '1 Minute', '10 Minutes', '1 Hour'].map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </label>
+        <TextField label="Range" value={f.draft.range} placeholder="e.g. 60 ft" onChange={(v) => f.set({ range: v })} />
+        <TextField label="Source" value={f.draft.source} placeholder="e.g. Ranger, Feat" onChange={(v) => f.set({ source: v })} />
+        <TextField label="Dice / effect" value={f.draft.dice} placeholder="e.g. DEX save · 3d6 Fire" onChange={(v) => f.set({ dice: v })} />
+        <TextField label="Duration" value={f.draft.dur} placeholder="e.g. 1 hour, Instantaneous" onChange={(v) => f.set({ dur: v })} />
+        <TextField label="Components" value={f.draft.comp} placeholder="e.g. V, S, M (a pinch of salt)" onChange={(v) => f.set({ comp: v })} />
+        <label className="check"><input type="checkbox" checked={f.draft.conc} onChange={(e) => f.set({ conc: e.target.checked })} />Concentration</label>
+        <label className="check"><input type="checkbox" checked={f.draft.always} onChange={(e) => f.set({ always: e.target.checked })} />Always prepared</label>
+        <label className="field">AC effect
+          <select className="input" value={f.draft.acFx} onChange={(e) => {
+            const acFx = e.target.value as AcEffect | '';
+            const known = AC_SPELLS[f.draft.name.trim().toLowerCase()];
+            f.set({ acFx, ...(acFx && known ? { acVal: known[1] } : {}) });
+          }}>
+            {AC_EFFECTS.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+          </select>
+        </label>
+        {f.draft.acFx && (
+          <label className="field">{f.draft.acFx === 'bonus' ? 'AC bonus' : f.draft.acFx === 'base' ? 'Base AC (+ DEX)' : 'AC at least'}
+            <NumInput className="input" value={f.draft.acVal} min={0} max={30} onCommit={(acVal) => f.set({ acVal })} />
+          </label>
+        )}
+      </div>
+    </EntryForm>
+  );
 
   const groups = [];
   for (let l = 0; l <= 9; l++) {
-    const list = c.spells
-      .filter((x) => (x.lvl || 0) === l && (c.spellFilter !== 'prepared' || l === 0 || spellUsable(c, x)))
-      .sort((a, b) => a.name.localeCompare(b.name));
+    const list = sortSpells(c, c.spells.filter((x) => (x.lvl || 0) === l && (c.spellFilter !== 'prepared' || l === 0 || spellUsable(c, x))));
     if (list.length) groups.push({ l, list });
   }
   const slotLevels = [1, 2, 3, 4, 5, 6, 7, 8, 9].filter((l) => edit || c.slotMax[l] > 0);
@@ -61,8 +100,8 @@ export function SpellsTab() {
     <div className="col gap-12">
       <div className="row wrap gap-12" style={{ alignItems: 'stretch' }}>
         <StatCard label="Spellcasting ability" value={CAST_NAMES[c.castAb]} />
-        <DieStat label="Spell save DC" value={dc === null ? '' : String(dc)} />
-        <DieStat label="Spell attack" value={atk === null ? '' : fmt(atk)} />
+        <DieStat label="Spell save DC" value={dc === null ? '' : String(dc)} open={statOpen === 'dc'} onToggle={dc === null ? undefined : () => toggleStat('dc')} />
+        <DieStat label="Spell attack" value={atk === null ? '' : fmt(atk)} open={statOpen === 'atk'} onToggle={atk === null ? undefined : () => toggleStat('atk')} />
         {usePrep && (
           <div className="well col" style={{ flex: '1 1 140px' }}>
             <span className="small">Prepared spells</span>
@@ -80,6 +119,7 @@ export function SpellsTab() {
           </div>
         )}
       </div>
+      {breakdown && <SpellBreakdown title={statOpen === 'dc' ? 'Spell save DC' : 'Spell attack'} parts={breakdown} bareFirst={statOpen === 'dc'} />}
 
       <div className="row wrap" style={{ gap: '8px 14px' }}>
         <button type="button" role="switch" aria-checked={usePrep} className="btn row gap-10" style={{ fontSize: 14, padding: '0 12px 0 8px' }}
@@ -136,6 +176,17 @@ export function SpellsTab() {
         {slotLevels.length === 0 && <span className="muted" style={{ padding: '8px 0' }}>No spell slots. Turn on Edit to set them.</span>}
       </div>
 
+      <div className="row wrap between" style={{ gap: '8px 14px' }}>
+        {/* Hidden only by the add form: while a spell below is edited it stays, so the list doesn't shift up. */}
+        {!f.isOpen || f.editingId ? <AddButton always onClick={f.openAdd}>+ Add spell</AddButton> : <span />}
+        <div role="group" aria-label="Sort spells" className="row wrap gap-4">
+          {SPELL_SORTS.map(([k, label]) => (
+            <button key={k} type="button" aria-pressed={c.spellSort === k} className="filter-btn" onClick={() => update({ spellSort: k })}>{label}</button>
+          ))}
+        </div>
+      </div>
+      {f.isOpen && !f.editingId && form}
+
       {groups.map(({ l, list }) => {
         const max = l ? c.slotMax[l] : 0, left = slotsLeft(c, l);
         return (
@@ -150,53 +201,14 @@ export function SpellsTab() {
               )}
               {l > 0 && max === 0 && <span style={{ fontSize: 13, color: 'var(--dim)' }}>No level {l} slots</span>}
             </div>
-            {list.map((sp) => (
+            {list.map((sp) => (f.editingId === sp.id ? <div key={sp.id}>{form}</div> : (
               <SpellRow key={sp.id} sp={sp} picking={castPick === sp.id} setPicking={(on) => setCastPick(on ? sp.id : null)}
                 onEdit={() => f.openEdit(sp.id, toDraft(sp))} />
-            ))}
+            )))}
           </div>
         );
       })}
 
-      {!f.isOpen && <AddButton onClick={f.openAdd}>+ Add spell</AddButton>}
-      {f.isOpen && (
-        <EntryForm kind="spell" title={f.title} saveLabel={f.saveLabel} onSave={save} onCancel={f.close}>
-          <div className="grid">
-            <TextField label="Name" value={f.draft.name} placeholder="e.g. Misty Step" onChange={(v) => f.set({ name: v })} />
-            <label className="field">Level
-              <select className="input" value={f.draft.lvl} onChange={(e) => f.set({ lvl: e.target.value })}>
-                {ORDINAL.map((_, i) => <option key={i} value={String(i)}>{i === 0 ? 'Cantrip' : 'Level ' + i}</option>)}
-              </select>
-            </label>
-            <label className="field">Casting time
-              <select className="input" value={f.draft.time} onChange={(e) => f.set({ time: e.target.value })}>
-                {['Action', 'Bonus Action', 'Reaction', '1 Minute', '10 Minutes', '1 Hour'].map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </label>
-            <TextField label="Range" value={f.draft.range} placeholder="e.g. 60 ft" onChange={(v) => f.set({ range: v })} />
-            <TextField label="Source" value={f.draft.source} placeholder="e.g. Ranger, Feat" onChange={(v) => f.set({ source: v })} />
-            <TextField label="Dice / effect" value={f.draft.dice} placeholder="e.g. DEX save · 3d6 Fire" onChange={(v) => f.set({ dice: v })} />
-            <TextField label="Duration" value={f.draft.dur} placeholder="e.g. 1 hour, Instantaneous" onChange={(v) => f.set({ dur: v })} />
-            <TextField label="Components" value={f.draft.comp} placeholder="e.g. V, S, M (a pinch of salt)" onChange={(v) => f.set({ comp: v })} />
-            <label className="check"><input type="checkbox" checked={f.draft.conc} onChange={(e) => f.set({ conc: e.target.checked })} />Concentration</label>
-            <label className="check"><input type="checkbox" checked={f.draft.always} onChange={(e) => f.set({ always: e.target.checked })} />Always prepared</label>
-            <label className="field">AC effect
-              <select className="input" value={f.draft.acFx} onChange={(e) => {
-                const acFx = e.target.value as AcEffect | '';
-                const known = AC_SPELLS[f.draft.name.trim().toLowerCase()];
-                f.set({ acFx, ...(acFx && known ? { acVal: known[1] } : {}) });
-              }}>
-                {AC_EFFECTS.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
-              </select>
-            </label>
-            {f.draft.acFx && (
-              <label className="field">{f.draft.acFx === 'bonus' ? 'AC bonus' : f.draft.acFx === 'base' ? 'Base AC (+ DEX)' : 'AC at least'}
-                <NumInput className="input" value={f.draft.acVal} min={0} max={30} onCommit={(acVal) => f.set({ acVal })} />
-              </label>
-            )}
-          </div>
-        </EntryForm>
-      )}
     </div>
   );
 }
@@ -209,16 +221,37 @@ function StatCard({ label, value }: { label: string; value: string | number }) {
   );
 }
 
-function DieStat({ label, value }: { label: string; value: string }) {
+// Tapping shows how the number is made up. Without a spellcasting ability there is nothing to show, so it is no button.
+function DieStat({ label, value, open, onToggle }: { label: string; value: string; open: boolean; onToggle?: () => void }) {
+  if (!onToggle) {
+    return <div className="well row gap-10" style={{ flex: '1 1 140px' }}><DieBadge value={value} /><span className="small">{label}</span></div>;
+  }
   return (
-    <div className="well row gap-10" style={{ flex: '1 1 140px' }}>
+    <button type="button" className="well row gap-10 die-stat" aria-expanded={open} onClick={onToggle} style={{ flex: '1 1 140px' }}>
       <DieBadge value={value} /><span className="small">{label}</span>
+    </button>
+  );
+}
+
+// Same look as the Armor Class panel. The DC's first part (8) is a bare number; the rest are signed.
+function SpellBreakdown({ title, parts, bareFirst }: { title: string; parts: AcPart[]; bareFirst: boolean }) {
+  return (
+    <div className="block">
+      <h3 className="block-title">{title}</h3>
+      <div className="grid speed-grid">
+        {parts.map((p, i) => (
+          <div key={p.label} className="tile">
+            <span className="muted">{p.label}</span>
+            <span className="speed-value">{bareFirst && i === 0 ? p.value : fmt(p.value)}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
 
 function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boolean; setPicking: (on: boolean) => void; onEdit: () => void }) {
-  const { c, update, edit } = useSheet();
+  const { c, update } = useSheet();
   const lvl = sp.lvl || 0;
   const usePrep = c.usePrep;
   const isAlways = usePrep && !!sp.always;
@@ -241,35 +274,37 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
     setPicking(false);
   };
 
-  return (
-    <div className="well row wrap" style={{ gap: '8px 10px' }}>
-      {usePrep && lvl > 0 && !isAlways && (
-        <button type="button" aria-pressed={prepOn} aria-label={prepOn ? sp.name + ' is prepared; tap to unprepare' : 'Prepare ' + sp.name} title="Prepared"
-          onClick={() => update((p) => ({ spells: patchEntry(p.spells, sp.id, (x) => ({ prep: !x.prep })) }))}
-          style={{
-            flex: 'none', width: 40, height: 40, padding: 0, cursor: 'pointer', borderRadius: 10, font: '700 15px var(--sans)',
-            border: '2px solid ' + (prepOn ? 'var(--accent)' : 'var(--dash)'), background: prepOn ? 'var(--accent)' : 'transparent', color: prepOn ? 'var(--on-accent)' : 'var(--off)'
-          }}>P</button>
-      )}
-      {lvl > 0 && isAlways && (
-        <span role="img" aria-label="Always prepared" title="Always prepared" className="row" style={{
-          flex: 'none', width: 40, height: 40, borderRadius: 10, border: '2px dashed var(--accent)', color: 'var(--accent)',
-          justifyContent: 'center', font: '700 15px var(--sans)'
-        }}>P</span>
-      )}
-      {usePrep && lvl === 0 && <span aria-hidden="true" style={{ flex: 'none', width: 40 }} />}
+  const prepBox = (on: boolean, dashed: boolean) => ({
+    flex: 'none', width: 44, height: 44, padding: 0, borderRadius: 10, font: '700 15px var(--sans)',
+    border: '2px ' + (dashed ? 'dashed' : 'solid') + ' ' + (on ? 'var(--accent)' : 'var(--dash)')
+  });
+  const before = <>
+    {usePrep && lvl > 0 && !isAlways && (
+      <button type="button" aria-pressed={prepOn} aria-label={prepOn ? sp.name + ' is prepared; tap to unprepare' : 'Prepare ' + sp.name} title="Prepared"
+        onClick={() => update((p) => ({ spells: patchEntry(p.spells, sp.id, (x) => ({ prep: !x.prep })) }))}
+        style={{ ...prepBox(prepOn, false), cursor: 'pointer', background: prepOn ? 'var(--accent)' : 'transparent', color: prepOn ? 'var(--on-accent)' : 'var(--off)' }}>P</button>
+    )}
+    {lvl > 0 && isAlways && (
+      <span role="img" aria-label="Always prepared" title="Always prepared" className="row" style={{ ...prepBox(true, true), color: 'var(--accent)', justifyContent: 'center' }}>P</span>
+    )}
+    {usePrep && lvl === 0 && <span aria-hidden="true" style={{ flex: 'none', width: 44 }} />}
+  </>;
 
-      <div className="col" style={{ flex: '1 1 220px', minWidth: 0, opacity: lvl > 0 && !usable ? 0.45 : 1 }}>
-        <span className="row gap-6" style={{ fontWeight: 600 }}>
-          {sp.name}
-          {lvl > 0 && !usable && <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>not prepared</span>}
-          {sp.c && <span title="Concentration" style={{ fontSize: 11, fontWeight: 700, border: '1px solid var(--blue)', color: 'var(--blue)', borderRadius: 4, padding: '0 4px' }}>C</span>}
-        </span>
-        <span className="muted">{[sp.time, sp.range, sp.source].filter((x) => x).join(' · ')}</span>
-        {(sp.dur || sp.comp) && <span className="muted">{[sp.dur, sp.comp].filter((x) => x).join(' · ')}</span>}
-        {sp.dice && <span style={{ fontSize: 14, fontWeight: 700, marginTop: 2 }}>{sp.dice}</span>}
-      </div>
+  const head = (
+    <span className="col" style={{ opacity: lvl > 0 && !usable ? 0.45 : 1 }}>
+      <span className="row gap-6" style={{ fontWeight: 600 }}>
+        {sp.name}
+        {lvl > 0 && !usable && <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>not prepared</span>}
+        {sp.c && <span title="Concentration" style={{ fontSize: 11, fontWeight: 700, border: '1px solid var(--blue)', color: 'var(--blue)', borderRadius: 4, padding: '0 4px' }}>C</span>}
+      </span>
+      <span className="muted">{[sp.time, sp.range].filter((x) => x).join(' · ')}</span>
+      {(sp.dur || sp.comp) && <span className="muted">{[sp.dur, sp.comp].filter((x) => x).join(' · ')}</span>}
+      {sp.dice && <span style={{ fontSize: 14, fontWeight: 700, marginTop: 2 }}>{sp.dice}</span>}
+    </span>
+  );
 
+  const side = (
+    <div className="row wrap gap-6" style={{ padding: '6px 0' }}>
       {sp.c && (lvl === 0 || usable) && (
         <button type="button" aria-pressed={concOn} aria-label={concOn ? 'Stop concentrating on ' + sp.name : 'Concentrate on ' + sp.name}
           className="btn btn-sm" style={{ border: '1px solid var(--blue)', background: concOn ? 'var(--blue)' : 'transparent', color: concOn ? 'var(--on-accent)' : 'var(--blue)' }}
@@ -292,18 +327,27 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
           )}
         </div>
       )}
-      {picking && upcasts.length > 0 && (
-        <div role="group" aria-label={'Higher slot levels for ' + sp.name} className="row wrap gap-6" style={{ flex: '1 1 100%', padding: 8, borderRadius: 12, background: 'var(--raised)' }}>
-          <span className="muted" style={{ flex: '1 1 100%' }}>Cast {sp.name} with a higher slot:</span>
-          {upcasts.map(({ l, left }) => (
-            <button key={l} type="button" aria-disabled={!left} aria-label={'Cast ' + sp.name + ' with a level ' + l + ' slot, ' + left + ' left'}
-              className="btn btn-sm" style={{ border: '1px solid ' + (left ? 'var(--line-2)' : 'var(--line)'), background: left ? 'var(--raised)' : 'transparent', color: left ? 'var(--text)' : 'var(--off)', cursor: left ? 'pointer' : 'not-allowed', textDecoration: left ? undefined : 'line-through' }}
-              onClick={() => { if (left) castWith(l); }}>{ORDINAL[l]} ({left})</button>
-          ))}
-        </div>
-      )}
-      {lvl > 0 && !sp.free && !first && usable && <span style={{ fontSize: 13, color: 'var(--danger)' }}>No slots of this level or higher</span>}
-      <EntryActions name={sp.name} canEdit={edit} onEdit={onEdit} onRemove={() => update((p) => removeSpell(p, sp.id))} />
     </div>
+  );
+
+  const noSlots = lvl > 0 && !sp.free && !first && usable;
+  return (
+    <EntryRow name={sp.name} before={before} head={head} side={side}
+      body={sp.source ? <span className="muted">Source: {sp.source}</span> : undefined}
+      onEdit={onEdit} onRemove={() => update((p) => removeSpell(p, sp.id))}>
+      {(picking && upcasts.length > 0 || noSlots) && <>
+        {picking && upcasts.length > 0 && (
+          <div role="group" aria-label={'Higher slot levels for ' + sp.name} className="row wrap gap-6" style={{ padding: 8, borderRadius: 12, background: 'var(--raised)' }}>
+            <span className="muted" style={{ flex: '1 1 100%' }}>Cast {sp.name} with a higher slot:</span>
+            {upcasts.map(({ l, left }) => (
+              <button key={l} type="button" aria-disabled={!left} aria-label={'Cast ' + sp.name + ' with a level ' + l + ' slot, ' + left + ' left'}
+                className="btn btn-sm" style={{ border: '1px solid ' + (left ? 'var(--line-2)' : 'var(--line)'), background: left ? 'var(--raised)' : 'transparent', color: left ? 'var(--text)' : 'var(--off)', cursor: left ? 'pointer' : 'not-allowed', textDecoration: left ? undefined : 'line-through' }}
+                onClick={() => { if (left) castWith(l); }}>{ORDINAL[l]} ({left})</button>
+            ))}
+          </div>
+        )}
+        {noSlots && <span style={{ fontSize: 13, color: 'var(--danger)' }}>No slots of this level or higher</span>}
+      </>}
+    </EntryRow>
   );
 }

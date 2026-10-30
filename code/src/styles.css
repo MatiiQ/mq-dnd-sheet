@@ -79,6 +79,30 @@ h1, h2, h3 { margin: 0; }
 .block { display: flex; flex-direction: column; gap: 8px; }
 .well { background: var(--well); border-radius: 12px; padding: 10px 12px; }
 .well.tight { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px; }
+/* An entry that expands on tap: the head is the tap target, controls sit beside it, the body opens below. */
+.well.entry { padding: 0 12px; }
+.entry-row { display: flex; flex-wrap: wrap; align-items: center; column-gap: 8px; }
+.entry-head {
+  flex: 1 1 200px; min-width: 0; min-height: 44px; padding: 10px 0; border: none; background: transparent;
+  font: inherit; color: inherit; text-align: left; cursor: pointer; display: flex; flex-direction: column; gap: 2px;
+}
+.entry-body, .entry-extra { display: flex; flex-direction: column; gap: 6px; padding: 0 0 8px; }
+/* Spell save DC and Spell attack badges open their breakdown. */
+.die-stat { border: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.die-stat[aria-expanded="true"] { box-shadow: inset 0 0 0 2px var(--accent); }
+/* Inventory: carried weight against carrying capacity. The fill width is set inline. */
+.carry { display: flex; flex-direction: column; gap: 8px; width: 100%; border: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.carry[aria-expanded="true"] { box-shadow: inset 0 0 0 2px var(--accent); }
+.carry-track { display: block; height: 8px; border-radius: 4px; background: var(--raised); overflow: hidden; }
+.carry-fill { display: block; height: 100%; background: var(--accent); }
+.carry-fill.over { background: var(--danger); }
+/* Attunement slots: dashed when empty, amber when filled; an unequipped attuned item gets a warning note. */
+.attune-slot { font-weight: 600; background: transparent; border: 1px dashed var(--dash); }
+.attune-slot.filled { border: 1px solid var(--accent); }
+.attune-note { font-size: 12px; font-weight: 600; color: var(--danger); }
+/* Senses sit in a wrapping row beside the passive scores: rows shrink to their content, an open form takes the full width. */
+.sense-entry .entry-head { flex: 0 1 auto; }
+.sense-form { flex-basis: 100%; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .edit-details { gap: 12px; border-left: 3px solid var(--accent); padding-left: 12px; }
 
@@ -222,8 +246,6 @@ button.pill { border: none; font: inherit; font-size: 13px; cursor: pointer; }
 }
 .bar-icon.on { border-color: var(--accent); background: var(--accent); color: var(--on-accent); }
 .bar-icon.on-light { border-color: var(--text); background: var(--text); color: var(--bg); }
-.insp-toggle { width: 100%; min-height: 44px; border: none; cursor: pointer; text-align: left; font: inherit; color: inherit; }
-.insp-toggle .bar-icon { flex: none; }
 .status-chip {
   display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 8px 0 12px; border-radius: 18px;
   border: none; background: var(--blue-bg); color: var(--blue-fg); font: 600 13px var(--sans); cursor: pointer;

@@ -6,19 +6,18 @@ export function sampleCharacter(): Character {
     ch: { name: 'Ilyra Moonbrook', species: 'Wood Elf', cls: 'Ranger', sub: 'Hunter', bg: 'Guide', align: 'Neutral Good' },
     speeds: { climb: 0, swim: 0, fly: 0, burrow: 0 }, speedOpen: false,
     acOpen: false, acUnarm: 'none', acOn: [], acMods: [],
+    size: 'medium', carryUp: false,
     level: 5, speedBase: 35, initMisc: 0, hdDie: 10, castAb: 'wis',
     abil: { str: 12, dex: 18, con: 14, int: 10, wis: 14, cha: 8 }, abilAdj: {},
     saveProf: { str: true, dex: true },
     skillProf: { stealth: 1, nature: 1, animal: 1, insight: 1, perception: 1, survival: 2 },
-    hp: 31, maxHp: 44, origHp: 44, origOn: false, temp: 0, amount: 5, insp: true, pills: ['hp', 'ac', 'res:favored'], tab: 'actions', prepMax: 6, spellFilter: 'all', usePrep: true,
+    hp: 31, maxHp: 44, origHp: 44, origOn: false, temp: 0, amount: 5, insp: 1, pills: ['hp', 'ac', 'res:favored'], tab: 'actions', prepMax: 6, spellFilter: 'all', spellSort: 'az', usePrep: true,
     hdUsed: 1, ds: 0, df: 0, exh: 0, conds: {}, free: {}, conc: null, hpUndo: null, concCheck: null, restMsg: null,
     slotMax: [0, 4, 2, 0, 0, 0, 0, 0, 0, 0], slotUsed: [0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
-    def: { res: [], vul: [], imm: [] }, saveNotes: 'Advantage on saves to avoid or end Charmed (Fey Ancestry).',
-    senses: [{ id: 'se1', name: 'Darkvision', range: '60 ft' }],
+    def: { res: [], vul: [], imm: [], adv: ['vs Charmed'] }, // Fey Ancestry (PHB p.190)
+    senses: [{ id: 'se1', name: 'Darkvision', range: '60 ft', srcKind: 'species', srcName: 'Wood Elf' }],
     res: [
-      { id: 'favored', name: 'Favored Enemy', note: 'Cast Hunter’s Mark without a slot', count: 2, max: 3, recharge: 'long' },
-      { id: 'arrows', name: 'Arrows', note: 'Tap − after each Longbow shot', count: 20, inv: true },
-      { id: 'potions', name: 'Potion of Healing', note: 'Bonus Action · roll 2d4 +2, then Heal', count: 2, inv: true }
+      { id: 'favored', name: 'Favored Enemy', note: 'Cast Hunter’s Mark without a slot', count: 2, max: 3, recharge: 'long' }
     ],
     attacks: [
       { id: 'a1', name: 'Longbow', hit: '+9', dmg: '1d8 +4 Piercing', info: '150/600 ft · Ammunition, Heavy, Two-Handed · includes Archery +2', mastery: 'Slow: on a hit, target’s Speed drops 10 ft until your next turn' },
@@ -31,20 +30,24 @@ export function sampleCharacter(): Character {
       { id: 'r3', name: 'Critical hit', dice: 'Roll weapon dice twice' }
     ],
     coins: { cp: 0, sp: 14, ep: 0, gp: 38, pp: 0 },
-    attune: ['Cloak of Elvenkind', '', ''],
+    attuneIds: ['i9', '', ''],
     notes: { appearance: '', personality: '', backstory: '', session: '' },
     inv: [
-      { id: 'i1', name: 'Studded Leather Armor', qty: 1, eq: true, armor: 'light', acBase: 12 },
-      { id: 'i2', name: 'Longbow', qty: 1, eq: true },
-      { id: 'i3', name: 'Shortsword', qty: 1, eq: true },
-      { id: 'i4', name: 'Cartographer’s Tools', qty: 1, eq: false },
-      { id: 'i5', name: 'Explorer’s Pack', qty: 1, eq: false },
-      { id: 'i6', name: 'Traveler’s Clothes', qty: 1, eq: false }
+      { id: 'i1', name: 'Studded Leather Armor', qty: 1, eq: true, armor: 'light', acBase: 12, wt: 13 },
+      { id: 'i2', name: 'Longbow', qty: 1, eq: true, wt: 2 },
+      { id: 'i3', name: 'Shortsword', qty: 1, eq: true, wt: 2 },
+      { id: 'i4', name: 'Cartographer’s Tools', qty: 1, eq: false, wt: 6 },
+      { id: 'i5', name: 'Explorer’s Pack', qty: 1, eq: false, wt: 55 },
+      { id: 'i6', name: 'Traveler’s Clothes', qty: 1, eq: false, wt: 4 },
+      // Arrows weigh 1 lb per 20 (PHB p.222), a Potion of Healing ½ lb (PHB p.223).
+      { id: 'i7', name: 'Arrows', qty: 20, eq: false, wt: 0.05, desc: 'Tap − after each Longbow shot' },
+      { id: 'i8', name: 'Potion of Healing', qty: 2, eq: false, wt: 0.5, desc: 'Bonus Action · roll 2d4 +2, then Heal' },
+      { id: 'i9', name: 'Cloak of Elvenkind', qty: 1, eq: true }
     ],
     spells: [
-      { id: 'sp1', name: 'Druidcraft', lvl: 0, time: 'Action', range: '30 ft', source: 'Elf', dur: 'Instantaneous', comp: 'V, S' },
-      { id: 'sp2', name: 'Guidance', lvl: 0, time: 'Action', range: 'Touch', source: 'Magic Initiate', c: true, dice: '+1d4 to one check', dur: 'Up to 1 minute', comp: 'V, S' },
-      { id: 'sp3', name: 'Produce Flame', lvl: 0, time: 'Bonus Action', range: 'Self · throw 60 ft', source: 'Magic Initiate', dice: 'd20 +5 · 2d8 Fire', dur: '10 minutes', comp: 'V, S' },
+      { id: 'sp1', name: 'Druidcraft', lvl: 0, time: 'Action', range: '30 ft', source: 'Elf', dur: 'Instantaneous', comp: 'V, S', prep: true },
+      { id: 'sp2', name: 'Guidance', lvl: 0, time: 'Action', range: 'Touch', source: 'Magic Initiate', c: true, dice: '+1d4 to one check', dur: 'Up to 1 minute', comp: 'V, S', prep: true },
+      { id: 'sp3', name: 'Produce Flame', lvl: 0, time: 'Bonus Action', range: 'Self · throw 60 ft', source: 'Magic Initiate', dice: 'd20 +5 · 2d8 Fire', dur: '10 minutes', comp: 'V, S', prep: true },
       { id: 'sp4', name: 'Hunter’s Mark', lvl: 1, time: 'Bonus Action', range: '90 ft', source: 'Ranger · Favored Enemy', c: true, dice: '+1d6 Force per hit', dur: 'Up to 1 hour', comp: 'V', always: true },
       { id: 'sp5', name: 'Cure Wounds', lvl: 1, time: 'Action', range: 'Touch', source: 'Ranger', dice: 'Heal 2d8 +2 · +2d8 per slot level above 1', dur: 'Instantaneous', comp: 'V, S', prep: true },
       { id: 'sp6', name: 'Ensnaring Strike', lvl: 1, time: 'Bonus Action', range: 'Self', source: 'Ranger', c: true, dice: 'STR save DC 13 · 1d6 Piercing/turn', dur: 'Up to 1 minute', comp: 'V', prep: true },
@@ -81,32 +84,30 @@ export function sampleCharacter(): Character {
 
 // Sample character: Seren Vale, Aasimar Druid 12 (Circle of the Stars), a busy high-level caster for testing.
 // Built by the book: standard array + Sage (+2 WIS, +1 CON), ASI at 4 and 8, War Caster at 12 (PHB p.38, p.183, p.209).
-// HP uses fixed values: 8 + 11 × 5, plus CON +3 per level = 99 (PHB p.42). Magic items come from the DMG, so attunement is empty.
+// HP uses fixed values: 8 + 11 × 5, plus CON +3 per level = 99 (PHB p.42). No attuned items.
 export function druidSample(): Character {
   return {
     ch: { name: 'Seren Vale', species: 'Aasimar', cls: 'Druid', sub: 'Circle of the Stars', bg: 'Sage', align: 'Neutral' },
     speeds: { climb: 0, swim: 0, fly: 0, burrow: 0 }, speedOpen: false,
     acOpen: false, acUnarm: 'none', acOn: [], acMods: [],
+    size: 'medium', carryUp: false,
     level: 12, speedBase: 30, initMisc: 0, hdDie: 8, castAb: 'wis',
     abil: { str: 8, dex: 13, con: 16, int: 13, wis: 20, cha: 10 }, abilAdj: {},
     saveProf: { int: true, wis: true },
     skillProf: { arcana: 1, history: 1, medicine: 1, perception: 1 },
-    hp: 71, maxHp: 99, origHp: 99, origOn: false, temp: 12, amount: 8, insp: true, pills: ['hp', 'ac', 'res:wild'], tab: 'actions', prepMax: 16, spellFilter: 'all', usePrep: true,
+    hp: 71, maxHp: 99, origHp: 99, origOn: false, temp: 12, amount: 8, insp: 1, pills: ['hp', 'ac', 'res:wild'], tab: 'actions', prepMax: 16, spellFilter: 'all', spellSort: 'az', usePrep: true,
     hdUsed: 3, ds: 0, df: 0, exh: 1, conds: { Poisoned: true }, free: { ds12: true }, conc: { id: 'ds9', name: 'Moonbeam' },
     hpUndo: null, concCheck: null, restMsg: null,
     slotMax: [0, 4, 3, 3, 3, 2, 1, 0, 0, 0], slotUsed: [0, 2, 1, 1, 0, 1, 0, 0, 0, 0],
-    def: { res: ['Necrotic', 'Radiant'], vul: [], imm: [] },
-    saveNotes: 'Advantage on CON saves to keep Concentration (War Caster). Starry Form · Dragon: a d20 of 9 or lower counts as 10 on those saves.',
-    senses: [{ id: 'se1', name: 'Darkvision', range: '60 ft' }],
+    def: { res: ['Necrotic', 'Radiant'], vul: [], imm: [], adv: ['Concentration saves'] }, // Celestial Resistance; War Caster
+    senses: [{ id: 'se1', name: 'Darkvision', range: '60 ft', srcKind: 'species', srcName: 'Aasimar' }],
     res: [
       { id: 'wild', name: 'Wild Shape', note: 'Bonus Action · beast form or Starry Form · regain 1 on a Short Rest', count: 2, max: 3, recharge: 'long' },
       { id: 'bolt', name: 'Star Map · Guiding Bolt', note: 'Cast Guiding Bolt without a slot', count: 4, max: 5, recharge: 'long' },
       { id: 'omen', name: 'Cosmic Omen · Weal', note: 'Reaction · add 1d6 to a D20 Test within 30 ft (re-roll even/odd each Long Rest)', count: 5, max: 5, recharge: 'long' },
       { id: 'resurge', name: 'Wild Resurgence', note: 'Spend 1 Wild Shape use for a level 1 slot', count: 1, max: 1, recharge: 'long' },
       { id: 'hands', name: 'Healing Hands', note: 'Magic action · touch, heal 4d4', count: 1, max: 1, recharge: 'long' },
-      { id: 'reveal', name: 'Celestial Revelation', note: 'Bonus Action · 1 minute · wings, radiance or shroud', count: 0, max: 1, recharge: 'long' },
-      { id: 'potions', name: 'Potion of Healing', note: 'Bonus Action · roll 2d4 +2, then Heal', count: 3, recharge: 'none', inv: true },
-      { id: 'diamond', name: 'Diamond (300 GP)', note: 'Consumed by Revivify', count: 1, recharge: 'none', inv: true }
+      { id: 'reveal', name: 'Celestial Revelation', note: 'Bonus Action · 1 minute · wings, radiance or shroud', count: 0, max: 1, recharge: 'long' }
     ],
     attacks: [
       { id: 'a1', name: 'Starry Form · Archer', hit: '+9', dmg: '2d8 +5 Radiant', info: 'Bonus Action in Starry Form · ranged spell attack, 60 ft', mastery: '' },
@@ -123,7 +124,7 @@ export function druidSample(): Character {
       { id: 'r3', name: 'Critical hit', dice: 'Roll damage dice twice' }
     ],
     coins: { cp: 37, sp: 52, ep: 4, gp: 418, pp: 6 },
-    attune: ['', '', ''],
+    attuneIds: ['', '', ''],
     notes: {
       appearance: 'Tall, with silver-flecked dark skin and pale eyes that glint like starlight. Wears a deep blue robe stitched with constellations.',
       personality: 'Patient and curious. Reads omens in everything and quotes old star charts at the worst moments.',
@@ -131,17 +132,19 @@ export function druidSample(): Character {
       session: 'Fought the blight-wolves at the ruined observatory. Still poisoned from the hag’s bite. Moonbeam is up on the wolf den.'
     },
     inv: [
-      { id: 'i1', name: 'Leather Armor', qty: 1, eq: true, armor: 'light', acBase: 11 },
-      { id: 'i2', name: 'Shield', qty: 1, eq: true, armor: 'shield', acBase: 2 },
-      { id: 'i3', name: 'Quarterstaff', qty: 1, eq: true },
+      { id: 'i1', name: 'Leather Armor', qty: 1, eq: true, armor: 'light', acBase: 11, wt: 10 },
+      { id: 'i2', name: 'Shield', qty: 1, eq: true, armor: 'shield', acBase: 2, wt: 6 },
+      { id: 'i3', name: 'Quarterstaff', qty: 1, eq: true, wt: 4 },
       { id: 'i4', name: 'Star Map (crystal engraved with starry patterns)', qty: 1, eq: true },
-      { id: 'i5', name: 'Sickle', qty: 1, eq: false },
-      { id: 'i6', name: 'Herbalism Kit', qty: 1, eq: false },
-      { id: 'i7', name: 'Calligrapher’s Supplies', qty: 1, eq: false },
-      { id: 'i8', name: 'Book (history)', qty: 1, eq: false },
+      { id: 'i5', name: 'Sickle', qty: 1, eq: false, wt: 2 },
+      { id: 'i6', name: 'Herbalism Kit', qty: 1, eq: false, wt: 3 },
+      { id: 'i7', name: 'Calligrapher’s Supplies', qty: 1, eq: false, wt: 5 },
+      { id: 'i8', name: 'Book (history)', qty: 1, eq: false, wt: 5 },
       { id: 'i9', name: 'Parchment', qty: 8, eq: false },
-      { id: 'i10', name: 'Robe', qty: 1, eq: false },
-      { id: 'i11', name: 'Explorer’s Pack', qty: 1, eq: false }
+      { id: 'i10', name: 'Robe', qty: 1, eq: false, wt: 4 },
+      { id: 'i11', name: 'Explorer’s Pack', qty: 1, eq: false, wt: 55 },
+      { id: 'i12', name: 'Potion of Healing', qty: 3, eq: false, wt: 0.5, desc: 'Bonus Action · roll 2d4 +2, then Heal' },
+      { id: 'i13', name: 'Diamond (300 GP)', qty: 1, eq: false, desc: 'Consumed by Revivify' }
     ],
     // Cantrips carry prep so migrate() leaves them as they are.
     spells: [
@@ -209,11 +212,12 @@ export function blankCharacter(): Character {
   return {
     ...sampleCharacter(),
     ch: { name: 'New character', species: '', cls: '', sub: '', bg: '', align: '' },
-    level: 1, speedBase: 30, initMisc: 0, hdDie: 8, castAb: 'none', insp: false, pills: ['hp', 'ac', ''],
+    size: 'medium', carryUp: false,
+    level: 1, speedBase: 30, initMisc: 0, hdDie: 8, castAb: 'none', insp: 0, pills: ['hp', 'ac', ''], spellSort: 'az',
     abil: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 }, abilAdj: {}, saveProf: {}, skillProf: {},
     hp: 8, maxHp: 8, origHp: 8, hdUsed: 0,
     slotMax: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], slotUsed: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    def: { res: [], vul: [], imm: [] }, saveNotes: '', senses: [], res: [], attacks: [], riders: [],
-    coins: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 }, attune: ['', '', ''], inv: [], spells: [], feats: [], prepMax: 0
+    def: { res: [], vul: [], imm: [], adv: [] }, senses: [], res: [], attacks: [], riders: [],
+    coins: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 }, attuneIds: ['', '', ''], inv: [], spells: [], feats: [], prepMax: 0
   };
 }

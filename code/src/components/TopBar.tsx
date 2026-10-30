@@ -96,13 +96,6 @@ export function TopBar({ store, activeSec, setActiveSec, menuOpen, setMenuOpen, 
           }
           if (!v) return null;
           const t = v.target;
-          if (t === 'insp') {
-            return (
-              <button key={slot} type="button" className="pill" onClick={() => update({ insp: !c.insp })} aria-pressed={c.insp} aria-label="Heroic Inspiration">
-                <PillBody v={v} />
-              </button>
-            );
-          }
           if ('tab' in t) {
             return (
               <a key={slot} href="#sec-tabs" className="pill" onClick={(e) => openTab(t.tab, e)}
@@ -220,7 +213,7 @@ function PillBody({ v }: { v: PillView }) {
       </>
     );
   }
-  if (v.key === 'insp') return <><span aria-hidden="true" className={'pill-star' + (c.insp ? ' on' : '')}><StarIcon size={16} fill={c.insp ? 'currentColor' : 'none'} /></span>{v.label}</>;
+  if (v.key === 'insp') return <><span aria-hidden="true" className={'pill-star' + (c.insp ? ' on' : '')}><StarIcon size={16} fill={c.insp ? 'currentColor' : 'none'} /></span><strong>{v.value}</strong></>;
   return <><span className="pill-label">{v.label}</span> <strong>{v.value}</strong>{v.max && <span style={{ color: 'var(--muted)' }}>/{v.max}</span>}</>;
 }
 

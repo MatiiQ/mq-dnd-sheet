@@ -1,6 +1,6 @@
 // D&D 2024 rules used by the sheet. Pure functions: each takes a character and returns the next one.
 import { blankCharacter, sampleCharacter } from './defaults';
-import type { AcEffect, Ability, ArmorKind, CastAbility, Character, Concentration, HpSnapshot, Item, Resource, Spell, Tab, Unarmored } from './types';
+import type { AcEffect, Ability, ArmorKind, CastAbility, Character, Concentration, HpSnapshot, Item, Resource, Size, Spell, SpellSort, SrcKind, Tab, Unarmored } from './types';
 
 export const ABILITIES: [Ability, string][] = [
   ['str', 'Strength'], ['dex', 'Dexterity'], ['con', 'Constitution'],
@@ -16,6 +16,12 @@ export const SKILLS: [string, string, Ability][] = [
 ];
 
 export const TABS: [Tab, string][] = [['actions', 'Actions'], ['spells', 'Spells'], ['inventory', 'Inventory'], ['features', 'Features & Traits'], ['notes', 'Notes']];
+
+// Kinds of source an entry can name (roadmap, "Source kinds"), with their labels.
+export const SRC_KINDS: [SrcKind, string][] = [
+  ['species', 'Species'], ['background', 'Background'], ['class', 'Class'], ['subclass', 'Subclass'],
+  ['feat', 'Feat'], ['item', 'Item'], ['spell', 'Spell'], ['other', 'Other']
+];
 
 export const CAST_NAMES: Record<CastAbility, string> = { none: 'None', int: 'Intelligence', wis: 'Wisdom', cha: 'Charisma' };
 
@@ -36,6 +42,9 @@ export const CONDITION_RULES: Record<string, string> = {
   Unconscious: 'Incapacitated and Prone; you drop what you hold. Speed 0. Auto-fail STR and DEX saves. Attacks against you have Advantage; hits within 5 ft are critical hits.'
 };
 export const CONDITIONS = Object.keys(CONDITION_RULES);
+export const DAMAGE_TYPES = ['Acid', 'Bludgeoning', 'Cold', 'Fire', 'Force', 'Lightning', 'Necrotic', 'Piercing', 'Poison', 'Psychic', 'Radiant', 'Slashing', 'Thunder'];
+// Conditions a defense can name: the list above plus Exhaustion, which the sheet tracks as a level.
+export const CONDITION_OPTIONS = [...CONDITIONS.slice(0, 3), 'Exhaustion', ...CONDITIONS.slice(3)];
 const INCAPACITATING = ['Incapacitated', 'Paralyzed', 'Petrified', 'Stunned', 'Unconscious'];
 const ZERO_SPEED = ['Grappled', 'Restrained', 'Paralyzed', 'Petrified', 'Unconscious'];
 
@@ -53,6 +62,15 @@ export const saveMod = (c: Character, k: Ability) => abilityMod(c, k) + (c.saveP
 // Spell save DC = 8 + spellcasting ability modifier + PB; spell attack = modifier + PB (PHB p.41). null without a spellcasting ability.
 export const spellSaveDC = (c: Character) => (c.castAb === 'none' ? null : 8 + abilityMod(c, c.castAb) + profBonus(c.level));
 export const spellAttack = (c: Character) => (c.castAb === 'none' ? null : abilityMod(c, c.castAb) + profBonus(c.level));
+// The same two numbers as parts, for the breakdown under each badge (PHB p.41). Their sums equal the values above.
+export function spellAttackParts(c: Character): AcPart[] | null {
+  if (c.castAb === 'none') return null;
+  return [{ label: CAST_NAMES[c.castAb] + ' modifier', value: abilityMod(c, c.castAb) }, { label: 'Proficiency Bonus', value: profBonus(c.level) }];
+}
+export const spellDcParts = (c: Character): AcPart[] | null => {
+  const parts = spellAttackParts(c);
+  return parts && [{ label: 'Base', value: 8 }, ...parts];
+};
 // Initiative is a Dexterity check (PHB p.23); initMisc holds extra bonuses from features or items.
 export const initiative = (c: Character) => abilityMod(c, 'dex') + c.initMisc;
 
@@ -143,6 +161,20 @@ export function armorClass(c: Character): { total: number; parts: AcPart[] } {
 // A levelled spell can be cast when it is prepared or always prepared; always-prepared spells don't count
 // toward the prepared limit (PHB p.235). With tracking off (classes that know their spells), every spell can be cast.
 export const spellUsable = (c: Character, sp: Spell) => !c.usePrep || !!sp.always || !!sp.prep;
+// Sort orders for the spell list. Casting time matches the start of the free-text time; anything else goes last.
+export const SPELL_SORTS: [SpellSort, string][] = [['az', 'A–Z'], ['prep', 'Prepared first'], ['time', 'Casting time']];
+function castRank(time: string): number {
+  const t = time.trim().toLowerCase();
+  if (/^action/.test(t)) return 0;
+  if (/^bonus action/.test(t)) return 1;
+  if (/^reaction/.test(t)) return 2;
+  const m = t.match(/^(\d+)\s*(minute|hour)s?/);
+  return m ? 3 + Number(m[1]) * (m[2] === 'hour' ? 60 : 1) : Infinity;
+}
+export function sortSpells(c: Character, list: Spell[]): Spell[] {
+  const key = (sp: Spell) => (c.spellSort === 'prep' ? (spellUsable(c, sp) ? 0 : 1) : c.spellSort === 'time' ? castRank(sp.time) : 0);
+  return [...list].sort((a, b) => key(a) - key(b) || a.name.localeCompare(b.name));
+}
 export const preparedCount = (c: Character) => c.spells.filter((x) => (x.lvl || 0) > 0 && !x.always && x.prep).length;
 export const slotsLeft = (c: Character, level: number) => Math.max(0, c.slotMax[level] - c.slotUsed[level]);
 export const setSlotUsed = (c: Character, l: number, n: number) => { const u = c.slotUsed.slice(); u[l] = n; return { slotUsed: u }; };
@@ -189,6 +221,28 @@ export function concAfterEdit(c: Character, sp: Pick<Spell, 'id' | 'name' | 'c'>
   if (c.conc?.id !== sp.id) return {};
   if (!sp.c) return setConc(null);
   return sp.name !== c.conc.name ? setConc({ id: sp.id, name: sp.name }) : {};
+}
+
+// Carrying capacity: Strength score × a multiplier for the size; Drag/Lift/Push is twice that (PHB p.362–363, Carrying
+// Capacity table; Small and Medium share a row). Powerful Build counts one size larger (PHB p.192); Gargantuan is the
+// last row. Going over only matters while dragging, lifting or pushing (Speed at most 5 ft), so Speed never changes here.
+export const SIZES: [Size, string][] = [['tiny', 'Tiny'], ['small', 'Small'], ['medium', 'Medium'], ['large', 'Large'], ['huge', 'Huge'], ['gargantuan', 'Gargantuan']];
+export const CARRY_MULT: Record<Size, number> = { tiny: 7.5, small: 15, medium: 15, large: 30, huge: 60, gargantuan: 120 };
+export function carryCapacity(c: Character): { carry: number; push: number; size: Size } {
+  const i = SIZES.findIndex(([k]) => k === c.size);
+  const size = c.carryUp ? SIZES[Math.min(i + 1, SIZES.length - 1)][0] : c.size;
+  const carry = effScore(c, 'str') * CARRY_MULT[size];
+  return { carry, push: carry * 2, size };
+}
+// Items count weight × quantity; fifty coins weigh a pound (PHB p.213).
+export function carriedWeight(c: Character): number {
+  const coins = Object.values(c.coins).reduce((t, n) => t + n, 0);
+  return c.inv.reduce((t, i) => t + (i.wt || 0) * i.qty, 0) + coins / 50;
+}
+// A typed weight in lb. A Polish keyboard types a decimal comma, so "0,5" is 0.5. Anything else is no weight.
+export function parseWeight(s: string): number | undefined {
+  const t = s.trim();
+  return /^(\d+([.,]\d*)?|[.,]\d+)$/.test(t) ? Number(t.replace(',', '.')) : undefined;
 }
 
 export const zeroSpeedBy = (c: Character) => CONDITIONS.filter((n) => c.conds[n] && ZERO_SPEED.includes(n));
@@ -409,6 +463,9 @@ const ENTRY_LISTS = ['senses', 'res', 'attacks', 'riders', 'inv', 'spells', 'fea
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 const isEntry = (x: unknown): x is Record<string, unknown> =>
   isObj(x) && typeof x.name === 'string' && Object.values(x).every((v) => v === null || typeof v !== 'object');
+// Top-level fields added after the first release. A save without one gets the blank character's value, never
+// the sample's (roadmap, "Saves keep working"). Each later field adds its key here.
+export const NEW_FIELDS: readonly (keyof Character)[] = ['spellSort', 'size', 'carryUp', 'attuneIds'];
 // Resources the Inventory tab echoed before `inv` existed.
 const OLD_INVENTORY_RESOURCES = ['arrows', 'potions'];
 
@@ -421,6 +478,7 @@ export function migrate(data: unknown): Character {
   for (const [k, dv] of Object.entries(def)) {
     if (data[k] !== undefined && (dv === null || sameType(dv, data[k]))) d[k] = data[k];
   }
+  for (const k of NEW_FIELDS) if (!sameType(blank[k], data[k])) d[k] = blank[k];
   for (const k of FIXED_RECORDS) {
     const v = d[k] as Record<string, unknown>, base = blank[k] as Record<string, unknown>;
     d[k] = Object.fromEntries(Object.entries(base).map(([kk, bv]) => [kk, sameType(bv, v[kk]) ? v[kk] : bv]));
@@ -429,8 +487,21 @@ export function migrate(data: unknown): Character {
     d[k] = (d[k] as unknown[]).filter(isEntry).map((x) => (typeof x.id === 'string' ? x : { ...x, id: newId() }));
   }
   const c = d as unknown as Character;
-  c.def = { res: strings(c.def.res), vul: strings(c.def.vul), imm: strings(c.def.imm) };
-  c.attune = [0, 1, 2].map((i) => strings(c.attune)[i] ?? '');
+  // Sense sources: an unknown kind reads as Other; text that isn't a string goes.
+  c.senses = c.senses.map(({ desc, srcKind, srcName, ...se }) => ({
+    ...se,
+    ...(typeof desc === 'string' ? { desc } : {}),
+    ...(srcKind == null ? {} : { srcKind: SRC_KINDS.some(([k]) => k === srcKind) ? srcKind : 'other' }),
+    ...(typeof srcName === 'string' ? { srcName } : {})
+  }));
+  c.def = { res: strings(c.def.res), vul: strings(c.def.vul), imm: strings(c.def.imm), adv: strings(c.def.adv) };
+  // Resistance and Vulnerability apply to damage types only; Immunity to damage types and conditions (PHB p.28).
+  // Older saves could list a condition under Resistances, meaning Advantage on saves against it, and had a free-text
+  // save note. Both move to Advantage on saves. The note is no longer a field, so it is read from the raw save.
+  const addAdv = (t: string) => { if (!c.def.adv.includes(t)) c.def.adv.push(t); };
+  if (typeof data.saveNotes === 'string' && data.saveNotes.trim()) addAdv(data.saveNotes.trim());
+  c.def.res.filter((n) => CONDITION_OPTIONS.includes(n)).forEach((n) => addAdv('vs ' + n));
+  c.def.res = c.def.res.filter((n) => !CONDITION_OPTIONS.includes(n));
   c.slotMax = slots(c.slotMax);
   c.slotUsed = slots(c.slotUsed);
   // These values size lists of buttons, so an out-of-range number could freeze the sheet. Limits match the UI.
@@ -444,12 +515,18 @@ export function migrate(data: unknown): Character {
   if (!TABS.some(([t]) => t === c.tab)) c.tab = def.tab;
   if (!Object.hasOwn(CAST_NAMES, c.castAb)) c.castAb = 'none';
   if (c.spellFilter !== 'prepared') c.spellFilter = 'all';
+  if (!SPELL_SORTS.some(([k]) => k === c.spellSort)) c.spellSort = 'az';
+  if (!SIZES.some(([k]) => k === c.size)) c.size = 'medium';
   // Nullable fields: keep only well-formed values. The undo row lasts seconds, so it never survives a reload.
   const conc = c.conc as unknown;
   c.conc = isObj(conc) && typeof conc.id === 'string' && typeof conc.name === 'string' ? c.conc : null;
   // Older versions kept Concentration on a spell after removing it. Checked after the entry filter above.
   if (c.conc && !c.spells.some((x) => x.id === c.conc!.id)) c.conc = null;
   c.hpUndo = null;
+  // Inspiration is a counter, 0 or more. This deliberately departs from the rules, where a character has at most one
+  // Heroic Inspiration (PHB p.13, p.368). Older saves had an on/off flag; the type changed, so read the raw save.
+  const insp = data.insp;
+  c.insp = typeof insp === 'boolean' ? Number(insp) : finite(insp) ? Math.max(0, Math.floor(insp)) : 0;
   if (typeof c.concCheck !== 'string') c.concCheck = null;
   const msg = c.restMsg as unknown;
   c.restMsg = isObj(msg) && typeof msg.title === 'string' && typeof msg.body === 'string' ? c.restMsg : null;
@@ -458,10 +535,12 @@ export function migrate(data: unknown): Character {
   // AC fields: a damaged one would show NaN or join strings, so it goes, with its partner field.
   c.acMods = c.acMods.filter((m) => finite(m.val));
   if (!Object.hasOwn(UNARMORED, c.acUnarm)) c.acUnarm = 'none';
-  c.inv = c.inv.map(({ armor, acBase, acBonus, ...i }) => ({
+  c.inv = c.inv.map(({ armor, acBase, acBonus, wt, desc, ...i }) => ({
     ...i,
     ...(['light', 'medium', 'heavy', 'shield'].includes(armor as string) && finite(acBase) ? { armor, acBase } : {}),
-    ...(finite(acBonus) ? { acBonus } : {})
+    ...(finite(acBonus) ? { acBonus } : {}),
+    ...(finite(wt) && wt >= 0 ? { wt } : {}),
+    ...(typeof desc === 'string' ? { desc } : {})
   }));
   c.spells = c.spells.map(({ acFx, acVal, ...x }) => ({ ...x, ...(['bonus', 'base', 'floor'].includes(acFx as string) && finite(acVal) ? { acFx, acVal } : {}) }));
   c.acOn = strings(c.acOn).filter((id) => c.spells.some((x) => x.id === id && x.acFx && !x.c));
@@ -473,12 +552,61 @@ export function migrate(data: unknown): Character {
     const total = armorClass(c).total;
     if (total !== data.ac) c.acMods = [...c.acMods, { id: newId(), name: 'Adjustment (from old AC)', val: data.ac - total }];
   }
-  c.res = c.res.map((r) => (r.inv === undefined && OLD_INVENTORY_RESOURCES.includes(r.id) ? { ...r, inv: true } : r));
+  // Saves from before attunement by item id have no attuneIds. The one-time steps below run only on those, so they
+  // never change entries the player adds later (roadmap, "Saves keep working").
+  const oldSave = data.attuneIds === undefined;
+  if (oldSave) c.res = c.res.map((r) => (r.inv === undefined && OLD_INVENTORY_RESOURCES.includes(r.id) ? { ...r, inv: true } : r));
   // Older saves had a `refill` flag that meant a Long Rest recharge.
   c.res = c.res.map((r) => ({ ...r, recharge: r.recharge || (r.refill ? 'long' : 'none') }));
+  const converted: string[] = [];
+  if (oldSave) {
+    // Resources also listed in the Inventory become items. One with a maximum or a recharge stays a resource and keeps
+    // its inv flag: items have no charges yet, so converting it would lose them.
+    const added: string[] = [];
+    c.res = c.res.filter((r) => {
+      if (!r.inv || r.max || rechargeOf(r) !== 'none') return true;
+      const note = typeof r.note === 'string' ? r.note.trim() : '';
+      const item: Item = { id: newId(), name: r.name, qty: finite(r.count) ? Math.max(0, Math.floor(r.count)) : 1, eq: false, ...(note ? { desc: note } : {}) };
+      c.inv = [...c.inv, item];
+      added.push(item.id);
+      converted.push(r.id);
+      return false;
+    });
+    // Attunement slots held names. A name links the first item with that name not already in a slot; other text
+    // becomes a new equipped item, so nothing is lost. Never run detectArmor here: a slot reading "Shield" would move AC.
+    // A matched item keeps its eq flag, except a just-converted resource, which is equipped like a new item.
+    const oldAttune: unknown[] = Array.isArray(data.attune) ? data.attune : [];
+    const linked: string[] = [];
+    c.attuneIds = [0, 1, 2].map((i) => {
+      const v = oldAttune[i];
+      if (typeof v !== 'string' || !/[\p{L}\p{N}]/u.test(v) || normName(v) === 'none') return '';
+      const match = c.inv.find((it) => normName(it.name) === normName(v) && !linked.includes(it.id));
+      const id = match ? match.id : newId();
+      if (!match) c.inv = [...c.inv, { id, name: v.trim(), qty: 1, eq: true }];
+      else if (added.includes(id)) c.inv = c.inv.map((it) => (it.id === id ? { ...it, eq: true } : it));
+      linked.push(id);
+      return id;
+    });
+  }
+  // Three slots, each an existing item id or ''. Checked slot by slot, so a bad slot never shifts the ones after it.
+  const ids: unknown[] = c.attuneIds;
+  c.attuneIds = [];
+  for (let i = 0; i < 3; i++) {
+    const x = ids[i];
+    c.attuneIds.push(typeof x === 'string' && c.inv.some((it) => it.id === x) && !c.attuneIds.includes(x) ? x : '');
+  }
   // From the raw save, not the sample-merged copy: old saves get today's bar (HP and AC), not the sample's picks.
-  c.pills = sanitizePills(data.pills);
+  // Pills don't show items, so a pill of a resource that became an item empties.
+  c.pills = sanitizePills(data.pills).map((k) => (converted.some((id) => k === resPill(id)) ? '' : k));
   return c;
+}
+
+// Names match after trimming, ignoring case and treating ’ and ' as the same character.
+export const normName = (s: string) => s.trim().toLowerCase().replace(/’/g, "'");
+
+// The one way to remove an item: its attunement slot empties with it.
+export function removeItem(c: Character, id: string): Character {
+  return { ...c, inv: c.inv.filter((i) => i.id !== id), attuneIds: c.attuneIds.map((x) => (x === id ? '' : x)) };
 }
 
 // Top bar pills. [key, picker name, short label], in picker order.
@@ -488,7 +616,7 @@ export const PILL_STATS: [PillStat, string, string][] = [
   ['init', 'Initiative', 'Init'], ['atk', 'Spell attack', 'Atk'], ['hd', 'Hit Dice left', 'HD'], ['insp', 'Inspiration', 'Insp']
 ];
 export const resPill = (id: string) => 'res:' + id;
-export type PillTarget = { sec: 'sec-hp' | 'sec-vitals' | 'sec-senses' | 'sec-resources' } | { tab: Tab } | 'insp';
+export type PillTarget = { sec: 'sec-hp' | 'sec-vitals' | 'sec-senses' | 'sec-resources' } | { tab: Tab };
 export interface PillView { key: string; label: string; value: string; max?: string; target: PillTarget }
 
 // What a slot shows. Null for an empty slot, an unknown key, or a resource that was deleted.
@@ -509,7 +637,7 @@ export function pillView(c: Character, key: string): PillView | null {
     case 'init': return { key, label, value: fmt(initiative(c)), target: { sec: 'sec-vitals' } };
     case 'atk': return { key, label, value: atk === null ? '—' : fmt(atk), target: { tab: 'spells' } };
     case 'hd': return { key, label, value: String(c.level - hdSpent(c)), max: String(c.level), target: { sec: 'sec-hp' } };
-    case 'insp': return { key, label, value: c.insp ? 'On' : 'Off', target: 'insp' };
+    case 'insp': return { key, label, value: String(c.insp), target: { sec: 'sec-resources' } };
   }
 }
 
