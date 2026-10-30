@@ -6519,7 +6519,15 @@
     "cls": "sorcerer",
     "lvl": 20,
     "desc": "While your Innate Sorcery feature is active, you can use one Metamagic option on each of your turns without spending Sorcery Points on it.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Arcane Apotheosis",
+        "econ": "other",
+        "note": "While Innate Sorcery is active, one Metamagic option each turn costs no Sorcery Points."
+      }
+    ]
   },
   {
     "id": "feature/sorcerer/draconic-sorcery/draconic-resilience",
@@ -6530,7 +6538,23 @@
     "cls": "sorcerer",
     "lvl": 3,
     "desc": "The magic in your body manifests physical traits of your draconic gift. Your Hit Point maximum increases by 3, and it increases by 1 whenever you gain another Sorcerer level. Parts of you are also covered by dragon-like scales. While you aren’t wearing armor, your base Armor Class equals 10 plus your Dexterity and Charisma modifiers.",
-    "grants": [],
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "hpLvl",
+        "name": "+1 Hit Point per Sorcerer level",
+        "val": "1"
+      },
+      {
+        "id": "g2",
+        "kind": "ac",
+        "name": "Draconic Resilience: 10 + DEX + CHA",
+        "acMode": "unarmored",
+        "ab": "cha",
+        "shieldOk": true,
+        "when": "noArmor"
+      }
+    ],
     "sub": "draconic-sorcery"
   },
   {
@@ -6542,7 +6566,84 @@
     "cls": "sorcerer",
     "lvl": 3,
     "desc": "When you reach a Sorcerer level specified in the Draconic Spells table, you thereafter always have the listed spells prepared.\nDraconic Spells Alter Self, Chromatic Orb, Command, Dragon’s Breath 5 Fear, Fly 7 Arcane Eye, Charm Monster 9 Legend Lore, Summon Dragon",
-    "grants": [],
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Alter Self",
+        "spell": "spell/alter-self",
+        "always": true
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Chromatic Orb",
+        "spell": "spell/chromatic-orb",
+        "always": true
+      },
+      {
+        "id": "g3",
+        "kind": "spell",
+        "name": "Command",
+        "spell": "spell/command",
+        "always": true
+      },
+      {
+        "id": "g4",
+        "kind": "spell",
+        "name": "Dragon’s Breath",
+        "spell": "spell/dragons-breath",
+        "always": true
+      },
+      {
+        "id": "g5",
+        "kind": "spell",
+        "name": "Fear",
+        "spell": "spell/fear",
+        "always": true,
+        "lvl": 5
+      },
+      {
+        "id": "g6",
+        "kind": "spell",
+        "name": "Fly",
+        "spell": "spell/fly",
+        "always": true,
+        "lvl": 5
+      },
+      {
+        "id": "g7",
+        "kind": "spell",
+        "name": "Arcane Eye",
+        "spell": "spell/arcane-eye",
+        "always": true,
+        "lvl": 7
+      },
+      {
+        "id": "g8",
+        "kind": "spell",
+        "name": "Charm Monster",
+        "spell": "spell/charm-monster",
+        "always": true,
+        "lvl": 7
+      },
+      {
+        "id": "g9",
+        "kind": "spell",
+        "name": "Legend Lore",
+        "spell": "spell/legend-lore",
+        "always": true,
+        "lvl": 9
+      },
+      {
+        "id": "g10",
+        "kind": "spell",
+        "name": "Summon Dragon",
+        "spell": "spell/summon-dragon",
+        "always": true,
+        "lvl": 9
+      }
+    ],
     "sub": "draconic-sorcery"
   },
   {
@@ -6554,7 +6655,23 @@
     "cls": "sorcerer",
     "lvl": 18,
     "desc": "You can cast Summon Dragon without a Material component. You can also cast it once without a spell slot, and you regain the ability to cast it in this way when you finish a Long Rest. Whenever you start casting the spell, you can modify it so that it doesn’t require Concentration. If you do so, the spell’s duration becomes 1 minute for that casting.",
-    "grants": [],
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Summon Dragon (free cast)",
+        "max": "1",
+        "recharge": "long",
+        "casts": "spell/summon-dragon"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Dragon Companion",
+        "econ": "other",
+        "note": "Summon Dragon needs no Material component and can skip Concentration (1 minute)."
+      }
+    ],
     "sub": "draconic-sorcery"
   },
   {
@@ -6566,7 +6683,31 @@
     "cls": "sorcerer",
     "lvl": 14,
     "desc": "As a Bonus Action, you can cause draconic wings to appear on your back. The wings last for 1 hour or until you dismiss them (no action required). For the duration, you have a Fly Speed of 60 feet. Once you use this feature, you can’t use it again until you finish a Long Rest unless you spend 3 Sorcery Points (no action required) to restore your use of it.",
-    "grants": [],
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Dragon Wings",
+        "max": "1",
+        "recharge": "long"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Dragon Wings",
+        "econ": "bonus",
+        "res": "g1",
+        "note": "Wings for 1 hour: Fly Speed 60 ft. 3 Sorcery Points restore it."
+      },
+      {
+        "id": "g3",
+        "kind": "speed",
+        "name": "Fly Speed 60 ft",
+        "mode": "fly",
+        "val": "60",
+        "when": "active"
+      }
+    ],
     "sub": "draconic-sorcery"
   },
   {
@@ -6578,7 +6719,58 @@
     "cls": "sorcerer",
     "lvl": 6,
     "desc": "Your draconic magic has an affinity with a damage type associated with dragons. Choose one of those types: Acid, Cold, Fire, Lightning, or Poison. You have Resistance to that damage type, and when you cast a spell that deals damage of that type, you can add your Charisma modifier to one damage roll of that spell.",
-    "grants": [],
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "aff",
+        "name": "Elemental Affinity",
+        "pick": 1,
+        "options": [
+          {
+            "id": "o1",
+            "kind": "defense",
+            "name": "Acid Resistance",
+            "def": "res",
+            "target": "Acid"
+          },
+          {
+            "id": "o2",
+            "kind": "defense",
+            "name": "Cold Resistance",
+            "def": "res",
+            "target": "Cold"
+          },
+          {
+            "id": "o3",
+            "kind": "defense",
+            "name": "Fire Resistance",
+            "def": "res",
+            "target": "Fire"
+          },
+          {
+            "id": "o4",
+            "kind": "defense",
+            "name": "Lightning Resistance",
+            "def": "res",
+            "target": "Lightning"
+          },
+          {
+            "id": "o5",
+            "kind": "defense",
+            "name": "Poison Resistance",
+            "def": "res",
+            "target": "Poison"
+          }
+        ]
+      },
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Elemental Affinity",
+        "econ": "other",
+        "note": "Add CHA to one damage roll of a spell dealing your affinity’s type."
+      }
+    ],
     "sub": "draconic-sorcery"
   },
   {
@@ -6609,7 +6801,23 @@
     "cls": "sorcerer",
     "lvl": 2,
     "desc": "You can tap into the wellspring of magic within yourself. This wellspring is represented by Sorcery Points, which allow you to create a variety of magical effects. You have 2 Sorcery Points, and you gain more as you reach higher levels, as shown in the Sorcery Points column of the Sorcerer Features table. You can’t have more Sorcery Points than the number shown in the table for your level. You regain all expended Sorcery Points when you finish a Long Rest. You can use your Sorcery Points to fuel the options below, along with other features, such as Metamagic, that use those points.\nConverting Spell Slots to Sorcery Points. You can expend a spell slot to gain a number of Sorcery Points equal to the slot’s level (no action required).\nCreating Spell Slots. As a Bonus Action, you can transform unexpended Sorcery Points into one spell slot. The Creating Spell Slots table shows the cost of creating a spell slot of a given level, and it lists the minimum Sorcerer level you must be to create a slot. You can create a spell slot no higher than level 5. Any spell slot you create with this feature vanishes when you finish a Long Rest.\nCreating Spell Slots Sorcery Point Cost Min. Sorcerer",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Sorcery Points",
+        "max": "lvl",
+        "recharge": "long"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Create Spell Slot",
+        "econ": "bonus",
+        "res": "g1",
+        "note": "Turn Sorcery Points into a spell slot of level 5 or lower (2/3/5/6/7 points); turn a slot into points equal to its level."
+      }
+    ]
   },
   {
     "id": "feature/sorcerer/innate-sorcery",
@@ -6620,7 +6828,23 @@
     "cls": "sorcerer",
     "lvl": 1,
     "desc": "An event in your past left an indelible mark on you, infusing you with simmering magic. As a Bonus Action, you can unleash that magic for 1 minute, during which you gain the following benefits:\n• The spell save DC of your Sorcerer spells increases by 1. • You have Advantage on the attack rolls of Sorcerer spells you cast.\nYou can use this feature twice, and you regain all expended uses of it when you finish a Long Rest.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Innate Sorcery",
+        "max": "2",
+        "recharge": "long"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Innate Sorcery",
+        "econ": "bonus",
+        "res": "g1",
+        "note": "For 1 minute: +1 to your Sorcerer spell save DC and Advantage on Sorcerer spell attacks."
+      }
+    ]
   },
   {
     "id": "feature/sorcerer/metamagic",
@@ -6631,7 +6855,15 @@
     "cls": "sorcerer",
     "lvl": 2,
     "desc": "Because your magic flows from within, you can alter your spells to suit your needs; you gain two Metamagic options of your choice from “Meta­magic Options” later in this class’s description. You use the chosen options to temporarily modify spells you cast. To use an option, you must spend the number of Sorcery Points that it costs. You can use only one Metamagic option on a spell when you cast it unless otherwise noted in one of those options.\nWhenever you gain a Sorcerer level, you can replace one of your Metamagic options with one you don’t know. You gain two more options at Sorcerer level 10 and two more at Sorcerer level 17.",
-    "grants": [],
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "meta",
+        "name": "Metamagic options",
+        "pick": 2,
+        "pool": "metamagic:any"
+      }
+    ],
     "again": "10,17"
   },
   {
@@ -6662,7 +6894,23 @@
     "cls": "sorcerer",
     "lvl": 5,
     "desc": "When you finish a Short Rest, you can regain expended Sorcery Points, but no more than a number equal to half your Sorcerer level (round down). Once you use this feature, you can’t do so again until you finish a Long Rest.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Sorcerous Restoration",
+        "max": "1",
+        "recharge": "long"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Sorcerous Restoration",
+        "econ": "free",
+        "res": "g1",
+        "note": "On a Short Rest, regain Sorcery Points up to half your Sorcerer level."
+      }
+    ]
   },
   {
     "id": "feature/sorcerer/sorcery-incarnate",
@@ -6673,7 +6921,15 @@
     "cls": "sorcerer",
     "lvl": 7,
     "desc": "If you have no uses of Innate Sorcery left, you can use it if you spend 2 Sorcery Points when you take the Bonus Action to activate it. In addition, while your Innate Sorcery feature is active, you can use up to two of your Metamagic options on each spell you cast.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Sorcery Incarnate",
+        "econ": "other",
+        "note": "With no Innate Sorcery uses, spend 2 Sorcery Points to use it; while it is active, two Metamagic options per spell."
+      }
+    ]
   },
   {
     "id": "feature/sorcerer/spellcasting",
@@ -6715,7 +6971,23 @@
     "cls": "warlock",
     "lvl": 9,
     "desc": "In the past, you usually contacted your patron through intermediaries. Now you can communicate directly; you always have the Contact Other Plane spell prepared. With this feature, you can cast the spell without expending a spell slot to contact your patron, and you automatically succeed on the spell’s saving throw. Once you cast the spell with this feature, you can’t do so in this way again until you finish a Long Rest.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Contact Other Plane",
+        "spell": "spell/contact-other-plane",
+        "always": true
+      },
+      {
+        "id": "g2",
+        "kind": "resource",
+        "name": "Contact Patron (free cast)",
+        "max": "1",
+        "recharge": "long",
+        "casts": "spell/contact-other-plane"
+      }
+    ]
   },
   {
     "id": "feature/warlock/eldritch-invocations",
@@ -6726,7 +6998,23 @@
     "cls": "warlock",
     "lvl": 1,
     "desc": "You have unearthed Eldritch Invocations, pieces of forbidden knowledge that imbue you with an abiding magical ability or other lessons. You gain one invocation of your choice, such as Pact of the Tome. Invocations are described in the “Eldritch Invocation Options” section later in this class’s description.\nPrerequisites. If an invocation has a prerequisite, you must meet it to learn that invocation. For example, if an invocation requires you to be a level 5+ Warlock, you can select the invocation once you reach Warlock level 5.\nReplacing and Gaining Invocations. Whenever you gain a Warlock level, you can replace one of your invocations with another one for which you qualify. You can’t replace an invocation if it’s a prerequisite for another invocation that you have. When you gain certain Warlock levels, you gain more invocations of your choice, as shown in the Invocations column of the Warlock Features table. You can’t pick the same invocation more than once unless its description says otherwise.",
-    "grants": []
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "inv",
+        "name": "Eldritch Invocations",
+        "pick": 1,
+        "pool": "invocation:any"
+      },
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Eldritch Invocations",
+        "econ": "other",
+        "dice": "1:1,2:3,5:5,7:6,9:7,12:8,15:9,18:10",
+        "note": "Invocations known by level (Eldritch Invocations column); replace one on each level."
+      }
+    ]
   },
   {
     "id": "feature/warlock/eldritch-master",
@@ -6737,7 +7025,15 @@
     "cls": "warlock",
     "lvl": 20,
     "desc": "When you use your Magical Cunning feature, you regain all your expended Pact Magic spell slots.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Eldritch Master",
+        "econ": "other",
+        "note": "Magical Cunning regains all Pact Magic slots."
+      }
+    ]
   },
   {
     "id": "feature/warlock/epic-boon",
@@ -6767,7 +7063,16 @@
     "cls": "warlock",
     "lvl": 3,
     "desc": "When you reduce an enemy to 0 Hit Points, you gain Temporary Hit Points equal to your Charisma modifier plus your Warlock level (minimum of 1 Temporary Hit Point). You also gain this benefit if someone else reduces an enemy within 10 feet of you to 0 Hit Points.",
-    "grants": [],
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Dark One’s Blessing",
+        "econ": "other",
+        "dice": "cha+lvl>=1",
+        "note": "When an enemy within 10 ft (or one you defeat) drops to 0 HP, gain this many Temporary HP."
+      }
+    ],
     "sub": "fiend-patron"
   },
   {
@@ -6779,7 +7084,24 @@
     "cls": "warlock",
     "lvl": 6,
     "desc": "You can call on your fiendish patron to alter fate in your favor. When you make an ability check or a saving throw, you can use this feature to add 1d10 to your roll. You can do so after seeing the roll but before any of the roll’s effects occur. You can use this feature a number of times equal to your Charisma modifier (minimum of once), but you can use it no more than once per roll. You regain all expended uses when you finish a Long Rest.",
-    "grants": [],
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Dark One’s Own Luck",
+        "max": "cha>=1",
+        "recharge": "long"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Dark One’s Own Luck",
+        "econ": "free",
+        "res": "g1",
+        "dice": "1d10",
+        "note": "Add 1d10 to an ability check or save after seeing the roll."
+      }
+    ],
     "sub": "fiend-patron"
   },
   {
@@ -6791,7 +7113,84 @@
     "cls": "warlock",
     "lvl": 3,
     "desc": "The magic of your patron ensures you always have certain spells ready; when you reach a Warlock level specified in the Fiend Spells table, you thereafter always have the listed spells prepared.\nFiend Spells Warlock Level Spells 3 Burning Hands, Command, Scorching Ray, Suggestion 5 Fireball, Stinking Cloud 7 Fire Shield, Wall of Fire 9 Geas, Insect Plague",
-    "grants": [],
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Burning Hands",
+        "spell": "spell/burning-hands",
+        "always": true
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Command",
+        "spell": "spell/command",
+        "always": true
+      },
+      {
+        "id": "g3",
+        "kind": "spell",
+        "name": "Scorching Ray",
+        "spell": "spell/scorching-ray",
+        "always": true
+      },
+      {
+        "id": "g4",
+        "kind": "spell",
+        "name": "Suggestion",
+        "spell": "spell/suggestion",
+        "always": true
+      },
+      {
+        "id": "g5",
+        "kind": "spell",
+        "name": "Fireball",
+        "spell": "spell/fireball",
+        "always": true,
+        "lvl": 5
+      },
+      {
+        "id": "g6",
+        "kind": "spell",
+        "name": "Stinking Cloud",
+        "spell": "spell/stinking-cloud",
+        "always": true,
+        "lvl": 5
+      },
+      {
+        "id": "g7",
+        "kind": "spell",
+        "name": "Fire Shield",
+        "spell": "spell/fire-shield",
+        "always": true,
+        "lvl": 7
+      },
+      {
+        "id": "g8",
+        "kind": "spell",
+        "name": "Wall of Fire",
+        "spell": "spell/wall-of-fire",
+        "always": true,
+        "lvl": 7
+      },
+      {
+        "id": "g9",
+        "kind": "spell",
+        "name": "Geas",
+        "spell": "spell/geas",
+        "always": true,
+        "lvl": 9
+      },
+      {
+        "id": "g10",
+        "kind": "spell",
+        "name": "Insect Plague",
+        "spell": "spell/insect-plague",
+        "always": true,
+        "lvl": 9
+      }
+    ],
     "sub": "fiend-patron"
   },
   {
@@ -6803,7 +7202,100 @@
     "cls": "warlock",
     "lvl": 10,
     "desc": "Choose one damage type, other than Force, whenever you finish a Short or Long Rest. You have Resistance to that damage type until you choose a different one with this feature.",
-    "grants": [],
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "res",
+        "name": "Fiendish Resilience (choose on each rest)",
+        "pick": 1,
+        "options": [
+          {
+            "id": "o1",
+            "kind": "defense",
+            "name": "Acid Resistance",
+            "def": "res",
+            "target": "Acid"
+          },
+          {
+            "id": "o2",
+            "kind": "defense",
+            "name": "Bludgeoning Resistance",
+            "def": "res",
+            "target": "Bludgeoning"
+          },
+          {
+            "id": "o3",
+            "kind": "defense",
+            "name": "Cold Resistance",
+            "def": "res",
+            "target": "Cold"
+          },
+          {
+            "id": "o4",
+            "kind": "defense",
+            "name": "Fire Resistance",
+            "def": "res",
+            "target": "Fire"
+          },
+          {
+            "id": "o5",
+            "kind": "defense",
+            "name": "Lightning Resistance",
+            "def": "res",
+            "target": "Lightning"
+          },
+          {
+            "id": "o6",
+            "kind": "defense",
+            "name": "Necrotic Resistance",
+            "def": "res",
+            "target": "Necrotic"
+          },
+          {
+            "id": "o7",
+            "kind": "defense",
+            "name": "Piercing Resistance",
+            "def": "res",
+            "target": "Piercing"
+          },
+          {
+            "id": "o8",
+            "kind": "defense",
+            "name": "Poison Resistance",
+            "def": "res",
+            "target": "Poison"
+          },
+          {
+            "id": "o9",
+            "kind": "defense",
+            "name": "Psychic Resistance",
+            "def": "res",
+            "target": "Psychic"
+          },
+          {
+            "id": "o10",
+            "kind": "defense",
+            "name": "Radiant Resistance",
+            "def": "res",
+            "target": "Radiant"
+          },
+          {
+            "id": "o11",
+            "kind": "defense",
+            "name": "Slashing Resistance",
+            "def": "res",
+            "target": "Slashing"
+          },
+          {
+            "id": "o12",
+            "kind": "defense",
+            "name": "Thunder Resistance",
+            "def": "res",
+            "target": "Thunder"
+          }
+        ]
+      }
+    ],
     "sub": "fiend-patron"
   },
   {
@@ -6815,7 +7307,23 @@
     "cls": "warlock",
     "lvl": 14,
     "desc": "Once per turn when you hit a creature with an attack roll, you can try to instantly transport the target through the Lower Planes. The target must succeed on a Charisma saving throw against your spell save DC, or the target disappears and hurtles through a nightmare landscape. The target takes 8d10 Psychic damage if it isn’t a Fiend, and it has the Incapacitated condition until the end of your next turn, when it returns to the space it previously occupied or the nearest unoccupied space. Once you use this feature, you can’t use it again until you finish a Long Rest unless you expend a Pact Magic spell slot (no action required) to restore your use of it.",
-    "grants": [],
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Hurl Through Hell",
+        "max": "1",
+        "recharge": "long"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Hurl Through Hell",
+        "econ": "other",
+        "res": "g1",
+        "note": "On a hit: CHA save or the target vanishes, takes 8d10 Psychic (not Fiends) and is Incapacitated. A Pact slot restores it."
+      }
+    ],
     "sub": "fiend-patron"
   },
   {
@@ -6827,7 +7335,23 @@
     "cls": "warlock",
     "lvl": 2,
     "desc": "You can perform an esoteric rite for 1 minute. At the end of it, you regain expended Pact Magic spell slots but no more than a number equal to half your maximum (round up). Once you use this feature, you can’t do so again until you finish a Long Rest.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Magical Cunning",
+        "max": "1",
+        "recharge": "long"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Magical Cunning",
+        "econ": "other",
+        "res": "g1",
+        "note": "1-minute rite: regain Pact Magic slots up to half your maximum (all at level 20)."
+      }
+    ]
   },
   {
     "id": "feature/warlock/mystic-arcanum",
@@ -6838,7 +7362,29 @@
     "cls": "warlock",
     "lvl": 11,
     "desc": "Your patron grants you a magical secret called an arcanum. Choose one level 6 Warlock spell as this arcanum. You can cast your arcanum spell once without expending a spell slot, and you must finish a Long Rest before you can cast it in this way again. As shown in the Warlock Features table, you gain another Warlock spell of your choice that can be cast in this way when you reach Warlock levels 13 (level 7 spell), 15 (level 8 spell), and 17 (level 9 spell). You regain all uses of your Mystic Arcanum when you finish a Long Rest.\nWhenever you gain a Warlock level, you can replace one of your arcanum spells with another Warlock spell of the same level.",
-    "grants": [],
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "arc",
+        "name": "Mystic Arcanum (level 6, then 7, 8, 9)",
+        "pick": 1,
+        "pool": "spell:list=warlock;lvl=6|7|8|9"
+      },
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Mystic Arcanum",
+        "spell": "$arc"
+      },
+      {
+        "id": "g2",
+        "kind": "resource",
+        "name": "Mystic Arcanum (free cast)",
+        "max": "1",
+        "recharge": "long",
+        "casts": "$arc"
+      }
+    ],
     "again": "13,15,17"
   },
   {
@@ -6900,7 +7446,23 @@
     "cls": "wizard",
     "lvl": 1,
     "desc": "You can regain some of your magical energy by studying your spellbook. When you finish a Short Rest, you can choose expended spell slots to recover. The spell slots can have a combined level equal to no more than half your Wizard level (round up), and none of the slots can be level 6 or higher. For example, if you’re a level 4 Wizard, you can recover up to two levels’ worth of spell slots, regaining either one level 2 spell slot or two level 1 spell slots. Once you use this feature, you can’t do so again until you finish a Long Rest.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Arcane Recovery",
+        "max": "1",
+        "recharge": "long"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Arcane Recovery",
+        "econ": "free",
+        "res": "g1",
+        "note": "On a Short Rest, recover slots totalling half your Wizard level (none of level 6+)."
+      }
+    ]
   },
   {
     "id": "feature/wizard/epic-boon",
@@ -6930,7 +7492,15 @@
     "cls": "wizard",
     "lvl": 10,
     "desc": "Whenever you cast a Wizard spell from the Evocation school, you can add your Intelligence modifier to one damage roll of that spell.",
-    "grants": [],
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Empowered Evocation",
+        "econ": "other",
+        "note": "Add INT to one damage roll of your Wizard Evocation spells."
+      }
+    ],
     "sub": "evoker"
   },
   {
@@ -6942,7 +7512,21 @@
     "cls": "wizard",
     "lvl": 3,
     "desc": "Choose two Wizard spells from the Evocation school, each of which must be no higher than level 2, and add them to your spellbook for free. In addition, whenever you gain access to a new level of spell slots in this class, you can add one Wizard spell from the Evocation school to your spellbook for free. The chosen spell must be of a level for which you have spell slots.",
-    "grants": [],
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "sav",
+        "name": "Evocation Savant",
+        "pick": 2,
+        "pool": "spell:list=wizard;school=evocation;lvl<=2"
+      },
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Evocation Savant spells",
+        "spell": "$sav"
+      }
+    ],
     "sub": "evoker"
   },
   {
@@ -6954,7 +7538,15 @@
     "cls": "wizard",
     "lvl": 14,
     "desc": "You can increase the power of your spells. When you cast a Wizard spell with a spell slot of levels 1–5 that deals damage, you can deal maximum damage with that spell on the turn you cast it. The first time you do so, you suffer no adverse effect. If you use this feature again before you finish a Long Rest, you take 2d12 Necrotic damage for each level of the spell slot immediately after you cast it. This damage ignores Resistance and Immunity. Each time you use this feature again before finishing a Long Rest, the Necrotic damage per spell level increases by 1d12.",
-    "grants": [],
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Overchannel",
+        "econ": "other",
+        "note": "A level 1–5 damaging Wizard spell deals maximum damage; repeat uses before a Long Rest cost Necrotic damage."
+      }
+    ],
     "sub": "evoker"
   },
   {
@@ -6966,7 +7558,15 @@
     "cls": "wizard",
     "lvl": 3,
     "desc": "Your damaging cantrips affect even creatures that avoid the brunt of the effect. When you cast a cantrip at a creature and you miss with the attack roll or the target succeeds on a saving throw against the cantrip, the target takes half the cantrip’s damage (if any) but suffers no additional effect from the cantrip.",
-    "grants": [],
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Potent Cantrip",
+        "econ": "other",
+        "note": "A missed or saved-against damaging cantrip still deals half damage."
+      }
+    ],
     "sub": "evoker"
   },
   {
@@ -6978,7 +7578,15 @@
     "cls": "wizard",
     "lvl": 6,
     "desc": "You can create pockets of relative safety within the effects of your evocations. When you cast an Evocation spell that affects other creatures that you can see, you can choose a number of them equal to 1 plus the spell’s level. The chosen creatures automatically succeed on their saving throws against the spell, and they take no damage if they would normally take half damage on a successful save.",
-    "grants": [],
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Sculpt Spells",
+        "econ": "other",
+        "note": "Up to 1 + spell level creatures automatically succeed on your Evocation spell’s save and take no damage."
+      }
+    ],
     "sub": "evoker"
   },
   {
@@ -6990,7 +7598,15 @@
     "cls": "wizard",
     "lvl": 5,
     "desc": "Whenever you finish a Short Rest, you can study your spellbook and replace one of the level 1+ Wizard spells you have prepared for your Spellcasting feature with another level 1+ spell from the book.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Memorize Spell",
+        "econ": "other",
+        "note": "On a Short Rest, swap one prepared level 1+ spell for another from your spellbook."
+      }
+    ]
   },
   {
     "id": "feature/wizard/ritual-adept",
@@ -7001,7 +7617,15 @@
     "cls": "wizard",
     "lvl": 1,
     "desc": "You can cast any spell as a Ritual if that spell has the Ritual tag and the spell is in your spellbook. You needn’t have the spell prepared, but you must read from the book to cast a spell in this way.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Ritual Adept",
+        "econ": "other",
+        "note": "Cast any Ritual spell in your spellbook as a Ritual without preparing it."
+      }
+    ]
   },
   {
     "id": "feature/wizard/scholar",
@@ -7012,7 +7636,22 @@
     "cls": "wizard",
     "lvl": 2,
     "desc": "While studying magic, you also specialized in another field of study. Choose one of the following skills in which you have proficiency: Arcana, History, Investigation, Medicine, Nature, or Religion. You have Expertise in the chosen skill.",
-    "grants": []
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "exp",
+        "name": "Scholar Expertise",
+        "pick": 1,
+        "pool": "skill:arcana|history|investigation|medicine|nature|religion"
+      },
+      {
+        "id": "pexp",
+        "kind": "prof",
+        "name": "Scholar Expertise",
+        "cat": "expertise",
+        "target": "$exp"
+      }
+    ]
   },
   {
     "id": "feature/wizard/signature-spells",
@@ -7023,7 +7662,30 @@
     "cls": "wizard",
     "lvl": 20,
     "desc": "Choose two level 3 spells in your spellbook as your signature spells. You always have these spells prepared, and you can cast each of them once at level 3 without expending a spell slot. When you do so, you can’t cast them in this way again until you finish a Short or Long Rest. To cast either spell at a higher level, you must expend a spell slot.",
-    "grants": []
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "sig",
+        "name": "Signature Spells",
+        "pick": 2,
+        "pool": "spell:list=wizard;lvl=3"
+      },
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Signature Spells",
+        "spell": "$sig",
+        "always": true
+      },
+      {
+        "id": "g2",
+        "kind": "resource",
+        "name": "Signature Spells (free casts)",
+        "max": "2",
+        "recharge": "short",
+        "casts": "$sig"
+      }
+    ]
   },
   {
     "id": "feature/wizard/spell-mastery",
@@ -7034,7 +7696,36 @@
     "cls": "wizard",
     "lvl": 18,
     "desc": "You have achieved such mastery over certain spells that you can cast them at will. Choose a level 1 and a level 2 spell in your spellbook that have a casting time of an action. You always have those spells prepared, and you can cast them at their lowest level without expending a spell slot. To cast either spell at a higher level, you must expend a spell slot. Whenever you finish a Long Rest, you can study your spellbook and replace one of those spells with an eligible spell of the same level from the book.",
-    "grants": []
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "m1",
+        "name": "Spell Mastery: level 1 spell",
+        "pick": 1,
+        "pool": "spell:list=wizard;lvl=1"
+      },
+      {
+        "kind": "choice",
+        "id": "m2",
+        "name": "Spell Mastery: level 2 spell",
+        "pick": 1,
+        "pool": "spell:list=wizard;lvl=2"
+      },
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Spell Mastery (level 1, at will)",
+        "spell": "$m1",
+        "always": true
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Spell Mastery (level 2, at will)",
+        "spell": "$m2",
+        "always": true
+      }
+    ]
   },
   {
     "id": "feature/wizard/spellcasting",

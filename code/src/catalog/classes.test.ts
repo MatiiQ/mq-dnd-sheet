@@ -149,3 +149,38 @@ describe('Rogue (PHB p.129–137)', () => {
   });
   it('Thief has a grant at every level', () => expect(subLevels('rogue', 'thief')).toEqual([]));
 });
+
+describe('Sorcerer (PHB p.139–149)', () => {
+  it('Sorcery Points equal to level; Innate Sorcery twice per Long Rest; Metamagic picks', () => {
+    expect(grants(F('sorcerer', 'font-of-magic'))[0]).toMatchObject({ kind: 'resource', max: 'lvl', recharge: 'long' });
+    expect(grants(F('sorcerer', 'innate-sorcery'))[0]).toMatchObject({ max: '2', recharge: 'long' });
+    expect(byId.get(F('sorcerer', 'metamagic'))).toMatchObject({ lvl: 2, again: '10,17' });
+    expect(choices(F('sorcerer', 'metamagic'))[0]).toMatchObject({ pick: 2, pool: 'metamagic:any' });
+  });
+  it('Draconic Sorcery: HP per level, unarmored AC with CHA, an Elemental Affinity Resistance', () => {
+    expect(grants(F('sorcerer', 'draconic-sorcery/draconic-resilience'))).toMatchObject([{ kind: 'hpLvl', val: '1' }, { kind: 'ac', acMode: 'unarmored', ab: 'cha', when: 'noArmor' }]);
+    expect(choices(F('sorcerer', 'draconic-sorcery/elemental-affinity'))[0].options!.map((o) => o.target)).toEqual(['Acid', 'Cold', 'Fire', 'Lightning', 'Poison']);
+    expect(subLevels('sorcerer', 'draconic-sorcery')).toEqual([]);
+  });
+});
+
+describe('Warlock (PHB p.153–162)', () => {
+  it('Eldritch Invocations, Mystic Arcanum and Contact Patron', () => {
+    expect(choices(F('warlock', 'eldritch-invocations'))[0]).toMatchObject({ pool: 'invocation:any' });
+    expect(byId.get(F('warlock', 'mystic-arcanum'))).toMatchObject({ lvl: 11, again: '13,15,17' });
+    expect(grants(F('warlock', 'contact-patron'))).toMatchObject([{ spell: 'spell/contact-other-plane', always: true }, { kind: 'resource', casts: 'spell/contact-other-plane' }]);
+  });
+  it('Fiend Patron: Dark One’s Own Luck d10, uses by CHA; a grant at every level', () => {
+    expect(grants(F('warlock', 'fiend-patron/dark-ones-own-luck'))).toMatchObject([{ kind: 'resource', max: 'cha>=1' }, { kind: 'action', dice: '1d10' }]);
+    expect(subLevels('warlock', 'fiend-patron')).toEqual([]);
+  });
+});
+
+describe('Wizard (PHB p.165–174)', () => {
+  it('Arcane Recovery, Scholar Expertise, Signature Spells', () => {
+    expect(grants(F('wizard', 'arcane-recovery'))[0]).toMatchObject({ kind: 'resource', max: '1', recharge: 'long' });
+    expect(choices(F('wizard', 'scholar'))[0]).toMatchObject({ pick: 1, pool: 'skill:arcana|history|investigation|medicine|nature|religion' });
+    expect(grants(F('wizard', 'signature-spells'))).toContainEqual(expect.objectContaining({ kind: 'resource', max: '2', recharge: 'short' }));
+  });
+  it('Evoker has a grant at every level', () => expect(subLevels('wizard', 'evoker')).toEqual([]));
+});

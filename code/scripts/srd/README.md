@@ -65,7 +65,8 @@ A choice offers `options` (grants) or a `pool` (`<kind>:<filter>`) the app gener
 | `skill:proficient` | a skill the character is proficient in (Expertise) |
 | `subclass:cls=ranger` | a subclass of the class |
 | `tool:artisan` | one kind of Artisan’s Tools |
-| `maneuver:any` | Battle Master maneuvers (named in the description; not catalog entries) |
+| `maneuver:any`, `metamagic:any`, `invocation:any` | Battle Master maneuvers, Metamagic options, Eldritch Invocations (named in the descriptions; not catalog entries yet) |
+| `spell:list=wizard;school=evocation;lvl<=2`, `spell:list=warlock;lvl=6\|7\|8\|9` | spells filtered by school and a level range or set |
 
 `repeat: true` on a choice means one option may be picked more than once: Ability Score Improvement picks two `+1`
 options (the same one twice gives `+2`), a background picks three (`+2`/`+1` or `+1` to all three).
@@ -100,6 +101,9 @@ Each needs a small plan 3 follow-up to apply it.
   by class level.
 - New kind `crit` (Task 15): Critical Hit on a d20 roll of `val` or higher with weapons and Unarmed Strikes (Champion).
 - `atkAbil.weapons` may name categories as well as weapons: `simple-melee`, `martial-melee-light` (Monk weapons).
+
+Features without grants: the class Spellcasting and Pact Magic features (the class entry holds the slots and counts)
+and effects no kind describes, such as Advantage on Initiative (Feral Instinct), Evasion, Indomitable Might.
 
 Effects that stay text: changes to another feature's numbers or recharge (Font of Inspiration, Improved Warding Flare),
 rerolls and minimum rolls (Supreme Healing), damage that adds half a level (Divine Fury's dice carry only the 1d6).
