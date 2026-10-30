@@ -1,0 +1,6 @@
+{
+  "spell/shield": { "acFx": "bonus", "acVal": 5 },
+  "spell/shield-of-faith": { "acFx": "bonus", "acVal": 2 },
+  "spell/mage-armor": { "acFx": "base", "acVal": 13 },
+  "spell/barkskin": { "acFx": "floor", "acVal": 17 }
+}

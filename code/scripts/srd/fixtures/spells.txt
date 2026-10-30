@@ -1,0 +1,53 @@
+Acid Splash
+
+Evocation Cantrip (Sorcerer, Wizard)
+Casting Time: Action
+Range: 60 feet
+Components: V, S
+Duration: Instantaneous
+
+You create an acidic bubble at a point within range,
+where it explodes in a 5-foot-radius Sphere. Each
+creature in that Sphere must succeed on a Dexterity
+saving throw or take 1d6 Acid damage.
+Cantrip Upgrade. The damage increases by 1d6
+when you reach levels 5 (2d6), 11 (3d6), and 17
+(4d6).
+
+Cure Wounds
+
+Level 1 Abjuration (Bard, Cleric, Druid, Paladin,
+Ranger)
+Casting Time: Action
+Range: Touch
+Components: V, S
+Duration: Instantaneous
+
+A creature you touch regains a number of Hit Points
+equal to 2d8 plus your spellcasting ability modifier.
+Using a Higher-Level Spell Slot. The healing increases by 2d8 for each spell slot level above 1.
+
+Hunter’s Mark
+
+Level 1 Divination (Ranger)
+
+Casting Time: Bonus Action
+Range: 90 feet
+Components: V
+Duration: Concentration, up to 1 hour
+
+You magically mark one creature you can see within
+range as your quarry. Until the spell ends, you deal
+an extra 1d6 Force damage to the target whenever
+you hit it with an attack roll. You also have Advantage on any Wisdom (Perception or Survival) check
+you make to find it.
+
+141
+
+System Reference Document 5.2.1
+
+If the target drops to 0 Hit Points before this spell
+ends, you can take a Bonus Action to move the mark
+to a new creature you can see within range.
+Using a Higher-Level Spell Slot. Your Concentration can last longer with a spell slot of level 3–4 (up
+to 8 hours) or 5+ (up to 24 hours).
