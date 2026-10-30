@@ -10,15 +10,15 @@ export function sampleCharacter(): Character {
     abil: { str: 12, dex: 18, con: 14, int: 10, wis: 14, cha: 8 }, abilAdj: {},
     saveProf: { str: true, dex: true },
     skillProf: { stealth: 1, nature: 1, animal: 1, insight: 1, perception: 1, survival: 2 },
-    hp: 31, maxHp: 44, origHp: 44, origOn: false, temp: 0, amount: 5, insp: true, pills: ['hp', 'ac', 'res:favored'], tab: 'actions', prepMax: 6, spellFilter: 'all', usePrep: true,
+    hp: 31, maxHp: 44, origHp: 44, origOn: false, temp: 0, amount: 5, insp: true, pills: ['hp', 'ac', 'res:favored'], tab: 'actions', prepMax: 6, spellFilter: 'all', spellSort: 'az', usePrep: true,
     hdUsed: 1, ds: 0, df: 0, exh: 0, conds: {}, free: {}, conc: null, hpUndo: null, concCheck: null, restMsg: null,
     slotMax: [0, 4, 2, 0, 0, 0, 0, 0, 0, 0], slotUsed: [0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
     def: { res: [], vul: [], imm: [] }, saveNotes: 'Advantage on saves to avoid or end Charmed (Fey Ancestry).',
     senses: [{ id: 'se1', name: 'Darkvision', range: '60 ft' }],
     res: [
       { id: 'favored', name: 'Favored Enemy', note: 'Cast Hunter’s Mark without a slot', count: 2, max: 3, recharge: 'long' },
-      { id: 'arrows', name: 'Arrows', note: 'Tap − after each Longbow shot', count: 20, inv: true },
-      { id: 'potions', name: 'Potion of Healing', note: 'Bonus Action · roll 2d4 +2, then Heal', count: 2, inv: true }
+      { id: 'arrows', name: 'Arrows', note: 'Tap − after each Longbow shot', count: 20, recharge: 'none', inv: true },
+      { id: 'potions', name: 'Potion of Healing', note: 'Bonus Action · roll 2d4 +2, then Heal', count: 2, recharge: 'none', inv: true }
     ],
     attacks: [
       { id: 'a1', name: 'Longbow', hit: '+9', dmg: '1d8 +4 Piercing', info: '150/600 ft · Ammunition, Heavy, Two-Handed · includes Archery +2', mastery: 'Slow: on a hit, target’s Speed drops 10 ft until your next turn' },
@@ -42,9 +42,9 @@ export function sampleCharacter(): Character {
       { id: 'i6', name: 'Traveler’s Clothes', qty: 1, eq: false }
     ],
     spells: [
-      { id: 'sp1', name: 'Druidcraft', lvl: 0, time: 'Action', range: '30 ft', source: 'Elf', dur: 'Instantaneous', comp: 'V, S' },
-      { id: 'sp2', name: 'Guidance', lvl: 0, time: 'Action', range: 'Touch', source: 'Magic Initiate', c: true, dice: '+1d4 to one check', dur: 'Up to 1 minute', comp: 'V, S' },
-      { id: 'sp3', name: 'Produce Flame', lvl: 0, time: 'Bonus Action', range: 'Self · throw 60 ft', source: 'Magic Initiate', dice: 'd20 +5 · 2d8 Fire', dur: '10 minutes', comp: 'V, S' },
+      { id: 'sp1', name: 'Druidcraft', lvl: 0, time: 'Action', range: '30 ft', source: 'Elf', dur: 'Instantaneous', comp: 'V, S', prep: true },
+      { id: 'sp2', name: 'Guidance', lvl: 0, time: 'Action', range: 'Touch', source: 'Magic Initiate', c: true, dice: '+1d4 to one check', dur: 'Up to 1 minute', comp: 'V, S', prep: true },
+      { id: 'sp3', name: 'Produce Flame', lvl: 0, time: 'Bonus Action', range: 'Self · throw 60 ft', source: 'Magic Initiate', dice: 'd20 +5 · 2d8 Fire', dur: '10 minutes', comp: 'V, S', prep: true },
       { id: 'sp4', name: 'Hunter’s Mark', lvl: 1, time: 'Bonus Action', range: '90 ft', source: 'Ranger · Favored Enemy', c: true, dice: '+1d6 Force per hit', dur: 'Up to 1 hour', comp: 'V', always: true },
       { id: 'sp5', name: 'Cure Wounds', lvl: 1, time: 'Action', range: 'Touch', source: 'Ranger', dice: 'Heal 2d8 +2 · +2d8 per slot level above 1', dur: 'Instantaneous', comp: 'V, S', prep: true },
       { id: 'sp6', name: 'Ensnaring Strike', lvl: 1, time: 'Bonus Action', range: 'Self', source: 'Ranger', c: true, dice: 'STR save DC 13 · 1d6 Piercing/turn', dur: 'Up to 1 minute', comp: 'V', prep: true },
@@ -91,7 +91,7 @@ export function druidSample(): Character {
     abil: { str: 8, dex: 13, con: 16, int: 13, wis: 20, cha: 10 }, abilAdj: {},
     saveProf: { int: true, wis: true },
     skillProf: { arcana: 1, history: 1, medicine: 1, perception: 1 },
-    hp: 71, maxHp: 99, origHp: 99, origOn: false, temp: 12, amount: 8, insp: true, pills: ['hp', 'ac', 'res:wild'], tab: 'actions', prepMax: 16, spellFilter: 'all', usePrep: true,
+    hp: 71, maxHp: 99, origHp: 99, origOn: false, temp: 12, amount: 8, insp: true, pills: ['hp', 'ac', 'res:wild'], tab: 'actions', prepMax: 16, spellFilter: 'all', spellSort: 'az', usePrep: true,
     hdUsed: 3, ds: 0, df: 0, exh: 1, conds: { Poisoned: true }, free: { ds12: true }, conc: { id: 'ds9', name: 'Moonbeam' },
     hpUndo: null, concCheck: null, restMsg: null,
     slotMax: [0, 4, 3, 3, 3, 2, 1, 0, 0, 0], slotUsed: [0, 2, 1, 1, 0, 1, 0, 0, 0, 0],
@@ -209,7 +209,7 @@ export function blankCharacter(): Character {
   return {
     ...sampleCharacter(),
     ch: { name: 'New character', species: '', cls: '', sub: '', bg: '', align: '' },
-    level: 1, speedBase: 30, initMisc: 0, hdDie: 8, castAb: 'none', insp: false, pills: ['hp', 'ac', ''],
+    level: 1, speedBase: 30, initMisc: 0, hdDie: 8, castAb: 'none', insp: false, pills: ['hp', 'ac', ''], spellSort: 'az',
     abil: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 }, abilAdj: {}, saveProf: {}, skillProf: {},
     hp: 8, maxHp: 8, origHp: 8, hdUsed: 0,
     slotMax: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], slotUsed: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],

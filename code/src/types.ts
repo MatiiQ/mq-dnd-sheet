@@ -10,6 +10,7 @@ export type NoteKey = 'appearance' | 'personality' | 'backstory' | 'session';
 export type ArmorKind = 'light' | 'medium' | 'heavy' | 'shield';
 export type AcEffect = 'bonus' | 'base' | 'floor';
 export type Unarmored = 'none' | 'barbarian' | 'monk' | 'draconic' | 'dance';
+export type SpellSort = 'az' | 'prep' | 'time';
 
 export interface Details { name: string; species: string; cls: string; sub: string; bg: string; align: string }
 export interface Sense { id: string; name: string; range: string }
@@ -41,7 +42,7 @@ export interface Character {
   hp: number; maxHp: number; origHp: number; origOn: boolean; temp: number; amount: number; insp: boolean;
   /** Top bar pills, 3 slots: a stat key, 'res:<resource id>', or '' for an empty slot. */
   pills: string[];
-  tab: Tab; prepMax: number; spellFilter: 'all' | 'prepared'; usePrep: boolean;
+  tab: Tab; prepMax: number; spellFilter: 'all' | 'prepared'; spellSort: SpellSort; usePrep: boolean;
   hdUsed: number; ds: number; df: number; exh: number;
   conds: Record<string, boolean>; free: Record<string, boolean>; conc: Concentration | null;
   hpUndo: { prev: HpSnapshot; text: string } | null; concCheck: string | null; restMsg: { title: string; body: string } | null;

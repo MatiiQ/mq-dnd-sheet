@@ -1,6 +1,6 @@
 // D&D 2024 rules used by the sheet. Pure functions: each takes a character and returns the next one.
 import { blankCharacter, sampleCharacter } from './defaults';
-import type { AcEffect, Ability, ArmorKind, CastAbility, Character, Concentration, HpSnapshot, Item, Resource, Spell, Tab, Unarmored } from './types';
+import type { AcEffect, Ability, ArmorKind, CastAbility, Character, Concentration, HpSnapshot, Item, Resource, Spell, SpellSort, Tab, Unarmored } from './types';
 
 export const ABILITIES: [Ability, string][] = [
   ['str', 'Strength'], ['dex', 'Dexterity'], ['con', 'Constitution'],
@@ -143,6 +143,20 @@ export function armorClass(c: Character): { total: number; parts: AcPart[] } {
 // A levelled spell can be cast when it is prepared or always prepared; always-prepared spells don't count
 // toward the prepared limit (PHB p.235). With tracking off (classes that know their spells), every spell can be cast.
 export const spellUsable = (c: Character, sp: Spell) => !c.usePrep || !!sp.always || !!sp.prep;
+// Sort orders for the spell list. Casting time matches the start of the free-text time; anything else goes last.
+export const SPELL_SORTS: [SpellSort, string][] = [['az', 'A–Z'], ['prep', 'Prepared first'], ['time', 'Casting time']];
+function castRank(time: string): number {
+  const t = time.trim().toLowerCase();
+  if (/^action/.test(t)) return 0;
+  if (/^bonus action/.test(t)) return 1;
+  if (/^reaction/.test(t)) return 2;
+  const m = t.match(/^(\d+)\s*(minute|hour)s?/);
+  return m ? 3 + Number(m[1]) * (m[2] === 'hour' ? 60 : 1) : Infinity;
+}
+export function sortSpells(c: Character, list: Spell[]): Spell[] {
+  const key = (sp: Spell) => (c.spellSort === 'prep' ? (spellUsable(c, sp) ? 0 : 1) : c.spellSort === 'time' ? castRank(sp.time) : 0);
+  return [...list].sort((a, b) => key(a) - key(b) || a.name.localeCompare(b.name));
+}
 export const preparedCount = (c: Character) => c.spells.filter((x) => (x.lvl || 0) > 0 && !x.always && x.prep).length;
 export const slotsLeft = (c: Character, level: number) => Math.max(0, c.slotMax[level] - c.slotUsed[level]);
 export const setSlotUsed = (c: Character, l: number, n: number) => { const u = c.slotUsed.slice(); u[l] = n; return { slotUsed: u }; };
@@ -409,6 +423,9 @@ const ENTRY_LISTS = ['senses', 'res', 'attacks', 'riders', 'inv', 'spells', 'fea
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 const isEntry = (x: unknown): x is Record<string, unknown> =>
   isObj(x) && typeof x.name === 'string' && Object.values(x).every((v) => v === null || typeof v !== 'object');
+// Top-level fields added after the first release. A save without one gets the blank character's value, never
+// the sample's (roadmap, "Saves keep working"). Each later field adds its key here.
+export const NEW_FIELDS: readonly (keyof Character)[] = ['spellSort'];
 // Resources the Inventory tab echoed before `inv` existed.
 const OLD_INVENTORY_RESOURCES = ['arrows', 'potions'];
 
@@ -421,6 +438,7 @@ export function migrate(data: unknown): Character {
   for (const [k, dv] of Object.entries(def)) {
     if (data[k] !== undefined && (dv === null || sameType(dv, data[k]))) d[k] = data[k];
   }
+  for (const k of NEW_FIELDS) if (!sameType(blank[k], data[k])) d[k] = blank[k];
   for (const k of FIXED_RECORDS) {
     const v = d[k] as Record<string, unknown>, base = blank[k] as Record<string, unknown>;
     d[k] = Object.fromEntries(Object.entries(base).map(([kk, bv]) => [kk, sameType(bv, v[kk]) ? v[kk] : bv]));
@@ -444,6 +462,7 @@ export function migrate(data: unknown): Character {
   if (!TABS.some(([t]) => t === c.tab)) c.tab = def.tab;
   if (!Object.hasOwn(CAST_NAMES, c.castAb)) c.castAb = 'none';
   if (c.spellFilter !== 'prepared') c.spellFilter = 'all';
+  if (!SPELL_SORTS.some(([k]) => k === c.spellSort)) c.spellSort = 'az';
   // Nullable fields: keep only well-formed values. The undo row lasts seconds, so it never survives a reload.
   const conc = c.conc as unknown;
   c.conc = isObj(conc) && typeof conc.id === 'string' && typeof conc.name === 'string' ? c.conc : null;

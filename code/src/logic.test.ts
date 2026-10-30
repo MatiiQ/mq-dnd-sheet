@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import {
-  applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, passiveScore, pillView, resPill, setPill, preparedCount, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
-  setExhaustion, speedNow, spellAttack, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, toggleFreeCast, undoHp
+  applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, NEW_FIELDS, passiveScore, pillView, resPill, setPill, preparedCount, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
+  setExhaustion, sortSpells, speedNow, spellAttack, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, toggleFreeCast, undoHp
 } from './logic';
 import type { Character, Item, Spell } from './types';
 
@@ -552,5 +552,37 @@ describe('AC migration', () => {
     ]);
     expect(c.spells.map((s) => [s.acFx, s.acVal])).toEqual([[undefined, undefined], [undefined, undefined]]);
     expect(Number.isFinite(armorClass(c).total)).toBe(true);
+  });
+});
+
+describe('saves keep working', () => {
+  it('migrate leaves both samples unchanged', () => {
+    expect(migrate(sampleCharacter())).toEqual(sampleCharacter());
+    expect(migrate(druidSample())).toEqual(druidSample());
+  });
+  it('fills every new field from the blank character, not the sample, when a save lacks it or holds the wrong type', () => {
+    for (const k of NEW_FIELDS) {
+      const raw = { ...sampleCharacter() } as Record<string, unknown>;
+      delete raw[k];
+      expect(migrate(raw)[k]).toEqual(blankCharacter()[k]);
+      expect(migrate({ ...sampleCharacter(), [k]: 7 })[k]).toEqual(blankCharacter()[k]); // no new field is a number
+    }
+  });
+});
+
+describe('spell sort order', () => {
+  const list = [
+    sp({ id: 'a', name: 'Zap', time: '1 hour' }), sp({ id: 'b', name: 'Aid', time: 'Reaction, which you take when hit' }),
+    sp({ id: 'c', name: 'Mend', time: 'bonus action', prep: true }), sp({ id: 'd', name: 'Bolt', time: 'Action or Ritual' }),
+    sp({ id: 'e', name: 'Odd', time: 'Special' }), sp({ id: 'f', name: 'Rest', time: '10 minutes' })
+  ];
+  const ids = (s: 'az' | 'prep' | 'time') => sortSpells(make({ spellSort: s }), list).map((x) => x.id);
+  it('sorts A–Z, prepared first, or by casting time with unknown times last', () => {
+    expect(ids('az')).toEqual(['b', 'd', 'c', 'e', 'f', 'a']);
+    expect(ids('prep')).toEqual(['c', 'b', 'd', 'e', 'f', 'a']);
+    expect(ids('time')).toEqual(['d', 'c', 'b', 'f', 'a', 'e']);
+  });
+  it('falls back to A–Z for an unknown saved sort', () => {
+    expect(migrate({ ...sampleCharacter(), spellSort: 'zz' }).spellSort).toBe('az');
   });
 });
