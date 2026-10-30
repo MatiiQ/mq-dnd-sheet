@@ -1884,6 +1884,71 @@
       }
     ]
   },
+  "feature/paladin/abjure-foes": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Abjure Foes",
+        "econ": "action",
+        "note": "Spend Channel Divinity: up to CHA creatures within 60 ft, WIS save or Frightened for 1 minute."
+      }
+    ]
+  },
+  "feature/paladin/aura-expansion": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Aura Expansion",
+        "econ": "other",
+        "note": "Aura of Protection becomes a 30-ft Emanation."
+      }
+    ]
+  },
+  "feature/paladin/aura-of-courage": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "defense",
+        "name": "Frightened Immunity",
+        "def": "imm",
+        "target": "Frightened"
+      }
+    ]
+  },
+  "feature/paladin/aura-of-protection": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "saveBonus",
+        "name": "Aura of Protection",
+        "ab": "all",
+        "val": "cha>=1"
+      }
+    ]
+  },
+  "feature/paladin/channel-divinity": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Channel Divinity",
+        "max": "3:2,11:3",
+        "recharge": "long",
+        "regain": "1",
+        "regainOn": "short"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Divine Sense",
+        "econ": "bonus",
+        "res": "g1",
+        "note": "For 10 minutes, sense Celestials, Fiends and Undead within 60 ft."
+      }
+    ]
+  },
   "feature/paladin/epic-boon": {
     "grants": [
       {
@@ -1895,6 +1960,199 @@
       }
     ]
   },
+  "feature/paladin/extra-attack": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "attacks",
+        "name": "Two attacks per Attack action",
+        "val": "2"
+      }
+    ]
+  },
+  "feature/paladin/faithful-steed": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Find Steed",
+        "spell": "spell/find-steed",
+        "always": true
+      },
+      {
+        "id": "g2",
+        "kind": "resource",
+        "name": "Find Steed (free cast)",
+        "max": "1",
+        "recharge": "long",
+        "casts": "spell/find-steed"
+      }
+    ]
+  },
+  "feature/paladin/fighting-style": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "style",
+        "name": "Fighting Style feat or Blessed Warrior",
+        "pick": 1,
+        "pool": "feat:cat=style"
+      }
+    ]
+  },
+  "feature/paladin/lay-on-hands": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Lay On Hands (HP pool)",
+        "max": "lvl+lvl+lvl+lvl+lvl",
+        "recharge": "long"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Lay On Hands",
+        "econ": "bonus",
+        "res": "g1",
+        "note": "Touch: restore HP from the pool, or spend 5 to remove Poisoned."
+      }
+    ]
+  },
+  "feature/paladin/oath-of-devotion/aura-of-devotion": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "defense",
+        "name": "Charmed Immunity",
+        "def": "imm",
+        "target": "Charmed"
+      }
+    ]
+  },
+  "feature/paladin/oath-of-devotion/holy-nimbus": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Holy Nimbus",
+        "max": "1",
+        "recharge": "long"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Holy Nimbus",
+        "econ": "bonus",
+        "res": "g1",
+        "note": "For 10 minutes: Advantage on saves against Fiends and Undead, CHA + PB Radiant to enemies starting in the aura, sunlight. A level 5 slot restores it."
+      }
+    ]
+  },
+  "feature/paladin/oath-of-devotion/oath-of-devotion-spells": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Protection from Evil and Good",
+        "spell": "spell/protection-from-evil-and-good",
+        "always": true
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Shield of Faith",
+        "spell": "spell/shield-of-faith",
+        "always": true
+      },
+      {
+        "id": "g3",
+        "kind": "spell",
+        "name": "Aid",
+        "spell": "spell/aid",
+        "always": true,
+        "lvl": 5
+      },
+      {
+        "id": "g4",
+        "kind": "spell",
+        "name": "Zone of Truth",
+        "spell": "spell/zone-of-truth",
+        "always": true,
+        "lvl": 5
+      },
+      {
+        "id": "g5",
+        "kind": "spell",
+        "name": "Beacon of Hope",
+        "spell": "spell/beacon-of-hope",
+        "always": true,
+        "lvl": 9
+      },
+      {
+        "id": "g6",
+        "kind": "spell",
+        "name": "Dispel Magic",
+        "spell": "spell/dispel-magic",
+        "always": true,
+        "lvl": 9
+      },
+      {
+        "id": "g7",
+        "kind": "spell",
+        "name": "Freedom of Movement",
+        "spell": "spell/freedom-of-movement",
+        "always": true,
+        "lvl": 13
+      },
+      {
+        "id": "g8",
+        "kind": "spell",
+        "name": "Guardian of Faith",
+        "spell": "spell/guardian-of-faith",
+        "always": true,
+        "lvl": 13
+      },
+      {
+        "id": "g9",
+        "kind": "spell",
+        "name": "Commune",
+        "spell": "spell/commune",
+        "always": true,
+        "lvl": 17
+      },
+      {
+        "id": "g10",
+        "kind": "spell",
+        "name": "Flame Strike",
+        "spell": "spell/flame-strike",
+        "always": true,
+        "lvl": 17
+      }
+    ]
+  },
+  "feature/paladin/oath-of-devotion/sacred-weapon": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Sacred Weapon",
+        "econ": "other",
+        "note": "With the Attack action, spend Channel Divinity: for 10 minutes a melee weapon adds CHA to attack rolls and can deal Radiant damage."
+      }
+    ]
+  },
+  "feature/paladin/oath-of-devotion/smite-of-protection": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Smite of Protection",
+        "econ": "other",
+        "note": "When you cast Divine Smite, you and allies in your aura have Half Cover until your next turn."
+      }
+    ]
+  },
   "feature/paladin/paladin-subclass": {
     "grants": [
       {
@@ -1903,6 +2161,59 @@
         "name": "Subclass",
         "pick": 1,
         "pool": "subclass:cls=paladin"
+      }
+    ]
+  },
+  "feature/paladin/paladins-smite": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Divine Smite",
+        "spell": "spell/divine-smite",
+        "always": true
+      },
+      {
+        "id": "g2",
+        "kind": "resource",
+        "name": "Divine Smite (free cast)",
+        "max": "1",
+        "recharge": "long",
+        "casts": "spell/divine-smite"
+      }
+    ]
+  },
+  "feature/paladin/radiant-strikes": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "xdmg",
+        "name": "Radiant Strikes",
+        "dice": "1d8",
+        "dtype": "Radiant",
+        "on": "a hit with a Melee weapon or an Unarmed Strike"
+      }
+    ]
+  },
+  "feature/paladin/restoring-touch": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Restoring Touch",
+        "econ": "other",
+        "note": "Lay On Hands can also end Blinded, Charmed, Deafened, Frightened, Paralyzed or Stunned for 5 HP each."
+      }
+    ]
+  },
+  "feature/paladin/weapon-mastery": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "prof",
+        "name": "Weapon Mastery: 2 kinds of weapons",
+        "cat": "mastery",
+        "val": "2"
       }
     ]
   },
@@ -1960,6 +2271,24 @@
       }
     ]
   },
+  "feature/ranger/expertise": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "exp",
+        "name": "Expertise",
+        "pick": 2,
+        "pool": "skill:proficient"
+      },
+      {
+        "id": "pexp",
+        "kind": "prof",
+        "name": "Expertise",
+        "cat": "expertise",
+        "target": "$exp"
+      }
+    ]
+  },
   "feature/ranger/extra-attack": {
     "grants": [
       {
@@ -1989,6 +2318,16 @@
       }
     ]
   },
+  "feature/ranger/feral-senses": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "sense",
+        "name": "Blindsight 30 ft",
+        "range": "30"
+      }
+    ]
+  },
   "feature/ranger/fighting-style": {
     "grants": [
       {
@@ -1997,6 +2336,54 @@
         "name": "Fighting Style feat or Druidic Warrior",
         "pick": 1,
         "pool": "feat:cat=style"
+      }
+    ]
+  },
+  "feature/ranger/foe-slayer": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Foe Slayer",
+        "econ": "other",
+        "note": "Hunter’s Mark deals 1d10 instead of 1d6."
+      }
+    ]
+  },
+  "feature/ranger/hunter/defensive-tactics": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "tactic",
+        "name": "Defensive Tactics (swap on a rest)",
+        "pick": 1,
+        "options": [
+          {
+            "id": "o1",
+            "kind": "action",
+            "name": "Escape the Horde",
+            "econ": "other",
+            "note": "Opportunity Attacks against you have Disadvantage."
+          },
+          {
+            "id": "o2",
+            "kind": "action",
+            "name": "Multiattack Defense",
+            "econ": "other",
+            "note": "A creature that hits you has Disadvantage on its other attacks against you this turn."
+          }
+        ]
+      }
+    ]
+  },
+  "feature/ranger/hunter/hunters-lore": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Hunter’s Lore",
+        "econ": "other",
+        "note": "Know the Immunities, Resistances and Vulnerabilities of the creature you marked."
       }
     ]
   },
@@ -2027,6 +2414,58 @@
       }
     ]
   },
+  "feature/ranger/hunter/superior-hunters-defense": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Superior Hunter’s Defense",
+        "econ": "reaction",
+        "note": "When you take damage, Resistance to that type until the end of the turn."
+      }
+    ]
+  },
+  "feature/ranger/hunter/superior-hunters-prey": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Superior Hunter’s Prey",
+        "econ": "other",
+        "note": "Once per turn, Hunter’s Mark damage also hits a second creature within 30 ft of the first."
+      }
+    ]
+  },
+  "feature/ranger/natures-veil": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Nature’s Veil",
+        "max": "wis>=1",
+        "recharge": "long"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Nature’s Veil",
+        "econ": "bonus",
+        "res": "g1",
+        "note": "Invisible until the end of your next turn."
+      }
+    ]
+  },
+  "feature/ranger/precise-hunter": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Precise Hunter",
+        "econ": "other",
+        "note": "Advantage on attacks against the creature marked by your Hunter’s Mark."
+      }
+    ]
+  },
   "feature/ranger/ranger-subclass": {
     "grants": [
       {
@@ -2035,6 +2474,63 @@
         "name": "Subclass",
         "pick": 1,
         "pool": "subclass:cls=ranger"
+      }
+    ]
+  },
+  "feature/ranger/relentless-hunter": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Relentless Hunter",
+        "econ": "other",
+        "note": "Taking damage can’t break your Concentration on Hunter’s Mark."
+      }
+    ]
+  },
+  "feature/ranger/roving": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "speed",
+        "name": "Roving +10 ft",
+        "mode": "walk",
+        "val": "10",
+        "when": "noHeavy"
+      },
+      {
+        "id": "g2",
+        "kind": "speed",
+        "name": "Climb Speed",
+        "mode": "climb",
+        "val": "walk"
+      },
+      {
+        "id": "g3",
+        "kind": "speed",
+        "name": "Swim Speed",
+        "mode": "swim",
+        "val": "walk"
+      }
+    ]
+  },
+  "feature/ranger/tireless": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Tireless",
+        "max": "wis>=1",
+        "recharge": "long"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Tireless",
+        "econ": "action",
+        "res": "g1",
+        "dice": "1d8",
+        "note": "Gain the roll + WIS as Temporary HP. A Short Rest also lowers Exhaustion by 1."
       }
     ]
   },
@@ -2060,6 +2556,50 @@
       }
     ]
   },
+  "feature/rogue/cunning-action": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Cunning Action",
+        "econ": "bonus",
+        "note": "Dash, Disengage or Hide."
+      }
+    ]
+  },
+  "feature/rogue/cunning-strike": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Cunning Strike",
+        "econ": "other",
+        "note": "Forgo Sneak Attack dice for Poison, Trip or Withdraw (DC 8 + DEX + PB)."
+      }
+    ]
+  },
+  "feature/rogue/devious-strikes": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Devious Strikes",
+        "econ": "other",
+        "note": "Cunning Strike adds Daze (2d6), Knock Out (6d6) and Obscure (3d6)."
+      }
+    ]
+  },
+  "feature/rogue/elusive": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Elusive",
+        "econ": "other",
+        "note": "No attack roll against you has Advantage unless you are Incapacitated."
+      }
+    ]
+  },
   "feature/rogue/epic-boon": {
     "grants": [
       {
@@ -2071,6 +2611,57 @@
       }
     ]
   },
+  "feature/rogue/evasion": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Evasion",
+        "econ": "other",
+        "note": "DEX save for half damage: none on a success, half on a failure."
+      }
+    ]
+  },
+  "feature/rogue/expertise": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "exp",
+        "name": "Expertise",
+        "pick": 2,
+        "pool": "skill:proficient"
+      },
+      {
+        "id": "pexp",
+        "kind": "prof",
+        "name": "Expertise",
+        "cat": "expertise",
+        "target": "$exp"
+      }
+    ]
+  },
+  "feature/rogue/improved-cunning-strike": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Improved Cunning Strike",
+        "econ": "other",
+        "note": "Use two Cunning Strike effects on one Sneak Attack."
+      }
+    ]
+  },
+  "feature/rogue/reliable-talent": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Reliable Talent",
+        "econ": "other",
+        "note": "With a skill or tool proficiency, treat a d20 roll of 9 or lower as 10."
+      }
+    ]
+  },
   "feature/rogue/rogue-subclass": {
     "grants": [
       {
@@ -2079,6 +2670,175 @@
         "name": "Subclass",
         "pick": 1,
         "pool": "subclass:cls=rogue"
+      }
+    ]
+  },
+  "feature/rogue/slippery-mind": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "prof",
+        "name": "Wisdom saves",
+        "cat": "save",
+        "target": "wis"
+      },
+      {
+        "id": "g2",
+        "kind": "prof",
+        "name": "Charisma saves",
+        "cat": "save",
+        "target": "cha"
+      }
+    ]
+  },
+  "feature/rogue/sneak-attack": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "xdmg",
+        "name": "Sneak Attack",
+        "dice": "1:1d6,3:2d6,5:3d6,7:4d6,9:5d6,11:6d6,13:7d6,15:8d6,17:9d6,19:10d6",
+        "on": "a Finesse or Ranged weapon hit with Advantage, or with an ally next to the target",
+        "perTurn": true
+      }
+    ]
+  },
+  "feature/rogue/steady-aim": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Steady Aim",
+        "econ": "bonus",
+        "note": "If you haven’t moved: Advantage on your next attack this turn; your Speed becomes 0."
+      }
+    ]
+  },
+  "feature/rogue/stroke-of-luck": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Stroke of Luck",
+        "max": "1",
+        "recharge": "short"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Stroke of Luck",
+        "econ": "free",
+        "res": "g1",
+        "note": "Turn a failed D20 Test into a 20."
+      }
+    ]
+  },
+  "feature/rogue/thief/fast-hands": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Fast Hands",
+        "econ": "bonus",
+        "note": "Sleight of Hand with Thieves’ Tools or a pocket, or Utilize, or use a magic item’s Magic action."
+      }
+    ]
+  },
+  "feature/rogue/thief/second-story-work": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "speed",
+        "name": "Climb Speed",
+        "mode": "climb",
+        "val": "walk"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Jumper",
+        "econ": "other",
+        "note": "Jump distances use DEX instead of STR."
+      }
+    ]
+  },
+  "feature/rogue/thief/supreme-sneak": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Stealth Attack",
+        "econ": "other",
+        "note": "Cunning Strike option (1d6): stay hidden behind Three-Quarters or Total Cover after attacking."
+      }
+    ]
+  },
+  "feature/rogue/thief/thiefs-reflexes": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Thief’s Reflexes",
+        "econ": "other",
+        "note": "Two turns in the first round of combat, the second at Initiative − 10."
+      }
+    ]
+  },
+  "feature/rogue/thief/use-magic-device": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Use Magic Device",
+        "econ": "other",
+        "note": "Attune to 4 items; a 6 on a d6 saves a charge; use any Spell Scroll with INT."
+      }
+    ]
+  },
+  "feature/rogue/thieves-cant": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "prof",
+        "name": "Thieves’ Cant",
+        "cat": "language",
+        "target": "Thieves’ Cant"
+      },
+      {
+        "kind": "choice",
+        "id": "lang",
+        "name": "Language",
+        "pick": 1,
+        "pool": "language:any"
+      },
+      {
+        "id": "plang",
+        "kind": "prof",
+        "name": "Language",
+        "cat": "language",
+        "target": "$lang"
+      }
+    ]
+  },
+  "feature/rogue/uncanny-dodge": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Uncanny Dodge",
+        "econ": "reaction",
+        "note": "Halve the damage of an attack that hits you."
+      }
+    ]
+  },
+  "feature/rogue/weapon-mastery": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "prof",
+        "name": "Weapon Mastery: 2 kinds of weapons",
+        "cat": "mastery",
+        "val": "2"
       }
     ]
   },

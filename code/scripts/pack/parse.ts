@@ -188,7 +188,7 @@ export function parseClassMd(md: string): [ClassEntry, SubclassEntry[], FeatureE
   const levelsOf = (fname: string) => rows.flatMap((r, i) => (r['Class Features'].split(/,\s*/).some((x) => norm(x) === norm(fname)) ? [i + 1] : []));
   const feature = (b: Block, sub?: string): FeatureEntry | null => {
     const m = /^Level (\d+): (.+)$/.exec(b.title);
-    if (!m) return null;
+    if (!m || /^subclass feature$/i.test(m[2])) return null; // a pointer to the subclass, not a feature
     const e: FeatureEntry = { id: catalogId('feature', m[2], [name, sub]), kind: 'feature', name: m[2], src: 'phb', page: b.page, cls: slug(name),
       lvl: Number(m[1]), desc: b.lines.filter((l) => l.trim()).map(clean).join('\n'), grants: [] };
     if (sub) e.sub = slug(sub);

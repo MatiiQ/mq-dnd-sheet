@@ -56,6 +56,9 @@ Scope: an invented class in reference/'s format.
 ### Level 4: Ability Score Improvement (PHB p.903)
 - Gain the Ability Score Improvement feat or another feat.
 
+### Level 6: Subclass feature (PHB p.903)
+- See the subclass.
+
 ## Subclasses (PHB p.904)
 
 ### Order of the Wick (PHB p.904)

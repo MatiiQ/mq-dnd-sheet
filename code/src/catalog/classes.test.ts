@@ -113,3 +113,39 @@ describe('Monk (PHB p.101–107)', () => {
   });
   it('Warrior of the Open Hand has a grant at every level', () => expect(subLevels('monk', 'warrior-of-the-open-hand')).toEqual([]));
 });
+
+describe('Paladin (PHB p.109–114)', () => {
+  it('Lay On Hands pool, Channel Divinity uses, Aura of Protection', () => {
+    expect(grants(F('paladin', 'lay-on-hands'))[0]).toMatchObject({ kind: 'resource', max: 'lvl+lvl+lvl+lvl+lvl', recharge: 'long' });
+    expect(grants(F('paladin', 'channel-divinity'))[0]).toMatchObject({ max: '3:2,11:3', regain: '1', regainOn: 'short' });
+    expect(grants(F('paladin', 'aura-of-protection'))).toMatchObject([{ kind: 'saveBonus', ab: 'all', val: 'cha>=1' }]);
+  });
+  it('Paladin’s Smite and Faithful Steed: always prepared, one free cast; Radiant Strikes', () => {
+    expect(grants(F('paladin', 'paladins-smite'))).toMatchObject([{ kind: 'spell', spell: 'spell/divine-smite', always: true }, { kind: 'resource', max: '1', casts: 'spell/divine-smite' }]);
+    expect(grants(F('paladin', 'faithful-steed'))).toMatchObject([{ spell: 'spell/find-steed' }, { casts: 'spell/find-steed' }]);
+    expect(grants(F('paladin', 'radiant-strikes'))).toMatchObject([{ kind: 'xdmg', dice: '1d8', dtype: 'Radiant' }]);
+  });
+  it('Oath of Devotion has a grant at every level', () => expect(subLevels('paladin', 'oath-of-devotion')).toEqual([]));
+});
+
+describe('Ranger 6–20 and Hunter (PHB p.121, 127)', () => {
+  it('Roving speeds, Feral Senses, Tireless', () => {
+    expect(grants(F('ranger', 'roving')).map((g) => [g.mode, g.val, g.when])).toEqual([['walk', '10', 'noHeavy'], ['climb', 'walk', undefined], ['swim', 'walk', undefined]]);
+    expect(grants(F('ranger', 'feral-senses'))).toMatchObject([{ kind: 'sense', name: 'Blindsight 30 ft', range: '30' }]);
+    expect(grants(F('ranger', 'tireless'))[0]).toMatchObject({ kind: 'resource', max: 'wis>=1', recharge: 'long' });
+  });
+  it('Hunter has a grant at every level', () => expect(subLevels('ranger', 'hunter')).toEqual([]));
+});
+
+describe('Rogue (PHB p.129–137)', () => {
+  it('Sneak Attack dice by level, once per turn', () => {
+    expect(grants(F('rogue', 'sneak-attack'))).toMatchObject([{ kind: 'xdmg', dice: '1:1d6,3:2d6,5:3d6,7:4d6,9:5d6,11:6d6,13:7d6,15:8d6,17:9d6,19:10d6', perTurn: true }]);
+  });
+  it('Expertise at 1 and 6, Thieves’ Cant and a language, Stroke of Luck', () => {
+    expect(byId.get(F('rogue', 'expertise'))).toMatchObject({ lvl: 1, again: '6' });
+    expect(all(F('rogue', 'thieves-cant'))).toContainEqual(expect.objectContaining({ kind: 'prof', cat: 'language', target: 'Thieves’ Cant' }));
+    expect(grants(F('rogue', 'stroke-of-luck'))[0]).toMatchObject({ max: '1', recharge: 'short' });
+    expect(grants(F('rogue', 'slippery-mind')).map((g) => g.target)).toEqual(['wis', 'cha']);
+  });
+  it('Thief has a grant at every level', () => expect(subLevels('rogue', 'thief')).toEqual([]));
+});

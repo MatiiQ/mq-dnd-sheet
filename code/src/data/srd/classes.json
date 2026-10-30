@@ -4989,7 +4989,15 @@
     "cls": "paladin",
     "lvl": 9,
     "desc": "As a Magic action, you can expend one use of this class’s Channel Divinity to overwhelm foes with awe. As you present your Holy Symbol or weapon, you can target a number of creatures equal to your Charisma modifier (minimum of one creature) that you can see within 60 feet of yourself. Each target must succeed on a Wisdom saving throw or have the Frightened condition for 1 minute or until it takes any damage. While Frightened in this way, a target can do only one of the following on its turns: move, take an action, or take a Bonus Action.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Abjure Foes",
+        "econ": "action",
+        "note": "Spend Channel Divinity: up to CHA creatures within 60 ft, WIS save or Frightened for 1 minute."
+      }
+    ]
   },
   {
     "id": "feature/paladin/aura-expansion",
@@ -5000,7 +5008,15 @@
     "cls": "paladin",
     "lvl": 18,
     "desc": "Your Aura of Protection is now a 30-foot Emanation.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Aura Expansion",
+        "econ": "other",
+        "note": "Aura of Protection becomes a 30-ft Emanation."
+      }
+    ]
   },
   {
     "id": "feature/paladin/aura-of-courage",
@@ -5011,7 +5027,15 @@
     "cls": "paladin",
     "lvl": 10,
     "desc": "You and your allies have Immunity to the Frightened condition while in your Aura of Protection. If a Frightened ally enters the aura, that condition has no effect on that ally while there.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "defense",
+        "name": "Frightened Immunity",
+        "def": "imm",
+        "target": "Frightened"
+      }
+    ]
   },
   {
     "id": "feature/paladin/aura-of-protection",
@@ -5022,7 +5046,15 @@
     "cls": "paladin",
     "lvl": 6,
     "desc": "You radiate a protective, unseeable aura in a 10-foot Emanation that originates from you. The aura is inactive while you have the Incapacitated condition. You and your allies in the aura gain a bonus to saving throws equal to your Charisma modifier (minimum bonus of +1). If another Paladin is present, a creature can benefit from only one Aura of Protection at a time; the creature chooses which aura while in them.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "saveBonus",
+        "name": "Aura of Protection",
+        "ab": "all",
+        "val": "cha>=1"
+      }
+    ]
   },
   {
     "id": "feature/paladin/channel-divinity",
@@ -5033,7 +5065,25 @@
     "cls": "paladin",
     "lvl": 3,
     "desc": "You can channel divine energy directly from the Outer Planes, using it to fuel magical effects. You start with one such effect: Divine Sense, which is described below. Other Paladin features give additional Channel Divinity effect options. Each time you use this class’s Channel Divinity, you choose which effect from this class to create. You can use this class’s Channel Divinity twice. You regain one of its expended uses when you finish a Short Rest, and you regain all expended uses when you finish a Long Rest. You gain an additional use when you reach Paladin level 11.\nBreaking Your Oath A Paladin tries to hold to the highest standards of conduct, but even the most dedicated are fallible. Sometimes a Paladin transgresses their oath. A Paladin who has broken a vow typically seeks absolution, spending an all-night vigil as a sign of penitence or undertaking a fast. After a rite of forgiveness, the Paladin starts fresh. If your Paladin unrepentantly violates their oath, talk to your GM. Your Paladin should probably take a more appropriate subclass or even abandon the class and adopt another one.\nIf a Channel Divinity effect requires a saving throw, the DC equals the spell save DC from this class’s Spellcasting feature.\nDivine Sense. As a Bonus Action, you can open your awareness to detect Celestials, Fiends, and Undead. For the next 10 minutes or until you have the Incapacitated condition, you know the location of any creature of those types within 60 feet of yourself, and you know its creature type. Within the same radius, you also detect the presence of any place or object that has been consecrated or desecrated, as with the Hallow spell.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Channel Divinity",
+        "max": "3:2,11:3",
+        "recharge": "long",
+        "regain": "1",
+        "regainOn": "short"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Divine Sense",
+        "econ": "bonus",
+        "res": "g1",
+        "note": "For 10 minutes, sense Celestials, Fiends and Undead within 60 ft."
+      }
+    ]
   },
   {
     "id": "feature/paladin/epic-boon",
@@ -5063,7 +5113,14 @@
     "cls": "paladin",
     "lvl": 5,
     "desc": "You can attack twice instead of once whenever you take the Attack action on your turn.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "attacks",
+        "name": "Two attacks per Attack action",
+        "val": "2"
+      }
+    ]
   },
   {
     "id": "feature/paladin/faithful-steed",
@@ -5074,7 +5131,23 @@
     "cls": "paladin",
     "lvl": 5,
     "desc": "You can call on the aid of an otherworldly steed. You always have the Find Steed spell prepared. You can also cast the spell once without expending a spell slot, and you regain the ability to do so when you finish a Long Rest.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Find Steed",
+        "spell": "spell/find-steed",
+        "always": true
+      },
+      {
+        "id": "g2",
+        "kind": "resource",
+        "name": "Find Steed (free cast)",
+        "max": "1",
+        "recharge": "long",
+        "casts": "spell/find-steed"
+      }
+    ]
   },
   {
     "id": "feature/paladin/fighting-style",
@@ -5085,7 +5158,15 @@
     "cls": "paladin",
     "lvl": 2,
     "desc": "You gain a Fighting Style feat of your choice (see “Feats” for feats). Instead of choosing one of those feats, you can choose the option below.\nBlessed Warrior. You learn two Cleric cantrips of your choice (see the Cleric class’s section for a list of Cleric spells). Guidance and Sacred Flame are recommended. The chosen cantrips count as Paladin spells for you, and Charisma is your spellcasting ability for them. Whenever you gain a Paladin level, you can replace one of these cantrips with another Cleric cantrip.",
-    "grants": []
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "style",
+        "name": "Fighting Style feat or Blessed Warrior",
+        "pick": 1,
+        "pool": "feat:cat=style"
+      }
+    ]
   },
   {
     "id": "feature/paladin/lay-on-hands",
@@ -5096,7 +5177,23 @@
     "cls": "paladin",
     "lvl": 1,
     "desc": "Your blessed touch can heal wounds. You have a pool of healing power that replenishes when you finish a Long Rest. With that pool, you can restore a total number of Hit Points equal to five times your Paladin level.\nAs a Bonus Action, you can touch a creature (which could be yourself) and draw power from the pool of healing to restore a number of Hit Points to that creature, up to the maximum amount remaining in the pool. You can also expend 5 Hit Points from the pool of healing power to remove the Poisoned condition from the creature; those points don’t also restore Hit Points to the creature.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Lay On Hands (HP pool)",
+        "max": "lvl+lvl+lvl+lvl+lvl",
+        "recharge": "long"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Lay On Hands",
+        "econ": "bonus",
+        "res": "g1",
+        "note": "Touch: restore HP from the pool, or spend 5 to remove Poisoned."
+      }
+    ]
   },
   {
     "id": "feature/paladin/oath-of-devotion/aura-of-devotion",
@@ -5107,7 +5204,15 @@
     "cls": "paladin",
     "lvl": 7,
     "desc": "You and your allies have Immunity to the Charmed condition while in your Aura of Protection. If a Charmed ally enters the aura, that condition has no effect on that ally while there.",
-    "grants": [],
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "defense",
+        "name": "Charmed Immunity",
+        "def": "imm",
+        "target": "Charmed"
+      }
+    ],
     "sub": "oath-of-devotion"
   },
   {
@@ -5119,7 +5224,23 @@
     "cls": "paladin",
     "lvl": 20,
     "desc": "As a Bonus Action, you can imbue your Aura of Protection with holy power, granting the benefits below for 10 minutes or until you end them (no action required). Once you use this feature, you can’t use it again until you finish a Long Rest. You can also restore your use of it by expending a level 5 spell slot (no action required).\nHoly Ward. You have Advantage on any saving throw you are forced to make by a Fiend or an Undead.\nRadiant Damage. Whenever an enemy starts its turn in the aura, that creature takes Radiant damage equal to your Charisma modifier plus your Proficiency Bonus.\nSunlight. The aura is filled with Bright Light that is sunlight.",
-    "grants": [],
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Holy Nimbus",
+        "max": "1",
+        "recharge": "long"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Holy Nimbus",
+        "econ": "bonus",
+        "res": "g1",
+        "note": "For 10 minutes: Advantage on saves against Fiends and Undead, CHA + PB Radiant to enemies starting in the aura, sunlight. A level 5 slot restores it."
+      }
+    ],
     "sub": "oath-of-devotion"
   },
   {
@@ -5131,7 +5252,86 @@
     "cls": "paladin",
     "lvl": 3,
     "desc": "The magic of your oath ensures you always have certain spells ready; when you reach a Paladin level specified in the Oath of Devotion Spells table, you thereafter always have the listed spells prepared.\nOath of Devotion Spells Paladin Level Protection from Evil and Good, Shield of Faith 5 Aid, Zone of Truth 9 Beacon of Hope, Dispel Magic 13 Freedom of Movement, Guardian of Faith 17 Commune, Flame Strike",
-    "grants": [],
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Protection from Evil and Good",
+        "spell": "spell/protection-from-evil-and-good",
+        "always": true
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Shield of Faith",
+        "spell": "spell/shield-of-faith",
+        "always": true
+      },
+      {
+        "id": "g3",
+        "kind": "spell",
+        "name": "Aid",
+        "spell": "spell/aid",
+        "always": true,
+        "lvl": 5
+      },
+      {
+        "id": "g4",
+        "kind": "spell",
+        "name": "Zone of Truth",
+        "spell": "spell/zone-of-truth",
+        "always": true,
+        "lvl": 5
+      },
+      {
+        "id": "g5",
+        "kind": "spell",
+        "name": "Beacon of Hope",
+        "spell": "spell/beacon-of-hope",
+        "always": true,
+        "lvl": 9
+      },
+      {
+        "id": "g6",
+        "kind": "spell",
+        "name": "Dispel Magic",
+        "spell": "spell/dispel-magic",
+        "always": true,
+        "lvl": 9
+      },
+      {
+        "id": "g7",
+        "kind": "spell",
+        "name": "Freedom of Movement",
+        "spell": "spell/freedom-of-movement",
+        "always": true,
+        "lvl": 13
+      },
+      {
+        "id": "g8",
+        "kind": "spell",
+        "name": "Guardian of Faith",
+        "spell": "spell/guardian-of-faith",
+        "always": true,
+        "lvl": 13
+      },
+      {
+        "id": "g9",
+        "kind": "spell",
+        "name": "Commune",
+        "spell": "spell/commune",
+        "always": true,
+        "lvl": 17
+      },
+      {
+        "id": "g10",
+        "kind": "spell",
+        "name": "Flame Strike",
+        "spell": "spell/flame-strike",
+        "always": true,
+        "lvl": 17
+      }
+    ],
     "sub": "oath-of-devotion"
   },
   {
@@ -5143,7 +5343,15 @@
     "cls": "paladin",
     "lvl": 3,
     "desc": "When you take the Attack action, you can expend one use of your Channel Divinity to imbue one Melee weapon that you are holding with positive energy. For 10 minutes or until you use this feature again, you add your Charisma modifier to attack rolls you make with that weapon (minimum bonus of +1), and each time you hit with it, you cause it to deal its normal damage type or Radiant damage. The weapon also emits Bright Light in a 20-foot radius and Dim Light 20 feet beyond that. You can end this effect early (no action required). This effect also ends if you aren’t carrying the weapon.",
-    "grants": [],
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Sacred Weapon",
+        "econ": "other",
+        "note": "With the Attack action, spend Channel Divinity: for 10 minutes a melee weapon adds CHA to attack rolls and can deal Radiant damage."
+      }
+    ],
     "sub": "oath-of-devotion"
   },
   {
@@ -5155,7 +5363,15 @@
     "cls": "paladin",
     "lvl": 15,
     "desc": "Your magical smite now radiates protective energy. Whenever you cast Divine Smite, you and your allies have Half Cover while in your Aura of Protection. The aura has this benefit until the start of your next turn.",
-    "grants": [],
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Smite of Protection",
+        "econ": "other",
+        "note": "When you cast Divine Smite, you and allies in your aura have Half Cover until your next turn."
+      }
+    ],
     "sub": "oath-of-devotion"
   },
   {
@@ -5186,7 +5402,23 @@
     "cls": "paladin",
     "lvl": 2,
     "desc": "You always have the Divine Smite spell prepared. In addition, you can cast it without expending a spell slot, but you must finish a Long Rest before you can cast it in this way again.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Divine Smite",
+        "spell": "spell/divine-smite",
+        "always": true
+      },
+      {
+        "id": "g2",
+        "kind": "resource",
+        "name": "Divine Smite (free cast)",
+        "max": "1",
+        "recharge": "long",
+        "casts": "spell/divine-smite"
+      }
+    ]
   },
   {
     "id": "feature/paladin/radiant-strikes",
@@ -5197,7 +5429,16 @@
     "cls": "paladin",
     "lvl": 11,
     "desc": "Your strikes now carry supernatural power. When you hit a target with an attack roll using a Melee weapon or an Unarmed Strike, the target takes an extra 1d8 Radiant damage.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "xdmg",
+        "name": "Radiant Strikes",
+        "dice": "1d8",
+        "dtype": "Radiant",
+        "on": "a hit with a Melee weapon or an Unarmed Strike"
+      }
+    ]
   },
   {
     "id": "feature/paladin/restoring-touch",
@@ -5208,7 +5449,15 @@
     "cls": "paladin",
     "lvl": 14,
     "desc": "When you use Lay On Hands on a creature, you can also remove one or more of the following conditions from the creature: Blinded, Charmed, Deafened, Frightened, Paralyzed, or Stunned. You must expend 5 Hit Points from the healing pool of Lay On Hands for each of these conditions you remove; those points don’t also restore Hit Points to the creature.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Restoring Touch",
+        "econ": "other",
+        "note": "Lay On Hands can also end Blinded, Charmed, Deafened, Frightened, Paralyzed or Stunned for 5 HP each."
+      }
+    ]
   },
   {
     "id": "feature/paladin/spellcasting",
@@ -5230,7 +5479,15 @@
     "cls": "paladin",
     "lvl": 1,
     "desc": "Your training with weapons allows you to use the mastery properties of two kinds of weapons of your choice with which you have proficiency, such as Longswords and Javelins.\nWhenever you finish a Long Rest, you can change the kinds of weapons you chose. For example, you could switch to using the mastery properties of Halberds and Flails.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "prof",
+        "name": "Weapon Mastery: 2 kinds of weapons",
+        "cat": "mastery",
+        "val": "2"
+      }
+    ]
   },
   {
     "id": "feature/ranger/ability-score-improvement",
@@ -5320,7 +5577,22 @@
     "cls": "ranger",
     "lvl": 9,
     "desc": "Choose two of your skill proficiencies with which you lack Expertise. You gain Expertise in those skills.",
-    "grants": []
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "exp",
+        "name": "Expertise",
+        "pick": 2,
+        "pool": "skill:proficient"
+      },
+      {
+        "id": "pexp",
+        "kind": "prof",
+        "name": "Expertise",
+        "cat": "expertise",
+        "target": "$exp"
+      }
+    ]
   },
   {
     "id": "feature/ranger/extra-attack",
@@ -5376,7 +5648,14 @@
     "cls": "ranger",
     "lvl": 18,
     "desc": "Your connection to the forces of nature grants you Blindsight with a range of 30 feet.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "sense",
+        "name": "Blindsight 30 ft",
+        "range": "30"
+      }
+    ]
   },
   {
     "id": "feature/ranger/fighting-style",
@@ -5406,7 +5685,15 @@
     "cls": "ranger",
     "lvl": 20,
     "desc": "The damage die of your Hunter’s Mark is a d10 rather than a d6.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Foe Slayer",
+        "econ": "other",
+        "note": "Hunter’s Mark deals 1d10 instead of 1d6."
+      }
+    ]
   },
   {
     "id": "feature/ranger/hunter/defensive-tactics",
@@ -5417,7 +5704,30 @@
     "cls": "ranger",
     "lvl": 7,
     "desc": "You gain one of the following feature options of your choice. Whenever you finish a Short or Long Rest, you can replace the chosen option with the other one.\nEscape the Horde. Opportunity Attacks have Disadvantage against you.\nMultiattack Defense. When a creature hits you with an attack roll, that creature has Disadvantage on all other attack rolls against you this turn.",
-    "grants": [],
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "tactic",
+        "name": "Defensive Tactics (swap on a rest)",
+        "pick": 1,
+        "options": [
+          {
+            "id": "o1",
+            "kind": "action",
+            "name": "Escape the Horde",
+            "econ": "other",
+            "note": "Opportunity Attacks against you have Disadvantage."
+          },
+          {
+            "id": "o2",
+            "kind": "action",
+            "name": "Multiattack Defense",
+            "econ": "other",
+            "note": "A creature that hits you has Disadvantage on its other attacks against you this turn."
+          }
+        ]
+      }
+    ],
     "sub": "hunter"
   },
   {
@@ -5429,7 +5739,15 @@
     "cls": "ranger",
     "lvl": 3,
     "desc": "You can call on the forces of nature to reveal certain strengths and weaknesses of your prey. While a creature is marked by your Hunter’s Mark, you know whether that creature has any Immunities, Resistances, or Vulnerabilities, and if the creature has any, you know what they are.",
-    "grants": [],
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Hunter’s Lore",
+        "econ": "other",
+        "note": "Know the Immunities, Resistances and Vulnerabilities of the creature you marked."
+      }
+    ],
     "sub": "hunter"
   },
   {
@@ -5477,7 +5795,15 @@
     "cls": "ranger",
     "lvl": 15,
     "desc": "When you take damage, you can take a Reaction to give yourself Resistance to that damage and any other damage of the same type until the end of the current turn.",
-    "grants": [],
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Superior Hunter’s Defense",
+        "econ": "reaction",
+        "note": "When you take damage, Resistance to that type until the end of the turn."
+      }
+    ],
     "sub": "hunter"
   },
   {
@@ -5489,7 +5815,15 @@
     "cls": "ranger",
     "lvl": 11,
     "desc": "Once per turn when you deal damage to a creature marked by your Hunter’s Mark, you can also deal that spell’s extra damage to a different creature that you can see within 30 feet of the first creature.",
-    "grants": [],
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Superior Hunter’s Prey",
+        "econ": "other",
+        "note": "Once per turn, Hunter’s Mark damage also hits a second creature within 30 ft of the first."
+      }
+    ],
     "sub": "hunter"
   },
   {
@@ -5501,7 +5835,23 @@
     "cls": "ranger",
     "lvl": 14,
     "desc": "You invoke spirits of nature to magically hide yourself. As a Bonus Action, you can give yourself the Invisible condition until the end of your next turn. You can use this feature a number of times equal to your Wisdom modifier (minimum of once), and you regain all expended uses when you finish a Long Rest.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Nature’s Veil",
+        "max": "wis>=1",
+        "recharge": "long"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Nature’s Veil",
+        "econ": "bonus",
+        "res": "g1",
+        "note": "Invisible until the end of your next turn."
+      }
+    ]
   },
   {
     "id": "feature/ranger/precise-hunter",
@@ -5512,7 +5862,15 @@
     "cls": "ranger",
     "lvl": 17,
     "desc": "You have Advantage on attack rolls against the creature currently marked by your Hunter’s Mark.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Precise Hunter",
+        "econ": "other",
+        "note": "Advantage on attacks against the creature marked by your Hunter’s Mark."
+      }
+    ]
   },
   {
     "id": "feature/ranger/ranger-subclass",
@@ -5542,7 +5900,15 @@
     "cls": "ranger",
     "lvl": 13,
     "desc": "Taking damage can’t break your Concentration on Hunter’s Mark.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Relentless Hunter",
+        "econ": "other",
+        "note": "Taking damage can’t break your Concentration on Hunter’s Mark."
+      }
+    ]
   },
   {
     "id": "feature/ranger/roving",
@@ -5553,7 +5919,30 @@
     "cls": "ranger",
     "lvl": 6,
     "desc": "Your Speed increases by 10 feet while you aren’t wearing Heavy armor. You also have a Climb Speed and a Swim Speed equal to your Speed.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "speed",
+        "name": "Roving +10 ft",
+        "mode": "walk",
+        "val": "10",
+        "when": "noHeavy"
+      },
+      {
+        "id": "g2",
+        "kind": "speed",
+        "name": "Climb Speed",
+        "mode": "climb",
+        "val": "walk"
+      },
+      {
+        "id": "g3",
+        "kind": "speed",
+        "name": "Swim Speed",
+        "mode": "swim",
+        "val": "walk"
+      }
+    ]
   },
   {
     "id": "feature/ranger/spellcasting",
@@ -5575,7 +5964,24 @@
     "cls": "ranger",
     "lvl": 10,
     "desc": "Primal forces now help fuel you on your journeys, granting you the following benefits.\nTemporary Hit Points. As a Magic action, you can give yourself a number of Temporary Hit Points equal to 1d8 plus your Wisdom modifier (minimum of 1). You can use this action a number of times equal to your Wisdom modifier (minimum of once), and you regain all expended uses when you finish a Long Rest.\nDecrease Exhaustion. Whenever you finish a Short Rest, your Exhaustion level, if any, decreases by 1.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Tireless",
+        "max": "wis>=1",
+        "recharge": "long"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Tireless",
+        "econ": "action",
+        "res": "g1",
+        "dice": "1d8",
+        "note": "Gain the roll + WIS as Temporary HP. A Short Rest also lowers Exhaustion by 1."
+      }
+    ]
   },
   {
     "id": "feature/ranger/weapon-mastery",
@@ -5625,7 +6031,15 @@
     "cls": "rogue",
     "lvl": 2,
     "desc": "Your quick thinking and agility allow you to move and act quickly. On your turn, you can take one of the following actions as a Bonus Action: Dash, Disengage, or Hide.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Cunning Action",
+        "econ": "bonus",
+        "note": "Dash, Disengage or Hide."
+      }
+    ]
   },
   {
     "id": "feature/rogue/cunning-strike",
@@ -5636,7 +6050,15 @@
     "cls": "rogue",
     "lvl": 5,
     "desc": "You’ve developed cunning ways to use your Sneak Attack. When you deal Sneak Attack damage, you can add one of the following Cunning Strike effects. Each effect has a die cost, which is the number of Sneak Attack damage dice you must forgo to add the effect. You remove the die before rolling, and the effect occurs immediately after the attack’s damage is dealt. For example, if you add the Poison effect, remove 1d6 from the Sneak Attack’s damage before rolling. If a Cunning Strike effect requires a saving throw, the DC equals 8 plus your Dexterity modifier and Proficiency Bonus. Poison (Cost: 1d6). You add a toxin to your strike, forcing the target to make a Constitution saving throw. On a failed save, the target has the Poisoned condition for 1 minute. At the end of each of its turns, the Poisoned target repeats the save, ending the effect on itself on a success. To use this effect, you must have a Poisoner’s Kit on your person. Trip (Cost: 1d6). If the target is Large or smaller, it must succeed on a Dexterity saving throw or have the Prone condition. Withdraw (Cost: 1d6). Immediately after the attack, you move up to half your Speed without provoking Opportunity Attacks.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Cunning Strike",
+        "econ": "other",
+        "note": "Forgo Sneak Attack dice for Poison, Trip or Withdraw (DC 8 + DEX + PB)."
+      }
+    ]
   },
   {
     "id": "feature/rogue/devious-strikes",
@@ -5647,7 +6069,15 @@
     "cls": "rogue",
     "lvl": 14,
     "desc": "You’ve practiced new ways to use your Sneak Attack deviously. The following effects are now among your Cunning Strike options. Daze (Cost: 2d6). The target must succeed on a Constitution saving throw, or on its next turn, it can do only one of the following: move or take an action or a Bonus Action. Knock Out (Cost: 6d6). The target must succeed on a Constitution saving throw, or it has the Unconscious condition for 1 minute or until it takes any damage. The Unconscious target repeats the save at the end of each of its turns, ending the effect on itself on a success. Obscure (Cost: 3d6). The target must succeed on a Dexterity saving throw, or it has the Blinded condition until the end of its next turn.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Devious Strikes",
+        "econ": "other",
+        "note": "Cunning Strike adds Daze (2d6), Knock Out (6d6) and Obscure (3d6)."
+      }
+    ]
   },
   {
     "id": "feature/rogue/elusive",
@@ -5658,7 +6088,15 @@
     "cls": "rogue",
     "lvl": 18,
     "desc": "You’re so evasive that attackers rarely gain the upper hand against you. No attack roll can have Advantage against you unless you have the Incapacitated condition.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Elusive",
+        "econ": "other",
+        "note": "No attack roll against you has Advantage unless you are Incapacitated."
+      }
+    ]
   },
   {
     "id": "feature/rogue/epic-boon",
@@ -5688,7 +6126,15 @@
     "cls": "rogue",
     "lvl": 7,
     "desc": "You can nimbly dodge out of the way of certain dangers. When you’re subjected to an effect that allows you to make a Dexterity saving throw to take only half damage, you instead take no damage if you succeed on the saving throw and only half damage if you fail. You can’t use this feature if you have the Incapacitated condition.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Evasion",
+        "econ": "other",
+        "note": "DEX save for half damage: none on a success, half on a failure."
+      }
+    ]
   },
   {
     "id": "feature/rogue/expertise",
@@ -5699,7 +6145,22 @@
     "cls": "rogue",
     "lvl": 1,
     "desc": "You gain Expertise in two of your skill proficiencies of your choice. Sleight of Hand and Stealth are recommended if you have proficiency in them. At Rogue level 6, you gain Expertise in two more of your skill proficiencies of your choice.",
-    "grants": [],
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "exp",
+        "name": "Expertise",
+        "pick": 2,
+        "pool": "skill:proficient"
+      },
+      {
+        "id": "pexp",
+        "kind": "prof",
+        "name": "Expertise",
+        "cat": "expertise",
+        "target": "$exp"
+      }
+    ],
     "again": "6"
   },
   {
@@ -5711,7 +6172,15 @@
     "cls": "rogue",
     "lvl": 11,
     "desc": "You can use up to two Cunning Strike effects when you deal Sneak Attack damage, paying the die cost for each effect.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Improved Cunning Strike",
+        "econ": "other",
+        "note": "Use two Cunning Strike effects on one Sneak Attack."
+      }
+    ]
   },
   {
     "id": "feature/rogue/reliable-talent",
@@ -5722,7 +6191,15 @@
     "cls": "rogue",
     "lvl": 7,
     "desc": "Whenever you make an ability check that uses one of your skill or tool proficiencies, you can treat a d20 roll of 9 or lower as a 10.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Reliable Talent",
+        "econ": "other",
+        "note": "With a skill or tool proficiency, treat a d20 roll of 9 or lower as 10."
+      }
+    ]
   },
   {
     "id": "feature/rogue/rogue-subclass",
@@ -5752,7 +6229,22 @@
     "cls": "rogue",
     "lvl": 15,
     "desc": "Your cunning mind is exceptionally difficult to control. You gain proficiency in Wisdom and Charisma saving throws.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "prof",
+        "name": "Wisdom saves",
+        "cat": "save",
+        "target": "wis"
+      },
+      {
+        "id": "g2",
+        "kind": "prof",
+        "name": "Charisma saves",
+        "cat": "save",
+        "target": "cha"
+      }
+    ]
   },
   {
     "id": "feature/rogue/sneak-attack",
@@ -5763,7 +6255,16 @@
     "cls": "rogue",
     "lvl": 1,
     "desc": "You know how to strike subtly and exploit a foe’s distraction. Once per turn, you can deal an extra 1d6 damage to one creature you hit with an attack roll if you have Advantage on the roll and the attack uses a Finesse or a Ranged weapon. The extra damage’s type is the same as the weapon’s type. You don’t need Advantage on the attack roll if at least one of your allies is within 5 feet of the target, the ally doesn’t have the Incapacitated condition, and you don’t have Disadvantage on the attack roll. The extra damage increases as you gain Rogue levels, as shown in the Sneak Attack column of the Rogue Features table.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "xdmg",
+        "name": "Sneak Attack",
+        "dice": "1:1d6,3:2d6,5:3d6,7:4d6,9:5d6,11:6d6,13:7d6,15:8d6,17:9d6,19:10d6",
+        "on": "a Finesse or Ranged weapon hit with Advantage, or with an ally next to the target",
+        "perTurn": true
+      }
+    ]
   },
   {
     "id": "feature/rogue/steady-aim",
@@ -5774,7 +6275,15 @@
     "cls": "rogue",
     "lvl": 3,
     "desc": "As a Bonus Action, you give yourself Advantage on your next attack roll on the current turn. You can use this feature only if you haven’t moved during this turn, and after you use it, your Speed is 0 until the end of the current turn.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Steady Aim",
+        "econ": "bonus",
+        "note": "If you haven’t moved: Advantage on your next attack this turn; your Speed becomes 0."
+      }
+    ]
   },
   {
     "id": "feature/rogue/stroke-of-luck",
@@ -5785,7 +6294,23 @@
     "cls": "rogue",
     "lvl": 20,
     "desc": "You have a marvelous knack for succeeding when you need to. If you fail a D20 Test, you can turn the roll into a 20. Once you use this feature, you can’t use it again until you finish a Short or Long Rest.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Stroke of Luck",
+        "max": "1",
+        "recharge": "short"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Stroke of Luck",
+        "econ": "free",
+        "res": "g1",
+        "note": "Turn a failed D20 Test into a 20."
+      }
+    ]
   },
   {
     "id": "feature/rogue/thief/fast-hands",
@@ -5796,7 +6321,15 @@
     "cls": "rogue",
     "lvl": 3,
     "desc": "As a Bonus Action, you can do one of the following.\nSleight of Hand. Make a Dexterity (Sleight of Hand) check to pick a lock or disarm a trap with Thieves’ Tools or to pick a pocket.\nUse an Object. Take the Utilize action, or take the Magic action to use a magic item that requires that action.",
-    "grants": [],
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Fast Hands",
+        "econ": "bonus",
+        "note": "Sleight of Hand with Thieves’ Tools or a pocket, or Utilize, or use a magic item’s Magic action."
+      }
+    ],
     "sub": "thief"
   },
   {
@@ -5808,7 +6341,22 @@
     "cls": "rogue",
     "lvl": 3,
     "desc": "You’ve trained to get into especially hard-to-reach places, granting you these benefits.\nClimber. You gain a Climb Speed equal to your Speed.\nJumper. You can determine your jump distance using your Dexterity rather than your Strength.",
-    "grants": [],
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "speed",
+        "name": "Climb Speed",
+        "mode": "climb",
+        "val": "walk"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Jumper",
+        "econ": "other",
+        "note": "Jump distances use DEX instead of STR."
+      }
+    ],
     "sub": "thief"
   },
   {
@@ -5820,7 +6368,15 @@
     "cls": "rogue",
     "lvl": 9,
     "desc": "You gain the following Cunning Strike option. Stealth Attack (Cost: 1d6). If you have the Hide action’s Invisible condition, this attack doesn’t end that condition on you if you end the turn behind Three-Quarters Cover or Total Cover.",
-    "grants": [],
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Stealth Attack",
+        "econ": "other",
+        "note": "Cunning Strike option (1d6): stay hidden behind Three-Quarters or Total Cover after attacking."
+      }
+    ],
     "sub": "thief"
   },
   {
@@ -5832,7 +6388,15 @@
     "cls": "rogue",
     "lvl": 17,
     "desc": "You are adept at laying ambushes and quickly escaping danger. You can take two turns during the first round of any combat. You take your first turn at your normal Initiative and your second turn at your Initiative minus 10.",
-    "grants": [],
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Thief’s Reflexes",
+        "econ": "other",
+        "note": "Two turns in the first round of combat, the second at Initiative − 10."
+      }
+    ],
     "sub": "thief"
   },
   {
@@ -5844,7 +6408,15 @@
     "cls": "rogue",
     "lvl": 13,
     "desc": "You’ve learned how to maximize use of magic items, granting you the following benefits.\nAttunement. You can attune to up to four magic items at once.\nCharges. Whenever you use a magic item property that expends charges, roll 1d6. On a roll of 6, you use the property without expending the charges.\nScrolls. You can use any Spell Scroll, using Intelligence as your spellcasting ability for the spell. If the spell is a cantrip or a level 1 spell, you can cast it reliably. If the scroll contains a higher-level spell, you must first succeed on an Intelligence (Arcana) check (DC 10 plus the spell’s level). On a successful check, you cast the spell from the scroll. On a failed check, the scroll disintegrates.",
-    "grants": [],
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Use Magic Device",
+        "econ": "other",
+        "note": "Attune to 4 items; a 6 on a d6 saves a charge; use any Spell Scroll with INT."
+      }
+    ],
     "sub": "thief"
   },
   {
@@ -5856,7 +6428,29 @@
     "cls": "rogue",
     "lvl": 1,
     "desc": "You picked up various languages in the communities where you plied your roguish talents. You know Thieves’ Cant and one other language of your choice, which you choose from the language tables in “Character Creation.”",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "prof",
+        "name": "Thieves’ Cant",
+        "cat": "language",
+        "target": "Thieves’ Cant"
+      },
+      {
+        "kind": "choice",
+        "id": "lang",
+        "name": "Language",
+        "pick": 1,
+        "pool": "language:any"
+      },
+      {
+        "id": "plang",
+        "kind": "prof",
+        "name": "Language",
+        "cat": "language",
+        "target": "$lang"
+      }
+    ]
   },
   {
     "id": "feature/rogue/uncanny-dodge",
@@ -5867,7 +6461,15 @@
     "cls": "rogue",
     "lvl": 5,
     "desc": "When an attacker that you can see hits you with an attack roll, you can take a Reaction to halve the attack’s damage against you (round down).",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Uncanny Dodge",
+        "econ": "reaction",
+        "note": "Halve the damage of an attack that hits you."
+      }
+    ]
   },
   {
     "id": "feature/rogue/weapon-mastery",
@@ -5878,7 +6480,15 @@
     "cls": "rogue",
     "lvl": 1,
     "desc": "Your training with weapons allows you to use the mastery properties of two kinds of weapons of your choice with which you have proficiency, such as Daggers and Shortbows.\nWhenever you finish a Long Rest, you can change the kinds of weapons you chose. For example, you could switch to using the mastery properties of Scimitars and Shortswords.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "prof",
+        "name": "Weapon Mastery: 2 kinds of weapons",
+        "cat": "mastery",
+        "val": "2"
+      }
+    ]
   },
   {
     "id": "feature/sorcerer/ability-score-improvement",
