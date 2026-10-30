@@ -3,7 +3,7 @@
 import type { AcEffect, Ability, ArmorKind, Size } from '../types';
 import { isValue } from './value.ts';
 
-export const SRD_VERSION: string = '';
+export const SRD_VERSION: string = '5.2.1';
 
 export type Kind = 'spell' | 'item' | 'feat' | 'background' | 'species' | 'trait' | 'class' | 'subclass' | 'feature' | 'prof' | 'rule';
 export const KINDS: Kind[] = ['spell', 'item', 'feat', 'background', 'species', 'trait', 'class', 'subclass', 'feature', 'prof', 'rule'];
