@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { AC_SPELLS, ARMORS, SKILLS } from '../logic';
+import classes from '../data/srd/classes.json';
 import items from '../data/srd/items.json';
 import origins from '../data/srd/origins.json';
 import spells from '../data/srd/spells.json';
-import { validateEntry, type Entry, type BackgroundEntry, type ChoiceSpec, type FeatEntry, type GrantSpec, type ItemEntry, type Spec, type SpellEntry } from './schema';
+import { validateEntry, type Entry, type BackgroundEntry, type ChoiceSpec, type ClassEntry, type FeatEntry, type GrantSpec, type ItemEntry, type Spec, type SpellEntry } from './schema';
 
 // Every committed SRD data file, read through Vite so no Node types are needed under src/.
 const files = import.meta.glob<{ default: Entry[] }>('../data/srd/*.json', { eager: true });
@@ -80,5 +81,21 @@ describe('SRD origins', () => {
       }
       if (e.kind === 'trait' && e.of) expect([e.id, ids.has(e.of)]).toEqual([e.id, true]);
     }
+  });
+});
+
+describe('SRD classes', () => {
+  const list = (classes as Entry[]).filter((e): e is ClassEntry => e.kind === 'class');
+  it('hold the 12 classes, one subclass each', () => {
+    expect(list.map((c) => c.name)).toEqual(['Barbarian', 'Bard', 'Cleric', 'Druid', 'Fighter', 'Monk', 'Paladin', 'Ranger', 'Rogue', 'Sorcerer', 'Warlock', 'Wizard']);
+    expect((classes as Entry[]).filter((e) => e.kind === 'subclass')).toHaveLength(12);
+  });
+  it('offer skills by the app’s keys and mark only the Warlock as Pact Magic', () => {
+    const keys = SKILLS.map(([k]) => k);
+    for (const c of list) {
+      const pool = c.skills.pool!.slice('skill:'.length);
+      if (pool !== 'any') for (const k of pool.split('|')) expect([c.name, keys.includes(k) && k]).toEqual([c.name, k]);
+    }
+    expect(list.filter((c) => c.pact).map((c) => c.name)).toEqual(['Warlock']);
   });
 });

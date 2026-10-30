@@ -1,0 +1,130 @@
+Core Ranger Traits
+Primary Ability
+
+Dexterity and Wisdom
+
+Hit Point Die
+
+D10 per Ranger level
+
+Saving Throw
+Proficiencies
+
+Strength and Dexterity
+
+Skill Proficiencies
+
+Choose 3: Animal Handling,
+Athletics, Insight, Investigation,
+Nature, Perception, Stealth, or
+Survival
+
+Weapon Proficiencies Simple and Martial weapons
+Armor Training
+
+Light and Medium armor and
+Shields
+
+Starting Equipment
+
+Choose A or B: (A) Studded
+
+Spellcasting Ability. Wisdom is your spellcasting
+ability for your Ranger spells.
+
+Level 1: Favored Enemy
+
+You always have the Hunter’s Mark spell prepared.
+You can cast it twice without expending a spell slot,
+and you regain all expended uses of this ability
+when you finish a Long Rest.
+The number of times you can cast the spell without a spell slot increases when you reach certain
+Ranger levels, as shown in the Favored Enemy column of the Ranger Features table.
+
+Level 1: Weapon Mastery
+
+Your training with weapons allows you to use the
+mastery properties of two kinds of weapons of your
+
+choice with which you have proficiency, such as
+Longbows and Shortswords.
+Whenever you finish a Long Rest, you can change
+the kinds of weapons you chose. For example, you
+could switch to using the mastery properties of
+Scimitars and Longswords.
+
+Level 2: Deft Explorer
+
+Thanks to your travels, you gain the following
+benefits.
+Expertise. Choose one of your skill proficiencies
+with which you lack Expertise. You gain Expertise
+in that skill.
+Languages. You know two languages of your
+choice from the language tables in “Character
+Creation.”
+
+Level 2: Fighting Style
+
+You gain a Fighting Style feat of your choice (see
+“Feats”). Instead of choosing one of those feats, you
+can choose the option below.
+Druidic Warrior. You learn two Druid cantrips of
+your choice (see the Druid class’s section for a list of
+Druid spells). Guidance and Starry Wisp are recommended. The chosen cantrips count as Ranger spells
+for you, and Wisdom is your spellcasting ability for
+them. Whenever you gain a Ranger level, you can
+replace one of these cantrips with another Druid
+cantrip.
+
+Level 3: Ranger Subclass
+
+You gain a Ranger subclass of your choice. The
+Hunter subclass is detailed after this class’s description. A subclass is a specialization that grants
+you features at certain Ranger levels. For the rest
+of your career, you gain each of your subclass’s features that are of your Ranger level or lower.
+
+Level 4: Ability Score Improvement
+
+You gain the Ability Score Improvement feat (see
+“Feats”) or another feat of your choice for which you
+qualify. You gain this feature again at Ranger levels
+8, 12, and 16.
+
+Level 5: Extra Attack
+
+You can attack twice instead of once whenever you
+take the Attack action on your turn.
+
+Ranger Subclass: Hunter
+Protect Nature and People from Destruction
+You stalk prey in the wilds and elsewhere, using
+your abilities as a Hunter to protect nature and
+people everywhere from forces that would destroy
+them.
+
+Level 3: Hunter’s Lore
+
+You can call on the forces of nature to reveal certain
+strengths and weaknesses of your prey. While a
+creature is marked by your Hunter’s Mark, you know
+whether that creature has any Immunities, Resistances, or Vulnerabilities, and if the creature has
+any, you know what they are.
+
+Level 3: Hunter’s Prey
+
+You gain one of the following feature options of your
+choice. Whenever you finish a Short or Long Rest,
+you can replace the chosen option with the other
+one.
+Colossus Slayer. Your tenacity can wear down
+even the most resilient foes. When you hit a creature with a weapon, the weapon deals an extra 1d8
+damage to the target if it’s missing any of its Hit
+Points. You can deal this extra damage only once
+per turn.
+Horde Breaker. Once on each of your turns when
+you make an attack with a weapon, you can make
+another attack with the same weapon against a different creature that is within 5 feet of the original
+target, that is within the weapon’s range, and that
+you haven’t attacked this turn.
+

@@ -55,3 +55,12 @@ export function layoutBetween(layout: string, from: RegExp, to: RegExp): string 
   if (a < 0 || b < 0) throw new Error(`layout ${from} … ${to} not found`);
   return lines.slice(a, b + 1).join('\n');
 }
+
+// Drops fragments of full-width tables that the column crop cut into the prose: runs of short lines, each found in
+// one of the tables' text (normalised). A lone match is prose. keep(i) protects a line (a heading) from the check.
+export function dropFragments(lines: Line[], tables: string[], keep: (i: number) => boolean = () => false): Line[] {
+  const norm = (s: string) => s.replace(/​/g, '').replace(/\s+/g, ' ').trim();
+  const cand = lines.map((l, i) => { const t = norm(l.text); return !!t && !keep(i) && t.length <= 45 && tables.some((tb) => tb.includes(t)); });
+  const near = (i: number, d: number) => { for (let j = i + d; j >= 0 && j < lines.length; j += d) if (lines[j].text.trim()) return cand[j]; return false; };
+  return lines.filter((_, i) => !(cand[i] && (near(i, -1) || near(i, 1))));
+}

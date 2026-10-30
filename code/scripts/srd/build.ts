@@ -4,6 +4,7 @@ import type { Entry } from '../../src/catalog/schema.ts';
 import { applyOverlay, type Overlay } from '../lib/overlay.ts';
 import { writeEntries } from '../lib/write.ts';
 import { parseArmor, parseGear, parseMagicItems, parseTools, parseWeapons } from './items.ts';
+import { parseClass } from './classes.ts';
 import { parseBackgrounds, parseFeats, parseSpecies } from './origins.ts';
 import { parseSpells } from './spells.ts';
 import { layoutBetween, section } from './text.ts';
@@ -35,3 +36,8 @@ out('origins', [
   ...parseBackgrounds(section(srdText, 'Acolyte', 'Character Species', 'Background Descriptions')),
   ...species, ...traits
 ]);
+const CLASSES = ['Barbarian', 'Bard', 'Cleric', 'Druid', 'Fighter', 'Monk', 'Paladin', 'Ranger', 'Rogue', 'Sorcerer', 'Warlock', 'Wizard'];
+out('classes', CLASSES.flatMap((c, i) => {
+  const [cls, subs, feats] = parseClass(section(srdText, `Core ${c} Traits`, CLASSES[i + 1] ? `Core ${CLASSES[i + 1]} Traits` : 'Character Origins'), layout);
+  return [cls, ...subs, ...feats];
+}));
