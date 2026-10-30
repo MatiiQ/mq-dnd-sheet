@@ -1,6 +1,6 @@
-import { CAST_NAMES } from '../logic';
+import { CAST_NAMES, SIZES } from '../logic';
 import { useSheet } from '../sheet';
-import type { CastAbility, Details } from '../types';
+import type { CastAbility, Details, Size } from '../types';
 import { NumInput, TextField, useArmed } from './ui';
 
 const TEXT_FIELDS: [string, keyof Details][] = [['Name', 'name'], ['Species', 'species'], ['Class', 'cls'], ['Subclass', 'sub'], ['Background', 'bg'], ['Alignment', 'align']];
@@ -39,6 +39,12 @@ export function EditDetails({ onReset }: { onReset: () => void }) {
             {Object.entries(CAST_NAMES).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
           </select>
         </label>
+        <label className="field">Size
+          <select className="input" value={c.size} onChange={(e) => update({ size: e.target.value as Size })}>
+            {SIZES.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+          </select>
+        </label>
+        <label className="check"><input type="checkbox" checked={c.carryUp} onChange={(e) => update({ carryUp: e.target.checked })} />Counts as one size larger for carrying</label>
       </div>
       <div className="muted">Max HP, ability scores, proficiencies and speeds are edited in their own blocks below; spell slots in the Spells tab. Pencil buttons edit existing entries.</div>
     </section>

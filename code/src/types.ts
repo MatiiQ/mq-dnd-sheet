@@ -12,6 +12,7 @@ export type ArmorKind = 'light' | 'medium' | 'heavy' | 'shield';
 export type AcEffect = 'bonus' | 'base' | 'floor';
 export type Unarmored = 'none' | 'barbarian' | 'monk' | 'draconic' | 'dance';
 export type SpellSort = 'az' | 'prep' | 'time';
+export type Size = 'tiny' | 'small' | 'medium' | 'large' | 'huge' | 'gargantuan';
 export type SrcKind = 'species' | 'background' | 'class' | 'subclass' | 'feat' | 'item' | 'spell' | 'other';
 
 export interface Details { name: string; species: string; cls: string; sub: string; bg: string; align: string }
@@ -21,7 +22,8 @@ export interface Resource { id: string; name: string; note?: string; count: numb
 export interface Attack { id: string; name: string; hit: string; dmg: string; info: string; mastery: string }
 export interface Rider { id: string; name: string; dice: string }
 // armor/acBase: a suit of armor or a Shield and its table base. acBonus: a magic or other bonus, counted while equipped.
-export interface Item { id: string; name: string; qty: number; eq: boolean; armor?: ArmorKind; acBase?: number; acBonus?: number }
+// wt: weight in lb per unit.
+export interface Item { id: string; name: string; qty: number; eq: boolean; armor?: ArmorKind; acBase?: number; acBonus?: number; wt?: number; desc?: string }
 export interface AcMod { id: string; name: string; val: number }
 export interface Spell {
   id: string; name: string; lvl: number; time: string; range: string; source: string;
@@ -36,6 +38,8 @@ export interface HpSnapshot { hp: number; temp: number; ds: number; df: number; 
 
 export interface Character {
   ch: Details;
+  /** carryUp: counts as one size larger for carrying capacity (Powerful Build). */
+  size: Size; carryUp: boolean;
   level: number; speedBase: number; speeds: Record<SpeedKind, number>; speedOpen: boolean;
   initMisc: number; hdDie: number; castAb: CastAbility;
   /** AC spells switched on (ids of non-Concentration spells with an AC effect), unarmored feature, custom bonuses. */

@@ -1,6 +1,6 @@
 // D&D 2024 rules used by the sheet. Pure functions: each takes a character and returns the next one.
 import { blankCharacter, sampleCharacter } from './defaults';
-import type { AcEffect, Ability, ArmorKind, CastAbility, Character, Concentration, HpSnapshot, Item, Resource, Spell, SpellSort, SrcKind, Tab, Unarmored } from './types';
+import type { AcEffect, Ability, ArmorKind, CastAbility, Character, Concentration, HpSnapshot, Item, Resource, Size, Spell, SpellSort, SrcKind, Tab, Unarmored } from './types';
 
 export const ABILITIES: [Ability, string][] = [
   ['str', 'Strength'], ['dex', 'Dexterity'], ['con', 'Constitution'],
@@ -223,6 +223,28 @@ export function concAfterEdit(c: Character, sp: Pick<Spell, 'id' | 'name' | 'c'>
   return sp.name !== c.conc.name ? setConc({ id: sp.id, name: sp.name }) : {};
 }
 
+// Carrying capacity: Strength score × a multiplier for the size; Drag/Lift/Push is twice that (PHB p.362–363, Carrying
+// Capacity table; Small and Medium share a row). Powerful Build counts one size larger (PHB p.192); Gargantuan is the
+// last row. Going over only matters while dragging, lifting or pushing (Speed at most 5 ft), so Speed never changes here.
+export const SIZES: [Size, string][] = [['tiny', 'Tiny'], ['small', 'Small'], ['medium', 'Medium'], ['large', 'Large'], ['huge', 'Huge'], ['gargantuan', 'Gargantuan']];
+export const CARRY_MULT: Record<Size, number> = { tiny: 7.5, small: 15, medium: 15, large: 30, huge: 60, gargantuan: 120 };
+export function carryCapacity(c: Character): { carry: number; push: number; size: Size } {
+  const i = SIZES.findIndex(([k]) => k === c.size);
+  const size = c.carryUp ? SIZES[Math.min(i + 1, SIZES.length - 1)][0] : c.size;
+  const carry = effScore(c, 'str') * CARRY_MULT[size];
+  return { carry, push: carry * 2, size };
+}
+// Items count weight × quantity; fifty coins weigh a pound (PHB p.213).
+export function carriedWeight(c: Character): number {
+  const coins = Object.values(c.coins).reduce((t, n) => t + n, 0);
+  return c.inv.reduce((t, i) => t + (i.wt || 0) * i.qty, 0) + coins / 50;
+}
+// A typed weight in lb. A Polish keyboard types a decimal comma, so "0,5" is 0.5. Anything else is no weight.
+export function parseWeight(s: string): number | undefined {
+  const t = s.trim();
+  return /^(\d+([.,]\d*)?|[.,]\d+)$/.test(t) ? Number(t.replace(',', '.')) : undefined;
+}
+
 export const zeroSpeedBy = (c: Character) => CONDITIONS.filter((n) => c.conds[n] && ZERO_SPEED.includes(n));
 export const speedOf = (c: Character, base: number) => (zeroSpeedBy(c).length ? 0 : Math.max(0, base - 5 * c.exh));
 export const speedNow = (c: Character) => speedOf(c, c.speedBase);
@@ -443,7 +465,7 @@ const isEntry = (x: unknown): x is Record<string, unknown> =>
   isObj(x) && typeof x.name === 'string' && Object.values(x).every((v) => v === null || typeof v !== 'object');
 // Top-level fields added after the first release. A save without one gets the blank character's value, never
 // the sample's (roadmap, "Saves keep working"). Each later field adds its key here.
-export const NEW_FIELDS: readonly (keyof Character)[] = ['spellSort'];
+export const NEW_FIELDS: readonly (keyof Character)[] = ['spellSort', 'size', 'carryUp'];
 // Resources the Inventory tab echoed before `inv` existed.
 const OLD_INVENTORY_RESOURCES = ['arrows', 'potions'];
 
@@ -495,6 +517,7 @@ export function migrate(data: unknown): Character {
   if (!Object.hasOwn(CAST_NAMES, c.castAb)) c.castAb = 'none';
   if (c.spellFilter !== 'prepared') c.spellFilter = 'all';
   if (!SPELL_SORTS.some(([k]) => k === c.spellSort)) c.spellSort = 'az';
+  if (!SIZES.some(([k]) => k === c.size)) c.size = 'medium';
   // Nullable fields: keep only well-formed values. The undo row lasts seconds, so it never survives a reload.
   const conc = c.conc as unknown;
   c.conc = isObj(conc) && typeof conc.id === 'string' && typeof conc.name === 'string' ? c.conc : null;
@@ -513,10 +536,12 @@ export function migrate(data: unknown): Character {
   // AC fields: a damaged one would show NaN or join strings, so it goes, with its partner field.
   c.acMods = c.acMods.filter((m) => finite(m.val));
   if (!Object.hasOwn(UNARMORED, c.acUnarm)) c.acUnarm = 'none';
-  c.inv = c.inv.map(({ armor, acBase, acBonus, ...i }) => ({
+  c.inv = c.inv.map(({ armor, acBase, acBonus, wt, desc, ...i }) => ({
     ...i,
     ...(['light', 'medium', 'heavy', 'shield'].includes(armor as string) && finite(acBase) ? { armor, acBase } : {}),
-    ...(finite(acBonus) ? { acBonus } : {})
+    ...(finite(acBonus) ? { acBonus } : {}),
+    ...(finite(wt) && wt >= 0 ? { wt } : {}),
+    ...(typeof desc === 'string' ? { desc } : {})
   }));
   c.spells = c.spells.map(({ acFx, acVal, ...x }) => ({ ...x, ...(['bonus', 'base', 'floor'].includes(acFx as string) && finite(acVal) ? { acFx, acVal } : {}) }));
   c.acOn = strings(c.acOn).filter((id) => c.spells.some((x) => x.id === id && x.acFx && !x.c));

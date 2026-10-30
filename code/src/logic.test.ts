@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import {
-  applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, NEW_FIELDS, passiveScore, pillView, resPill, setPill, preparedCount, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
+  applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, NEW_FIELDS, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
   setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, toggleFreeCast, undoHp
 } from './logic';
 import type { Character, Item, Spell } from './types';
@@ -615,5 +615,37 @@ describe('defenses', () => {
   it('adds nothing for blank save notes and never duplicates an entry', () => {
     expect(migrate({ ...old, def: { res: [], vul: [], imm: [] }, saveNotes: '  ' }).def.adv).toEqual([]);
     expect(migrate({ ...old, def: { res: ['Charmed'], vul: [], imm: [], adv: ['vs Charmed'] }, saveNotes: '' }).def.adv).toEqual(['vs Charmed']);
+  });
+});
+
+describe('carrying capacity', () => {
+  const str = (s: number) => ({ abil: { ...sampleCharacter().abil, str: s } });
+  it('carries STR × 15 lb at Small/Medium, ×7.5 Tiny, ×30 Large, ×60 Huge, ×120 Gargantuan; drag/lift/push is twice that (PHB p.363)', () => {
+    expect(carryCapacity(make())).toEqual({ carry: 180, push: 360, size: 'medium' }); // Ilyra STR 12
+    expect(carryCapacity(make({ size: 'tiny' }))).toEqual({ carry: 90, push: 180, size: 'tiny' });
+    expect(carryCapacity(make({ size: 'huge', ...str(10) }))).toEqual({ carry: 600, push: 1200, size: 'huge' });
+  });
+  it('counts one size larger with the carry toggle, never past Gargantuan (Powerful Build, PHB p.192)', () => {
+    expect(carryCapacity(make({ size: 'small', carryUp: true })).size).toBe('medium');
+    expect(carryCapacity(make({ carryUp: true }))).toEqual({ carry: 360, push: 720, size: 'large' });
+    expect(carryCapacity(make({ size: 'gargantuan', carryUp: true })).carry).toBe(1440);
+  });
+  it('uses the effective Strength score and never changes Speed', () => {
+    expect(carryCapacity(make({ abilAdj: { str: -2 } })).carry).toBe(150);
+    const heavy = make({ inv: [it_({ wt: 500 })] });
+    expect(carriedWeight(heavy)).toBeGreaterThan(carryCapacity(heavy).carry);
+    expect(speedNow(heavy)).toBe(35);
+  });
+  it('adds item weight × quantity and 50 coins to the pound (PHB p.213)', () => {
+    const c = make({ inv: [it_({ wt: 2, qty: 3 }), it_({ id: 'b', wt: 0.25, qty: 4 }), it_({ id: 'c' })], coins: { cp: 0, sp: 0, ep: 0, gp: 100, pp: 25 } });
+    expect(carriedWeight(c)).toBe(9.5);
+  });
+  it('reads typed weights with a decimal point or comma', () => {
+    expect(['2', '0,5', ' 1.25 ', '', 'abc', '-1'].map(parseWeight)).toEqual([2, 0.5, 1.25, undefined, undefined, undefined]);
+  });
+  it('drops damaged weights and sizes on load', () => {
+    const c = migrate({ ...sampleCharacter(), size: 'colossal', carryUp: 'yes', inv: [{ id: 'a', name: 'Rope', qty: 1, eq: false, wt: 'x' }, { id: 'b', name: 'Pot', qty: 1, eq: false, wt: -3 }] });
+    expect(c).toMatchObject({ size: 'medium', carryUp: false });
+    expect(c.inv.map((i) => i.wt)).toEqual([undefined, undefined]);
   });
 });

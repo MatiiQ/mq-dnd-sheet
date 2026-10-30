@@ -6,6 +6,7 @@ export function sampleCharacter(): Character {
     ch: { name: 'Ilyra Moonbrook', species: 'Wood Elf', cls: 'Ranger', sub: 'Hunter', bg: 'Guide', align: 'Neutral Good' },
     speeds: { climb: 0, swim: 0, fly: 0, burrow: 0 }, speedOpen: false,
     acOpen: false, acUnarm: 'none', acOn: [], acMods: [],
+    size: 'medium', carryUp: false,
     level: 5, speedBase: 35, initMisc: 0, hdDie: 10, castAb: 'wis',
     abil: { str: 12, dex: 18, con: 14, int: 10, wis: 14, cha: 8 }, abilAdj: {},
     saveProf: { str: true, dex: true },
@@ -34,12 +35,12 @@ export function sampleCharacter(): Character {
     attune: ['Cloak of Elvenkind', '', ''],
     notes: { appearance: '', personality: '', backstory: '', session: '' },
     inv: [
-      { id: 'i1', name: 'Studded Leather Armor', qty: 1, eq: true, armor: 'light', acBase: 12 },
-      { id: 'i2', name: 'Longbow', qty: 1, eq: true },
-      { id: 'i3', name: 'Shortsword', qty: 1, eq: true },
-      { id: 'i4', name: 'Cartographer’s Tools', qty: 1, eq: false },
-      { id: 'i5', name: 'Explorer’s Pack', qty: 1, eq: false },
-      { id: 'i6', name: 'Traveler’s Clothes', qty: 1, eq: false }
+      { id: 'i1', name: 'Studded Leather Armor', qty: 1, eq: true, armor: 'light', acBase: 12, wt: 13 },
+      { id: 'i2', name: 'Longbow', qty: 1, eq: true, wt: 2 },
+      { id: 'i3', name: 'Shortsword', qty: 1, eq: true, wt: 2 },
+      { id: 'i4', name: 'Cartographer’s Tools', qty: 1, eq: false, wt: 6 },
+      { id: 'i5', name: 'Explorer’s Pack', qty: 1, eq: false, wt: 55 },
+      { id: 'i6', name: 'Traveler’s Clothes', qty: 1, eq: false, wt: 4 }
     ],
     spells: [
       { id: 'sp1', name: 'Druidcraft', lvl: 0, time: 'Action', range: '30 ft', source: 'Elf', dur: 'Instantaneous', comp: 'V, S', prep: true },
@@ -87,6 +88,7 @@ export function druidSample(): Character {
     ch: { name: 'Seren Vale', species: 'Aasimar', cls: 'Druid', sub: 'Circle of the Stars', bg: 'Sage', align: 'Neutral' },
     speeds: { climb: 0, swim: 0, fly: 0, burrow: 0 }, speedOpen: false,
     acOpen: false, acUnarm: 'none', acOn: [], acMods: [],
+    size: 'medium', carryUp: false,
     level: 12, speedBase: 30, initMisc: 0, hdDie: 8, castAb: 'wis',
     abil: { str: 8, dex: 13, con: 16, int: 13, wis: 20, cha: 10 }, abilAdj: {},
     saveProf: { int: true, wis: true },
@@ -130,17 +132,17 @@ export function druidSample(): Character {
       session: 'Fought the blight-wolves at the ruined observatory. Still poisoned from the hag’s bite. Moonbeam is up on the wolf den.'
     },
     inv: [
-      { id: 'i1', name: 'Leather Armor', qty: 1, eq: true, armor: 'light', acBase: 11 },
-      { id: 'i2', name: 'Shield', qty: 1, eq: true, armor: 'shield', acBase: 2 },
-      { id: 'i3', name: 'Quarterstaff', qty: 1, eq: true },
+      { id: 'i1', name: 'Leather Armor', qty: 1, eq: true, armor: 'light', acBase: 11, wt: 10 },
+      { id: 'i2', name: 'Shield', qty: 1, eq: true, armor: 'shield', acBase: 2, wt: 6 },
+      { id: 'i3', name: 'Quarterstaff', qty: 1, eq: true, wt: 4 },
       { id: 'i4', name: 'Star Map (crystal engraved with starry patterns)', qty: 1, eq: true },
-      { id: 'i5', name: 'Sickle', qty: 1, eq: false },
-      { id: 'i6', name: 'Herbalism Kit', qty: 1, eq: false },
-      { id: 'i7', name: 'Calligrapher’s Supplies', qty: 1, eq: false },
-      { id: 'i8', name: 'Book (history)', qty: 1, eq: false },
+      { id: 'i5', name: 'Sickle', qty: 1, eq: false, wt: 2 },
+      { id: 'i6', name: 'Herbalism Kit', qty: 1, eq: false, wt: 3 },
+      { id: 'i7', name: 'Calligrapher’s Supplies', qty: 1, eq: false, wt: 5 },
+      { id: 'i8', name: 'Book (history)', qty: 1, eq: false, wt: 5 },
       { id: 'i9', name: 'Parchment', qty: 8, eq: false },
-      { id: 'i10', name: 'Robe', qty: 1, eq: false },
-      { id: 'i11', name: 'Explorer’s Pack', qty: 1, eq: false }
+      { id: 'i10', name: 'Robe', qty: 1, eq: false, wt: 4 },
+      { id: 'i11', name: 'Explorer’s Pack', qty: 1, eq: false, wt: 55 }
     ],
     // Cantrips carry prep so migrate() leaves them as they are.
     spells: [
@@ -208,6 +210,7 @@ export function blankCharacter(): Character {
   return {
     ...sampleCharacter(),
     ch: { name: 'New character', species: '', cls: '', sub: '', bg: '', align: '' },
+    size: 'medium', carryUp: false,
     level: 1, speedBase: 30, initMisc: 0, hdDie: 8, castAb: 'none', insp: 0, pills: ['hp', 'ac', ''], spellSort: 'az',
     abil: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 }, abilAdj: {}, saveProf: {}, skillProf: {},
     hp: 8, maxHp: 8, origHp: 8, hdUsed: 0,
