@@ -28,8 +28,9 @@ function scrollToForm(el: HTMLElement): void {
   const col = el.closest<HTMLElement>('#sec-tabs');
   const ownScroll = !!col && getComputedStyle(col).overflowY !== 'visible';
   const r = el.getBoundingClientRect();
-  const area = ownScroll ? col!.getBoundingClientRect() : { top: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--topbar-h')) || 0, bottom: window.innerHeight };
-  if (r.top >= area.top && r.bottom <= area.bottom) return;
+  const top = ownScroll ? col!.getBoundingClientRect().top : parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--topbar-h')) || 0;
+  const bottom = Math.min(window.innerHeight, ownScroll ? col!.getBoundingClientRect().bottom : Infinity);
+  if (r.top >= top && r.bottom <= bottom) return;
   if (col && ownScroll) {
     const top = col.scrollTop + el.getBoundingClientRect().top - col.getBoundingClientRect().top - (col.clientHeight - el.offsetHeight) / 2;
     col.scrollTo({ top, behavior: 'smooth' });
