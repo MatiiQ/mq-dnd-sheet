@@ -44,12 +44,39 @@ function RemoveButton({ name, onRemove }: { name: string; onRemove: () => void }
   );
 }
 
-export function EntryActions({ name, canEdit, onEdit, onRemove }: { name: string; canEdit: boolean; onEdit: () => void; onRemove: () => void }) {
+export function EntryActions({ name, canEdit, onEdit, onRemove }: { name: string; canEdit: boolean; onEdit?: () => void; onRemove: () => void }) {
   if (!canEdit) return null;
   return (
     <div className="row">
-      <button type="button" className="icon-btn" aria-label={'Edit ' + name} onClick={onEdit}><PencilIcon /></button>
+      {onEdit && <button type="button" className="icon-btn" aria-label={'Edit ' + name} onClick={onEdit}><PencilIcon /></button>}
       <RemoveButton name={name} onRemove={onRemove} />
+    </div>
+  );
+}
+
+// ---------- list entry that expands on tap ----------
+// Tapping the head shows the body plus Edit / Remove, so entries change without Edit mode. In Edit mode the
+// buttons stay in the row, as before, and never repeat in the body. `before` and `side` sit outside the tap target.
+export function EntryRow({ name, before, head, side, body, onEdit, onRemove, className = '' }: {
+  name: string; before?: ReactNode; head: ReactNode; side?: ReactNode; body?: ReactNode;
+  onEdit?: () => void; onRemove: () => void; className?: string;
+}) {
+  const { edit } = useSheet();
+  const [open, setOpen] = useState(false);
+  return (
+    <div className={'well entry ' + className}>
+      <div className="entry-row">
+        {before}
+        <button type="button" className="entry-head" aria-expanded={open} onClick={() => setOpen(!open)}>{head}</button>
+        {side}
+        {edit && <EntryActions name={name} canEdit onEdit={onEdit} onRemove={onRemove} />}
+      </div>
+      {open && (body || !edit) && (
+        <div className="entry-body">
+          {body}
+          {!edit && <EntryActions name={name} canEdit onEdit={onEdit} onRemove={onRemove} />}
+        </div>
+      )}
     </div>
   );
 }
@@ -165,9 +192,10 @@ export function EntryForm({ kind, title, saveLabel, onSave, onCancel, inline, ch
   );
 }
 
-export function AddButton({ onClick, children, style }: { onClick: () => void; children: ReactNode; style?: CSSProperties }) {
+// Shows in Edit mode only, unless `always` (lists that add entries during play).
+export function AddButton({ onClick, children, style, always }: { onClick: () => void; children: ReactNode; style?: CSSProperties; always?: boolean }) {
   const { edit } = useSheet();
-  if (!edit) return null;
+  if (!edit && !always) return null;
   return <button type="button" className="btn btn-add" style={style} onClick={onClick}>{children}</button>;
 }
 

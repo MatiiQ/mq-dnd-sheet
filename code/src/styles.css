@@ -79,6 +79,14 @@ h1, h2, h3 { margin: 0; }
 .block { display: flex; flex-direction: column; gap: 8px; }
 .well { background: var(--well); border-radius: 12px; padding: 10px 12px; }
 .well.tight { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px; }
+/* An entry that expands on tap: the head is the tap target, controls sit beside it, the body opens below. */
+.well.entry { padding: 0 12px; }
+.entry-row { display: flex; flex-wrap: wrap; align-items: center; column-gap: 8px; }
+.entry-head {
+  flex: 1 1 200px; min-width: 0; min-height: 44px; padding: 10px 0; border: none; background: transparent;
+  font: inherit; color: inherit; text-align: left; cursor: pointer; display: flex; flex-direction: column; gap: 2px;
+}
+.entry-body { display: flex; flex-direction: column; gap: 6px; padding: 0 0 8px; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .edit-details { gap: 12px; border-left: 3px solid var(--accent); padding-left: 12px; }
 
