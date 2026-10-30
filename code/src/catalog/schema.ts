@@ -1,0 +1,276 @@
+// Catalog schema shared by the app and both builders (SRD in the repo, PHB pack on the device). Node runs this
+// file directly from the build scripts, so it uses erasable TypeScript only and imports types with `import type`.
+import type { AcEffect, Ability, ArmorKind, Size } from '../types';
+
+export const SRD_VERSION: string = '';
+
+export type Kind = 'spell' | 'item' | 'feat' | 'background' | 'species' | 'trait' | 'class' | 'subclass' | 'feature' | 'prof' | 'rule';
+export const KINDS: Kind[] = ['spell', 'item', 'feat', 'background', 'species', 'trait', 'class', 'subclass', 'feature', 'prof', 'rule'];
+
+// replace: a pack entry that wins over the SRD entry with its id (merge.ts).
+export interface EntryBase { id: string; kind: Kind; name: string; src: 'srd' | 'phb'; page?: number; desc: string; replace?: boolean }
+export interface SpellEntry extends EntryBase {
+  kind: 'spell'; lvl: number; school: string; classes: string; time: string; range: string;
+  comp: string; dur: string; conc: boolean; ritual: boolean; atk?: 'melee' | 'ranged'; save?: Ability; fx: 'damage' | 'healing' | 'other';
+  dice?: string; dtype?: string; scale?: string; higher?: string; acFx?: AcEffect; acVal?: number;
+}
+export interface ItemEntry extends EntryBase {
+  kind: 'item'; cat: 'weapon' | 'armor' | 'shield' | 'gear' | 'tool' | 'pack' | 'ammo' | 'focus' | 'magic';
+  cost?: string; wt?: number;
+  wcat?: 'simple' | 'martial'; wrange?: 'melee' | 'ranged'; dmg?: string; dtype?: string; props?: string; thrown?: string; vers?: string; ammo?: string; mastery?: string;
+  armor?: ArmorKind; acBase?: number; acBonus?: number; strReq?: number; stealthDis?: boolean;
+  cap?: number; capVol?: string; xdim?: boolean;
+  rarity?: string; attune?: boolean; charges?: string; recharge?: Recharge4; regain?: string; regainOn?: 'short' | 'dawn';
+  grants?: Spec[];
+}
+export interface FeatEntry extends EntryBase { kind: 'feat'; cat: 'origin' | 'general' | 'style' | 'boon'; prereq?: string; repeat?: boolean; grants: Spec[] }
+export interface BackgroundEntry extends EntryBase { kind: 'background'; abils: string; feat: string; skills: string; tool: string; equip: string; grants: Spec[] }
+export interface SpeciesEntry extends EntryBase { kind: 'species'; sizes: string; speed: number }
+// A species trait or a lineage option.
+export interface TraitEntry extends EntryBase { kind: 'trait'; species: string; lvl: number; grants: Spec[] }
+export interface ClassEntry extends EntryBase {
+  kind: 'class'; hd: number; saves: string; skills: ChoiceSpec; armor: string; weapons: string; tools?: string;
+  castAb?: Ability; slots?: number[][]; pact?: boolean; cantrips?: string; prepared?: string;
+}
+export interface SubclassEntry extends EntryBase { kind: 'subclass'; cls: string }
+// again: later levels at which the same feature is gained again, as a comma list ('8,12,16').
+export interface FeatureEntry extends EntryBase { kind: 'feature'; cls: string; sub?: string; lvl: number; again?: string; grants: Spec[] }
+export interface ProfEntry extends EntryBase { kind: 'prof'; cat: 'armor' | 'weapon' | 'tool' | 'language'; short?: string }
+export interface RuleEntry extends EntryBase { kind: 'rule'; cat: 'action' | 'sense' | 'condition' }
+export type Entry = SpellEntry | ItemEntry | FeatEntry | BackgroundEntry | SpeciesEntry | TraitEntry | ClassEntry | SubclassEntry | FeatureEntry | ProfEntry | RuleEntry;
+
+export type Recharge4 = 'short' | 'long' | 'dawn' | 'none';
+export type Spec = GrantSpec | ChoiceSpec;
+// Pick N of the options, or of a generated pool ('<kind>:<filter>', such as 'spell:list=druid;lvl=0' or 'skill:any').
+export interface ChoiceSpec { kind: 'choice'; id: string; name: string; pick: number; repeat?: boolean; options?: GrantSpec[]; pool?: string }
+export type GrantKind = 'sense' | 'resource' | 'defense' | 'abil' | 'abilSet' | 'prof' | 'saveBonus' | 'checkBonus' | 'spell' | 'speed' | 'ac'
+  | 'init' | 'hpLvl' | 'size' | 'carryUp' | 'action' | 'xdmg' | 'attacks' | 'unarmed' | 'atkBonus' | 'dmgBonus' | 'lightExtra' | 'atkAbil';
+// Every grant is flat, so a character can store it as a plain entry. Fields that take a Value also accept '$<choiceId>'.
+export interface GrantSpec {
+  id: string; kind: GrantKind; name: string;
+  when?: 'armor' | 'noHeavy' | 'noArmor' | 'noShield' | 'noArmorNoShield';
+  lvl?: number; needEq?: boolean; needAtt?: boolean;
+  range?: string;                                                                   // sense
+  max?: string; recharge?: Recharge4; regain?: string; regainOn?: 'short' | 'dawn'; casts?: string;   // resource
+  def?: 'res' | 'vul' | 'imm' | 'adv'; target?: string;                              // defense, prof, checkBonus
+  ab?: string; val?: string; cap?: 20 | 30;                                         // abil, abilSet, saveBonus, ac, atkAbil
+  cat?: 'armor' | 'weapon' | 'tool' | 'language' | 'skill' | 'save' | 'expertise' | 'mastery' | 'half';   // prof
+  spell?: string; always?: boolean; castAb?: string;                                // spell
+  mode?: 'walk' | 'climb' | 'swim' | 'fly' | 'burrow'; hover?: boolean;             // speed
+  acMode?: 'bonus' | 'unarmored'; shieldOk?: boolean;                               // ac
+  size?: Size;                                                                      // size
+  econ?: 'action' | 'bonus' | 'reaction' | 'free' | 'other'; res?: string; note?: string;   // action
+  dice?: string; dtype?: string; on?: string; perTurn?: boolean;                    // xdmg
+  die?: string; abs?: string;                                                       // unarmed, atkAbil
+  wrange?: 'melee' | 'ranged'; amode?: 'melee' | 'ranged'; prop?: string; weapon?: string; oneHand?: boolean;   // atkBonus, dmgBonus
+  addMod?: boolean;                                                                 // lightExtra
+  weapons?: string;                                                                 // atkAbil
+}
+
+// Copies of the app's lists (types.ts, logic.ts) so validateEntry has their values at run time; schema.test.ts keeps them in step.
+export const ABILITY_KEYS: Ability[] = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
+export const ARMOR_KINDS: ArmorKind[] = ['light', 'medium', 'heavy', 'shield'];
+export const AC_EFFECTS: AcEffect[] = ['bonus', 'base', 'floor'];
+export const SIZE_KEYS: Size[] = ['tiny', 'small', 'medium', 'large', 'huge', 'gargantuan'];
+
+// PHB names that SRD releases publish under another name, mapped to the SRD name. Both builders apply it.
+export const PHB_TO_SRD: Record<string, string> = {};
+
+// Lower case, apostrophes dropped, every other run of characters that are not letters or digits becomes '-'.
+export const slug = (name: string) => name.toLowerCase().replace(/[’']/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+
+const aliasBySlug = () => new Map(Object.entries(PHB_TO_SRD).map(([phb, srd]) => [slug(phb), srd]));
+// The one id rule: kind, then the scope (class and subclass for features, class for subclasses, species for traits), then the name.
+export function catalogId(kind: Kind, name: string, scope: (string | undefined)[] = []): string {
+  const n = PHB_TO_SRD[name] ?? aliasBySlug().get(slug(name)) ?? name;
+  return [kind, ...scope.filter((s): s is string => s !== undefined).map(slug), slug(n)].join('/');
+}
+export function entryScope(e: Entry): (string | undefined)[] {
+  return e.kind === 'feature' ? [e.cls, e.sub] : e.kind === 'trait' ? [e.species] : e.kind === 'subclass' ? [e.cls] : [];
+}
+
+// Replaced by the value grammar (value.ts).
+const isValue = (v: string) => typeof v === 'string';
+
+type Check = (v: unknown) => boolean;
+const str: Check = (v) => typeof v === 'string';
+const bool: Check = (v) => typeof v === 'boolean';
+const num: Check = (v) => typeof v === 'number' && Number.isFinite(v);
+const whole = (lo: number, hi: number): Check => (v) => Number.isInteger(v) && (v as number) >= lo && (v as number) <= hi;
+const oneOf = (...xs: unknown[]): Check => (v) => xs.includes(v);
+const ref = (v: unknown) => typeof v === 'string' && /^\$[\w-]+$/.test(v);
+const value: Check = (v) => ref(v) || (typeof v === 'string' && isValue(v));
+const ability: Check = oneOf(...ABILITY_KEYS);
+const or = (...cs: Check[]): Check => (v) => cs.some((c) => c(v));
+const list = (c: Check): Check => (v) => typeof v === 'string' && (v === '' || v.split(',').every((x) => c(x)));
+
+const RECHARGE = oneOf('short', 'long', 'dawn', 'none');
+const WHEN = oneOf('armor', 'noHeavy', 'noArmor', 'noShield', 'noArmorNoShield');
+const RANGE_KIND = oneOf('melee', 'ranged');
+// Own fields per grant kind: [check, required].
+const GRANTS: Record<GrantKind, Record<string, [Check, boolean]>> = {
+  sense: { range: [value, true] },
+  resource: { max: [value, false], recharge: [RECHARGE, true], regain: [value, false], regainOn: [oneOf('short', 'dawn'), false], casts: [str, false] },
+  defense: { def: [oneOf('res', 'vul', 'imm', 'adv'), true], target: [str, true] },
+  abil: { ab: [or(ability, ref), true], val: [value, true], cap: [oneOf(20, 30), true] },
+  abilSet: { ab: [or(ability, ref), true], val: [value, true] },
+  prof: { cat: [oneOf('armor', 'weapon', 'tool', 'language', 'skill', 'save', 'expertise', 'mastery', 'half'), true], target: [str, false], val: [value, false] },
+  saveBonus: { ab: [or(ability, oneOf('all'), ref), true], val: [value, true] },
+  checkBonus: { target: [str, true], val: [value, true] },
+  spell: { spell: [str, true], always: [bool, false], castAb: [or(ability, ref), false] },
+  speed: { mode: [oneOf('walk', 'climb', 'swim', 'fly', 'burrow'), true], val: [or(value, oneOf('walk')), true], hover: [bool, false] },
+  ac: { acMode: [oneOf('bonus', 'unarmored'), true], val: [value, false], ab: [or(ability, ref), false], shieldOk: [bool, false] },
+  init: { val: [value, true] },
+  hpLvl: { val: [value, true] },
+  size: { size: [oneOf(...SIZE_KEYS), true] },
+  carryUp: {},
+  action: { econ: [oneOf('action', 'bonus', 'reaction', 'free', 'other'), true], res: [str, false], note: [str, false] },
+  xdmg: { dice: [value, true], dtype: [str, false], on: [str, true], perTurn: [bool, false] },
+  attacks: { val: [value, true] },
+  unarmed: { die: [value, true], abs: [str, true] },
+  atkBonus: { val: [value, true], wrange: [RANGE_KIND, false], amode: [RANGE_KIND, false], prop: [str, false], weapon: [str, false], oneHand: [bool, false] },
+  dmgBonus: { val: [value, true], wrange: [RANGE_KIND, false], amode: [RANGE_KIND, false], prop: [str, false], weapon: [str, false], oneHand: [bool, false] },
+  lightExtra: { addMod: [bool, true] },
+  atkAbil: { ab: [or(ability, oneOf('cast'), ref), true], weapons: [str, false], amode: [RANGE_KIND, false], die: [value, false] }
+};
+const COMMON: Record<string, [Check, boolean]> = { id: [str, true], kind: [str, true], name: [str, true], when: [WHEN, false], lvl: [whole(1, 20), false], needEq: [bool, false], needAtt: [bool, false] };
+
+// Per-kind entry fields: [check, required]. Base fields and grants are checked separately.
+const SPELL: Record<string, [Check, boolean]> = {
+  lvl: [whole(0, 9), true], school: [str, true], classes: [str, true], time: [str, true], range: [str, true], comp: [str, true], dur: [str, true],
+  conc: [bool, true], ritual: [bool, true], atk: [RANGE_KIND, false], save: [ability, false], fx: [oneOf('damage', 'healing', 'other'), true],
+  dice: [str, false], dtype: [str, false], scale: [str, false], higher: [str, false], acFx: [oneOf(...AC_EFFECTS), false], acVal: [num, false]
+};
+const ITEM: Record<string, [Check, boolean]> = {
+  cat: [oneOf('weapon', 'armor', 'shield', 'gear', 'tool', 'pack', 'ammo', 'focus', 'magic'), true], cost: [str, false], wt: [num, false],
+  wcat: [oneOf('simple', 'martial'), false], wrange: [RANGE_KIND, false], dmg: [str, false], dtype: [str, false], props: [str, false], thrown: [str, false],
+  vers: [str, false], ammo: [str, false], mastery: [str, false],
+  armor: [oneOf(...ARMOR_KINDS), false], acBase: [num, false], acBonus: [num, false], strReq: [num, false], stealthDis: [bool, false],
+  cap: [num, false], capVol: [str, false], xdim: [bool, false],
+  rarity: [str, false], attune: [bool, false], charges: [value, false], recharge: [RECHARGE, false], regain: [value, false], regainOn: [oneOf('short', 'dawn'), false]
+};
+const PREREQ_TERM = /^(lvl>=\d+|(str|dex|con|int|wis|cha)(\|(str|dex|con|int|wis|cha))*>=\d+|feature=[a-z0-9-]+|armor=(light|medium|heavy|shield))$/;
+const slotRows: Check = (v) => Array.isArray(v) && (v.length === 0 || (v.length === 20 && v.every((r) => Array.isArray(r) && r.length === 9 && r.every(whole(0, 9)))));
+const FIELDS: Record<Kind, Record<string, [Check, boolean]>> = {
+  spell: SPELL,
+  item: ITEM,
+  feat: { cat: [oneOf('origin', 'general', 'style', 'boon'), true], prereq: [(v) => typeof v === 'string' && v.split(';').every((t) => PREREQ_TERM.test(t)), false], repeat: [bool, false] },
+  background: { abils: [list(ability), true], feat: [str, true], skills: [str, true], tool: [str, true], equip: [str, true] },
+  species: { sizes: [(v) => typeof v === 'string' && v.split(',').every((s) => SIZE_KEYS.includes(s as Size)), true], speed: [num, true] },
+  trait: { species: [str, true], lvl: [whole(1, 20), true] },
+  class: {
+    hd: [oneOf(6, 8, 10, 12), true], saves: [list(ability), true], armor: [str, true], weapons: [str, true], tools: [str, false],
+    castAb: [ability, false], slots: [slotRows, false], pact: [bool, false], cantrips: [value, false], prepared: [value, false]
+  },
+  subclass: { cls: [str, true] },
+  feature: { cls: [str, true], sub: [str, false], lvl: [whole(1, 20), true], again: [str, false] },
+  prof: { cat: [oneOf('armor', 'weapon', 'tool', 'language'), true], short: [str, false] },
+  rule: { cat: [oneOf('action', 'sense', 'condition'), true] }
+};
+const HAS_GRANTS: Kind[] = ['feat', 'background', 'trait', 'feature'];
+
+const isObj = (x: unknown): x is Record<string, unknown> => typeof x === 'object' && x !== null && !Array.isArray(x);
+const primitive = (v: unknown) => v === null || typeof v !== 'object';
+
+function checkFields(o: Record<string, unknown>, fields: Record<string, [Check, boolean]>, where: string, errs: string[]) {
+  for (const [k, [check, required]] of Object.entries(fields)) {
+    if (o[k] === undefined) { if (required) errs.push(`${where}: missing ${k}`); }
+    else if (!check(o[k])) errs.push(`${where}: bad ${k} ${JSON.stringify(o[k])}`);
+  }
+}
+// Recharge pairs: regainOn 'short' goes with recharge 'long', 'dawn' with 'dawn'; regain and regainOn come together.
+function checkRegain(o: Record<string, unknown>, where: string, errs: string[]) {
+  if ((o.regain === undefined) !== (o.regainOn === undefined)) errs.push(`${where}: regain and regainOn go together`);
+  if (o.regainOn !== undefined && !((o.regainOn === 'short' && o.recharge === 'long') || (o.regainOn === 'dawn' && o.recharge === 'dawn'))) {
+    errs.push(`${where}: regainOn ${String(o.regainOn)} does not go with recharge ${String(o.recharge)}`);
+  }
+}
+
+function checkGrant(g: unknown, e: Record<string, unknown>, where: string, errs: string[]) {
+  if (!isObj(g)) { errs.push(`${where}: not an object`); return; }
+  const own = GRANTS[g.kind as GrantKind];
+  if (!own) { errs.push(`${where}: unknown grant kind ${JSON.stringify(g.kind)}`); return; }
+  checkFields(g, { ...COMMON, ...own }, where, errs);
+  for (const [k, v] of Object.entries(g)) {
+    if (!(k in COMMON) && !(k in own)) errs.push(`${where}: unknown field ${k}`);
+    if (!primitive(v)) errs.push(`${where}: ${k} is not a plain value`);
+  }
+  if (typeof g.lvl === 'number' && typeof e.lvl === 'number' && g.lvl < e.lvl) errs.push(`${where}: lvl ${g.lvl} is below the entry's ${e.lvl}`);
+  if ((g.needEq !== undefined || g.needAtt !== undefined) && e.kind !== 'item') errs.push(`${where}: needEq/needAtt are for item grants`);
+  if (g.kind === 'resource') checkRegain(g, where, errs);
+  if (g.kind === 'speed' && g.mode === 'walk' && g.val === 'walk') errs.push(`${where}: a walk speed can't equal the walking Speed`);
+}
+
+function checkChoice(c: Record<string, unknown>, e: Record<string, unknown>, where: string, errs: string[]) {
+  checkFields(c, { id: [str, true], name: [str, true], pick: [whole(1, 99), true], repeat: [bool, false], pool: [(v) => typeof v === 'string' && /^[a-z]+:.+$/.test(v), false] }, where, errs);
+  if (c.options === undefined && c.pool === undefined) errs.push(`${where}: needs options or a pool`);
+  if (c.options !== undefined) {
+    if (!Array.isArray(c.options)) errs.push(`${where}: options is not a list`);
+    else c.options.forEach((o, i) => checkGrant(o, e, `${where}.options[${i}]`, errs));
+  }
+}
+
+// The ids of every grant, choice and option in an entry, for uniqueness and for '$<choiceId>' and action `res` references.
+function specsOf(e: Record<string, unknown>): Record<string, unknown>[] {
+  const top = Array.isArray(e.grants) ? e.grants.filter(isObj) : [];
+  return top.flatMap((s) => [s, ...(s.kind === 'choice' && Array.isArray(s.options) ? s.options.filter(isObj) : [])]);
+}
+
+// [] when the entry is valid, otherwise one message per problem.
+export function validateEntry(x: unknown): string[] {
+  if (!isObj(x)) return ['entry is not an object'];
+  const errs: string[] = [];
+  const at = typeof x.id === 'string' ? x.id : JSON.stringify(x.name);
+  if (!KINDS.includes(x.kind as Kind)) return [`${at}: unknown kind ${JSON.stringify(x.kind)}`];
+  checkFields(x, { id: [str, true], name: [(v) => typeof v === 'string' && v.trim() !== '', true], src: [oneOf('srd', 'phb'), true],
+    page: [whole(1, 9999), false], desc: [str, true], replace: [bool, false] }, at, errs);
+  checkFields(x, FIELDS[x.kind as Kind], at, errs);
+  if (errs.length) return errs;
+  const e = x as unknown as Entry;
+  const want = catalogId(e.kind, e.name, entryScope(e));
+  if (e.id !== want) errs.push(`${at}: id should be ${want}`);
+
+  if (e.kind === 'spell' || e.kind === 'item') {
+    for (const [k, v] of Object.entries(x)) if (k !== 'grants' && !primitive(v)) errs.push(`${at}: ${k} is not a plain value`);
+  }
+  if (e.kind === 'item') {
+    checkRegain(x, at, errs);
+    if (e.acBonus !== undefined && !e.armor) errs.push(`${at}: acBonus is for armor and Shields; use an ac grant`);
+  }
+  if (e.kind === 'feature' && e.again !== undefined) {
+    const lv = e.again.split(',').map(Number);
+    if (!lv.every((l, i) => Number.isInteger(l) && l > (i ? lv[i - 1] : e.lvl) && l <= 20)) errs.push(`${at}: bad again ${JSON.stringify(e.again)}`);
+  }
+  if (e.kind === 'class') {
+    if (e.pact && !e.slots?.length) errs.push(`${at}: pact needs slots`);
+    if (!isObj(e.skills) || e.skills.kind !== 'choice') errs.push(`${at}: skills is not a choice`);
+    else {
+      checkChoice(e.skills as unknown as Record<string, unknown>, x, `${at}.skills`, errs);
+      if (!String(e.skills.pool ?? '').startsWith('skill:')) errs.push(`${at}.skills: pool must be a skill: pool`);
+    }
+  }
+
+  const grants = x.grants;
+  if (HAS_GRANTS.includes(e.kind) && grants === undefined) errs.push(`${at}: missing grants`);
+  if (grants !== undefined) {
+    if (!HAS_GRANTS.includes(e.kind) && e.kind !== 'item') errs.push(`${at}: ${e.kind} entries have no grants`);
+    else if (!Array.isArray(grants)) errs.push(`${at}: grants is not a list`);
+    else {
+      grants.forEach((s, i) => {
+        const where = `${at}.grants[${i}]`;
+        if (isObj(s) && s.kind === 'choice') checkChoice(s, x, where, errs);
+        else checkGrant(s, x, where, errs);
+      });
+      const specs = specsOf(x);
+      const ids = specs.map((s) => s.id);
+      const dup = ids.find((id, i) => ids.indexOf(id) !== i);
+      if (dup !== undefined) errs.push(`${at}: grant id ${String(dup)} is used twice`);
+      const choices = new Set(grants.filter((s) => isObj(s) && s.kind === 'choice').map((s) => (s as Record<string, unknown>).id));
+      for (const s of specs) {
+        for (const v of Object.values(s)) if (ref(v) && !choices.has((v as string).slice(1))) errs.push(`${at}: ${String(v)} names no choice`);
+        if (s.kind === 'action' && s.res !== undefined && !specs.some((r) => r.kind === 'resource' && r.id === s.res)) errs.push(`${at}: res ${String(s.res)} names no resource`);
+      }
+    }
+  }
+  return errs;
+}

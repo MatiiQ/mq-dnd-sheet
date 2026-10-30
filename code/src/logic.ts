@@ -103,6 +103,7 @@ export function detectArmor(name: string): Pick<Item, 'armor' | 'acBase' | 'acBo
 }
 
 // AC spells by name: Shield +5 and Shield of Faith +2 (PHB p.316), Mage Armor base 13 + DEX (p.293), Barkskin AC at least 17 (p.245).
+export const AC_EFFECTS: AcEffect[] = ['bonus', 'base', 'floor'];
 export const AC_SPELLS: Record<string, [AcEffect, number]> = {
   shield: ['bonus', 5], 'shield of faith': ['bonus', 2], 'mage armor': ['base', 13], barkskin: ['floor', 17]
 };
@@ -461,7 +462,7 @@ const FIXED_RECORDS = ['ch', 'abil', 'speeds', 'coins', 'notes', 'def'] as const
 // Lists of entries: each needs a name and holds only plain values.
 const ENTRY_LISTS = ['senses', 'res', 'attacks', 'riders', 'inv', 'spells', 'feats', 'acMods'] as const;
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
-const isEntry = (x: unknown): x is Record<string, unknown> =>
+export const isEntry = (x: unknown): x is Record<string, unknown> =>
   isObj(x) && typeof x.name === 'string' && Object.values(x).every((v) => v === null || typeof v !== 'object');
 // Top-level fields added after the first release. A save without one gets the blank character's value, never
 // the sample's (roadmap, "Saves keep working"). Each later field adds its key here.
@@ -542,7 +543,7 @@ export function migrate(data: unknown): Character {
     ...(finite(wt) && wt >= 0 ? { wt } : {}),
     ...(typeof desc === 'string' ? { desc } : {})
   }));
-  c.spells = c.spells.map(({ acFx, acVal, ...x }) => ({ ...x, ...(['bonus', 'base', 'floor'].includes(acFx as string) && finite(acVal) ? { acFx, acVal } : {}) }));
+  c.spells = c.spells.map(({ acFx, acVal, ...x }) => ({ ...x, ...(AC_EFFECTS.includes(acFx as AcEffect) && finite(acVal) ? { acFx, acVal } : {}) }));
   c.acOn = strings(c.acOn).filter((id) => c.spells.some((x) => x.id === id && x.acFx && !x.c));
   // Old saves had a typed `ac`. Fill armor and AC spells from their names (switching none on), then add the
   // difference as a custom bonus so the number doesn't move. New saves have no `ac`, so this runs once.
