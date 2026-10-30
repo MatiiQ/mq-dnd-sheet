@@ -44,3 +44,11 @@ export function section(text: string, from: string, to: string, after?: string):
   if (a < 0 || b < 0) throw new Error(`section ${from} … ${to} not found`);
   return '\f'.repeat(lines.slice(0, a).join('\n').split('\f').length - 1) + lines.slice(a, b).join('\n');
 }
+
+// The lines of the -layout text from the first line matching `from` through the next line matching `to`.
+export function layoutBetween(layout: string, from: RegExp, to: RegExp): string {
+  const lines = layout.split('\n');
+  const a = lines.findIndex((l) => from.test(l)), b = lines.findIndex((l, i) => i > a && to.test(l));
+  if (a < 0 || b < 0) throw new Error(`layout ${from} … ${to} not found`);
+  return lines.slice(a, b + 1).join('\n');
+}

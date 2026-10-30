@@ -1,0 +1,1067 @@
+{
+  "item/amulet-of-health": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "abilSet",
+        "name": "CON 19",
+        "ab": "con",
+        "val": "19",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/armor-of-invulnerability": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "defense",
+        "name": "Bludgeoning Resistance",
+        "def": "res",
+        "target": "Bludgeoning",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "defense",
+        "name": "Piercing Resistance",
+        "def": "res",
+        "target": "Piercing",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g3",
+        "kind": "defense",
+        "name": "Slashing Resistance",
+        "def": "res",
+        "target": "Slashing",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/armor-of-resistance": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "c1",
+        "name": "Resistance",
+        "pick": 1,
+        "options": [
+          {
+            "id": "o1",
+            "kind": "defense",
+            "name": "Acid Resistance",
+            "def": "res",
+            "target": "Acid",
+            "needEq": true,
+            "needAtt": true
+          },
+          {
+            "id": "o2",
+            "kind": "defense",
+            "name": "Cold Resistance",
+            "def": "res",
+            "target": "Cold",
+            "needEq": true,
+            "needAtt": true
+          },
+          {
+            "id": "o3",
+            "kind": "defense",
+            "name": "Fire Resistance",
+            "def": "res",
+            "target": "Fire",
+            "needEq": true,
+            "needAtt": true
+          },
+          {
+            "id": "o4",
+            "kind": "defense",
+            "name": "Force Resistance",
+            "def": "res",
+            "target": "Force",
+            "needEq": true,
+            "needAtt": true
+          },
+          {
+            "id": "o5",
+            "kind": "defense",
+            "name": "Lightning Resistance",
+            "def": "res",
+            "target": "Lightning",
+            "needEq": true,
+            "needAtt": true
+          },
+          {
+            "id": "o6",
+            "kind": "defense",
+            "name": "Necrotic Resistance",
+            "def": "res",
+            "target": "Necrotic",
+            "needEq": true,
+            "needAtt": true
+          },
+          {
+            "id": "o7",
+            "kind": "defense",
+            "name": "Poison Resistance",
+            "def": "res",
+            "target": "Poison",
+            "needEq": true,
+            "needAtt": true
+          },
+          {
+            "id": "o8",
+            "kind": "defense",
+            "name": "Psychic Resistance",
+            "def": "res",
+            "target": "Psychic",
+            "needEq": true,
+            "needAtt": true
+          },
+          {
+            "id": "o9",
+            "kind": "defense",
+            "name": "Radiant Resistance",
+            "def": "res",
+            "target": "Radiant",
+            "needEq": true,
+            "needAtt": true
+          },
+          {
+            "id": "o10",
+            "kind": "defense",
+            "name": "Thunder Resistance",
+            "def": "res",
+            "target": "Thunder",
+            "needEq": true,
+            "needAtt": true
+          }
+        ]
+      }
+    ]
+  },
+  "item/armor-of-vulnerability": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "c1",
+        "name": "Resistance",
+        "pick": 1,
+        "options": [
+          {
+            "id": "o1",
+            "kind": "defense",
+            "name": "Bludgeoning Resistance",
+            "def": "res",
+            "target": "Bludgeoning",
+            "needEq": true,
+            "needAtt": true
+          },
+          {
+            "id": "o2",
+            "kind": "defense",
+            "name": "Piercing Resistance",
+            "def": "res",
+            "target": "Piercing",
+            "needEq": true,
+            "needAtt": true
+          },
+          {
+            "id": "o3",
+            "kind": "defense",
+            "name": "Slashing Resistance",
+            "def": "res",
+            "target": "Slashing",
+            "needEq": true,
+            "needAtt": true
+          }
+        ]
+      }
+    ]
+  },
+  "item/arrow-catching-shield": {
+    "armor": "shield",
+    "acBase": 2
+  },
+  "item/belt-of-dwarvenkind": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "prof",
+        "name": "Dwarvish",
+        "cat": "language",
+        "target": "Dwarvish",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "abil",
+        "name": "CON +2",
+        "ab": "con",
+        "val": "2",
+        "cap": 20,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g3",
+        "kind": "sense",
+        "name": "Darkvision 60 ft",
+        "range": "60",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g4",
+        "kind": "defense",
+        "name": "Poison Resistance",
+        "def": "res",
+        "target": "Poison",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g5",
+        "kind": "defense",
+        "name": "Advantage vs Poisoned",
+        "def": "adv",
+        "target": "vs Poisoned",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/belt-of-giant-strength": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "c1",
+        "name": "Giant type",
+        "pick": 1,
+        "options": [
+          {
+            "id": "o1",
+            "kind": "abilSet",
+            "name": "Hill giant: STR 21",
+            "ab": "str",
+            "val": "21",
+            "needEq": true,
+            "needAtt": true
+          },
+          {
+            "id": "o2",
+            "kind": "abilSet",
+            "name": "Frost or stone giant: STR 23",
+            "ab": "str",
+            "val": "23",
+            "needEq": true,
+            "needAtt": true
+          },
+          {
+            "id": "o3",
+            "kind": "abilSet",
+            "name": "Fire giant: STR 25",
+            "ab": "str",
+            "val": "25",
+            "needEq": true,
+            "needAtt": true
+          },
+          {
+            "id": "o4",
+            "kind": "abilSet",
+            "name": "Cloud giant: STR 27",
+            "ab": "str",
+            "val": "27",
+            "needEq": true,
+            "needAtt": true
+          },
+          {
+            "id": "o5",
+            "kind": "abilSet",
+            "name": "Storm giant: STR 29",
+            "ab": "str",
+            "val": "29",
+            "needEq": true,
+            "needAtt": true
+          }
+        ]
+      }
+    ]
+  },
+  "item/berserker-axe": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "hpLvl",
+        "name": "+1 HP per level",
+        "val": "1",
+        "needAtt": true
+      }
+    ]
+  },
+  "item/boots-of-the-winterlands": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "defense",
+        "name": "Cold Resistance",
+        "def": "res",
+        "target": "Cold",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/bracers-of-archery": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "prof",
+        "name": "Longbow",
+        "cat": "weapon",
+        "target": "Longbow",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "prof",
+        "name": "Shortbow",
+        "cat": "weapon",
+        "target": "Shortbow",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g3",
+        "kind": "dmgBonus",
+        "name": "+2 damage with Longbow and Shortbow",
+        "val": "2",
+        "weapon": "longbow,shortbow",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/bracers-of-defense": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "ac",
+        "name": "+2 AC",
+        "acMode": "bonus",
+        "val": "2",
+        "when": "noArmorNoShield",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/brooch-of-shielding": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "defense",
+        "name": "Force Resistance",
+        "def": "res",
+        "target": "Force",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/cloak-of-arachnida": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "defense",
+        "name": "Poison Resistance",
+        "def": "res",
+        "target": "Poison",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "speed",
+        "name": "Climb Speed equal to Speed",
+        "mode": "climb",
+        "val": "walk",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/cloak-of-protection": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "ac",
+        "name": "+1 AC",
+        "acMode": "bonus",
+        "val": "1",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "saveBonus",
+        "name": "+1 to saving throws",
+        "ab": "all",
+        "val": "1",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/cloak-of-the-manta-ray": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "speed",
+        "name": "Swim Speed 60 ft",
+        "mode": "swim",
+        "val": "60",
+        "needEq": true
+      }
+    ]
+  },
+  "item/demon-armor": {
+    "armor": "heavy",
+    "acBase": 18,
+    "acBonus": 1,
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "prof",
+        "name": "Abyssal",
+        "cat": "language",
+        "target": "Abyssal",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "unarmed",
+        "name": "Unarmed Strike 1d8 Slashing",
+        "die": "1d8",
+        "abs": "str",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g3",
+        "kind": "atkBonus",
+        "name": "+1 to Unarmed Strikes",
+        "val": "1",
+        "weapon": "unarmed-strike",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g4",
+        "kind": "dmgBonus",
+        "name": "+1 damage with Unarmed Strikes",
+        "val": "1",
+        "weapon": "unarmed-strike",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/dragon-scale-mail": {
+    "armor": "medium",
+    "acBase": 14,
+    "acBonus": 1,
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "defense",
+        "name": "Advantage vs Dragons’ breath weapons",
+        "def": "adv",
+        "target": "vs Dragons’ breath weapons",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "kind": "choice",
+        "id": "c1",
+        "name": "Resistance",
+        "pick": 1,
+        "options": [
+          {
+            "id": "o1",
+            "kind": "defense",
+            "name": "Acid Resistance",
+            "def": "res",
+            "target": "Acid",
+            "needEq": true,
+            "needAtt": true
+          },
+          {
+            "id": "o2",
+            "kind": "defense",
+            "name": "Cold Resistance",
+            "def": "res",
+            "target": "Cold",
+            "needEq": true,
+            "needAtt": true
+          },
+          {
+            "id": "o3",
+            "kind": "defense",
+            "name": "Fire Resistance",
+            "def": "res",
+            "target": "Fire",
+            "needEq": true,
+            "needAtt": true
+          },
+          {
+            "id": "o4",
+            "kind": "defense",
+            "name": "Lightning Resistance",
+            "def": "res",
+            "target": "Lightning",
+            "needEq": true,
+            "needAtt": true
+          },
+          {
+            "id": "o5",
+            "kind": "defense",
+            "name": "Poison Resistance",
+            "def": "res",
+            "target": "Poison",
+            "needEq": true,
+            "needAtt": true
+          }
+        ]
+      }
+    ]
+  },
+  "item/dwarven-plate": {
+    "armor": "heavy",
+    "acBase": 18,
+    "acBonus": 2
+  },
+  "item/elven-chain": {
+    "armor": "medium",
+    "acBase": 13,
+    "acBonus": 1
+  },
+  "item/frost-brand": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "defense",
+        "name": "Fire Resistance",
+        "def": "res",
+        "target": "Fire",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/gauntlets-of-ogre-power": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "abilSet",
+        "name": "STR 19",
+        "ab": "str",
+        "val": "19",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/glamoured-studded-leather": {
+    "armor": "light",
+    "acBase": 12,
+    "acBonus": 1
+  },
+  "item/gloves-of-swimming-and-climbing": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "speed",
+        "name": "Climb Speed equal to Speed",
+        "mode": "climb",
+        "val": "walk",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "speed",
+        "name": "Swim Speed equal to Speed",
+        "mode": "swim",
+        "val": "walk",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/goggles-of-night": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "sense",
+        "name": "Darkvision 60 ft",
+        "range": "60",
+        "needEq": true
+      }
+    ]
+  },
+  "item/handy-haversack": {
+    "xdim": true,
+    "cap": 900,
+    "capVol": "64 cubic feet in the central pouch, 25 cubic feet in each of two side pouches"
+  },
+  "item/headband-of-intellect": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "abilSet",
+        "name": "INT 19",
+        "ab": "int",
+        "val": "19",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/holy-avenger": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "defense",
+        "name": "Advantage vs spells and magical effects",
+        "def": "adv",
+        "target": "vs spells and magical effects",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/luck-blade": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "saveBonus",
+        "name": "+1 to saving throws",
+        "ab": "all",
+        "val": "1",
+        "needAtt": true
+      }
+    ]
+  },
+  "item/mantle-of-spell-resistance": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "defense",
+        "name": "Advantage vs spells",
+        "def": "adv",
+        "target": "vs spells",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/necklace-of-adaptation": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "defense",
+        "name": "Advantage vs Poisoned",
+        "def": "adv",
+        "target": "vs Poisoned",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/periapt-of-health": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "defense",
+        "name": "Advantage vs Poisoned",
+        "def": "adv",
+        "target": "vs Poisoned",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "resource",
+        "name": "Periapt of Health",
+        "max": "1",
+        "recharge": "dawn",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g3",
+        "kind": "action",
+        "name": "Regain 2d4 + 2 Hit Points",
+        "econ": "action",
+        "res": "g2",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/periapt-of-proof-against-poison": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "defense",
+        "name": "Poison Immunity",
+        "def": "imm",
+        "target": "Poison",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "defense",
+        "name": "Poisoned Immunity",
+        "def": "imm",
+        "target": "Poisoned",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/portable-hole": {
+    "xdim": true,
+    "capVol": "a cylinder 6 feet across and 10 feet deep"
+  },
+  "item/ring-of-protection": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "ac",
+        "name": "+1 AC",
+        "acMode": "bonus",
+        "val": "1",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "saveBonus",
+        "name": "+1 to saving throws",
+        "ab": "all",
+        "val": "1",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/ring-of-resistance": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "c1",
+        "name": "Resistance",
+        "pick": 1,
+        "options": [
+          {
+            "id": "o1",
+            "kind": "defense",
+            "name": "Acid Resistance",
+            "def": "res",
+            "target": "Acid",
+            "needEq": true
+          },
+          {
+            "id": "o2",
+            "kind": "defense",
+            "name": "Cold Resistance",
+            "def": "res",
+            "target": "Cold",
+            "needEq": true
+          },
+          {
+            "id": "o3",
+            "kind": "defense",
+            "name": "Fire Resistance",
+            "def": "res",
+            "target": "Fire",
+            "needEq": true
+          },
+          {
+            "id": "o4",
+            "kind": "defense",
+            "name": "Force Resistance",
+            "def": "res",
+            "target": "Force",
+            "needEq": true
+          },
+          {
+            "id": "o5",
+            "kind": "defense",
+            "name": "Lightning Resistance",
+            "def": "res",
+            "target": "Lightning",
+            "needEq": true
+          },
+          {
+            "id": "o6",
+            "kind": "defense",
+            "name": "Necrotic Resistance",
+            "def": "res",
+            "target": "Necrotic",
+            "needEq": true
+          },
+          {
+            "id": "o7",
+            "kind": "defense",
+            "name": "Poison Resistance",
+            "def": "res",
+            "target": "Poison",
+            "needEq": true
+          },
+          {
+            "id": "o8",
+            "kind": "defense",
+            "name": "Psychic Resistance",
+            "def": "res",
+            "target": "Psychic",
+            "needEq": true
+          },
+          {
+            "id": "o9",
+            "kind": "defense",
+            "name": "Radiant Resistance",
+            "def": "res",
+            "target": "Radiant",
+            "needEq": true
+          },
+          {
+            "id": "o10",
+            "kind": "defense",
+            "name": "Thunder Resistance",
+            "def": "res",
+            "target": "Thunder",
+            "needEq": true
+          }
+        ]
+      }
+    ]
+  },
+  "item/ring-of-spell-turning": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "defense",
+        "name": "Advantage vs spells",
+        "def": "adv",
+        "target": "vs spells",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/ring-of-swimming": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "speed",
+        "name": "Swim Speed 40 ft",
+        "mode": "swim",
+        "val": "40",
+        "needEq": true
+      }
+    ]
+  },
+  "item/robe-of-eyes": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "sense",
+        "name": "Darkvision 120 ft",
+        "range": "120",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "sense",
+        "name": "Truesight 120 ft",
+        "range": "120",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/robe-of-stars": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "saveBonus",
+        "name": "+1 to saving throws",
+        "ab": "all",
+        "val": "1",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/robe-of-the-archmagi": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "ac",
+        "name": "Base AC 15 + DEX",
+        "acMode": "unarmored",
+        "val": "5",
+        "when": "noArmor",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "defense",
+        "name": "Advantage vs spells and magical effects",
+        "def": "adv",
+        "target": "vs spells and magical effects",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/scarab-of-protection": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "ac",
+        "name": "+1 AC",
+        "acMode": "bonus",
+        "val": "1",
+        "needAtt": true
+      }
+    ]
+  },
+  "item/sentinel-shield": {
+    "armor": "shield",
+    "acBase": 2
+  },
+  "item/shield-1-2-or-3": {
+    "armor": "shield",
+    "acBase": 2
+  },
+  "item/shield-of-missile-attraction": {
+    "armor": "shield",
+    "acBase": 2
+  },
+  "item/shield-of-the-cavalier": {
+    "armor": "shield",
+    "acBase": 2,
+    "acBonus": 2
+  },
+  "item/slippers-of-spider-climbing": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "speed",
+        "name": "Climb Speed equal to Speed",
+        "mode": "climb",
+        "val": "walk",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/spellguard-shield": {
+    "armor": "shield",
+    "acBase": 2,
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "defense",
+        "name": "Advantage vs spells and magical effects",
+        "def": "adv",
+        "target": "vs spells and magical effects",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/staff-of-fire": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "defense",
+        "name": "Fire Resistance",
+        "def": "res",
+        "target": "Fire",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/staff-of-frost": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "defense",
+        "name": "Cold Resistance",
+        "def": "res",
+        "target": "Cold",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/staff-of-power": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "ac",
+        "name": "+2 AC",
+        "acMode": "bonus",
+        "val": "2",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "saveBonus",
+        "name": "+2 to saving throws",
+        "ab": "all",
+        "val": "2",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/stone-of-good-luck-luckstone": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "saveBonus",
+        "name": "+1 to saving throws",
+        "ab": "all",
+        "val": "1",
+        "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "checkBonus",
+        "name": "+1 to ability checks",
+        "target": "all",
+        "val": "1",
+        "needAtt": true
+      }
+    ]
+  }
+}

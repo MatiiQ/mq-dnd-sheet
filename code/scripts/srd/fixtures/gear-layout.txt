@@ -1,0 +1,43 @@
+     Adventuring Gear                                   Item                       Weight          Cost
+     Item                        Weight        Cost     Ink Pen                          —         2 CP
+     Acid                              1 lb.   25 GP    Jug                            4 lb.       2 CP
+     Alchemist’s Fire                  1 lb.   50 GP    Ladder                        25 lb.        1 SP
+     Ammunition                   Varies       Varies   Lamp                           1 lb.        5 SP
+     Antitoxin                           —     50 GP    Lantern, Bullseye              2 lb.      10 GP
+     Arcane Focus                 Varies       Varies   Lantern, Hooded                2 lb.       5 GP
+     Backpack                          5 lb.    2 GP    Lock                           1 lb.      10 GP
+     Ball Bearings                     2 lb.    1 GP    Magnifying Glass                 —       100 GP
+     Barrel                        70 lb.       2 GP    Manacles                       6 lb.       2 GP
+     Basket                            2 lb.    4 SP    Map                              —         1 GP
+     Bedroll                           7 lb.    1 GP    Mirror                       1/2 lb.       5 GP
+     Bell                                —      1 GP    Net                            3 lb.       1 GP
+     Blanket                           3 lb.    5 SP    Oil                            1 lb.        1 SP
+     Block and Tackle                  5 lb.    1 GP    Paper                            —          2 SP
+     Book                              5 lb.   25 GP    Parchment                        —          1 SP
+     Bottle, Glass                     2 lb.    2 GP    Perfume                          —         5 GP
+     Bucket                            2 lb.    5 CP    Poison, Basic                    —       100 GP
+     Burglar’s Pack                42 lb.      16 GP    Pole                           7 lb.       5 CP
+     Caltrops                          2 lb.    1 GP    Pot, Iron                     10 lb.       2 GP
+     Candle                              —      1 CP    Potion of Healing            1/2 lb.      50 GP
+     Case, Crossbow Bolt               1 lb.    1 GP    Pouch                          1 lb.        5 SP
+     Case, Map or Scroll               1 lb.    1 GP    Priest’s Pack                 29 lb.      33 GP
+     Chain                         10 lb.       5 GP    Quiver                         1 lb.       1 GP
+     Chest                         25 lb.       5 GP    Ram, Portable                 35 lb.       4 GP
+     Climber’s Kit                 12 lb.      25 GP    Rations                        2 lb.        5 SP
+     Clothes, Fine                     6 lb.   15 GP    Robe                           4 lb.       1 GP
+     Clothes, Traveler’s               4 lb.    2 GP    Rope                           5 lb.       1 GP
+     Component Pouch                   2 lb.   25 GP    Sack                         1/2 lb.       1 CP
+     Costume                           4 lb.    5 GP    Scholar’s Pack                22 lb.      40 GP
+     Crowbar                           5 lb.    2 GP    Shovel                         5 lb.       2 GP
+     Diplomat’s Pack               39 lb.      39 GP    Signal Whistle                   —         5 CP
+     Druidic Focus                Varies       Varies   Spell Scroll (Cantrip)           —        30 GP
+     Dungeoneer’s Pack             55 lb.      12 GP    Spell Scroll (Level 1)           —        50 GP
+     Entertainer’s Pack          58½ lb.       40 GP    Spikes, Iron                   5 lb.       1 GP
+     Explorer’s Pack               55 lb.      10 GP    Spyglass                       1 lb.    1,000 GP
+     Flask                             1 lb.    2 CP    String                           —          1 SP
+     Grappling Hook                    4 lb.    2 GP    Tent                          20 lb.       2 GP
+     Healer’s Kit                      3 lb.    5 GP    Tinderbox                      1 lb.        5 SP
+     Holy Symbol                  Varies       Varies   Torch                          1 lb.       1 CP
+     Holy Water                        1 lb.   25 GP    Vial                             —         1 GP
+     Hunting Trap                  25 lb.       5 GP    Waterskin                5 lb. (full)       2 SP
+     Ink                                 —     10 GP
