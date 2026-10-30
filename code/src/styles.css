@@ -96,6 +96,10 @@ h1, h2, h3 { margin: 0; }
 .carry-track { display: block; height: 8px; border-radius: 4px; background: var(--raised); overflow: hidden; }
 .carry-fill { display: block; height: 100%; background: var(--accent); }
 .carry-fill.over { background: var(--danger); }
+/* Attunement slots: dashed when empty, amber when filled; an unequipped attuned item gets a warning note. */
+.attune-slot { font-weight: 600; background: transparent; border: 1px dashed var(--dash); }
+.attune-slot.filled { border: 1px solid var(--accent); }
+.attune-note { font-size: 12px; font-weight: 600; color: var(--danger); }
 /* Senses sit in a wrapping row beside the passive scores: rows shrink to their content, an open form takes the full width. */
 .sense-entry .entry-head { flex: 0 1 auto; }
 .sense-form { flex-basis: 100%; }

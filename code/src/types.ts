@@ -18,6 +18,7 @@ export type SrcKind = 'species' | 'background' | 'class' | 'subclass' | 'feat' |
 export interface Details { name: string; species: string; cls: string; sub: string; bg: string; align: string }
 // srcKind + srcName: where the sense comes from ("Species · Wood Elf"). No srcKind means no source given.
 export interface Sense { id: string; name: string; range: string; desc?: string; srcKind?: SrcKind; srcName?: string }
+// inv: legacy "Also list in Inventory" flag, kept only on resources with a max or a recharge (plan 3 moves them onto items).
 export interface Resource { id: string; name: string; note?: string; count: number; max?: number; recharge?: Recharge; refill?: boolean; inv?: boolean }
 export interface Attack { id: string; name: string; hit: string; dmg: string; info: string; mastery: string }
 export interface Rider { id: string; name: string; dice: string }
@@ -58,6 +59,7 @@ export interface Character {
   slotMax: number[]; slotUsed: number[];
   def: Record<DefenseKind, string[]>;
   senses: Sense[]; res: Resource[]; attacks: Attack[]; riders: Rider[];
-  coins: Record<Coin, number>; attune: string[]; notes: Record<NoteKey, string>;
+  /** Attunement slots: 3 item ids, '' for an empty slot. */
+  coins: Record<Coin, number>; attuneIds: string[]; notes: Record<NoteKey, string>;
   inv: Item[]; spells: Spell[]; feats: Feature[];
 }

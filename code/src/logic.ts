@@ -465,7 +465,7 @@ const isEntry = (x: unknown): x is Record<string, unknown> =>
   isObj(x) && typeof x.name === 'string' && Object.values(x).every((v) => v === null || typeof v !== 'object');
 // Top-level fields added after the first release. A save without one gets the blank character's value, never
 // the sample's (roadmap, "Saves keep working"). Each later field adds its key here.
-export const NEW_FIELDS: readonly (keyof Character)[] = ['spellSort', 'size', 'carryUp'];
+export const NEW_FIELDS: readonly (keyof Character)[] = ['spellSort', 'size', 'carryUp', 'attuneIds'];
 // Resources the Inventory tab echoed before `inv` existed.
 const OLD_INVENTORY_RESOURCES = ['arrows', 'potions'];
 
@@ -502,7 +502,6 @@ export function migrate(data: unknown): Character {
   if (typeof data.saveNotes === 'string' && data.saveNotes.trim()) addAdv(data.saveNotes.trim());
   c.def.res.filter((n) => CONDITION_OPTIONS.includes(n)).forEach((n) => addAdv('vs ' + n));
   c.def.res = c.def.res.filter((n) => !CONDITION_OPTIONS.includes(n));
-  c.attune = [0, 1, 2].map((i) => strings(c.attune)[i] ?? '');
   c.slotMax = slots(c.slotMax);
   c.slotUsed = slots(c.slotUsed);
   // These values size lists of buttons, so an out-of-range number could freeze the sheet. Limits match the UI.
@@ -553,12 +552,61 @@ export function migrate(data: unknown): Character {
     const total = armorClass(c).total;
     if (total !== data.ac) c.acMods = [...c.acMods, { id: newId(), name: 'Adjustment (from old AC)', val: data.ac - total }];
   }
-  c.res = c.res.map((r) => (r.inv === undefined && OLD_INVENTORY_RESOURCES.includes(r.id) ? { ...r, inv: true } : r));
+  // Saves from before attunement by item id have no attuneIds. The one-time steps below run only on those, so they
+  // never change entries the player adds later (roadmap, "Saves keep working").
+  const oldSave = data.attuneIds === undefined;
+  if (oldSave) c.res = c.res.map((r) => (r.inv === undefined && OLD_INVENTORY_RESOURCES.includes(r.id) ? { ...r, inv: true } : r));
   // Older saves had a `refill` flag that meant a Long Rest recharge.
   c.res = c.res.map((r) => ({ ...r, recharge: r.recharge || (r.refill ? 'long' : 'none') }));
+  const converted: string[] = [];
+  if (oldSave) {
+    // Resources also listed in the Inventory become items. One with a maximum or a recharge stays a resource and keeps
+    // its inv flag: items have no charges yet, so converting it would lose them.
+    const added: string[] = [];
+    c.res = c.res.filter((r) => {
+      if (!r.inv || r.max || rechargeOf(r) !== 'none') return true;
+      const note = typeof r.note === 'string' ? r.note.trim() : '';
+      const item: Item = { id: newId(), name: r.name, qty: finite(r.count) ? Math.max(0, Math.floor(r.count)) : 1, eq: false, ...(note ? { desc: note } : {}) };
+      c.inv = [...c.inv, item];
+      added.push(item.id);
+      converted.push(r.id);
+      return false;
+    });
+    // Attunement slots held names. A name links the first item with that name not already in a slot; other text
+    // becomes a new equipped item, so nothing is lost. Never run detectArmor here: a slot reading "Shield" would move AC.
+    // A matched item keeps its eq flag, except a just-converted resource, which is equipped like a new item.
+    const oldAttune: unknown[] = Array.isArray(data.attune) ? data.attune : [];
+    const linked: string[] = [];
+    c.attuneIds = [0, 1, 2].map((i) => {
+      const v = oldAttune[i];
+      if (typeof v !== 'string' || !/[\p{L}\p{N}]/u.test(v) || normName(v) === 'none') return '';
+      const match = c.inv.find((it) => normName(it.name) === normName(v) && !linked.includes(it.id));
+      const id = match ? match.id : newId();
+      if (!match) c.inv = [...c.inv, { id, name: v.trim(), qty: 1, eq: true }];
+      else if (added.includes(id)) c.inv = c.inv.map((it) => (it.id === id ? { ...it, eq: true } : it));
+      linked.push(id);
+      return id;
+    });
+  }
+  // Three slots, each an existing item id or ''. Checked slot by slot, so a bad slot never shifts the ones after it.
+  const ids: unknown[] = c.attuneIds;
+  c.attuneIds = [];
+  for (let i = 0; i < 3; i++) {
+    const x = ids[i];
+    c.attuneIds.push(typeof x === 'string' && c.inv.some((it) => it.id === x) && !c.attuneIds.includes(x) ? x : '');
+  }
   // From the raw save, not the sample-merged copy: old saves get today's bar (HP and AC), not the sample's picks.
-  c.pills = sanitizePills(data.pills);
+  // Pills don't show items, so a pill of a resource that became an item empties.
+  c.pills = sanitizePills(data.pills).map((k) => (converted.some((id) => k === resPill(id)) ? '' : k));
   return c;
+}
+
+// Names match after trimming, ignoring case and treating ’ and ' as the same character.
+export const normName = (s: string) => s.trim().toLowerCase().replace(/’/g, "'");
+
+// The one way to remove an item: its attunement slot empties with it.
+export function removeItem(c: Character, id: string): Character {
+  return { ...c, inv: c.inv.filter((i) => i.id !== id), attuneIds: c.attuneIds.map((x) => (x === id ? '' : x)) };
 }
 
 // Top bar pills. [key, picker name, short label], in picker order.

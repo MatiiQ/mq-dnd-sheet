@@ -4,7 +4,7 @@ import { patchEntry, removeEntry, saveEntry, useEntryForm, useSheet } from '../s
 import type { Recharge, Resource } from '../types';
 import { AddButton, EntryForm, EntryRow, StarIcon, Step, TextField } from './ui';
 
-const BLANK = { name: '', note: '', inv: false };
+const BLANK = { name: '', note: '' };
 const RECHARGE_TEXT: Record<Recharge, string> = { none: 'Manual only', short: 'Refills on Short or Long Rest', long: 'Refills on Long Rest' };
 
 export function Resources() {
@@ -20,7 +20,7 @@ export function Resources() {
   const save = () => {
     const name = f.draft.name.trim();
     if (!name) return;
-    update((p) => ({ res: saveEntry<Resource>(p.res, { name, note: f.draft.note.trim(), inv: f.draft.inv }, f.editingId, { count: 0 }) }));
+    update((p) => ({ res: saveEntry<Resource>(p.res, { name, note: f.draft.note.trim() }, f.editingId, { count: 0 }) }));
     f.close();
   };
   const form = f.isOpen && (
@@ -28,7 +28,6 @@ export function Resources() {
       <div className="grid" style={{ '--min': '200px' } as CSSProperties}>
         <TextField label="Name" value={f.draft.name} placeholder="e.g. Rations, Torches, Ki points" onChange={(v) => f.set({ name: v })} />
         <TextField label="Note (optional)" value={f.draft.note} placeholder="What it's for" onChange={(v) => f.set({ note: v })} />
-        <label className="check"><input type="checkbox" checked={f.draft.inv} onChange={(e) => f.set({ inv: e.target.checked })} />Also list in Inventory</label>
       </div>
     </EntryForm>
   );
@@ -64,7 +63,7 @@ export function Resources() {
                 </div>
               }
               body={<span className="small">{RECHARGE_TEXT[rc]}</span>}
-              onEdit={() => f.openEdit(r.id, { name: r.name, note: r.note || '', inv: !!r.inv })}
+              onEdit={() => f.openEdit(r.id, { name: r.name, note: r.note || '' })}
               onRemove={() => update((p) => ({ res: removeEntry(p.res, r.id) }))}>
               {edit && (
                 <>

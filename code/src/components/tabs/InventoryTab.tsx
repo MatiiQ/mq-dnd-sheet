@@ -1,6 +1,6 @@
 import { useState, type CSSProperties } from 'react';
-import { ARMORS, CARRY_MULT, SIZES, carriedWeight, carryCapacity, detectArmor, effScore, fmt, parseWeight } from '../../logic';
-import { patchEntry, removeEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
+import { ARMORS, CARRY_MULT, SIZES, carriedWeight, carryCapacity, detectArmor, effScore, fmt, parseWeight, removeItem } from '../../logic';
+import { patchEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { Coin, Item } from '../../types';
 import { AddButton, EntryForm, EntryRow, NumInput, TextField } from '../ui';
 
@@ -71,13 +71,23 @@ export function InventoryTab() {
   return (
     <div className="col gap-12">
       <div className="block">
-        <h3 className="block-title">Magic item attunement <span className="muted">· {c.attune.filter((x) => x && x.trim()).length} / 3</span></h3>
+        <h3 className="block-title">Magic item attunement <span className="muted">· {c.attuneIds.filter(Boolean).length} / 3</span></h3>
         <div className="grid" style={{ '--min': '200px', gap: 8 } as CSSProperties}>
-          {c.attune.map((v, i) => (
-            <input key={i} type="text" className="input" aria-label={'Attunement slot ' + (i + 1)} value={v} placeholder="Empty slot"
-              style={{ fontWeight: 600, background: 'transparent', border: v ? '1px solid var(--accent)' : '1px dashed var(--dash)' }}
-              onChange={(e) => update((p) => { const a = p.attune.slice(); a[i] = e.target.value; return { attune: a }; })} />
-          ))}
+          {c.attuneIds.map((id, i) => {
+            const item = c.inv.find((it) => it.id === id);
+            // Equipped items not in another slot, plus this slot's own item (which may have been unequipped since).
+            const choices = c.inv.filter((it) => it.id === id || (it.eq && !c.attuneIds.includes(it.id)));
+            return (
+              <div key={i} className="col gap-4">
+                <select className={'input attune-slot' + (id ? ' filled' : '')} aria-label={'Attunement slot ' + (i + 1)} value={id}
+                  onChange={(e) => update((p) => { const a = p.attuneIds.slice(); a[i] = e.target.value; return { attuneIds: a }; })}>
+                  <option value="">Empty</option>
+                  {choices.map((it) => <option key={it.id} value={it.id}>{it.name}</option>)}
+                </select>
+                {item && !item.eq && <span className="attune-note">not equipped</span>}
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -146,13 +156,8 @@ export function InventoryTab() {
                 </div>}
                 body={it.desc ? <span>{it.desc}</span> : undefined}
                 onEdit={() => f.openEdit(it.id, { name: it.name, armor: armorName(it), bonus: it.acBonus || 0, wt: it.wt === undefined ? '' : String(it.wt), desc: it.desc || '' })}
-                onRemove={() => update((p) => ({ inv: removeEntry(p.inv, it.id) }))} />
+                onRemove={() => update((p) => removeItem(p, it.id))} />
             )}
-          </li>
-        ))}
-        {c.res.filter((r) => r.inv).map((r) => (
-          <li key={r.id} className="well row between gap-8" style={{ padding: '12px 14px' }}>
-            <span>{r.name} <span className="muted">· tracked in Resources</span></span><span style={{ fontWeight: 700 }}>{r.count}</span>
           </li>
         ))}
       </ul>
