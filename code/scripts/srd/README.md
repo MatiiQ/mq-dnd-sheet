@@ -114,3 +114,21 @@ rerolls and minimum rolls (Supreme Healing), damage that adds half a level (Divi
 are what the pack holds. Wording pasted straight from the PDF or `reference/source/phb2024-fulltext.txt` is not
 detected. Never paste from those files into tracked files. Pushes from a clone without `reference/` (another machine,
 a cloud session) are not checked at all; the hook says so.
+
+## Entry counts (2026-10-30)
+
+| Kind | SRD 5.2.1 (committed) | PHB pack (local) |
+|---|---|---|
+| spell | 339 | 52 |
+| item | 420 | 0 |
+| feat | 17 | 58 |
+| background | 4 | 12 |
+| species | 9 | 1 |
+| trait | 47 | 5 |
+| class | 12 | 0 |
+| subclass | 12 | 36 |
+| feature | 231 | 183 |
+| prof | 102 | 0 |
+| rule | 17 | 0 |
+
+The pack holds only entries the SRD lacks (`npm run pack` prints parsed, dropped and written counts per kind).
