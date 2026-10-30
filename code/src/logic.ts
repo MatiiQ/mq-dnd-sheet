@@ -528,7 +528,8 @@ export function migrate(data: unknown): Character {
   if (c.conc && !c.spells.some((x) => x.id === c.conc!.id)) c.conc = null;
   c.hpUndo = null;
   // Inspiration is a counter, 0 or more. This deliberately departs from the rules, where a character has at most one
-  // Heroic Inspiration (PHB p.13, p.368). Older saves had an on/off flag; the type changed, so read the raw save.
+  // Heroic Inspiration (PHB p.13, p.368): the book says it doesn't stack, the sheet counts it with no maximum (house rule).
+  // Older saves had an on/off flag; the type changed, so read the raw save.
   const insp = data.insp;
   c.insp = typeof insp === 'boolean' ? Number(insp) : finite(insp) ? Math.max(0, Math.floor(insp)) : 0;
   if (typeof c.concCheck !== 'string') c.concCheck = null;

@@ -14,7 +14,7 @@ it('finds phrases ignoring case, line breaks, curly quotes and JSON escapes', ()
 
 it('reads added lines from ordinary and combined diffs, never the file headers', () => {
   const patch = ['commit aaa', 'Author: t <t@t>', '', '    message +++ not content', '', 'diff --cc a.txt', 'index 1,2..3', '--- a/a.txt', '+++ b/a.txt',
-    '@@@ -1,1 -1,1 +1,2 @@@', '- old', ' -other', '++secret', '+++1 bonus', '  same', 'commit bbb', 'diff --git a/b.txt b/b.txt', '--- a/b.txt', '+++ b/b.txt',
+    '@@@ -1,1 -1,1 +1,2 @@@', '- old', ' -other', '++secret', '+-removed in one parent', '+++1 bonus', '  same', 'commit bbb', 'diff --git a/b.txt b/b.txt', '--- a/b.txt', '+++ b/b.txt',
     '@@ -1 +1 @@', '-gone', '++plus first'].join('\n');
   expect([...addedLines(patch)]).toEqual([['aaa', ['secret', '+1 bonus']], ['bbb', ['+plus first']]]);
 });

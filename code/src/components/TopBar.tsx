@@ -356,10 +356,11 @@ function Menu({ store, onClose, onSwitched, onRest }: { store: CharacterStore; o
 // The PHB pack built with `npm run pack`: status, import from a file, remove. Without it the app uses SRD data only.
 function PhbData() {
   const [status, setStatus] = useState('Checking…');
+  const [loaded, setLoaded] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [armed, tapRemove] = useArmed();
   const fileRef = useRef<HTMLInputElement>(null);
-  const refresh = () => getPack().then((p) => setStatus(p ? packSummary(p) : 'Not loaded (SRD only)'));
+  const refresh = () => getPack().then((p) => { setLoaded(!!p); setStatus(p ? packSummary(p) : 'Not loaded (SRD only)'); });
   useEffect(() => { refresh(); }, []);
 
   const importPack = async (file: File | undefined) => {
@@ -385,7 +386,7 @@ function PhbData() {
       <span className="small">{status}</span>
       <div className="row gap-8">
         <button type="button" className="btn grow" style={{ padding: '0 10px' }} onClick={() => fileRef.current?.click()}>Import PHB data</button>
-        {status.startsWith('PHB data') && (
+        {loaded && (
           <button type="button" className={armed ? 'btn remove-armed' : 'btn'} style={{ padding: '0 10px' }} onClick={() => tapRemove(remove)}
             aria-label={armed ? 'Tap again to remove the PHB data' : 'Remove the PHB data'}>{armed ? 'Remove?' : 'Remove'}</button>
         )}
