@@ -62,6 +62,8 @@ A choice offers `options` (grants) or a `pool` (`<kind>:<filter>`) the app gener
 | `list:cleric\|druid\|wizard` | one of the named class spell lists (Magic Initiate) |
 | `ability:int\|wis\|cha` | one ability, usually the spellcasting ability for the entry's spells (`castAb: '$ab'`) |
 | `trait:of=<trait id>` | one of the lineage options that name that trait in `of` |
+| `skill:proficient` | a skill the character is proficient in (Expertise) |
+| `subclass:cls=ranger` | a subclass of the class |
 
 `repeat: true` on a choice means one option may be picked more than once: Ability Score Improvement picks two `+1`
 options (the same one twice gives `+2`), a background picks three (`+2`/`+1` or `+1` to all three).
@@ -71,3 +73,15 @@ options (the same one twice gives `+2`), a background picks three (`+2`/`+1` or 
 - `TraitEntry.of` (Task 6): a lineage or ancestry option (Wood Elf, Forest Gnome, Cloud’s Jaunt) is a trait of its own,
   because one option carries several grants; `of` names the trait that offers it, and that trait holds a choice with
   the pool `trait:of=<its id>`. Plan 3 follow-up: apply the chosen option's grants as the trait's.
+
+## Vocabulary changes found by the slice
+
+Authoring every entry the sample characters use (Task 10) added three optional fields; existing kinds keep their shape.
+Each needs a small plan 3 follow-up to apply it.
+
+- `opt` on a grant inside a choice's `options`: grants with the same `opt` are one pick. Primal Order's Warden gives
+  Martial weapons and Medium armor training together.
+- `cantrip` on `dmgBonus`: the bonus applies to the damage of the entry's class cantrips (Elemental Fury's Potent
+  Spellcasting adds WIS to Druid cantrips).
+- `dice` on `action`: the action's die as a Value (Cosmic Omen's Weal `1d6` and Woe `-1d6`, Starry Form's Archer
+  `1:1d8,10:2d8`, Healing Hands `pb` d4s).

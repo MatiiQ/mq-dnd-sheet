@@ -1,0 +1,517 @@
+{
+  "feature/barbarian/ability-score-improvement": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "feat",
+        "name": "Feat",
+        "pick": 1,
+        "pool": "feat:cat=general"
+      }
+    ]
+  },
+  "feature/barbarian/barbarian-subclass": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "sub",
+        "name": "Subclass",
+        "pick": 1,
+        "pool": "subclass:cls=barbarian"
+      }
+    ]
+  },
+  "feature/bard/ability-score-improvement": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "feat",
+        "name": "Feat",
+        "pick": 1,
+        "pool": "feat:cat=general"
+      }
+    ]
+  },
+  "feature/bard/bard-subclass": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "sub",
+        "name": "Subclass",
+        "pick": 1,
+        "pool": "subclass:cls=bard"
+      }
+    ]
+  },
+  "feature/cleric/ability-score-improvement": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "feat",
+        "name": "Feat",
+        "pick": 1,
+        "pool": "feat:cat=general"
+      }
+    ]
+  },
+  "feature/cleric/cleric-subclass": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "sub",
+        "name": "Subclass",
+        "pick": 1,
+        "pool": "subclass:cls=cleric"
+      }
+    ]
+  },
+  "feature/druid/ability-score-improvement": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "feat",
+        "name": "Feat",
+        "pick": 1,
+        "pool": "feat:cat=general"
+      }
+    ]
+  },
+  "feature/druid/druid-subclass": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "sub",
+        "name": "Subclass",
+        "pick": 1,
+        "pool": "subclass:cls=druid"
+      }
+    ]
+  },
+  "feature/druid/druidic": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "prof",
+        "name": "Druidic",
+        "cat": "language",
+        "target": "Druidic"
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Speak with Animals",
+        "spell": "spell/speak-with-animals",
+        "always": true
+      }
+    ]
+  },
+  "feature/druid/elemental-fury": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "fury",
+        "name": "Elemental Fury",
+        "pick": 1,
+        "options": [
+          {
+            "id": "o1",
+            "kind": "dmgBonus",
+            "name": "Potent Spellcasting",
+            "val": "wis",
+            "cantrip": true
+          },
+          {
+            "id": "o2",
+            "kind": "xdmg",
+            "name": "Primal Strike",
+            "dice": "1d8",
+            "dtype": "Cold, Fire, Lightning or Thunder",
+            "on": "a weapon or Beast form attack hit",
+            "perTurn": true
+          }
+        ]
+      }
+    ]
+  },
+  "feature/druid/primal-order": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "order",
+        "name": "Primal Order",
+        "pick": 1,
+        "options": [
+          {
+            "id": "o1",
+            "kind": "checkBonus",
+            "name": "Magician: Arcana + WIS",
+            "target": "arcana",
+            "val": "wis>=1",
+            "opt": "Magician"
+          },
+          {
+            "id": "o2",
+            "kind": "checkBonus",
+            "name": "Magician: Nature + WIS",
+            "target": "nature",
+            "val": "wis>=1",
+            "opt": "Magician"
+          },
+          {
+            "id": "o3",
+            "kind": "prof",
+            "name": "Warden: Martial weapons",
+            "cat": "weapon",
+            "target": "Martial weapons",
+            "opt": "Warden"
+          },
+          {
+            "id": "o4",
+            "kind": "prof",
+            "name": "Warden: Medium armor",
+            "cat": "armor",
+            "target": "Medium armor",
+            "opt": "Warden"
+          }
+        ]
+      }
+    ]
+  },
+  "feature/druid/wild-companion": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Wild Companion",
+        "econ": "action",
+        "note": "Expend a spell slot or a Wild Shape use: cast Find Familiar without Material components."
+      }
+    ]
+  },
+  "feature/druid/wild-resurgence": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Wild Resurgence: spell slot",
+        "max": "1",
+        "recharge": "long"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Wild Resurgence",
+        "econ": "free",
+        "res": "g1",
+        "note": "Expend a Wild Shape use to gain a level 1 spell slot."
+      }
+    ]
+  },
+  "feature/druid/wild-shape": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Wild Shape",
+        "max": "2:2,6:3,17:4",
+        "recharge": "long",
+        "regain": "1",
+        "regainOn": "short"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Wild Shape",
+        "econ": "bonus",
+        "res": "g1",
+        "note": "Shape-shift into a known Beast form for hours equal to half your Druid level."
+      }
+    ]
+  },
+  "feature/fighter/ability-score-improvement": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "feat",
+        "name": "Feat",
+        "pick": 1,
+        "pool": "feat:cat=general"
+      }
+    ]
+  },
+  "feature/fighter/fighter-subclass": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "sub",
+        "name": "Subclass",
+        "pick": 1,
+        "pool": "subclass:cls=fighter"
+      }
+    ]
+  },
+  "feature/monk/ability-score-improvement": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "feat",
+        "name": "Feat",
+        "pick": 1,
+        "pool": "feat:cat=general"
+      }
+    ]
+  },
+  "feature/monk/monk-subclass": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "sub",
+        "name": "Subclass",
+        "pick": 1,
+        "pool": "subclass:cls=monk"
+      }
+    ]
+  },
+  "feature/paladin/ability-score-improvement": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "feat",
+        "name": "Feat",
+        "pick": 1,
+        "pool": "feat:cat=general"
+      }
+    ]
+  },
+  "feature/paladin/paladin-subclass": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "sub",
+        "name": "Subclass",
+        "pick": 1,
+        "pool": "subclass:cls=paladin"
+      }
+    ]
+  },
+  "feature/ranger/ability-score-improvement": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "feat",
+        "name": "Feat",
+        "pick": 1,
+        "pool": "feat:cat=general"
+      }
+    ]
+  },
+  "feature/ranger/deft-explorer": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "exp",
+        "name": "Expertise",
+        "pick": 1,
+        "pool": "skill:proficient"
+      },
+      {
+        "kind": "choice",
+        "id": "lang",
+        "name": "Languages",
+        "pick": 2,
+        "pool": "language:any"
+      },
+      {
+        "id": "g1",
+        "kind": "prof",
+        "name": "Expertise",
+        "cat": "expertise",
+        "target": "$exp"
+      },
+      {
+        "id": "g2",
+        "kind": "prof",
+        "name": "Languages",
+        "cat": "language",
+        "target": "$lang"
+      }
+    ]
+  },
+  "feature/ranger/extra-attack": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "attacks",
+        "name": "Two attacks per Attack action",
+        "val": "2"
+      }
+    ]
+  },
+  "feature/ranger/favored-enemy": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Hunter’s Mark",
+        "spell": "spell/hunters-mark",
+        "always": true
+      },
+      {
+        "id": "g2",
+        "kind": "resource",
+        "name": "Favored Enemy",
+        "max": "1:2,5:3,9:4,13:5,17:6",
+        "recharge": "long",
+        "casts": "spell/hunters-mark"
+      }
+    ]
+  },
+  "feature/ranger/fighting-style": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "style",
+        "name": "Fighting Style feat or Druidic Warrior",
+        "pick": 1,
+        "pool": "feat:cat=style"
+      }
+    ]
+  },
+  "feature/ranger/hunter/hunters-prey": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "prey",
+        "name": "Hunter’s Prey",
+        "pick": 1,
+        "options": [
+          {
+            "id": "o1",
+            "kind": "xdmg",
+            "name": "Colossus Slayer",
+            "dice": "1d8",
+            "on": "a weapon hit on a creature missing Hit Points",
+            "perTurn": true
+          },
+          {
+            "id": "o2",
+            "kind": "action",
+            "name": "Horde Breaker",
+            "econ": "other",
+            "note": "Once per turn, attack another creature within 5 ft of the first target with the same weapon."
+          }
+        ]
+      }
+    ]
+  },
+  "feature/ranger/ranger-subclass": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "sub",
+        "name": "Subclass",
+        "pick": 1,
+        "pool": "subclass:cls=ranger"
+      }
+    ]
+  },
+  "feature/ranger/weapon-mastery": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "prof",
+        "name": "Weapon Mastery: 2 kinds of weapons",
+        "cat": "mastery",
+        "val": "2"
+      }
+    ]
+  },
+  "feature/rogue/ability-score-improvement": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "feat",
+        "name": "Feat",
+        "pick": 1,
+        "pool": "feat:cat=general"
+      }
+    ]
+  },
+  "feature/rogue/rogue-subclass": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "sub",
+        "name": "Subclass",
+        "pick": 1,
+        "pool": "subclass:cls=rogue"
+      }
+    ]
+  },
+  "feature/sorcerer/ability-score-improvement": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "feat",
+        "name": "Feat",
+        "pick": 1,
+        "pool": "feat:cat=general"
+      }
+    ]
+  },
+  "feature/sorcerer/sorcerer-subclass": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "sub",
+        "name": "Subclass",
+        "pick": 1,
+        "pool": "subclass:cls=sorcerer"
+      }
+    ]
+  },
+  "feature/warlock/ability-score-improvement": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "feat",
+        "name": "Feat",
+        "pick": 1,
+        "pool": "feat:cat=general"
+      }
+    ]
+  },
+  "feature/warlock/warlock-subclass": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "sub",
+        "name": "Subclass",
+        "pick": 1,
+        "pool": "subclass:cls=warlock"
+      }
+    ]
+  },
+  "feature/wizard/ability-score-improvement": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "feat",
+        "name": "Feat",
+        "pick": 1,
+        "pool": "feat:cat=general"
+      }
+    ]
+  },
+  "feature/wizard/wizard-subclass": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "sub",
+        "name": "Subclass",
+        "pick": 1,
+        "pool": "subclass:cls=wizard"
+      }
+    ]
+  }
+}

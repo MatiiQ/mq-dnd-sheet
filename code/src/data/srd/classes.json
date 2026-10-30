@@ -2043,7 +2043,15 @@
     "cls": "barbarian",
     "lvl": 4,
     "desc": "You gain the Ability Score Improvement feat (see “Feats”) or another feat of your choice for which you qualify. You gain this feature again at Barbarian levels 8, 12, and 16.",
-    "grants": [],
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "feat",
+        "name": "Feat",
+        "pick": 1,
+        "pool": "feat:cat=general"
+      }
+    ],
     "again": "8,12,16"
   },
   {
@@ -2055,7 +2063,15 @@
     "cls": "barbarian",
     "lvl": 3,
     "desc": "You gain a Barbarian subclass of your choice. The Path of the Berserker subclass is detailed after this class’s description. A subclass is a specialization that grants you features at certain Barbarian levels. For the rest of your career, you gain each of your subclass’s features that are of your Barbarian level or lower.",
-    "grants": []
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "sub",
+        "name": "Subclass",
+        "pick": 1,
+        "pool": "subclass:cls=barbarian"
+      }
+    ]
   },
   {
     "id": "feature/barbarian/brutal-strike",
@@ -2302,7 +2318,15 @@
     "cls": "bard",
     "lvl": 4,
     "desc": "You gain the Ability Score Improvement feat (see “Feats”) or another feat of your choice for which you qualify. You gain this feature again at Bard levels 8, 12, and 16.",
-    "grants": [],
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "feat",
+        "name": "Feat",
+        "pick": 1,
+        "pool": "feat:cat=general"
+      }
+    ],
     "again": "8,12,16"
   },
   {
@@ -2314,7 +2338,15 @@
     "cls": "bard",
     "lvl": 3,
     "desc": "You gain a Bard subclass of your choice. The College of Lore subclass is detailed after this class’s description. A subclass is a specialization that grants you features at certain Bard levels. For the rest of your career, you gain each of your subclass’s features that are of your Bard level or lower.",
-    "grants": []
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "sub",
+        "name": "Subclass",
+        "pick": 1,
+        "pool": "subclass:cls=bard"
+      }
+    ]
   },
   {
     "id": "feature/bard/bardic-inspiration",
@@ -2484,7 +2516,15 @@
     "cls": "cleric",
     "lvl": 4,
     "desc": "You gain the Ability Score Improvement feat (see “Feats”) or another feat of your choice for which you qualify. You gain this feature again at Cleric levels 8, 12, and 16.",
-    "grants": [],
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "feat",
+        "name": "Feat",
+        "pick": 1,
+        "pool": "feat:cat=general"
+      }
+    ],
     "again": "8,12,16"
   },
   {
@@ -2518,7 +2558,15 @@
     "cls": "cleric",
     "lvl": 3,
     "desc": "You gain a Cleric subclass of your choice. The Life Domain subclass is detailed after this class’s description. A subclass is a specialization that grants you features at certain Cleric levels. For the rest of your career, you gain each of your subclass’s features that are of your Cleric level or lower.",
-    "grants": []
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "sub",
+        "name": "Subclass",
+        "pick": 1,
+        "pool": "subclass:cls=cleric"
+      }
+    ]
   },
   {
     "id": "feature/cleric/divine-intervention",
@@ -2666,7 +2714,15 @@
     "cls": "druid",
     "lvl": 4,
     "desc": "You gain the Ability Score Improvement feat (see “Feats”) or another feat of your choice for which you qualify. You gain this feature again at Druid levels 8, 12, and 16.",
-    "grants": [],
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "feat",
+        "name": "Feat",
+        "pick": 1,
+        "pool": "feat:cat=general"
+      }
+    ],
     "again": "8,12,16"
   },
   {
@@ -2760,7 +2816,15 @@
     "cls": "druid",
     "lvl": 3,
     "desc": "You gain a Druid subclass of your choice. The Circle of the Land subclass is detailed after this class’s description. A subclass is a specialization that grants you features at certain Druid levels. For the rest of your career, you gain each of your subclass’s features that are of your Druid level or lower.",
-    "grants": []
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "sub",
+        "name": "Subclass",
+        "pick": 1,
+        "pool": "subclass:cls=druid"
+      }
+    ]
   },
   {
     "id": "feature/druid/druidic",
@@ -2771,7 +2835,22 @@
     "cls": "druid",
     "lvl": 1,
     "desc": "You know Druidic, the secret language of Druids. While learning this ancient tongue, you also unlocked the magic of communicating with animals; you always have the Speak with Animals spell prepared. You can use Druidic to leave hidden messages. You and others who know Druidic automatically spot such a message. Others spot the message’s presence with a successful DC 15 Intelligence (Investigation) check but can’t decipher it without magic.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "prof",
+        "name": "Druidic",
+        "cat": "language",
+        "target": "Druidic"
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Speak with Animals",
+        "spell": "spell/speak-with-animals",
+        "always": true
+      }
+    ]
   },
   {
     "id": "feature/druid/elemental-fury",
@@ -2782,7 +2861,32 @@
     "cls": "druid",
     "lvl": 7,
     "desc": "The might of the elements flows through you. You gain one of the following options of your choice.\nPotent Spellcasting. Add your Wisdom modifier to the damage you deal with any Druid cantrip.\nPrimal Strike. Once on each of your turns when you hit a creature with an attack roll using a weapon or a Beast form’s attack in Wild Shape, you can cause the target to take an extra 1d8 Cold, Fire, Lightning, or Thunder damage (choose when you hit).",
-    "grants": []
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "fury",
+        "name": "Elemental Fury",
+        "pick": 1,
+        "options": [
+          {
+            "id": "o1",
+            "kind": "dmgBonus",
+            "name": "Potent Spellcasting",
+            "val": "wis",
+            "cantrip": true
+          },
+          {
+            "id": "o2",
+            "kind": "xdmg",
+            "name": "Primal Strike",
+            "dice": "1d8",
+            "dtype": "Cold, Fire, Lightning or Thunder",
+            "on": "a weapon or Beast form attack hit",
+            "perTurn": true
+          }
+        ]
+      }
+    ]
   },
   {
     "id": "feature/druid/epic-boon",
@@ -2815,7 +2919,48 @@
     "cls": "druid",
     "lvl": 1,
     "desc": "You have dedicated yourself to one of the following sacred roles of your choice.\nMagician. You know one extra cantrip from the Druid spell list. In addition, your mystical connection to nature gives you a bonus to your Intelligence (Arcana or Nature) checks. The bonus equals your Wisdom modifier (minimum bonus of +1).\nWarden. Trained for battle, you gain proficiency with Martial weapons and training with Medium armor.",
-    "grants": []
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "order",
+        "name": "Primal Order",
+        "pick": 1,
+        "options": [
+          {
+            "id": "o1",
+            "kind": "checkBonus",
+            "name": "Magician: Arcana + WIS",
+            "target": "arcana",
+            "val": "wis>=1",
+            "opt": "Magician"
+          },
+          {
+            "id": "o2",
+            "kind": "checkBonus",
+            "name": "Magician: Nature + WIS",
+            "target": "nature",
+            "val": "wis>=1",
+            "opt": "Magician"
+          },
+          {
+            "id": "o3",
+            "kind": "prof",
+            "name": "Warden: Martial weapons",
+            "cat": "weapon",
+            "target": "Martial weapons",
+            "opt": "Warden"
+          },
+          {
+            "id": "o4",
+            "kind": "prof",
+            "name": "Warden: Medium armor",
+            "cat": "armor",
+            "target": "Medium armor",
+            "opt": "Warden"
+          }
+        ]
+      }
+    ]
   },
   {
     "id": "feature/druid/spellcasting",
@@ -2837,7 +2982,15 @@
     "cls": "druid",
     "lvl": 2,
     "desc": "You can summon a nature spirit that assumes an animal form to aid you. As a Magic action, you can expend a spell slot or a use of Wild Shape to cast the Find Familiar spell without Material components. When you cast the spell in this way, the familiar is Fey and disappears when you finish a Long Rest.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Wild Companion",
+        "econ": "action",
+        "note": "Expend a spell slot or a Wild Shape use: cast Find Familiar without Material components."
+      }
+    ]
   },
   {
     "id": "feature/druid/wild-resurgence",
@@ -2848,7 +3001,23 @@
     "cls": "druid",
     "lvl": 5,
     "desc": "Once on each of your turns, if you have no uses of Wild Shape left, you can give yourself one use by expending a spell slot (no action required). In addition, you can expend one use of Wild Shape (no action required) to give yourself a level 1 spell slot, but you can’t do so again until you finish a Long Rest.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Wild Resurgence: spell slot",
+        "max": "1",
+        "recharge": "long"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Wild Resurgence",
+        "econ": "free",
+        "res": "g1",
+        "note": "Expend a Wild Shape use to gain a level 1 spell slot."
+      }
+    ]
   },
   {
     "id": "feature/druid/wild-shape",
@@ -2859,7 +3028,25 @@
     "cls": "druid",
     "lvl": 2,
     "desc": "The power of nature allows you to assume the form of an animal. As a Bonus Action, you shape-shift into a Beast form that you have learned for this feature (see “Known Forms” below). You stay in that form for a number of hours equal to half your Druid level or until you use Wild Shape again, have the Incapacitated condition, or die. You can also leave the form early as a Bonus Action.\nNumber of Uses. You can use Wild Shape twice. You regain one expended use when you finish a Short Rest, and you regain all expended uses when you finish a Long Rest. You gain additional uses when you reach certain Druid levels, as shown in the Wild Shape column of the Druid Features table.\nKnown Forms. You know four Beast forms for this feature, chosen from among Beast stat blocks that have a maximum Challenge Rating of 1/4 and that lack a Fly Speed (see “Animals” in “Monsters” for stat block options). The Rat, Riding Horse, Spider, and Wolf are recommended. Whenever you finish a Long Rest, you can replace one of your known forms with another eligible form. When you reach certain Druid levels, your number of known forms and the maximum Challenge Rating for those forms increases, as shown in the Beast Shapes table. In addition, starting at level 8, you can adopt a form that has a Fly Speed. When choosing known forms, you may look in other sources for eligible Beasts if the Game Master permits you to do so.\nBeast Shapes Known Forms Max CR Fly Speed 1/4 No 1/2 No Yes Rules While Shape-Shifted. While in a form, you retain your personality, memories, and ability to speak, and the following rules apply:\nTemporary Hit Points. When you assume a Wild Shape form, you gain a number of Temporary Hit Points equal to your Druid level.\nGame Statistics. Your game statistics are replaced by the Beast’s stat block, but you retain your creature type; Hit Points; Hit Point Dice; Intelligence, Wisdom, and Charisma scores; class features; languages; and feats. You also retain your skill and saving throw proficiencies and use your Proficiency Bonus for them, in addition to gaining the proficiencies of the creature. If a skill or saving throw modifier in the Beast’s stat block is higher than yours, use the one in the stat block.\nNo Spellcasting. You can’t cast spells, but shapeshifting doesn’t break your Concentration or otherwise interfere with a spell you’ve already cast.\nObjects. Your ability to handle objects is determined by the form’s limbs rather than your own. In addition, you choose whether your equipment falls in your space, merges into your new form, or is worn by it. Worn equipment functions as normal, but the GM decides whether it’s practical for the new form to wear a piece of equipment based on the creature’s size and shape. Your equipment doesn’t change size or shape to match the new form, and any equipment that the new form can’t wear must either fall to the ground or merge with the form. Equipment that merges with the form has no effect while you’re in that form.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Wild Shape",
+        "max": "2:2,6:3,17:4",
+        "recharge": "long",
+        "regain": "1",
+        "regainOn": "short"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Wild Shape",
+        "econ": "bonus",
+        "res": "g1",
+        "note": "Shape-shift into a known Beast form for hours equal to half your Druid level."
+      }
+    ]
   },
   {
     "id": "feature/fighter/ability-score-improvement",
@@ -2870,7 +3057,15 @@
     "cls": "fighter",
     "lvl": 4,
     "desc": "You gain the Ability Score Improvement feat (see “Feats”) or another feat of your choice for which you qualify. You gain this feature again at Fighter levels 6, 8, 12, 14, and 16.",
-    "grants": [],
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "feat",
+        "name": "Feat",
+        "pick": 1,
+        "pool": "feat:cat=general"
+      }
+    ],
     "again": "6,8,12,14,16"
   },
   {
@@ -2988,7 +3183,15 @@
     "cls": "fighter",
     "lvl": 3,
     "desc": "You gain a Fighter subclass of your choice. The Champion subclass is detailed after this class’s description. A subclass is a specialization that grants you features at certain Fighter levels. For the rest of your career, you gain each of your subclass’s features that are of your Fighter level or lower.",
-    "grants": []
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "sub",
+        "name": "Subclass",
+        "pick": 1,
+        "pool": "subclass:cls=fighter"
+      }
+    ]
   },
   {
     "id": "feature/fighter/fighting-style",
@@ -3110,7 +3313,15 @@
     "cls": "monk",
     "lvl": 4,
     "desc": "You gain the Ability Score Improvement feat (see “Feats”) or another feat of your choice for which you qualify. You gain this feature again at Monk levels 8, 12, and 16.",
-    "grants": [],
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "feat",
+        "name": "Feat",
+        "pick": 1,
+        "pool": "feat:cat=general"
+      }
+    ],
     "again": "8,12,16"
   },
   {
@@ -3243,7 +3454,15 @@
     "cls": "monk",
     "lvl": 3,
     "desc": "You gain a Monk subclass of your choice. The Warrior of the Open Hand subclass is detailed after this class’s description. A subclass is a specialization that grants you features at certain Monk levels. For the rest of your career, you gain each of your subclass’s features that are of your Monk level or lower.",
-    "grants": []
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "sub",
+        "name": "Subclass",
+        "pick": 1,
+        "pool": "subclass:cls=monk"
+      }
+    ]
   },
   {
     "id": "feature/monk/monks-focus",
@@ -3401,7 +3620,15 @@
     "cls": "paladin",
     "lvl": 4,
     "desc": "You gain the Ability Score Improvement feat (see “Feats”) or another feat of your choice for which you qualify. You gain this feature again at Paladin levels 8, 12, and 16.",
-    "grants": [],
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "feat",
+        "name": "Feat",
+        "pick": 1,
+        "pool": "feat:cat=general"
+      }
+    ],
     "again": "8,12,16"
   },
   {
@@ -3583,7 +3810,15 @@
     "cls": "paladin",
     "lvl": 3,
     "desc": "You gain a Paladin subclass of your choice. The Oath of Devotion subclass is detailed after this class’s description. A subclass is a specialization that grants you features at certain Paladin levels. For the rest of your career, you gain each of your subclass’s features that are of your Paladin level or lower.",
-    "grants": []
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "sub",
+        "name": "Subclass",
+        "pick": 1,
+        "pool": "subclass:cls=paladin"
+      }
+    ]
   },
   {
     "id": "feature/paladin/paladins-smite",
@@ -3649,7 +3884,15 @@
     "cls": "ranger",
     "lvl": 4,
     "desc": "You gain the Ability Score Improvement feat (see “Feats”) or another feat of your choice for which you qualify. You gain this feature again at Ranger levels 8, 12, and 16.",
-    "grants": [],
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "feat",
+        "name": "Feat",
+        "pick": 1,
+        "pool": "feat:cat=general"
+      }
+    ],
     "again": "8,12,16"
   },
   {
@@ -3661,7 +3904,36 @@
     "cls": "ranger",
     "lvl": 2,
     "desc": "Thanks to your travels, you gain the following benefits.\nExpertise. Choose one of your skill proficiencies with which you lack Expertise. You gain Expertise in that skill.\nLanguages. You know two languages of your choice from the language tables in “Character Creation.”",
-    "grants": []
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "exp",
+        "name": "Expertise",
+        "pick": 1,
+        "pool": "skill:proficient"
+      },
+      {
+        "kind": "choice",
+        "id": "lang",
+        "name": "Languages",
+        "pick": 2,
+        "pool": "language:any"
+      },
+      {
+        "id": "g1",
+        "kind": "prof",
+        "name": "Expertise",
+        "cat": "expertise",
+        "target": "$exp"
+      },
+      {
+        "id": "g2",
+        "kind": "prof",
+        "name": "Languages",
+        "cat": "language",
+        "target": "$lang"
+      }
+    ]
   },
   {
     "id": "feature/ranger/epic-boon",
@@ -3694,7 +3966,14 @@
     "cls": "ranger",
     "lvl": 5,
     "desc": "You can attack twice instead of once whenever you take the Attack action on your turn.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "attacks",
+        "name": "Two attacks per Attack action",
+        "val": "2"
+      }
+    ]
   },
   {
     "id": "feature/ranger/favored-enemy",
@@ -3705,7 +3984,23 @@
     "cls": "ranger",
     "lvl": 1,
     "desc": "You always have the Hunter’s Mark spell prepared. You can cast it twice without expending a spell slot, and you regain all expended uses of this ability when you finish a Long Rest. The number of times you can cast the spell without a spell slot increases when you reach certain Ranger levels, as shown in the Favored Enemy column of the Ranger Features table.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Hunter’s Mark",
+        "spell": "spell/hunters-mark",
+        "always": true
+      },
+      {
+        "id": "g2",
+        "kind": "resource",
+        "name": "Favored Enemy",
+        "max": "1:2,5:3,9:4,13:5,17:6",
+        "recharge": "long",
+        "casts": "spell/hunters-mark"
+      }
+    ]
   },
   {
     "id": "feature/ranger/feral-senses",
@@ -3727,7 +4022,15 @@
     "cls": "ranger",
     "lvl": 2,
     "desc": "You gain a Fighting Style feat of your choice (see “Feats”). Instead of choosing one of those feats, you can choose the option below.\nDruidic Warrior. You learn two Druid cantrips of your choice (see the Druid class’s section for a list of Druid spells). Guidance and Starry Wisp are recommended. The chosen cantrips count as Ranger spells for you, and Wisdom is your spellcasting ability for them. Whenever you gain a Ranger level, you can replace one of these cantrips with another Druid cantrip.",
-    "grants": []
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "style",
+        "name": "Fighting Style feat or Druidic Warrior",
+        "pick": 1,
+        "pool": "feat:cat=style"
+      }
+    ]
   },
   {
     "id": "feature/ranger/foe-slayer",
@@ -3773,7 +4076,31 @@
     "cls": "ranger",
     "lvl": 3,
     "desc": "You gain one of the following feature options of your choice. Whenever you finish a Short or Long Rest, you can replace the chosen option with the other one.\nColossus Slayer. Your tenacity can wear down even the most resilient foes. When you hit a creature with a weapon, the weapon deals an extra 1d8 damage to the target if it’s missing any of its Hit Points. You can deal this extra damage only once per turn.\nHorde Breaker. Once on each of your turns when you make an attack with a weapon, you can make another attack with the same weapon against a different creature that is within 5 feet of the original target, that is within the weapon’s range, and that you haven’t attacked this turn.",
-    "grants": [],
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "prey",
+        "name": "Hunter’s Prey",
+        "pick": 1,
+        "options": [
+          {
+            "id": "o1",
+            "kind": "xdmg",
+            "name": "Colossus Slayer",
+            "dice": "1d8",
+            "on": "a weapon hit on a creature missing Hit Points",
+            "perTurn": true
+          },
+          {
+            "id": "o2",
+            "kind": "action",
+            "name": "Horde Breaker",
+            "econ": "other",
+            "note": "Once per turn, attack another creature within 5 ft of the first target with the same weapon."
+          }
+        ]
+      }
+    ],
     "sub": "hunter"
   },
   {
@@ -3831,7 +4158,15 @@
     "cls": "ranger",
     "lvl": 3,
     "desc": "You gain a Ranger subclass of your choice. The Hunter subclass is detailed after this class’s description. A subclass is a specialization that grants you features at certain Ranger levels. For the rest of your career, you gain each of your subclass’s features that are of your Ranger level or lower.",
-    "grants": []
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "sub",
+        "name": "Subclass",
+        "pick": 1,
+        "pool": "subclass:cls=ranger"
+      }
+    ]
   },
   {
     "id": "feature/ranger/relentless-hunter",
@@ -3886,7 +4221,15 @@
     "cls": "ranger",
     "lvl": 1,
     "desc": "Your training with weapons allows you to use the mastery properties of two kinds of weapons of your choice with which you have proficiency, such as Longbows and Shortswords. Whenever you finish a Long Rest, you can change the kinds of weapons you chose. For example, you could switch to using the mastery properties of Scimitars and Longswords.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "prof",
+        "name": "Weapon Mastery: 2 kinds of weapons",
+        "cat": "mastery",
+        "val": "2"
+      }
+    ]
   },
   {
     "id": "feature/rogue/ability-score-improvement",
@@ -3897,7 +4240,15 @@
     "cls": "rogue",
     "lvl": 4,
     "desc": "You gain the Ability Score Improvement feat (see “Feats”) or another feat of your choice for which you qualify. You gain this feature again at Rogue levels 8, 10, 12, and 16.",
-    "grants": [],
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "feat",
+        "name": "Feat",
+        "pick": 1,
+        "pool": "feat:cat=general"
+      }
+    ],
     "again": "8,10,12,16"
   },
   {
@@ -4009,7 +4360,15 @@
     "cls": "rogue",
     "lvl": 3,
     "desc": "You gain a Rogue subclass of your choice. The Thief subclass is detailed after this class’s description. A subclass is a specialization that grants you features at certain Rogue levels. For the rest of your career, you gain each of your subclass’s features that are of your Rogue level or lower.",
-    "grants": []
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "sub",
+        "name": "Subclass",
+        "pick": 1,
+        "pool": "subclass:cls=rogue"
+      }
+    ]
   },
   {
     "id": "feature/rogue/slippery-mind",
@@ -4157,7 +4516,15 @@
     "cls": "sorcerer",
     "lvl": 4,
     "desc": "You gain the Ability Score Improvement feat (see “Feats”) or another feat of your choice for which you qualify. You gain this feature again at Sorcerer levels 8, 12, and 16.",
-    "grants": [],
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "feat",
+        "name": "Feat",
+        "pick": 1,
+        "pool": "feat:cat=general"
+      }
+    ],
     "again": "8,12,16"
   },
   {
@@ -4285,7 +4652,15 @@
     "cls": "sorcerer",
     "lvl": 3,
     "desc": "You gain a Sorcerer subclass of your choice. The Draconic Sorcery subclass is detailed after this class’s description. A subclass is a specialization that grants you features at certain Sorcerer levels. For the rest of your career, you gain each of your subclass’s features that are of your Sorcerer level or lower.",
-    "grants": []
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "sub",
+        "name": "Subclass",
+        "pick": 1,
+        "pool": "subclass:cls=sorcerer"
+      }
+    ]
   },
   {
     "id": "feature/sorcerer/sorcerous-restoration",
@@ -4329,7 +4704,15 @@
     "cls": "warlock",
     "lvl": 4,
     "desc": "You gain the Ability Score Improvement feat (see “Feats”) or another feat of your choice for which you qualify. You gain this feature again at Warlock levels 8, 12, and 16.",
-    "grants": [],
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "feat",
+        "name": "Feat",
+        "pick": 1,
+        "pool": "feat:cat=general"
+      }
+    ],
     "again": "8,12,16"
   },
   {
@@ -4479,7 +4862,15 @@
     "cls": "warlock",
     "lvl": 3,
     "desc": "You gain a Warlock subclass of your choice. The Fiend Patron subclass is detailed after this class’s description. A subclass is a specialization that grants you features at certain Warlock levels. For the rest of your career, you gain each of your subclass’s features that are of your Warlock level or lower.",
-    "grants": []
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "sub",
+        "name": "Subclass",
+        "pick": 1,
+        "pool": "subclass:cls=warlock"
+      }
+    ]
   },
   {
     "id": "feature/wizard/ability-score-improvement",
@@ -4490,7 +4881,15 @@
     "cls": "wizard",
     "lvl": 4,
     "desc": "You gain the Ability Score Improvement feat (see “Feats”) or another feat of your choice for which you qualify. You gain this feature again at Wizard levels 8, 12, and 16.",
-    "grants": [],
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "feat",
+        "name": "Feat",
+        "pick": 1,
+        "pool": "feat:cat=general"
+      }
+    ],
     "again": "8,12,16"
   },
   {
@@ -4650,7 +5049,15 @@
     "cls": "wizard",
     "lvl": 3,
     "desc": "You gain a Wizard subclass of your choice. The Evoker subclass is detailed after this class’s description. A subclass is a specialization that grants you features at certain Wizard levels. For the rest Expanding and Replacing a Spellbook The spells you add to your spellbook as you gain levels reflect your ongoing magical research, but you might find other spells during your adventures that you can add to the book. You could discover a Wizard spell on a Spell Scroll, for example, and then copy it into your spellbook.\nCopying a Spell into the Book. When you find a level 1+ Wizard spell, you can copy it into your spellbook if it’s of a level you can prepare and if you have time to copy it. For each level of the spell, the transcription takes 2 hours and costs 50 GP. Afterward you can prepare the spell like the other spells in your spellbook.\nCopying the Book. You can copy a spell from your spellbook into another book. This is like copying a new spell into your spellbook but faster, since you already know how to cast the spell. You need spend only 1 hour and 10 GP for each level of the copied spell. If you lose your spellbook, you can use the same procedure to transcribe the Wizard spells that you have prepared into a new spellbook. Filling out the remainder of the new book requires you to find new spells to do so. For this reason, many wizards keep a backup spellbook.\nof your career, you gain each of your subclass’s features that are of your Wizard level or lower.",
-    "grants": []
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "sub",
+        "name": "Subclass",
+        "pick": 1,
+        "pool": "subclass:cls=wizard"
+      }
+    ]
   },
   {
     "id": "subclass/barbarian/path-of-the-berserker",

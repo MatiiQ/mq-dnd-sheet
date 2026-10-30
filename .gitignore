@@ -12,3 +12,6 @@ reference/
 
 # Brainstorm mockups (superpowers visual companion)
 .superpowers/
+
+# PHB-side tests: their expected values are PHB-only data
+code/scripts/local/

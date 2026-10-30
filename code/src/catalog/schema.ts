@@ -52,6 +52,7 @@ export interface GrantSpec {
   id: string; kind: GrantKind; name: string;
   when?: 'armor' | 'noHeavy' | 'noArmor' | 'noShield' | 'noArmorNoShield';
   lvl?: number; needEq?: boolean; needAtt?: boolean;
+  opt?: string;                                                                     // in choice options: grants with the same opt are one pick
   range?: string;                                                                   // sense
   max?: string; recharge?: Recharge4; regain?: string; regainOn?: 'short' | 'dawn'; casts?: string;   // resource
   def?: 'res' | 'vul' | 'imm' | 'adv'; target?: string;                              // defense, prof, checkBonus
@@ -61,10 +62,11 @@ export interface GrantSpec {
   mode?: 'walk' | 'climb' | 'swim' | 'fly' | 'burrow'; hover?: boolean;             // speed
   acMode?: 'bonus' | 'unarmored'; shieldOk?: boolean;                               // ac
   size?: Size;                                                                      // size
-  econ?: 'action' | 'bonus' | 'reaction' | 'free' | 'other'; res?: string; note?: string;   // action
+  econ?: 'action' | 'bonus' | 'reaction' | 'free' | 'other'; res?: string; note?: string;   // action (also dice)
   dice?: string; dtype?: string; on?: string; perTurn?: boolean;                    // xdmg
   die?: string; abs?: string;                                                       // unarmed, atkAbil
   wrange?: 'melee' | 'ranged'; amode?: 'melee' | 'ranged'; prop?: string; weapon?: string; oneHand?: boolean;   // atkBonus, dmgBonus
+  cantrip?: boolean;                                                                // dmgBonus: damage of the entry's class cantrips
   addMod?: boolean;                                                                 // lightExtra
   weapons?: string;                                                                 // atkAbil
 }
@@ -131,12 +133,12 @@ const GRANTS: Record<GrantKind, Record<string, [Check, boolean]>> = {
   hpLvl: { val: [value, true] },
   size: { size: [oneOf(...SIZE_KEYS), true] },
   carryUp: {},
-  action: { econ: [oneOf('action', 'bonus', 'reaction', 'free', 'other'), true], res: [str, false], note: [str, false] },
+  action: { econ: [oneOf('action', 'bonus', 'reaction', 'free', 'other'), true], res: [str, false], note: [str, false], dice: [value, false] },
   xdmg: { dice: [value, true], dtype: [str, false], on: [str, true], perTurn: [bool, false] },
   attacks: { val: [value, true] },
   unarmed: { die: [value, true], abs: [str, true] },
   atkBonus: { val: [value, true], wrange: [RANGE_KIND, false], amode: [RANGE_KIND, false], prop: [str, false], weapon: [str, false], oneHand: [bool, false] },
-  dmgBonus: { val: [value, true], wrange: [RANGE_KIND, false], amode: [RANGE_KIND, false], prop: [str, false], weapon: [str, false], oneHand: [bool, false] },
+  dmgBonus: { val: [value, true], wrange: [RANGE_KIND, false], amode: [RANGE_KIND, false], prop: [str, false], weapon: [str, false], oneHand: [bool, false], cantrip: [bool, false] },
   lightExtra: { addMod: [bool, true] },
   atkAbil: { ab: [or(ability, oneOf('cast'), ref), true], weapons: [str, false], amode: [RANGE_KIND, false], die: [value, false] }
 };
@@ -193,13 +195,14 @@ function checkRegain(o: Record<string, unknown>, where: string, errs: string[]) 
   }
 }
 
-function checkGrant(g: unknown, e: Record<string, unknown>, where: string, errs: string[]) {
+function checkGrant(g: unknown, e: Record<string, unknown>, where: string, errs: string[], inOption = false) {
   if (!isObj(g)) { errs.push(`${where}: not an object`); return; }
   const own = GRANTS[g.kind as GrantKind];
   if (!own) { errs.push(`${where}: unknown grant kind ${JSON.stringify(g.kind)}`); return; }
-  checkFields(g, { ...COMMON, ...own }, where, errs);
+  const fields = { ...COMMON, ...own, ...(inOption ? { opt: [str, false] as [Check, boolean] } : {}) };
+  checkFields(g, fields, where, errs);
   for (const [k, v] of Object.entries(g)) {
-    if (!(k in COMMON) && !(k in own)) errs.push(`${where}: unknown field ${k}`);
+    if (!(k in fields)) errs.push(`${where}: unknown field ${k}`);
     if (!primitive(v)) errs.push(`${where}: ${k} is not a plain value`);
   }
   if (typeof g.lvl === 'number' && typeof e.lvl === 'number' && g.lvl < e.lvl) errs.push(`${where}: lvl ${g.lvl} is below the entry's ${e.lvl}`);
@@ -213,7 +216,7 @@ function checkChoice(c: Record<string, unknown>, e: Record<string, unknown>, whe
   if (c.options === undefined && c.pool === undefined) errs.push(`${where}: needs options or a pool`);
   if (c.options !== undefined) {
     if (!Array.isArray(c.options)) errs.push(`${where}: options is not a list`);
-    else c.options.forEach((o, i) => checkGrant(o, e, `${where}.options[${i}]`, errs));
+    else c.options.forEach((o, i) => checkGrant(o, e, `${where}.options[${i}]`, errs, true));
   }
 }
 

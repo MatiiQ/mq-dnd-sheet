@@ -51,6 +51,19 @@ describe('validateEntry', () => {
     expect(validateEntry({ ...wood, of: 'trait/elf/elven-lineage' })).toEqual([]);
     expect(validateEntry({ ...wood, of: 'elven-lineage' })).not.toEqual([]);
   });
+  it('groups several grants into one option with opt', () => {
+    const order = { ...feature, id: 'feature/druid/primal-order', name: 'Primal Order', cls: 'druid', lvl: 1, grants: [{ kind: 'choice', id: 'c1', name: 'Primal Order', pick: 1, options: [
+      { id: 'o1', kind: 'prof', name: 'Martial weapons', cat: 'weapon', target: 'Martial weapons', opt: 'Warden' },
+      { id: 'o2', kind: 'prof', name: 'Medium armor', cat: 'armor', target: 'Medium armor', opt: 'Warden' },
+      { id: 'o3', kind: 'checkBonus', name: 'Arcana', target: 'arcana', val: 'wis>=1', opt: 'Magician' }] }] };
+    expect(validateEntry(order)).toEqual([]);
+    expect(validateEntry({ ...order, grants: [{ ...order.grants[0].options[0] }] })).not.toEqual([]); // opt only inside a choice
+  });
+  it('takes a cantrip damage bonus and a die on an action', () => {
+    expect(validateEntry({ ...feature, grants: [{ id: 'g1', kind: 'dmgBonus', name: 'Potent Spellcasting', val: 'wis', cantrip: true }] })).toEqual([]);
+    expect(validateEntry({ ...feature, grants: [{ id: 'g1', kind: 'action', name: 'Woe', econ: 'reaction', dice: '-1d6' }] })).toEqual([]);
+    expect(validateEntry({ ...feature, grants: [{ id: 'g1', kind: 'action', name: 'Woe', econ: 'reaction', dice: 'd6-' }] })).not.toEqual([]);
+  });
   it('accepts an AC grant on a magic item', () => {
     const ring = { id: 'item/ring-of-protection', kind: 'item', name: 'Ring of Protection', src: 'srd', desc: '…', cat: 'magic', rarity: 'rare', attune: true,
       grants: [{ id: 'g1', kind: 'ac', name: '+1 AC', acMode: 'bonus', val: '1', needEq: true, needAtt: true }] };
