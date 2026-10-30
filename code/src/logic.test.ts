@@ -308,7 +308,7 @@ describe('loading saves and backups', () => {
     expect(c).toMatchObject({ tab: 'actions', castAb: 'none', conc: null, hpUndo: null, restMsg: null });
     expect(c.attacks.map((a) => a.name)).toEqual(['Sling']);
     expect(c.attacks[0].id).toBeTruthy();
-    expect(c.def).toEqual({ res: ['Fire'], vul: [], imm: [] });
+    expect(c.def).toEqual({ res: ['Fire'], vul: [], imm: [], adv: [] });
     expect(c.attune).toEqual(['Ring', '', '']);
     // Resources moved out of the tabs into the left column.
     expect(migrate({ ...sampleCharacter(), tab: 'resources' }).tab).toBe('actions');
@@ -592,5 +592,19 @@ describe('spell sort order', () => {
   });
   it('falls back to A–Z for an unknown saved sort', () => {
     expect(migrate({ ...sampleCharacter(), spellSort: 'zz' }).spellSort).toBe('az');
+  });
+});
+
+describe('defenses', () => {
+  const old = { ...sampleCharacter(), def: { res: ['Fire', 'Charmed', 'Exhaustion', 'Mud'], vul: ['Poisoned'], imm: ['Poison', 'Frightened'] }, saveNotes: 'Advantage vs traps' };
+  it('moves save notes and conditions under Resistances to Advantage on saves (PHB p.28)', () => {
+    const c = migrate(old);
+    expect(c.def).toEqual({ res: ['Fire', 'Mud'], vul: ['Poisoned'], imm: ['Poison', 'Frightened'], adv: ['Advantage vs traps', 'vs Charmed', 'vs Exhaustion'] });
+    expect(c).not.toHaveProperty('saveNotes');
+    expect(migrate(c)).toEqual(c);
+  });
+  it('adds nothing for blank save notes and never duplicates an entry', () => {
+    expect(migrate({ ...old, def: { res: [], vul: [], imm: [] }, saveNotes: '  ' }).def.adv).toEqual([]);
+    expect(migrate({ ...old, def: { res: ['Charmed'], vul: [], imm: [], adv: ['vs Charmed'] }, saveNotes: '' }).def.adv).toEqual(['vs Charmed']);
   });
 });

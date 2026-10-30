@@ -34,7 +34,7 @@ export function useArmed(ms = 3000) {
   return [armed, tap] as const;
 }
 
-function RemoveButton({ name, onRemove }: { name: string; onRemove: () => void }) {
+export function RemoveButton({ name, onRemove }: { name: string; onRemove: () => void }) {
   const [armed, tap] = useArmed();
   return (
     <button type="button" className={armed ? 'remove-armed' : 'icon-btn faint'} onClick={() => tap(onRemove)}

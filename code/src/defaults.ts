@@ -13,7 +13,7 @@ export function sampleCharacter(): Character {
     hp: 31, maxHp: 44, origHp: 44, origOn: false, temp: 0, amount: 5, insp: true, pills: ['hp', 'ac', 'res:favored'], tab: 'actions', prepMax: 6, spellFilter: 'all', spellSort: 'az', usePrep: true,
     hdUsed: 1, ds: 0, df: 0, exh: 0, conds: {}, free: {}, conc: null, hpUndo: null, concCheck: null, restMsg: null,
     slotMax: [0, 4, 2, 0, 0, 0, 0, 0, 0, 0], slotUsed: [0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
-    def: { res: [], vul: [], imm: [] }, saveNotes: 'Advantage on saves to avoid or end Charmed (Fey Ancestry).',
+    def: { res: [], vul: [], imm: [], adv: ['vs Charmed'] },
     senses: [{ id: 'se1', name: 'Darkvision', range: '60 ft', srcKind: 'species', srcName: 'Wood Elf' }],
     res: [
       { id: 'favored', name: 'Favored Enemy', note: 'Cast Hunter’s Mark without a slot', count: 2, max: 3, recharge: 'long' },
@@ -95,8 +95,7 @@ export function druidSample(): Character {
     hdUsed: 3, ds: 0, df: 0, exh: 1, conds: { Poisoned: true }, free: { ds12: true }, conc: { id: 'ds9', name: 'Moonbeam' },
     hpUndo: null, concCheck: null, restMsg: null,
     slotMax: [0, 4, 3, 3, 3, 2, 1, 0, 0, 0], slotUsed: [0, 2, 1, 1, 0, 1, 0, 0, 0, 0],
-    def: { res: ['Necrotic', 'Radiant'], vul: [], imm: [] },
-    saveNotes: 'Advantage on CON saves to keep Concentration (War Caster). Starry Form · Dragon: a d20 of 9 or lower counts as 10 on those saves.',
+    def: { res: ['Necrotic', 'Radiant'], vul: [], imm: [], adv: ['Concentration saves'] },
     senses: [{ id: 'se1', name: 'Darkvision', range: '60 ft', srcKind: 'species', srcName: 'Aasimar' }],
     res: [
       { id: 'wild', name: 'Wild Shape', note: 'Bonus Action · beast form or Starry Form · regain 1 on a Short Rest', count: 2, max: 3, recharge: 'long' },
@@ -213,7 +212,7 @@ export function blankCharacter(): Character {
     abil: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 }, abilAdj: {}, saveProf: {}, skillProf: {},
     hp: 8, maxHp: 8, origHp: 8, hdUsed: 0,
     slotMax: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], slotUsed: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    def: { res: [], vul: [], imm: [] }, saveNotes: '', senses: [], res: [], attacks: [], riders: [],
+    def: { res: [], vul: [], imm: [], adv: [] }, senses: [], res: [], attacks: [], riders: [],
     coins: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 }, attune: ['', '', ''], inv: [], spells: [], feats: [], prepMax: 0
   };
 }

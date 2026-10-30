@@ -42,6 +42,9 @@ export const CONDITION_RULES: Record<string, string> = {
   Unconscious: 'Incapacitated and Prone; you drop what you hold. Speed 0. Auto-fail STR and DEX saves. Attacks against you have Advantage; hits within 5 ft are critical hits.'
 };
 export const CONDITIONS = Object.keys(CONDITION_RULES);
+export const DAMAGE_TYPES = ['Acid', 'Bludgeoning', 'Cold', 'Fire', 'Force', 'Lightning', 'Necrotic', 'Piercing', 'Poison', 'Psychic', 'Radiant', 'Slashing', 'Thunder'];
+// Conditions a defense can name: the list above plus Exhaustion, which the sheet tracks as a level.
+export const CONDITION_OPTIONS = [...CONDITIONS.slice(0, 3), 'Exhaustion', ...CONDITIONS.slice(3)];
 const INCAPACITATING = ['Incapacitated', 'Paralyzed', 'Petrified', 'Stunned', 'Unconscious'];
 const ZERO_SPEED = ['Grappled', 'Restrained', 'Paralyzed', 'Petrified', 'Unconscious'];
 
@@ -460,7 +463,14 @@ export function migrate(data: unknown): Character {
     ...(srcKind == null ? {} : { srcKind: SRC_KINDS.some(([k]) => k === srcKind) ? srcKind : 'other' }),
     ...(typeof srcName === 'string' ? { srcName } : {})
   }));
-  c.def = { res: strings(c.def.res), vul: strings(c.def.vul), imm: strings(c.def.imm) };
+  c.def = { res: strings(c.def.res), vul: strings(c.def.vul), imm: strings(c.def.imm), adv: strings(c.def.adv) };
+  // Resistance and Vulnerability apply to damage types only; Immunity to damage types and conditions (PHB p.28).
+  // Older saves could list a condition under Resistances, meaning Advantage on saves against it, and had a free-text
+  // save note. Both move to Advantage on saves. The note is no longer a field, so it is read from the raw save.
+  const addAdv = (t: string) => { if (!c.def.adv.includes(t)) c.def.adv.push(t); };
+  if (typeof data.saveNotes === 'string' && data.saveNotes.trim()) addAdv(data.saveNotes.trim());
+  c.def.res.filter((n) => CONDITION_OPTIONS.includes(n)).forEach((n) => addAdv('vs ' + n));
+  c.def.res = c.def.res.filter((n) => !CONDITION_OPTIONS.includes(n));
   c.attune = [0, 1, 2].map((i) => strings(c.attune)[i] ?? '');
   c.slotMax = slots(c.slotMax);
   c.slotUsed = slots(c.slotUsed);

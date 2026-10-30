@@ -3,7 +3,8 @@ export type CastAbility = 'none' | 'int' | 'wis' | 'cha';
 export type Recharge = 'none' | 'short' | 'long';
 export type Tab = 'actions' | 'spells' | 'inventory' | 'features' | 'notes';
 export type FeatureGroup = 'class' | 'sub' | 'feat' | 'species' | 'training' | 'other';
-export type DefenseKind = 'res' | 'vul' | 'imm';
+// adv: Advantage on saving throws ("vs Charmed", "Dexterity saves" or free text).
+export type DefenseKind = 'res' | 'vul' | 'imm' | 'adv';
 export type SpeedKind = 'climb' | 'swim' | 'fly' | 'burrow';
 export type Coin = 'cp' | 'sp' | 'ep' | 'gp' | 'pp';
 export type NoteKey = 'appearance' | 'personality' | 'backstory' | 'session';
@@ -49,7 +50,7 @@ export interface Character {
   conds: Record<string, boolean>; free: Record<string, boolean>; conc: Concentration | null;
   hpUndo: { prev: HpSnapshot; text: string } | null; concCheck: string | null; restMsg: { title: string; body: string } | null;
   slotMax: number[]; slotUsed: number[];
-  def: Record<DefenseKind, string[]>; saveNotes: string;
+  def: Record<DefenseKind, string[]>;
   senses: Sense[]; res: Resource[]; attacks: Attack[]; riders: Rider[];
   coins: Record<Coin, number>; attune: string[]; notes: Record<NoteKey, string>;
   inv: Item[]; spells: Spell[]; feats: Feature[];

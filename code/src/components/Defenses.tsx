@@ -1,66 +1,86 @@
-import type { CSSProperties } from 'react';
-import { CONDITIONS } from '../logic';
+import { useState, type CSSProperties } from 'react';
+import { ABILITIES, CONDITION_OPTIONS, DAMAGE_TYPES } from '../logic';
 import { useSheet } from '../sheet';
 import type { DefenseKind } from '../types';
-import { TextField, XIcon, useArmed } from './ui';
+import { RemoveButton, XIcon, useArmed } from './ui';
 
-const DAMAGE_TYPES = ['Acid', 'Bludgeoning', 'Cold', 'Fire', 'Force', 'Lightning', 'Necrotic', 'Piercing', 'Poison', 'Psychic', 'Radiant', 'Slashing', 'Thunder'];
-const CONDITION_OPTIONS = [...CONDITIONS.slice(0, 3), 'Exhaustion', ...CONDITIONS.slice(3)];
+// Choices for Advantage on saves; free text can be added too.
+const ADV_OPTIONS: [string, string[]][] = [
+  ['Conditions', CONDITION_OPTIONS.map((n) => 'vs ' + n)],
+  ['Abilities', ABILITIES.map(([, n]) => n + ' saves')],
+  ['Other', ['vs spells']]
+];
 
 export function Defenses() {
-  const { c, update, edit } = useSheet();
-  const empty = !edit && !c.def.res.length && !c.def.vul.length && !c.def.imm.length;
   return (
     <section id="sec-defenses" aria-label="Defenses" className="block section">
       <div className="row wrap between" style={{ alignItems: 'baseline', gap: '6px 12px' }}>
         <h2 className="block-title area-title">Defenses</h2>
-        {!empty && <span className="muted">Resistance halves damage · Vulnerability doubles it · Immunity ignores damage or the condition</span>}
+        <span className="muted">Resistance halves damage · Vulnerability doubles it · Immunity ignores damage or the condition</span>
       </div>
-      {empty ? <span className="muted">No resistances, vulnerabilities or immunities</span> : (
-        <div className="grid" style={{ '--min': '240px', gap: 12 } as CSSProperties}>
-          <DefenseGroup kind="res" title="Resistances" noun="resistance" color="var(--blue)" withConditions addLabel="Add a resistance" />
-          <DefenseGroup kind="vul" title="Vulnerabilities" noun="vulnerability" color="var(--danger)" addLabel="Add a vulnerability" />
-          <DefenseGroup kind="imm" title="Immunities" noun="immunity" color="var(--accent)" withConditions addLabel="Add an immunity" />
-        </div>
-      )}
-      <TextField label="Save notes" style={{ paddingTop: 4 }} value={c.saveNotes} placeholder="e.g. Advantage on saves against being Charmed"
-        onChange={(v) => update({ saveNotes: v })} />
+      <div className="grid" style={{ '--min': '240px', gap: 12 } as CSSProperties}>
+        <DefenseGroup kind="res" title="Resistances" noun="resistance" color="var(--blue)" addLabel="Add a resistance"
+          options={[['', DAMAGE_TYPES]]} placeholder="+ Add damage type" />
+        <DefenseGroup kind="vul" title="Vulnerabilities" noun="vulnerability" color="var(--danger)" addLabel="Add a vulnerability"
+          options={[['', DAMAGE_TYPES]]} placeholder="+ Add damage type" />
+        <DefenseGroup kind="imm" title="Immunities" noun="immunity" color="var(--accent)" addLabel="Add an immunity"
+          options={[['Damage types', DAMAGE_TYPES], ['Conditions', CONDITION_OPTIONS]]} placeholder="+ Add damage type or condition" />
+        <DefenseGroup kind="adv" title="Advantage on saves" noun="save advantage" color="var(--hp-high)" addLabel="Add an advantage on saves"
+          options={ADV_OPTIONS} placeholder="+ Add advantage on saves" freeText />
+      </div>
     </section>
   );
 }
 
-function DefenseGroup({ kind, title, noun, color, withConditions, addLabel }: {
-  kind: DefenseKind; title: string; noun: string; color: string; withConditions?: boolean; addLabel: string;
+// options: [optgroup label, values]; an empty label lists the values without a group.
+function DefenseGroup({ kind, title, noun, color, addLabel, options, placeholder, freeText }: {
+  kind: DefenseKind; title: string; noun: string; color: string; addLabel: string;
+  options: [string, string[]][]; placeholder: string; freeText?: boolean;
 }) {
   const { c, update, edit } = useSheet();
+  const [text, setText] = useState('');
   const list = c.def[kind];
-  const damageOptions = DAMAGE_TYPES.map((d) => <option key={d} value={d}>{d}</option>);
+  const add = (v: string) => update((p) => ({ def: { ...p.def, [kind]: p.def[kind].includes(v) ? p.def[kind] : [...p.def[kind], v] } }));
+  const remove = (n: string) => update((p) => ({ def: { ...p.def, [kind]: p.def[kind].filter((x) => x !== n) } }));
+  const addText = () => { const v = text.trim(); if (v) add(v); setText(''); };
+  const opts = (vals: string[]) => vals.map((d) => <option key={d} value={d}>{d}</option>);
   return (
     <div className="col gap-6">
       <span style={{ fontWeight: 700, fontSize: 14, color }}>{title}</span>
       <div className="row wrap gap-6" style={{ minHeight: 44 }}>
-        {list.map((n) => !edit ? (
-          <span key={n} className="row" style={{ fontSize: 13, fontWeight: 600, minHeight: 44, padding: '0 12px', borderRadius: 22, border: '1px solid ' + color, color }}>{n}</span>
-        ) : (
-          <DefenseChip key={n} name={n} noun={noun} color={color}
-            onRemove={() => update((p) => ({ def: { ...p.def, [kind]: p.def[kind].filter((x) => x !== n) } }))} />
-        ))}
+        {list.map((n) => edit
+          ? <DefenseChip key={n} name={n} noun={noun} color={color} onRemove={() => remove(n)} />
+          : <OpenChip key={n} name={n} noun={noun} color={color} onRemove={() => remove(n)} />)}
         {list.length === 0 && <span className="muted">None</span>}
       </div>
-      {edit && <select className="input" aria-label={addLabel} value=""
-        onChange={(e) => {
-          const v = e.target.value;
-          if (v) update((p) => ({ def: { ...p.def, [kind]: p.def[kind].includes(v) ? p.def[kind] : [...p.def[kind], v] } }));
-        }}>
-        <option value="">{withConditions ? '+ Add damage type or condition' : '+ Add damage type'}</option>
-        {withConditions ? (
-          <>
-            <optgroup label="Damage types">{damageOptions}</optgroup>
-            <optgroup label="Conditions">{CONDITION_OPTIONS.map((d) => <option key={d} value={d}>{d}</option>)}</optgroup>
-          </>
-        ) : damageOptions}
-      </select>}
+      <select className="input" aria-label={addLabel} value="" onChange={(e) => { if (e.target.value) add(e.target.value); }}>
+        <option value="">{placeholder}</option>
+        {options.map(([label, vals]) => (label ? <optgroup key={label} label={label}>{opts(vals)}</optgroup> : opts(vals)))}
+      </select>
+      {freeText && (
+        <div className="row gap-6">
+          <input type="text" className="input" aria-label="Advantage on saves, free text" placeholder="Other, e.g. vs traps"
+            value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') addText(); }} />
+          <button type="button" className="btn" onClick={addText}>Add</button>
+        </div>
+      )}
     </div>
+  );
+}
+
+const chipStyle = (color: string): CSSProperties => ({
+  fontSize: 13, fontWeight: 600, cursor: 'pointer', minHeight: 44, padding: '0 12px', borderRadius: 22,
+  border: '1px solid ' + color, background: 'transparent', color
+});
+
+// Outside Edit mode: tapping the chip shows its Remove button.
+function OpenChip({ name, noun, color, onRemove }: { name: string; noun: string; color: string; onRemove: () => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span className="row gap-4">
+      <button type="button" aria-expanded={open} aria-label={name + ' ' + noun} onClick={() => setOpen(!open)} style={chipStyle(color)}>{name}</button>
+      {open && <RemoveButton name={name + ' ' + noun} onRemove={onRemove} />}
+    </span>
   );
 }
 
