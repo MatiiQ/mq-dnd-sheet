@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
+import { resetCatalog } from '../catalog/load';
+import { packSummary, parsePackFile } from '../catalog/pack';
+import { deletePack, getPack, putPack } from '../catalog/pack-db';
 import { SRD_VERSION } from '../catalog/schema';
 import { setLayoutMode, useLayoutMode, useWide, type LayoutMode } from '../layout';
 import { CONDITIONS, PILL_STATS, TABS, fmt, hpColor, pillView, resPill, setConc, setPill, toggleAcSpell, type PillView } from '../logic';
@@ -336,6 +339,8 @@ function Menu({ store, onClose, onSwitched, onRest }: { store: CharacterStore; o
         </div>
         <span className="small">{backupMsg ?? 'Characters live only on this device. Export a backup to Files or iCloud Drive now and then.'}</span>
 
+        <PhbData />
+
         <span className="label">About</span>
         <span className="small">
           Rules data: System Reference Document {SRD_VERSION}. This work includes material from the System Reference Document 5.2.1
@@ -344,6 +349,50 @@ function Menu({ store, onClose, onSwitched, onRest }: { store: CharacterStore; o
           at <a href="https://creativecommons.org/licenses/by/4.0/legalcode">https://creativecommons.org/licenses/by/4.0/legalcode</a>.
         </span>
       </div>
+    </>
+  );
+}
+
+// The PHB pack built with `npm run pack`: status, import from a file, remove. Without it the app uses SRD data only.
+function PhbData() {
+  const [status, setStatus] = useState('Checking…');
+  const [msg, setMsg] = useState<string | null>(null);
+  const [armed, tapRemove] = useArmed();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const refresh = () => getPack().then((p) => setStatus(p ? packSummary(p) : 'Not loaded (SRD only)'));
+  useEffect(() => { refresh(); }, []);
+
+  const importPack = async (file: File | undefined) => {
+    if (!file) return;
+    const r = parsePackFile(await file.text());
+    if (!r.ok) { setMsg(r.error + ' The current PHB data stays.'); return; }
+    try {
+      await putPack(r.entries);
+      resetCatalog();
+      setMsg(null);
+      refresh();
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : 'The PHB data could not be stored.');
+    }
+  };
+  const remove = async () => {
+    try { await deletePack(); resetCatalog(); setMsg(null); refresh(); } catch (e) { setMsg(e instanceof Error ? e.message : 'The PHB data could not be removed.'); }
+  };
+
+  return (
+    <>
+      <span className="label">PHB data</span>
+      <span className="small">{status}</span>
+      <div className="row gap-8">
+        <button type="button" className="btn grow" style={{ padding: '0 10px' }} onClick={() => fileRef.current?.click()}>Import PHB data</button>
+        {status.startsWith('PHB data') && (
+          <button type="button" className={armed ? 'btn remove-armed' : 'btn'} style={{ padding: '0 10px' }} onClick={() => tapRemove(remove)}
+            aria-label={armed ? 'Tap again to remove the PHB data' : 'Remove the PHB data'}>{armed ? 'Remove?' : 'Remove'}</button>
+        )}
+        <input ref={fileRef} type="file" accept="application/json,.json" hidden
+          onChange={(e) => { importPack(e.target.files?.[0]); e.target.value = ''; }} />
+      </div>
+      <span className="small">{msg ?? 'On iPad, import inside the installed Home Screen app. Safari tabs keep separate storage.'}</span>
     </>
   );
 }

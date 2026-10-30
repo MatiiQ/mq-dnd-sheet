@@ -13,3 +13,8 @@ export function loadCatalog(): Promise<Catalog> {
   })().catch((e: unknown) => { cached = null; throw e; });
   return cached;
 }
+
+// After a pack is imported or removed: the next loadCatalog() merges again.
+export function resetCatalog(): void {
+  cached = null;
+}
