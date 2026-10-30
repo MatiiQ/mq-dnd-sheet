@@ -64,3 +64,52 @@ describe('Cleric (PHB p.69–74)', () => {
   // Blessed Healer (6) and Supreme Healing (17) change healing rolls, which no grant kind describes.
   it('Life Domain has a grant at every other level', () => expect(subLevels('cleric', 'life-domain', [6, 17])).toEqual([]));
 });
+
+describe('Druid 13–20 and Circle of the Land (PHB p.81–86)', () => {
+  it('Primal Strike grows to 2d8 at 15; Archdruid', () => {
+    expect(all(F('druid', 'elemental-fury')).find((g) => g.kind === 'xdmg')).toMatchObject({ dice: '7:1d8,15:2d8' });
+    expect(grants(F('druid', 'archdruid')).length).toBeGreaterThan(0);
+  });
+  it('Circle of the Land: a land type picks its spells; Land’s Aid die', () => {
+    const opts = choices(F('druid', 'circle-of-the-land/circle-of-the-land-spells'))[0].options!;
+    expect([...new Set(opts.map((o) => o.opt))]).toEqual(['Arid', 'Polar', 'Temperate', 'Tropical']);
+    expect(opts.filter((o) => o.opt === 'Arid').map((o) => [o.spell, o.lvl ?? 3])).toEqual([['spell/blur', 3], ['spell/burning-hands', 3], ['spell/fire-bolt', 3],
+      ['spell/fireball', 5], ['spell/blight', 7], ['spell/wall-of-stone', 9]]);
+    expect(grants(F('druid', 'circle-of-the-land/lands-aid'))).toMatchObject([{ kind: 'action', econ: 'action', dice: '3:2d6,10:3d6,14:4d6' }]);
+  });
+  it('Circle of the Land has a grant at every level', () => expect(subLevels('druid', 'circle-of-the-land')).toEqual([]));
+});
+
+describe('Fighter (PHB p.91–96)', () => {
+  it('Second Wind: uses by table, one back on a Short Rest, 1d10 + level', () => {
+    const [res, act] = grants(F('fighter', 'second-wind'));
+    expect(res).toMatchObject({ max: '1:2,4:3,10:4', recharge: 'long', regain: '1', regainOn: 'short' });
+    expect(act).toMatchObject({ econ: 'bonus', res: res.id, dice: '1d10+lvl' });
+  });
+  it('Action Surge, Indomitable, Weapon Mastery and attacks per Attack action', () => {
+    expect(grants(F('fighter', 'action-surge'))[0]).toMatchObject({ max: '2:1,17:2', recharge: 'short' });
+    expect(grants(F('fighter', 'indomitable'))[0]).toMatchObject({ max: '9:1,13:2,17:3', recharge: 'long' });
+    expect(grants(F('fighter', 'weapon-mastery'))[0]).toMatchObject({ cat: 'mastery', val: '1:3,4:4,10:5,16:6' });
+    expect(['extra-attack', 'two-extra-attacks', 'three-extra-attacks'].map((f) => grants(F('fighter', f))[0].val)).toEqual(['2', '3', '4']);
+    expect(choices(F('fighter', 'fighting-style'))[0].pool).toBe('feat:cat=style');
+  });
+  it('Champion: critical range 19, then 18; a grant at every level', () => {
+    expect(grants(F('fighter', 'champion/improved-critical'))).toMatchObject([{ kind: 'crit', val: '19' }]);
+    expect(grants(F('fighter', 'champion/superior-critical'))).toMatchObject([{ kind: 'crit', val: '18' }]);
+    expect(subLevels('fighter', 'champion')).toEqual([]);
+  });
+});
+
+describe('Monk (PHB p.101–107)', () => {
+  it('Martial Arts die, Focus Points, Unarmored Movement and Defense', () => {
+    expect(grants(F('monk', 'martial-arts'))).toContainEqual(expect.objectContaining({ kind: 'unarmed', die: '1:1d6,5:1d8,11:1d10,17:1d12', abs: 'str,dex', when: 'noArmorNoShield' }));
+    expect(grants(F('monk', 'monks-focus'))[0]).toMatchObject({ kind: 'resource', max: 'lvl', recharge: 'short' });
+    expect(grants(F('monk', 'unarmored-movement'))).toMatchObject([{ kind: 'speed', mode: 'walk', val: '2:10,6:15,10:20,14:25,18:30', when: 'noArmorNoShield' }]);
+    expect(grants(F('monk', 'unarmored-defense'))).toMatchObject([{ kind: 'ac', acMode: 'unarmored', ab: 'wis', shieldOk: false, when: 'noArmorNoShield' }]);
+  });
+  it('Disciplined Survivor: every save; Body and Mind to 25', () => {
+    expect(grants(F('monk', 'disciplined-survivor')).filter((g) => g.cat === 'save').map((g) => g.target)).toEqual(['str', 'dex', 'con', 'int', 'wis', 'cha']);
+    expect(grants(F('monk', 'body-and-mind'))).toMatchObject([{ ab: 'dex', val: '4', cap: 25 }, { ab: 'wis', val: '4', cap: 25 }]);
+  });
+  it('Warrior of the Open Hand has a grant at every level', () => expect(subLevels('monk', 'warrior-of-the-open-hand')).toEqual([]));
+});

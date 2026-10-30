@@ -776,6 +776,352 @@
       }
     ]
   },
+  "feature/druid/archdruid": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Evergreen Wild Shape",
+        "econ": "free",
+        "note": "On rolling Initiative with no Wild Shape uses, regain one."
+      },
+      {
+        "id": "g2",
+        "kind": "resource",
+        "name": "Nature Magician",
+        "max": "1",
+        "recharge": "long"
+      },
+      {
+        "id": "g3",
+        "kind": "action",
+        "name": "Nature Magician",
+        "econ": "free",
+        "res": "g2",
+        "note": "Turn Wild Shape uses into one spell slot, 2 levels per use."
+      }
+    ]
+  },
+  "feature/druid/beast-spells": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Beast Spells",
+        "econ": "other",
+        "note": "Cast spells in Wild Shape, except those with a costly or consumed Material component."
+      }
+    ]
+  },
+  "feature/druid/circle-of-the-land/circle-of-the-land-spells": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "land",
+        "name": "Land type (choose on each Long Rest)",
+        "pick": 1,
+        "options": [
+          {
+            "id": "o1",
+            "kind": "spell",
+            "name": "Blur",
+            "spell": "spell/blur",
+            "always": true,
+            "opt": "Arid"
+          },
+          {
+            "id": "o2",
+            "kind": "spell",
+            "name": "Burning Hands",
+            "spell": "spell/burning-hands",
+            "always": true,
+            "opt": "Arid"
+          },
+          {
+            "id": "o3",
+            "kind": "spell",
+            "name": "Fire Bolt",
+            "spell": "spell/fire-bolt",
+            "always": true,
+            "opt": "Arid"
+          },
+          {
+            "id": "o4",
+            "kind": "spell",
+            "name": "Fireball",
+            "spell": "spell/fireball",
+            "always": true,
+            "lvl": 5,
+            "opt": "Arid"
+          },
+          {
+            "id": "o5",
+            "kind": "spell",
+            "name": "Blight",
+            "spell": "spell/blight",
+            "always": true,
+            "lvl": 7,
+            "opt": "Arid"
+          },
+          {
+            "id": "o6",
+            "kind": "spell",
+            "name": "Wall of Stone",
+            "spell": "spell/wall-of-stone",
+            "always": true,
+            "lvl": 9,
+            "opt": "Arid"
+          },
+          {
+            "id": "o7",
+            "kind": "spell",
+            "name": "Fog Cloud",
+            "spell": "spell/fog-cloud",
+            "always": true,
+            "opt": "Polar"
+          },
+          {
+            "id": "o8",
+            "kind": "spell",
+            "name": "Hold Person",
+            "spell": "spell/hold-person",
+            "always": true,
+            "opt": "Polar"
+          },
+          {
+            "id": "o9",
+            "kind": "spell",
+            "name": "Ray of Frost",
+            "spell": "spell/ray-of-frost",
+            "always": true,
+            "opt": "Polar"
+          },
+          {
+            "id": "o10",
+            "kind": "spell",
+            "name": "Sleet Storm",
+            "spell": "spell/sleet-storm",
+            "always": true,
+            "lvl": 5,
+            "opt": "Polar"
+          },
+          {
+            "id": "o11",
+            "kind": "spell",
+            "name": "Ice Storm",
+            "spell": "spell/ice-storm",
+            "always": true,
+            "lvl": 7,
+            "opt": "Polar"
+          },
+          {
+            "id": "o12",
+            "kind": "spell",
+            "name": "Cone of Cold",
+            "spell": "spell/cone-of-cold",
+            "always": true,
+            "lvl": 9,
+            "opt": "Polar"
+          },
+          {
+            "id": "o13",
+            "kind": "spell",
+            "name": "Misty Step",
+            "spell": "spell/misty-step",
+            "always": true,
+            "opt": "Temperate"
+          },
+          {
+            "id": "o14",
+            "kind": "spell",
+            "name": "Shocking Grasp",
+            "spell": "spell/shocking-grasp",
+            "always": true,
+            "opt": "Temperate"
+          },
+          {
+            "id": "o15",
+            "kind": "spell",
+            "name": "Sleep",
+            "spell": "spell/sleep",
+            "always": true,
+            "opt": "Temperate"
+          },
+          {
+            "id": "o16",
+            "kind": "spell",
+            "name": "Lightning Bolt",
+            "spell": "spell/lightning-bolt",
+            "always": true,
+            "lvl": 5,
+            "opt": "Temperate"
+          },
+          {
+            "id": "o17",
+            "kind": "spell",
+            "name": "Freedom of Movement",
+            "spell": "spell/freedom-of-movement",
+            "always": true,
+            "lvl": 7,
+            "opt": "Temperate"
+          },
+          {
+            "id": "o18",
+            "kind": "spell",
+            "name": "Tree Stride",
+            "spell": "spell/tree-stride",
+            "always": true,
+            "lvl": 9,
+            "opt": "Temperate"
+          },
+          {
+            "id": "o19",
+            "kind": "spell",
+            "name": "Acid Splash",
+            "spell": "spell/acid-splash",
+            "always": true,
+            "opt": "Tropical"
+          },
+          {
+            "id": "o20",
+            "kind": "spell",
+            "name": "Ray of Sickness",
+            "spell": "spell/ray-of-sickness",
+            "always": true,
+            "opt": "Tropical"
+          },
+          {
+            "id": "o21",
+            "kind": "spell",
+            "name": "Web",
+            "spell": "spell/web",
+            "always": true,
+            "opt": "Tropical"
+          },
+          {
+            "id": "o22",
+            "kind": "spell",
+            "name": "Stinking Cloud",
+            "spell": "spell/stinking-cloud",
+            "always": true,
+            "lvl": 5,
+            "opt": "Tropical"
+          },
+          {
+            "id": "o23",
+            "kind": "spell",
+            "name": "Polymorph",
+            "spell": "spell/polymorph",
+            "always": true,
+            "lvl": 7,
+            "opt": "Tropical"
+          },
+          {
+            "id": "o24",
+            "kind": "spell",
+            "name": "Insect Plague",
+            "spell": "spell/insect-plague",
+            "always": true,
+            "lvl": 9,
+            "opt": "Tropical"
+          }
+        ]
+      }
+    ]
+  },
+  "feature/druid/circle-of-the-land/lands-aid": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Land’s Aid",
+        "econ": "action",
+        "dice": "3:2d6,10:3d6,14:4d6",
+        "note": "Spend a Wild Shape use: 10-ft Sphere within 60 ft, CON save or Necrotic damage (half on a success); one creature there regains the same roll in HP."
+      }
+    ]
+  },
+  "feature/druid/circle-of-the-land/natural-recovery": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Natural Recovery",
+        "max": "1",
+        "recharge": "long"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Natural Recovery",
+        "econ": "other",
+        "res": "g1",
+        "note": "Cast a Circle spell without a slot, once per Long Rest; on a Short Rest, recover slots worth half your Druid level."
+      }
+    ]
+  },
+  "feature/druid/circle-of-the-land/natures-sanctuary": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Nature’s Sanctuary",
+        "econ": "action",
+        "note": "Spend a Wild Shape use: a 15-ft Cube within 120 ft for 1 minute gives you and allies Half Cover and your Nature’s Ward Resistance."
+      }
+    ]
+  },
+  "feature/druid/circle-of-the-land/natures-ward": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "defense",
+        "name": "Poisoned Immunity",
+        "def": "imm",
+        "target": "Poisoned"
+      },
+      {
+        "kind": "choice",
+        "id": "land",
+        "name": "Nature’s Ward (your land type)",
+        "pick": 1,
+        "options": [
+          {
+            "id": "o1",
+            "kind": "defense",
+            "name": "Fire Resistance",
+            "def": "res",
+            "target": "Fire",
+            "opt": "Arid"
+          },
+          {
+            "id": "o2",
+            "kind": "defense",
+            "name": "Cold Resistance",
+            "def": "res",
+            "target": "Cold",
+            "opt": "Polar"
+          },
+          {
+            "id": "o3",
+            "kind": "defense",
+            "name": "Lightning Resistance",
+            "def": "res",
+            "target": "Lightning",
+            "opt": "Temperate"
+          },
+          {
+            "id": "o4",
+            "kind": "defense",
+            "name": "Poison Resistance",
+            "def": "res",
+            "target": "Poison",
+            "opt": "Tropical"
+          }
+        ]
+      }
+    ]
+  },
   "feature/druid/druid-subclass": {
     "grants": [
       {
@@ -824,7 +1170,7 @@
             "id": "o2",
             "kind": "xdmg",
             "name": "Primal Strike",
-            "dice": "1d8",
+            "dice": "7:1d8,15:2d8",
             "dtype": "Cold, Fire, Lightning or Thunder",
             "on": "a weapon or Beast form attack hit",
             "perTurn": true
@@ -841,6 +1187,17 @@
         "name": "Epic Boon feat",
         "pick": 1,
         "pool": "feat:cat=boon"
+      }
+    ]
+  },
+  "feature/druid/improved-elemental-fury": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Improved Elemental Fury",
+        "econ": "other",
+        "note": "Potent Spellcasting: Druid cantrips with a range of 10 ft or more gain 300 ft. Primal Strike: 2d8."
       }
     ]
   },
@@ -950,6 +1307,89 @@
       }
     ]
   },
+  "feature/fighter/action-surge": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Action Surge",
+        "max": "2:1,17:2",
+        "recharge": "short"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Action Surge",
+        "econ": "free",
+        "res": "g1",
+        "note": "Take one more action on your turn (not Magic); once per turn."
+      }
+    ]
+  },
+  "feature/fighter/champion/additional-fighting-style": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "style",
+        "name": "Fighting Style feat",
+        "pick": 1,
+        "pool": "feat:cat=style"
+      }
+    ]
+  },
+  "feature/fighter/champion/heroic-warrior": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Heroic Warrior",
+        "econ": "free",
+        "note": "In combat, gain Heroic Inspiration at the start of your turn if you have none."
+      }
+    ]
+  },
+  "feature/fighter/champion/improved-critical": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "crit",
+        "name": "Critical Hit on 19–20",
+        "val": "19"
+      }
+    ]
+  },
+  "feature/fighter/champion/remarkable-athlete": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Remarkable Athlete",
+        "econ": "other",
+        "note": "Advantage on Initiative and Athletics checks; after a Critical Hit, move half your Speed without provoking."
+      }
+    ]
+  },
+  "feature/fighter/champion/superior-critical": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "crit",
+        "name": "Critical Hit on 18–20",
+        "val": "18"
+      }
+    ]
+  },
+  "feature/fighter/champion/survivor": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Survivor",
+        "econ": "other",
+        "note": "Advantage on Death Saving Throws (18–20 counts as 20); while Bloodied, regain 5 + CON HP at the start of your turn."
+      }
+    ]
+  },
   "feature/fighter/epic-boon": {
     "grants": [
       {
@@ -958,6 +1398,16 @@
         "name": "Epic Boon feat",
         "pick": 1,
         "pool": "feat:cat=boon"
+      }
+    ]
+  },
+  "feature/fighter/extra-attack": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "attacks",
+        "name": "Two attacks per Attack action",
+        "val": "2"
       }
     ]
   },
@@ -972,6 +1422,134 @@
       }
     ]
   },
+  "feature/fighter/fighting-style": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "style",
+        "name": "Fighting Style feat",
+        "pick": 1,
+        "pool": "feat:cat=style"
+      }
+    ]
+  },
+  "feature/fighter/indomitable": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Indomitable",
+        "max": "9:1,13:2,17:3",
+        "recharge": "long"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Indomitable",
+        "econ": "free",
+        "res": "g1",
+        "note": "Reroll a failed save with a bonus equal to your Fighter level."
+      }
+    ]
+  },
+  "feature/fighter/second-wind": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Second Wind",
+        "max": "1:2,4:3,10:4",
+        "recharge": "long",
+        "regain": "1",
+        "regainOn": "short"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Second Wind",
+        "econ": "bonus",
+        "res": "g1",
+        "dice": "1d10+lvl",
+        "note": "Regain the roll in HP."
+      }
+    ]
+  },
+  "feature/fighter/studied-attacks": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Studied Attacks",
+        "econ": "other",
+        "note": "After a miss, Advantage on your next attack against that creature."
+      }
+    ]
+  },
+  "feature/fighter/tactical-master": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Tactical Master",
+        "econ": "other",
+        "note": "Replace a weapon’s mastery property with Push, Sap or Slow for an attack."
+      }
+    ]
+  },
+  "feature/fighter/tactical-mind": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Tactical Mind",
+        "econ": "free",
+        "dice": "1d10",
+        "note": "On a failed ability check, spend a Second Wind use to add 1d10 (kept if you still fail)."
+      }
+    ]
+  },
+  "feature/fighter/tactical-shift": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Tactical Shift",
+        "econ": "other",
+        "note": "When you use Second Wind, move half your Speed without provoking."
+      }
+    ]
+  },
+  "feature/fighter/three-extra-attacks": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "attacks",
+        "name": "Four attacks per Attack action",
+        "val": "4"
+      }
+    ]
+  },
+  "feature/fighter/two-extra-attacks": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "attacks",
+        "name": "Three attacks per Attack action",
+        "val": "3"
+      }
+    ]
+  },
+  "feature/fighter/weapon-mastery": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "prof",
+        "name": "Weapon Mastery",
+        "cat": "mastery",
+        "val": "1:3,4:4,10:5,16:6"
+      }
+    ]
+  },
   "feature/monk/ability-score-improvement": {
     "grants": [
       {
@@ -980,6 +1558,91 @@
         "name": "Feat",
         "pick": 1,
         "pool": "feat:cat=general"
+      }
+    ]
+  },
+  "feature/monk/body-and-mind": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "abil",
+        "name": "DEX +4",
+        "ab": "dex",
+        "val": "4",
+        "cap": 25
+      },
+      {
+        "id": "g2",
+        "kind": "abil",
+        "name": "WIS +4",
+        "ab": "wis",
+        "val": "4",
+        "cap": 25
+      }
+    ]
+  },
+  "feature/monk/deflect-attacks": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Deflect Attacks",
+        "econ": "reaction",
+        "dice": "1d10",
+        "note": "Reduce Bludgeoning, Piercing or Slashing attack damage by 1d10 + DEX + Monk level; at 0, spend 1 Focus Point to redirect it."
+      }
+    ]
+  },
+  "feature/monk/disciplined-survivor": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "prof",
+        "name": "STR saves",
+        "cat": "save",
+        "target": "str"
+      },
+      {
+        "id": "g2",
+        "kind": "prof",
+        "name": "DEX saves",
+        "cat": "save",
+        "target": "dex"
+      },
+      {
+        "id": "g3",
+        "kind": "prof",
+        "name": "CON saves",
+        "cat": "save",
+        "target": "con"
+      },
+      {
+        "id": "g4",
+        "kind": "prof",
+        "name": "INT saves",
+        "cat": "save",
+        "target": "int"
+      },
+      {
+        "id": "g5",
+        "kind": "prof",
+        "name": "WIS saves",
+        "cat": "save",
+        "target": "wis"
+      },
+      {
+        "id": "g6",
+        "kind": "prof",
+        "name": "CHA saves",
+        "cat": "save",
+        "target": "cha"
+      },
+      {
+        "id": "g7",
+        "kind": "action",
+        "name": "Disciplined Survivor",
+        "econ": "free",
+        "note": "Spend 1 Focus Point to reroll a failed save."
       }
     ]
   },
@@ -994,6 +1657,44 @@
       }
     ]
   },
+  "feature/monk/extra-attack": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "attacks",
+        "name": "Two attacks per Attack action",
+        "val": "2"
+      }
+    ]
+  },
+  "feature/monk/martial-arts": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "unarmed",
+        "name": "Martial Arts: Unarmed Strike",
+        "die": "1:1d6,5:1d8,11:1d10,17:1d12",
+        "abs": "str,dex",
+        "when": "noArmorNoShield"
+      },
+      {
+        "id": "g2",
+        "kind": "atkAbil",
+        "name": "Martial Arts: Monk weapons use DEX",
+        "ab": "dex",
+        "weapons": "simple-melee,martial-melee-light",
+        "die": "1:1d6,5:1d8,11:1d10,17:1d12",
+        "when": "noArmorNoShield"
+      },
+      {
+        "id": "g3",
+        "kind": "action",
+        "name": "Bonus Unarmed Strike",
+        "econ": "bonus",
+        "note": "Make an Unarmed Strike."
+      }
+    ]
+  },
   "feature/monk/monk-subclass": {
     "grants": [
       {
@@ -1002,6 +1703,173 @@
         "name": "Subclass",
         "pick": 1,
         "pool": "subclass:cls=monk"
+      }
+    ]
+  },
+  "feature/monk/monks-focus": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Focus Points",
+        "max": "lvl",
+        "recharge": "short"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Flurry of Blows",
+        "econ": "bonus",
+        "res": "g1",
+        "note": "Spend 1 Focus Point: two Unarmed Strikes (three from level 10)."
+      },
+      {
+        "id": "g3",
+        "kind": "action",
+        "name": "Patient Defense",
+        "econ": "bonus",
+        "res": "g1",
+        "note": "Disengage; or spend 1 Focus Point to Disengage and Dodge."
+      },
+      {
+        "id": "g4",
+        "kind": "action",
+        "name": "Step of the Wind",
+        "econ": "bonus",
+        "res": "g1",
+        "note": "Dash; or spend 1 Focus Point to Disengage and Dash with a doubled jump."
+      }
+    ]
+  },
+  "feature/monk/slow-fall": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Slow Fall",
+        "econ": "reaction",
+        "note": "Reduce falling damage by 5 × Monk level."
+      }
+    ]
+  },
+  "feature/monk/stunning-strike": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Stunning Strike",
+        "econ": "other",
+        "note": "Once per turn on a hit, spend 1 Focus Point: CON save or Stunned until your next turn."
+      }
+    ]
+  },
+  "feature/monk/superior-defense": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Superior Defense",
+        "econ": "other",
+        "note": "Spend 3 Focus Points at the start of your turn: Resistance to all damage but Force for 1 minute."
+      }
+    ]
+  },
+  "feature/monk/unarmored-defense": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "ac",
+        "name": "Unarmored Defense: 10 + DEX + WIS",
+        "acMode": "unarmored",
+        "ab": "wis",
+        "shieldOk": false,
+        "when": "noArmorNoShield"
+      }
+    ]
+  },
+  "feature/monk/unarmored-movement": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "speed",
+        "name": "Unarmored Movement",
+        "mode": "walk",
+        "val": "2:10,6:15,10:20,14:25,18:30",
+        "when": "noArmorNoShield"
+      }
+    ]
+  },
+  "feature/monk/uncanny-metabolism": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Uncanny Metabolism",
+        "max": "1",
+        "recharge": "long"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Uncanny Metabolism",
+        "econ": "free",
+        "res": "g1",
+        "dice": "1:1d6,5:1d8,11:1d10,17:1d12",
+        "note": "On rolling Initiative, regain all Focus Points and HP equal to Monk level + a Martial Arts die."
+      }
+    ]
+  },
+  "feature/monk/warrior-of-the-open-hand/fleet-step": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Fleet Step",
+        "econ": "other",
+        "note": "After another Bonus Action, also use Step of the Wind."
+      }
+    ]
+  },
+  "feature/monk/warrior-of-the-open-hand/open-hand-technique": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Open Hand Technique",
+        "econ": "other",
+        "note": "A Flurry of Blows hit can Addle, Push 15 ft (STR save) or Topple (DEX save)."
+      }
+    ]
+  },
+  "feature/monk/warrior-of-the-open-hand/quivering-palm": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Quivering Palm",
+        "econ": "other",
+        "dice": "10d12",
+        "note": "Spend 4 Focus Points on an Unarmed Strike hit; end it later for a CON save or 10d12 Force (half on a success)."
+      }
+    ]
+  },
+  "feature/monk/warrior-of-the-open-hand/wholeness-of-body": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Wholeness of Body",
+        "max": "wis>=1",
+        "recharge": "long"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Wholeness of Body",
+        "econ": "bonus",
+        "res": "g1",
+        "dice": "1:1d6,5:1d8,11:1d10,17:1d12",
+        "note": "Regain a Martial Arts die + WIS in HP."
       }
     ]
   },

@@ -46,7 +46,8 @@ export type Spec = GrantSpec | ChoiceSpec;
 // Pick N of the options, or of a generated pool ('<kind>:<filter>', such as 'spell:list=druid;lvl=0' or 'skill:any').
 export interface ChoiceSpec { kind: 'choice'; id: string; name: string; pick: number; repeat?: boolean; options?: GrantSpec[]; pool?: string }
 export type GrantKind = 'sense' | 'resource' | 'defense' | 'abil' | 'abilSet' | 'prof' | 'saveBonus' | 'checkBonus' | 'spell' | 'speed' | 'ac'
-  | 'init' | 'hpLvl' | 'size' | 'carryUp' | 'action' | 'xdmg' | 'attacks' | 'unarmed' | 'atkBonus' | 'dmgBonus' | 'lightExtra' | 'atkAbil';
+  | 'init' | 'hpLvl' | 'size' | 'carryUp' | 'action' | 'xdmg' | 'attacks' | 'unarmed' | 'atkBonus' | 'dmgBonus' | 'lightExtra' | 'atkAbil'
+  | 'casting' | 'crit';
 // Every grant is flat, so a character can store it as a plain entry. Fields that take a Value also accept '$<choiceId>'.
 export interface GrantSpec {
   id: string; kind: GrantKind; name: string;
@@ -69,6 +70,8 @@ export interface GrantSpec {
   cantrip?: boolean;                                                                // dmgBonus: damage of the entry's class cantrips
   addMod?: boolean;                                                                 // lightExtra
   weapons?: string;                                                                 // atkAbil
+  list?: string; cantrips?: string; prepared?: string;                              // casting: spell list, counts by level
+  s1?: string; s2?: string; s3?: string; s4?: string; s5?: string;                 // casting: slots of each level by class level
 }
 
 // Copies of the app's lists (types.ts, logic.ts) so validateEntry has their values at run time; schema.test.ts keeps them in step.
@@ -140,7 +143,12 @@ const GRANTS: Record<GrantKind, Record<string, [Check, boolean]>> = {
   atkBonus: { val: [value, true], wrange: [RANGE_KIND, false], amode: [RANGE_KIND, false], prop: [str, false], weapon: [str, false], oneHand: [bool, false] },
   dmgBonus: { val: [value, true], wrange: [RANGE_KIND, false], amode: [RANGE_KIND, false], prop: [str, false], weapon: [str, false], oneHand: [bool, false], cantrip: [bool, false] },
   lightExtra: { addMod: [bool, true] },
-  atkAbil: { ab: [or(ability, oneOf('cast'), ref), true], weapons: [str, false], amode: [RANGE_KIND, false], die: [value, false] }
+  atkAbil: { ab: [or(ability, oneOf('cast'), ref), true], weapons: [str, false], amode: [RANGE_KIND, false], die: [value, false] },
+  // A subclass that casts from a class list with its own slots (Eldritch Knight, Arcane Trickster).
+  casting: { ab: [ability, true], list: [str, true], cantrips: [value, false], prepared: [value, false],
+    s1: [value, false], s2: [value, false], s3: [value, false], s4: [value, false], s5: [value, false] },
+  // Critical Hit on a d20 roll of val or higher with weapons and Unarmed Strikes.
+  crit: { val: [value, true] }
 };
 const COMMON: Record<string, [Check, boolean]> = { id: [str, true], kind: [str, true], name: [str, true], when: [WHEN, false], lvl: [whole(1, 20), false], needEq: [bool, false], needAtt: [bool, false] };
 

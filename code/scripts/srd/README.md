@@ -64,6 +64,8 @@ A choice offers `options` (grants) or a `pool` (`<kind>:<filter>`) the app gener
 | `trait:of=<trait id>` | one of the lineage options that name that trait in `of` |
 | `skill:proficient` | a skill the character is proficient in (Expertise) |
 | `subclass:cls=ranger` | a subclass of the class |
+| `tool:artisan` | one kind of Artisan’s Tools |
+| `maneuver:any` | Battle Master maneuvers (named in the description; not catalog entries) |
 
 `repeat: true` on a choice means one option may be picked more than once: Ability Score Improvement picks two `+1`
 options (the same one twice gives `+2`), a background picks three (`+2`/`+1` or `+1` to all three).
@@ -93,6 +95,11 @@ Each needs a small plan 3 follow-up to apply it.
 - `when: 'active'` (Task 14): the grant counts only while the entry's effect is switched on, like an AC spell in
   `acOn`: Rage's resistances, Frenzy, Rage of the Gods' flight. A new value of the existing condition field.
 - `cap: 25` on `abil` (Task 14): Primal Champion raises STR and CON by 4 to a maximum of 25.
+- New kind `casting` (Task 15): a subclass that casts from a class list with its own table (Eldritch Knight, Arcane
+  Trickster): `ab`, `list`, `cantrips`, `prepared` and the slots of each spell level `s1`…`s5`, each a level-table Value
+  by class level.
+- New kind `crit` (Task 15): Critical Hit on a d20 roll of `val` or higher with weapons and Unarmed Strikes (Champion).
+- `atkAbil.weapons` may name categories as well as weapons: `simple-melee`, `martial-melee-light` (Monk weapons).
 
 Effects that stay text: changes to another feature's numbers or recharge (Font of Inspiration, Improved Warding Flare),
 rerolls and minimum rolls (Supreme Healing), damage that adds half a level (Divine Fury's dice carry only the 1d6).

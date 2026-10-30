@@ -78,6 +78,12 @@ describe('validateEntry', () => {
     for (const cap of [20, 25, 30]) expect(validateEntry({ ...feature, grants: [{ ...g, cap }] })).toEqual([]);
     expect(validateEntry({ ...feature, grants: [{ ...g, cap: 24 }] })).not.toEqual([]);
   });
+  it('takes a subclass’s own spellcasting and a wider critical range', () => {
+    const ek = { id: 'g1', kind: 'casting', name: 'Spellcasting', ab: 'int', list: 'wizard', cantrips: '3:2,10:3', prepared: '3:3,4:4', s1: '3:2,4:3,7:4', s2: '7:2,10:3' };
+    expect(validateEntry({ ...feature, grants: [ek] })).toEqual([]);
+    expect(validateEntry({ ...feature, grants: [{ ...ek, s2: 'two' }] })).not.toEqual([]);
+    expect(validateEntry({ ...feature, grants: [{ id: 'g1', kind: 'crit', name: 'Critical Hit on 19–20', val: '19' }] })).toEqual([]);
+  });
   it('accepts an AC grant on a magic item', () => {
     const ring = { id: 'item/ring-of-protection', kind: 'item', name: 'Ring of Protection', src: 'srd', desc: '…', cat: 'magic', rarity: 'rare', attune: true,
       grants: [{ id: 'g1', kind: 'ac', name: '+1 AC', acMode: 'bonus', val: '1', needEq: true, needAtt: true }] };

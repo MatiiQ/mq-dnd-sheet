@@ -3317,7 +3317,30 @@
     "cls": "druid",
     "lvl": 20,
     "desc": "The vitality of nature constantly blooms within you, granting you the following benefits.\nEvergreen Wild Shape. Whenever you roll Initiative and have no uses of Wild Shape left, you regain one expended use of it.\nNature Magician. You can convert uses of Wild Shape into a spell slot (no action required). Choose a number of your unexpended uses of Wild Shape and convert them into a single spell slot, with each use contributing 2 spell levels. For example, if you convert two uses of Wild Shape, you produce a level 4 spell slot. Once you use this benefit, you can’t do so again until you finish a Long Rest.\nLongevity. The primal magic that you wield causes you to age more slowly. For every ten years that pass, your body ages only one year.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Evergreen Wild Shape",
+        "econ": "free",
+        "note": "On rolling Initiative with no Wild Shape uses, regain one."
+      },
+      {
+        "id": "g2",
+        "kind": "resource",
+        "name": "Nature Magician",
+        "max": "1",
+        "recharge": "long"
+      },
+      {
+        "id": "g3",
+        "kind": "action",
+        "name": "Nature Magician",
+        "econ": "free",
+        "res": "g2",
+        "note": "Turn Wild Shape uses into one spell slot, 2 levels per use."
+      }
+    ]
   },
   {
     "id": "feature/druid/beast-spells",
@@ -3328,7 +3351,15 @@
     "cls": "druid",
     "lvl": 18,
     "desc": "While using Wild Shape, you can cast spells in Beast form, except for any spell that has a Material component with a cost specified or that consumes its Material component.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Beast Spells",
+        "econ": "other",
+        "note": "Cast spells in Wild Shape, except those with a costly or consumed Material component."
+      }
+    ]
   },
   {
     "id": "feature/druid/circle-of-the-land/circle-of-the-land-spells",
@@ -3339,7 +3370,220 @@
     "cls": "druid",
     "lvl": 3,
     "desc": "Whenever you finish a Long Rest, choose one type of land: arid, polar, temperate, or tropical. Consult the table below that corresponds to the chosen type; you have the spells listed for your Druid level and lower prepared.\nArid Land Druid Level Circle Spells 3 Blur, Burning Hands, Fire Bolt 5 Fireball 7 Blight 9 Wall of Stone Polar Land Druid Level Circle Spells 3 Fog Cloud, Hold Person, Ray of Frost 5 Sleet Storm 7 Ice Storm 9 Cone of Cold Temperate Land Druid Level Circle Spells 3 Misty Step, Shocking Grasp, Sleep 5 Lightning Bolt 7 Freedom of Movement 9 Tree Stride Tropical Land Druid Level Circle Spells 3 Acid Splash, Ray of Sickness, Web 5 Stinking Cloud 7 Polymorph 9 Insect Plague",
-    "grants": [],
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "land",
+        "name": "Land type (choose on each Long Rest)",
+        "pick": 1,
+        "options": [
+          {
+            "id": "o1",
+            "kind": "spell",
+            "name": "Blur",
+            "spell": "spell/blur",
+            "always": true,
+            "opt": "Arid"
+          },
+          {
+            "id": "o2",
+            "kind": "spell",
+            "name": "Burning Hands",
+            "spell": "spell/burning-hands",
+            "always": true,
+            "opt": "Arid"
+          },
+          {
+            "id": "o3",
+            "kind": "spell",
+            "name": "Fire Bolt",
+            "spell": "spell/fire-bolt",
+            "always": true,
+            "opt": "Arid"
+          },
+          {
+            "id": "o4",
+            "kind": "spell",
+            "name": "Fireball",
+            "spell": "spell/fireball",
+            "always": true,
+            "lvl": 5,
+            "opt": "Arid"
+          },
+          {
+            "id": "o5",
+            "kind": "spell",
+            "name": "Blight",
+            "spell": "spell/blight",
+            "always": true,
+            "lvl": 7,
+            "opt": "Arid"
+          },
+          {
+            "id": "o6",
+            "kind": "spell",
+            "name": "Wall of Stone",
+            "spell": "spell/wall-of-stone",
+            "always": true,
+            "lvl": 9,
+            "opt": "Arid"
+          },
+          {
+            "id": "o7",
+            "kind": "spell",
+            "name": "Fog Cloud",
+            "spell": "spell/fog-cloud",
+            "always": true,
+            "opt": "Polar"
+          },
+          {
+            "id": "o8",
+            "kind": "spell",
+            "name": "Hold Person",
+            "spell": "spell/hold-person",
+            "always": true,
+            "opt": "Polar"
+          },
+          {
+            "id": "o9",
+            "kind": "spell",
+            "name": "Ray of Frost",
+            "spell": "spell/ray-of-frost",
+            "always": true,
+            "opt": "Polar"
+          },
+          {
+            "id": "o10",
+            "kind": "spell",
+            "name": "Sleet Storm",
+            "spell": "spell/sleet-storm",
+            "always": true,
+            "lvl": 5,
+            "opt": "Polar"
+          },
+          {
+            "id": "o11",
+            "kind": "spell",
+            "name": "Ice Storm",
+            "spell": "spell/ice-storm",
+            "always": true,
+            "lvl": 7,
+            "opt": "Polar"
+          },
+          {
+            "id": "o12",
+            "kind": "spell",
+            "name": "Cone of Cold",
+            "spell": "spell/cone-of-cold",
+            "always": true,
+            "lvl": 9,
+            "opt": "Polar"
+          },
+          {
+            "id": "o13",
+            "kind": "spell",
+            "name": "Misty Step",
+            "spell": "spell/misty-step",
+            "always": true,
+            "opt": "Temperate"
+          },
+          {
+            "id": "o14",
+            "kind": "spell",
+            "name": "Shocking Grasp",
+            "spell": "spell/shocking-grasp",
+            "always": true,
+            "opt": "Temperate"
+          },
+          {
+            "id": "o15",
+            "kind": "spell",
+            "name": "Sleep",
+            "spell": "spell/sleep",
+            "always": true,
+            "opt": "Temperate"
+          },
+          {
+            "id": "o16",
+            "kind": "spell",
+            "name": "Lightning Bolt",
+            "spell": "spell/lightning-bolt",
+            "always": true,
+            "lvl": 5,
+            "opt": "Temperate"
+          },
+          {
+            "id": "o17",
+            "kind": "spell",
+            "name": "Freedom of Movement",
+            "spell": "spell/freedom-of-movement",
+            "always": true,
+            "lvl": 7,
+            "opt": "Temperate"
+          },
+          {
+            "id": "o18",
+            "kind": "spell",
+            "name": "Tree Stride",
+            "spell": "spell/tree-stride",
+            "always": true,
+            "lvl": 9,
+            "opt": "Temperate"
+          },
+          {
+            "id": "o19",
+            "kind": "spell",
+            "name": "Acid Splash",
+            "spell": "spell/acid-splash",
+            "always": true,
+            "opt": "Tropical"
+          },
+          {
+            "id": "o20",
+            "kind": "spell",
+            "name": "Ray of Sickness",
+            "spell": "spell/ray-of-sickness",
+            "always": true,
+            "opt": "Tropical"
+          },
+          {
+            "id": "o21",
+            "kind": "spell",
+            "name": "Web",
+            "spell": "spell/web",
+            "always": true,
+            "opt": "Tropical"
+          },
+          {
+            "id": "o22",
+            "kind": "spell",
+            "name": "Stinking Cloud",
+            "spell": "spell/stinking-cloud",
+            "always": true,
+            "lvl": 5,
+            "opt": "Tropical"
+          },
+          {
+            "id": "o23",
+            "kind": "spell",
+            "name": "Polymorph",
+            "spell": "spell/polymorph",
+            "always": true,
+            "lvl": 7,
+            "opt": "Tropical"
+          },
+          {
+            "id": "o24",
+            "kind": "spell",
+            "name": "Insect Plague",
+            "spell": "spell/insect-plague",
+            "always": true,
+            "lvl": 9,
+            "opt": "Tropical"
+          }
+        ]
+      }
+    ],
     "sub": "circle-of-the-land"
   },
   {
@@ -3351,7 +3595,16 @@
     "cls": "druid",
     "lvl": 3,
     "desc": "As a Magic action, you can expend a use of your Wild Shape and choose a point within 60 feet of yourself. Vitality-giving flowers and life-draining thorns appear for a moment in a 10-foot-radius Sphere centered on that point. Each creature of your choice in the Sphere must make a Constitution saving throw against your spell save DC, taking 2d6 Necrotic damage on a failed save or half as much damage on a successful one. One creature of your choice in that area regains 2d6 Hit Points. The damage and healing increase by 1d6 when you reach Druid levels 10 (3d6) and 14 (4d6).",
-    "grants": [],
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Land’s Aid",
+        "econ": "action",
+        "dice": "3:2d6,10:3d6,14:4d6",
+        "note": "Spend a Wild Shape use: 10-ft Sphere within 60 ft, CON save or Necrotic damage (half on a success); one creature there regains the same roll in HP."
+      }
+    ],
     "sub": "circle-of-the-land"
   },
   {
@@ -3363,7 +3616,23 @@
     "cls": "druid",
     "lvl": 6,
     "desc": "You can cast one of the level 1+ spells that you have prepared from your Circle Spells feature without expending a spell slot, and you must finish a Long Rest before you do so again. In addition, when you finish a Short Rest, you can choose expended spell slots to recover. The spell slots can have a combined level that is equal to or less than half your Druid level (round up), and none of them can be level 6+. For example, if you’re a level 6 Druid, you can recover up to three levels’ worth of spell slots. You can recover a level 3 spell slot, a level 2 and a level 1 spell slot, or three level 1 spell slots. Once you recover spell slots with this feature, you can’t do so again until you finish a Long Rest.",
-    "grants": [],
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Natural Recovery",
+        "max": "1",
+        "recharge": "long"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Natural Recovery",
+        "econ": "other",
+        "res": "g1",
+        "note": "Cast a Circle spell without a slot, once per Long Rest; on a Short Rest, recover slots worth half your Druid level."
+      }
+    ],
     "sub": "circle-of-the-land"
   },
   {
@@ -3375,7 +3644,15 @@
     "cls": "druid",
     "lvl": 14,
     "desc": "As a Magic action, you can expend a use of your Wild Shape and cause spectral trees and vines to appear in a 15-foot Cube on the ground within 120 feet of yourself. They last there for 1 minute or until you have the Incapacitated condition or die. You and your allies have Half Cover while in that area, and your allies gain the current Resistance of your Nature’s Ward while there. As a Bonus Action, you can move the Cube up to 60 feet to ground within 120 feet of yourself.",
-    "grants": [],
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Nature’s Sanctuary",
+        "econ": "action",
+        "note": "Spend a Wild Shape use: a 15-ft Cube within 120 ft for 1 minute gives you and allies Half Cover and your Nature’s Ward Resistance."
+      }
+    ],
     "sub": "circle-of-the-land"
   },
   {
@@ -3387,7 +3664,55 @@
     "cls": "druid",
     "lvl": 10,
     "desc": "You are immune to the Poisoned condition, and you have Resistance to a damage type associated with your current land choice in the Circle Spells feature, as shown in the Nature’s Ward table.\nNature’s Ward Land Type Resistance Land Type Resistance Arid Fire Temperate Lightning Polar Cold Tropical Poison",
-    "grants": [],
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "defense",
+        "name": "Poisoned Immunity",
+        "def": "imm",
+        "target": "Poisoned"
+      },
+      {
+        "kind": "choice",
+        "id": "land",
+        "name": "Nature’s Ward (your land type)",
+        "pick": 1,
+        "options": [
+          {
+            "id": "o1",
+            "kind": "defense",
+            "name": "Fire Resistance",
+            "def": "res",
+            "target": "Fire",
+            "opt": "Arid"
+          },
+          {
+            "id": "o2",
+            "kind": "defense",
+            "name": "Cold Resistance",
+            "def": "res",
+            "target": "Cold",
+            "opt": "Polar"
+          },
+          {
+            "id": "o3",
+            "kind": "defense",
+            "name": "Lightning Resistance",
+            "def": "res",
+            "target": "Lightning",
+            "opt": "Temperate"
+          },
+          {
+            "id": "o4",
+            "kind": "defense",
+            "name": "Poison Resistance",
+            "def": "res",
+            "target": "Poison",
+            "opt": "Tropical"
+          }
+        ]
+      }
+    ],
     "sub": "circle-of-the-land"
   },
   {
@@ -3462,7 +3787,7 @@
             "id": "o2",
             "kind": "xdmg",
             "name": "Primal Strike",
-            "dice": "1d8",
+            "dice": "7:1d8,15:2d8",
             "dtype": "Cold, Fire, Lightning or Thunder",
             "on": "a weapon or Beast form attack hit",
             "perTurn": true
@@ -3499,7 +3824,15 @@
     "cls": "druid",
     "lvl": 15,
     "desc": "The option you chose for Elemental Fury grows more powerful, as detailed below.\nPotent Spellcasting. When you cast a Druid cantrip with a range of 10 feet or greater, the spell’s range increases by 300 feet.\nPrimal Strike. The extra damage of your Primal Strike increases to 2d8.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Improved Elemental Fury",
+        "econ": "other",
+        "note": "Potent Spellcasting: Druid cantrips with a range of 10 ft or more gain 300 ft. Primal Strike: 2d8."
+      }
+    ]
   },
   {
     "id": "feature/druid/primal-order",
@@ -3668,7 +4001,23 @@
     "cls": "fighter",
     "lvl": 2,
     "desc": "You can push yourself beyond your normal limits for a moment. On your turn, you can take one additional action, except the Magic action. Once you use this feature, you can’t do so again until you finish a Short or Long Rest. Starting at level 17, you can use it twice before a rest but only once on a turn.",
-    "grants": [],
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Action Surge",
+        "max": "2:1,17:2",
+        "recharge": "short"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Action Surge",
+        "econ": "free",
+        "res": "g1",
+        "note": "Take one more action on your turn (not Magic); once per turn."
+      }
+    ],
     "again": "17"
   },
   {
@@ -3680,7 +4029,15 @@
     "cls": "fighter",
     "lvl": 7,
     "desc": "You gain another Fighting Style feat of your choice.",
-    "grants": [],
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "style",
+        "name": "Fighting Style feat",
+        "pick": 1,
+        "pool": "feat:cat=style"
+      }
+    ],
     "sub": "champion"
   },
   {
@@ -3692,7 +4049,15 @@
     "cls": "fighter",
     "lvl": 10,
     "desc": "The thrill of battle drives you toward victory. During combat, you can give yourself Heroic Inspiration whenever you start your turn without it.",
-    "grants": [],
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Heroic Warrior",
+        "econ": "free",
+        "note": "In combat, gain Heroic Inspiration at the start of your turn if you have none."
+      }
+    ],
     "sub": "champion"
   },
   {
@@ -3704,7 +4069,14 @@
     "cls": "fighter",
     "lvl": 3,
     "desc": "Your attack rolls with weapons and Unarmed Strikes can score a Critical Hit on a roll of 19 or 20 on the d20.",
-    "grants": [],
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "crit",
+        "name": "Critical Hit on 19–20",
+        "val": "19"
+      }
+    ],
     "sub": "champion"
   },
   {
@@ -3716,7 +4088,15 @@
     "cls": "fighter",
     "lvl": 3,
     "desc": "Thanks to your athleticism, you have Advantage on Initiative rolls and Strength (Athletics) checks. In addition, immediately after you score a Critical Hit, you can move up to half your Speed without provoking Opportunity Attacks.",
-    "grants": [],
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Remarkable Athlete",
+        "econ": "other",
+        "note": "Advantage on Initiative and Athletics checks; after a Critical Hit, move half your Speed without provoking."
+      }
+    ],
     "sub": "champion"
   },
   {
@@ -3728,7 +4108,14 @@
     "cls": "fighter",
     "lvl": 15,
     "desc": "Your attack rolls with weapons and Unarmed Strikes can now score a Critical Hit on a roll of 18–20 on the d20.",
-    "grants": [],
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "crit",
+        "name": "Critical Hit on 18–20",
+        "val": "18"
+      }
+    ],
     "sub": "champion"
   },
   {
@@ -3740,7 +4127,15 @@
     "cls": "fighter",
     "lvl": 18,
     "desc": "You attain the pinnacle of resilience in battle, giving you these benefits.\nDefy Death. You have Advantage on Death Saving Throws. Moreover, when you roll 18–20 on a Death Saving Throw, you gain the benefit of rolling a 20 on it.\nHeroic Rally. At the start of each of your turns, you regain Hit Points equal to 5 plus your Constitution modifier if you are Bloodied and have at least 1 Hit Point.",
-    "grants": [],
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Survivor",
+        "econ": "other",
+        "note": "Advantage on Death Saving Throws (18–20 counts as 20); while Bloodied, regain 5 + CON HP at the start of your turn."
+      }
+    ],
     "sub": "champion"
   },
   {
@@ -3771,7 +4166,14 @@
     "cls": "fighter",
     "lvl": 5,
     "desc": "You can attack twice instead of once whenever you take the Attack action on your turn.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "attacks",
+        "name": "Two attacks per Attack action",
+        "val": "2"
+      }
+    ]
   },
   {
     "id": "feature/fighter/fighter-subclass",
@@ -3801,7 +4203,15 @@
     "cls": "fighter",
     "lvl": 1,
     "desc": "You have honed your martial prowess and gain a Fighting Style feat of your choice (see “Feats”). Defense is recommended. Whenever you gain a Fighter level, you can replace the feat you chose with a different Fighting Style feat.",
-    "grants": []
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "style",
+        "name": "Fighting Style feat",
+        "pick": 1,
+        "pool": "feat:cat=style"
+      }
+    ]
   },
   {
     "id": "feature/fighter/indomitable",
@@ -3812,7 +4222,23 @@
     "cls": "fighter",
     "lvl": 9,
     "desc": "If you fail a saving throw, you can reroll it with a bonus equal to your Fighter level. You must use the new roll, and you can’t use this feature again until you finish a Long Rest. You can use this feature twice before a Long Rest starting at level 13 and three times before a Long Rest starting at level 17.",
-    "grants": [],
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Indomitable",
+        "max": "9:1,13:2,17:3",
+        "recharge": "long"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Indomitable",
+        "econ": "free",
+        "res": "g1",
+        "note": "Reroll a failed save with a bonus equal to your Fighter level."
+      }
+    ],
     "again": "13,17"
   },
   {
@@ -3824,7 +4250,26 @@
     "cls": "fighter",
     "lvl": 1,
     "desc": "You have a limited well of physical and mental stamina that you can draw on. As a Bonus Action, you can use it to regain Hit Points equal to 1d10 plus your Fighter level. You can use this feature twice. You regain one expended use when you finish a Short Rest, and you regain all expended uses when you finish a Long Rest. When you reach certain Fighter levels, you gain more uses of this feature, as shown in the Second Wind column of the Fighter Features table.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Second Wind",
+        "max": "1:2,4:3,10:4",
+        "recharge": "long",
+        "regain": "1",
+        "regainOn": "short"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Second Wind",
+        "econ": "bonus",
+        "res": "g1",
+        "dice": "1d10+lvl",
+        "note": "Regain the roll in HP."
+      }
+    ]
   },
   {
     "id": "feature/fighter/studied-attacks",
@@ -3835,7 +4280,15 @@
     "cls": "fighter",
     "lvl": 13,
     "desc": "You study your opponents and learn from each attack you make. If you make an attack roll against a creature and miss, you have Advantage on your next attack roll against that creature before the end of your next turn.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Studied Attacks",
+        "econ": "other",
+        "note": "After a miss, Advantage on your next attack against that creature."
+      }
+    ]
   },
   {
     "id": "feature/fighter/tactical-master",
@@ -3846,7 +4299,15 @@
     "cls": "fighter",
     "lvl": 9,
     "desc": "When you attack with a weapon whose mastery property you can use, you can replace that property with the Push, Sap, or Slow property for that attack.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Tactical Master",
+        "econ": "other",
+        "note": "Replace a weapon’s mastery property with Push, Sap or Slow for an attack."
+      }
+    ]
   },
   {
     "id": "feature/fighter/tactical-mind",
@@ -3857,7 +4318,16 @@
     "cls": "fighter",
     "lvl": 2,
     "desc": "You have a mind for tactics on and off the battlefield. When you fail an ability check, you can expend a use of your Second Wind to push yourself toward success. Rather than regaining Hit Points, you roll 1d10 and add the number rolled to the ability check, potentially turning it into a success. If the check still fails, this use of Second Wind isn’t expended.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Tactical Mind",
+        "econ": "free",
+        "dice": "1d10",
+        "note": "On a failed ability check, spend a Second Wind use to add 1d10 (kept if you still fail)."
+      }
+    ]
   },
   {
     "id": "feature/fighter/tactical-shift",
@@ -3868,7 +4338,15 @@
     "cls": "fighter",
     "lvl": 5,
     "desc": "Whenever you activate your Second Wind with a Bonus Action, you can move up to half your Speed without provoking Opportunity Attacks.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Tactical Shift",
+        "econ": "other",
+        "note": "When you use Second Wind, move half your Speed without provoking."
+      }
+    ]
   },
   {
     "id": "feature/fighter/three-extra-attacks",
@@ -3879,7 +4357,14 @@
     "cls": "fighter",
     "lvl": 20,
     "desc": "You can attack four times instead of once whenever you take the Attack action on your turn.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "attacks",
+        "name": "Four attacks per Attack action",
+        "val": "4"
+      }
+    ]
   },
   {
     "id": "feature/fighter/two-extra-attacks",
@@ -3890,7 +4375,14 @@
     "cls": "fighter",
     "lvl": 11,
     "desc": "You can attack three times instead of once whenever you take the Attack action on your turn.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "attacks",
+        "name": "Three attacks per Attack action",
+        "val": "3"
+      }
+    ]
   },
   {
     "id": "feature/fighter/weapon-mastery",
@@ -3901,7 +4393,15 @@
     "cls": "fighter",
     "lvl": 1,
     "desc": "Your training with weapons allows you to use the mastery properties of three kinds of Simple or Martial weapons of your choice. Whenever you finish a Long Rest, you can practice weapon drills and change one of those weapon choices. When you reach certain Fighter levels, you gain the ability to use the mastery properties of more kinds of weapons, as shown in the Weapon Mastery column of the Fighter Features table.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "prof",
+        "name": "Weapon Mastery",
+        "cat": "mastery",
+        "val": "1:3,4:4,10:5,16:6"
+      }
+    ]
   },
   {
     "id": "feature/monk/ability-score-improvement",
@@ -3943,7 +4443,24 @@
     "cls": "monk",
     "lvl": 20,
     "desc": "You have developed your body and mind to new heights. Your Dexterity and Wisdom scores increase by 4, to a maximum of 25.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "abil",
+        "name": "DEX +4",
+        "ab": "dex",
+        "val": "4",
+        "cap": 25
+      },
+      {
+        "id": "g2",
+        "kind": "abil",
+        "name": "WIS +4",
+        "ab": "wis",
+        "val": "4",
+        "cap": 25
+      }
+    ]
   },
   {
     "id": "feature/monk/deflect-attacks",
@@ -3954,7 +4471,16 @@
     "cls": "monk",
     "lvl": 3,
     "desc": "When an attack roll hits you and its damage includes Bludgeoning, Piercing, or Slashing damage, you can take a Reaction to reduce the attack’s total damage against you. The reduction equals 1d10 plus your Dexterity modifier and Monk level. If you reduce the damage to 0, you can expend 1 Focus Point to redirect some of the attack’s force. If you do so, choose a creature you can see within 5 feet of yourself if the attack was a melee attack or a creature you can see within 60 feet of yourself that isn’t behind Total Cover if the attack was a ranged attack. That creature must succeed on a Dexterity saving throw or take damage equal to two rolls of your Martial Arts die plus your Dexterity modifier. The damage is the same type dealt by the attack.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Deflect Attacks",
+        "econ": "reaction",
+        "dice": "1d10",
+        "note": "Reduce Bludgeoning, Piercing or Slashing attack damage by 1d10 + DEX + Monk level; at 0, spend 1 Focus Point to redirect it."
+      }
+    ]
   },
   {
     "id": "feature/monk/deflect-energy",
@@ -3976,7 +4502,57 @@
     "cls": "monk",
     "lvl": 14,
     "desc": "Your physical and mental discipline grant you proficiency in all saving throws. Additionally, whenever you make a saving throw and fail, you can expend 1 Focus Point to reroll it, and you must use the new roll.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "prof",
+        "name": "STR saves",
+        "cat": "save",
+        "target": "str"
+      },
+      {
+        "id": "g2",
+        "kind": "prof",
+        "name": "DEX saves",
+        "cat": "save",
+        "target": "dex"
+      },
+      {
+        "id": "g3",
+        "kind": "prof",
+        "name": "CON saves",
+        "cat": "save",
+        "target": "con"
+      },
+      {
+        "id": "g4",
+        "kind": "prof",
+        "name": "INT saves",
+        "cat": "save",
+        "target": "int"
+      },
+      {
+        "id": "g5",
+        "kind": "prof",
+        "name": "WIS saves",
+        "cat": "save",
+        "target": "wis"
+      },
+      {
+        "id": "g6",
+        "kind": "prof",
+        "name": "CHA saves",
+        "cat": "save",
+        "target": "cha"
+      },
+      {
+        "id": "g7",
+        "kind": "action",
+        "name": "Disciplined Survivor",
+        "econ": "free",
+        "note": "Spend 1 Focus Point to reroll a failed save."
+      }
+    ]
   },
   {
     "id": "feature/monk/empowered-strikes",
@@ -4028,7 +4604,14 @@
     "cls": "monk",
     "lvl": 5,
     "desc": "You can attack twice instead of once whenever you take the Attack action on your turn.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "attacks",
+        "name": "Two attacks per Attack action",
+        "val": "2"
+      }
+    ]
   },
   {
     "id": "feature/monk/heightened-focus",
@@ -4050,7 +4633,32 @@
     "cls": "monk",
     "lvl": 1,
     "desc": "Your practice of martial arts gives you mastery of combat styles that use your Unarmed Strike and Monk weapons, which are the following: • Simple Melee weapons • Martial Melee weapons that have the Light property You gain the following benefits while you are unarmed or wielding only Monk weapons and you aren’t wearing armor or wielding a Shield.\nBonus Unarmed Strike. You can make an Unarmed Strike as a Bonus Action.\nMartial Arts Die. You can roll 1d6 in place of the normal damage of your Unarmed Strike or Monk weapons. This die changes as you gain Monk levels, as shown in the Martial Arts column of the Monk Features table.\nDexterous Attacks. You can use your Dexterity modifier instead of your Strength modifier for the attack and damage rolls of your Unarmed Strikes and Monk weapons. In addition, when you use the Grapple or Shove option of your Unarmed Strike, you can use your Dexterity modifier instead of your Strength modifier to determine the save DC.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "unarmed",
+        "name": "Martial Arts: Unarmed Strike",
+        "die": "1:1d6,5:1d8,11:1d10,17:1d12",
+        "abs": "str,dex",
+        "when": "noArmorNoShield"
+      },
+      {
+        "id": "g2",
+        "kind": "atkAbil",
+        "name": "Martial Arts: Monk weapons use DEX",
+        "ab": "dex",
+        "weapons": "simple-melee,martial-melee-light",
+        "die": "1:1d6,5:1d8,11:1d10,17:1d12",
+        "when": "noArmorNoShield"
+      },
+      {
+        "id": "g3",
+        "kind": "action",
+        "name": "Bonus Unarmed Strike",
+        "econ": "bonus",
+        "note": "Make an Unarmed Strike."
+      }
+    ]
   },
   {
     "id": "feature/monk/monk-subclass",
@@ -4080,7 +4688,39 @@
     "cls": "monk",
     "lvl": 2,
     "desc": "Your focus and martial training allow you to harness a well of extraordinary energy within yourself. This energy is represented by Focus Points. Your Monk level determines the number of points you have, as shown in the Focus Points column of the Monk Features table. You can expend these points to enhance or fuel certain Monk features. You start knowing three such features: Flurry of Blows, Patient Defense, and Step of the Wind, each of which is detailed below. When you expend a Focus Point, it is unavailable until you finish a Short or Long Rest, at the end of which you regain all your expended points. Some features that use Focus Points require your target to make a saving throw. The save DC equals 8 plus your Wisdom modifier and Proficiency Bonus.\nFlurry of Blows. You can expend 1 Focus Point to make two Unarmed Strikes as a Bonus Action.\nPatient Defense. You can take the Disengage action as a Bonus Action. Alternatively, you can expend 1 Focus Point to take both the Disengage and the Dodge actions as a Bonus Action.\nStep of the Wind. You can take the Dash action as a Bonus Action. Alternatively, you can expend 1 Focus Point to take both the Disengage and Dash actions as a Bonus Action, and your jump distance is doubled for the turn.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Focus Points",
+        "max": "lvl",
+        "recharge": "short"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Flurry of Blows",
+        "econ": "bonus",
+        "res": "g1",
+        "note": "Spend 1 Focus Point: two Unarmed Strikes (three from level 10)."
+      },
+      {
+        "id": "g3",
+        "kind": "action",
+        "name": "Patient Defense",
+        "econ": "bonus",
+        "res": "g1",
+        "note": "Disengage; or spend 1 Focus Point to Disengage and Dodge."
+      },
+      {
+        "id": "g4",
+        "kind": "action",
+        "name": "Step of the Wind",
+        "econ": "bonus",
+        "res": "g1",
+        "note": "Dash; or spend 1 Focus Point to Disengage and Dash with a doubled jump."
+      }
+    ]
   },
   {
     "id": "feature/monk/perfect-focus",
@@ -4113,7 +4753,15 @@
     "cls": "monk",
     "lvl": 4,
     "desc": "You can take a Reaction when you fall to reduce any damage you take from the fall by an amount equal to five times your Monk level.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Slow Fall",
+        "econ": "reaction",
+        "note": "Reduce falling damage by 5 × Monk level."
+      }
+    ]
   },
   {
     "id": "feature/monk/stunning-strike",
@@ -4124,7 +4772,15 @@
     "cls": "monk",
     "lvl": 5,
     "desc": "Once per turn when you hit a creature with a Monk weapon or an Unarmed Strike, you can expend 1 Focus Point to attempt a stunning strike. The target must make a Constitution saving throw. On a failed save, the target has the Stunned condition until the start of your next turn. On a successful save, the target’s Speed is halved until the start of your next turn, and the next attack roll made against the target before then has Advantage.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Stunning Strike",
+        "econ": "other",
+        "note": "Once per turn on a hit, spend 1 Focus Point: CON save or Stunned until your next turn."
+      }
+    ]
   },
   {
     "id": "feature/monk/superior-defense",
@@ -4135,7 +4791,15 @@
     "cls": "monk",
     "lvl": 18,
     "desc": "At the start of your turn, you can expend 3 Focus Points to bolster yourself against harm for 1 minute or until you have the Incapacitated condition. During that time, you have Resistance to all damage except Force damage.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Superior Defense",
+        "econ": "other",
+        "note": "Spend 3 Focus Points at the start of your turn: Resistance to all damage but Force for 1 minute."
+      }
+    ]
   },
   {
     "id": "feature/monk/unarmored-defense",
@@ -4146,7 +4810,17 @@
     "cls": "monk",
     "lvl": 1,
     "desc": "While you aren’t wearing armor or wielding a Shield, your base Armor Class equals 10 plus your Dexterity and Wisdom modifiers.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "ac",
+        "name": "Unarmored Defense: 10 + DEX + WIS",
+        "acMode": "unarmored",
+        "ab": "wis",
+        "shieldOk": false,
+        "when": "noArmorNoShield"
+      }
+    ]
   },
   {
     "id": "feature/monk/unarmored-movement",
@@ -4157,7 +4831,16 @@
     "cls": "monk",
     "lvl": 2,
     "desc": "Your speed increases by 10 feet while you aren’t wearing armor or wielding a Shield. This bonus increases when you reach certain Monk levels, as shown on the Monk Features table.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "speed",
+        "name": "Unarmored Movement",
+        "mode": "walk",
+        "val": "2:10,6:15,10:20,14:25,18:30",
+        "when": "noArmorNoShield"
+      }
+    ]
   },
   {
     "id": "feature/monk/uncanny-metabolism",
@@ -4168,7 +4851,24 @@
     "cls": "monk",
     "lvl": 2,
     "desc": "When you roll Initiative, you can regain all expended Focus Points. When you do so, roll your Martial Arts die, and regain a number of Hit Points equal to your Monk level plus the number rolled. Once you use this feature, you can’t use it again until you finish a Long Rest.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Uncanny Metabolism",
+        "max": "1",
+        "recharge": "long"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Uncanny Metabolism",
+        "econ": "free",
+        "res": "g1",
+        "dice": "1:1d6,5:1d8,11:1d10,17:1d12",
+        "note": "On rolling Initiative, regain all Focus Points and HP equal to Monk level + a Martial Arts die."
+      }
+    ]
   },
   {
     "id": "feature/monk/warrior-of-the-open-hand/fleet-step",
@@ -4179,7 +4879,15 @@
     "cls": "monk",
     "lvl": 11,
     "desc": "When you take a Bonus Action other than Step of the Wind, you can also use Step of the Wind immediately after that Bonus Action.",
-    "grants": [],
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Fleet Step",
+        "econ": "other",
+        "note": "After another Bonus Action, also use Step of the Wind."
+      }
+    ],
     "sub": "warrior-of-the-open-hand"
   },
   {
@@ -4191,7 +4899,15 @@
     "cls": "monk",
     "lvl": 3,
     "desc": "Whenever you hit a creature with an attack granted by your Flurry of Blows, you can impose one of the following effects on that target.\nAddle. The target can’t make Opportunity Attacks until the start of its next turn.\nPush. The target must succeed on a Strength saving throw or be pushed up to 15 feet away from you.\nTopple. The target must succeed on a Dexterity saving throw or have the Prone condition.",
-    "grants": [],
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Open Hand Technique",
+        "econ": "other",
+        "note": "A Flurry of Blows hit can Addle, Push 15 ft (STR save) or Topple (DEX save)."
+      }
+    ],
     "sub": "warrior-of-the-open-hand"
   },
   {
@@ -4203,7 +4919,16 @@
     "cls": "monk",
     "lvl": 17,
     "desc": "You gain the ability to set up lethal vibrations in someone’s body. When you hit a creature with an Unarmed Strike, you can expend 4 Focus Points to start these imperceptible vibrations, which last for a number of days equal to your Monk level. The vibrations are harmless unless you take an action to end them. Alternatively, when you take the Attack action on your turn, you can forgo one of the attacks to end the vibrations. To end them, you and the target must be on the same plane of existence. When you end them, the target must make a Constitution saving throw, taking 10d12 Force damage on a failed save or half as much damage on a successful one. You can have only one creature under the effect of this feature at a time. You can end the vibrations harmlessly (no action required).",
-    "grants": [],
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Quivering Palm",
+        "econ": "other",
+        "dice": "10d12",
+        "note": "Spend 4 Focus Points on an Unarmed Strike hit; end it later for a CON save or 10d12 Force (half on a success)."
+      }
+    ],
     "sub": "warrior-of-the-open-hand"
   },
   {
@@ -4215,7 +4940,24 @@
     "cls": "monk",
     "lvl": 6,
     "desc": "You gain the ability to heal yourself. As a Bonus Action, you can roll your Martial Arts die. You regain a number of Hit Points equal to the number rolled plus your Wisdom modifier (minimum of 1 Hit Point regained). You can use this feature a number of times equal to your Wisdom modifier (minimum of once), and you regain all expended uses when you finish a Long Rest.",
-    "grants": [],
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Wholeness of Body",
+        "max": "wis>=1",
+        "recharge": "long"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Wholeness of Body",
+        "econ": "bonus",
+        "res": "g1",
+        "dice": "1:1d6,5:1d8,11:1d10,17:1d12",
+        "note": "Regain a Martial Arts die + WIS in HP."
+      }
+    ],
     "sub": "warrior-of-the-open-hand"
   },
   {
