@@ -61,10 +61,14 @@ const appText = (function walk(dir: URL): string[] {
 })(new URL('code/src/', root)).join('\n');
 const shared = normText(srdText + '\n' + appText);
 const phrases = new Set<string>();
+// Table rows are skipped (their cells are short and generic), and a phrase needs six words of three letters or more.
 for (const e of written) {
-  const words = e.desc.split(/\s+/).filter(Boolean);
+  const words = e.desc.split('\n').filter((l) => !l.trim().startsWith('|')).join(' ').split(/\s+/).filter(Boolean);
   const picks = [words.slice(0, 8), ...(words.length >= 24 ? [words.slice(Math.floor(words.length / 2) - 4, Math.floor(words.length / 2) + 4)] : [])];
-  for (const w of picks) { const p = normText(w.join(' ')); if (w.length === 8 && !shared.includes(p)) phrases.add(p); }
+  for (const w of picks) {
+    const p = normText(w.join(' '));
+    if (w.length === 8 && w.filter((x) => /[a-z]{3}/i.test(x)).length >= 6 && !shared.includes(p)) phrases.add(p);
+  }
 }
 if (phrases.size < 100) throw new Error(`only ${phrases.size} check phrases`);
 writeFileSync(ref('build/check-phrases.json'), JSON.stringify([...phrases].sort(), null, 1) + '\n');

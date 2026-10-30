@@ -85,3 +85,10 @@ Each needs a small plan 3 follow-up to apply it.
   Spellcasting adds WIS to Druid cantrips).
 - `dice` on `action`: the action's die as a Value (Cosmic Omen's Weal `1d6` and Woe `-1d6`, Starry Form's Archer
   `1:1d8,10:2d8`, Healing Hands `pb` d4s).
+
+## What check-phb does not catch
+
+`npm run check-phb` and the pre-push hook look for phrases taken from the condensed `reference/` descriptions, which
+are what the pack holds. Wording pasted straight from the PDF or `reference/source/phb2024-fulltext.txt` is not
+detected. Never paste from those files into tracked files. Pushes from a clone without `reference/` (another machine,
+a cloud session) are not checked at all; the hook says so.

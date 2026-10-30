@@ -25,13 +25,17 @@ npm test         # Vitest: rules logic in src/logic.test.ts
 npm run build    # tsc --noEmit + vite build into dist/
 npm run preview  # serve dist/ with the service worker active
 npm run icons    # regenerate public/icons/*.png (dependency-free PNG writer)
+npm run srd      # rebuild src/data/srd/*.json and src/catalog/names.ts from the SRD 5.2.1 text (scripts/srd/README.md)
+npm run pack     # build reference/build/phb-pack.json (PHB data for the device) and the check phrases, from reference/
+npm run check-phb  # build, then fail if dist/ or a tracked file holds PHB description text (needs reference/ and npm run pack)
+npm run hooks    # once per clone: install the pre-push hook that runs check-phb on every pushed commit
 ```
 
 Toolchain: Node 22+ (CI uses 22), React 19, Vite 8, TypeScript 7, Vitest 5. The app has no other runtime dependencies besides `@fontsource` (Fraunces and Figtree, latin subsets, bundled so they work offline).
 
 ## Deploy
 
-Every push to `main` runs `.github/workflows/deploy.yml` (test → build → deploy-pages). Pages source is "GitHub Actions". Vite uses `base: './'`, so the build works under any repo path. Installed Home Screen apps get the new version on their next online launch.
+Every push to `main` runs `.github/workflows/deploy.yml` (test → build → deploy-pages). Push only from the machine that holds `reference/`: the pre-push hook (`npm run hooks`) checks every pushed commit for PHB text, and on a clone without `reference/` it lets the push through unchecked. Pages source is "GitHub Actions". Vite uses `base: './'`, so the build works under any repo path. Installed Home Screen apps get the new version on their next online launch.
 
 ## App architecture (`code/src/`)
 
@@ -48,6 +52,8 @@ Every push to `main` runs `.github/workflows/deploy.yml` (test → build → dep
 | `components/tabs/` | `ActionsTab`, `SpellsTab`, `InventoryTab`, `FeaturesTab`, `NotesTab` |
 | `components/ui.tsx` | Shared bits: icons, `RemoveButton` (tap twice to confirm), `EntryActions`, `Step`, `UsePips`/`MarkPips`, `ProfDot`, `NumInput`, `EntryForm`, `TextField`, `useArmed` |
 | `styles.css` | Colour tokens on `:root` (indigo theme, amber `--accent`), layout utilities, component classes |
+| `catalog/` | Rules catalog: `schema.ts` (entry types, grant vocabulary, id rule, `PHB_TO_SRD`), `value.ts` (formulas and level tables), `merge.ts`/`load.ts` (SRD + pack, lazy), `pack.ts`/`pack-db.ts` (PHB pack import, IndexedDB), generated `names.ts` |
+| `data/srd/` | SRD 5.2.1 data built by `npm run srd` (CC-BY-4.0, see `code/SRD-ATTRIBUTION.md`); loaded as its own chunk |
 
 Conventions:
 - State changes go through `update(patch)` from `useSheet()`. A patch is a partial `Character` or a function of the current one. Put rule logic in `logic.ts`, not in components.

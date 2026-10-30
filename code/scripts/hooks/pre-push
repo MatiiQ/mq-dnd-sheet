@@ -1,0 +1,5 @@
+#!/bin/sh
+# Blocks a push that would publish PHB text (code/scripts/check-phb.ts). Installed by `npm run hooks` in code/.
+# git passes the pushed refs on stdin; exec hands them on.
+cd "$(git rev-parse --show-toplevel)/code" || exit 1
+exec node scripts/check-phb.ts --pre-push
