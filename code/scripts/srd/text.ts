@@ -18,7 +18,7 @@ export function srdLines(text: string): Line[] {
 
 const HEADINGS = /^(Using a Higher-Level Spell Slot|Cantrip Upgrade)\./;
 // A run-in heading: up to six title-case words, then '. ' ("Darkvision. You have…", "Cloud’s Jaunt (Cloud Giant). As…").
-export const RUN_IN = /^((?:[A-Z(][\w’'()-]*|of|the|and|a|with|without)(?: (?:[A-Z(][\w’'()-]*|of|the|and|a|with|without)){0,5})\. (.*)$/;
+export const RUN_IN = /^([A-Z(][\w’'()-]*(?: (?:[A-Z(][\w’'()-]*|of|the|and|a|an|with|without|between|into|in|on|for|to|from|by|at|or)){0,5})\. (.*)$/;
 // Joins wrapped lines into paragraphs, one per line of the result. Blank lines end a paragraph unless it stops
 // mid-sentence (a page or column break); a run-in heading after the end of a sentence starts a new one.
 export function paragraphs(lines: string[]): string[] {

@@ -1,0 +1,39 @@
+// SRD Rules Glossary → RuleEntry for the 12 actions, Opportunity Attack and the four senses; and the language tables.
+import { catalogId, type RuleEntry } from '../../src/catalog/schema.ts';
+import { paragraphs, srdLines } from './text.ts';
+
+const ACTIONS = ['Attack', 'Dash', 'Disengage', 'Dodge', 'Help', 'Hide', 'Influence', 'Magic', 'Ready', 'Search', 'Study', 'Utilize'];
+const SENSES = ['Blindsight', 'Darkvision', 'Tremorsense', 'Truesight'];
+// A glossary heading: a short title on its own line after a blank line.
+const HEADING = /^[A-Z][\w’' -]*(?: \[[\w ]+\])?$/;
+
+export function parseRules(text: string): RuleEntry[] {
+  const L = srdLines(text), lines = L.map((l) => l.text.trim());
+  const isHead = (i: number) => lines[i].length <= 40 && HEADING.test(lines[i]) && (i === 0 || !lines[i - 1]);
+  const out: RuleEntry[] = [];
+  lines.forEach((l, i) => {
+    const action = /^(\w+) \[Action\]$/.exec(l)?.[1];
+    const name = action && ACTIONS.includes(action) ? action : l === 'Opportunity Attacks' ? 'Opportunity Attack' : SENSES.includes(l) ? l : '';
+    if (!name) return;
+    const body: string[] = [];
+    let stray = false;
+    for (let k = i + 1; k < lines.length && !isHead(k); k++) {
+      // A lower-case line after a finished sentence was cut in from another entry by the column crop; so is the rest
+      // of its paragraph.
+      if (lines[k] && /^[a-z]/.test(lines[k]) && /[.!?][”)]*$/.test(body.filter(Boolean).pop() ?? '')) stray = true;
+      if (!lines[k]) stray = false;
+      if (!stray) body.push(lines[k]);
+    }
+    out.push({ id: catalogId('rule', name), kind: 'rule', name, src: 'srd', page: L[i].page, cat: SENSES.includes(name) ? 'sense' : 'action',
+      desc: paragraphs(body).join('\n') });
+  });
+  return out;
+}
+
+// The Standard and Rare Languages tables: every line that is only capitalised words, without dice ranges and footnote marks.
+export function parseLanguages(text: string): string[] {
+  const lines = srdLines(text).map((l) => l.text.trim());
+  const a = lines.indexOf('Standard Languages'), b = lines.findIndex((l) => l.startsWith('*'));
+  return lines.slice(a + 1, b).map((l) => l.replace(/^[\d–]+\s+/, '').replace(/\*$/, ''))
+    .filter((l) => l && !['Language', 'Rare Languages', '1d12', '—'].includes(l) && /^[A-Z][\w’']*(?: [A-Z][\w’']*)*$/.test(l));
+}

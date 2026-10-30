@@ -70,7 +70,7 @@ export function parseArmor(layout: string): ItemEntry[] {
 
 // Prose blocks headed "Name (cost)", as in the tool and gear descriptions.
 interface Priced { name: string; cost: string; page: number; lines: string[] }
-const PRICED = new RegExp(`^(.+?) \\((${COST}|Varies)\\)$`);
+const PRICED = new RegExp(`^([A-Z].*?) \\((${COST}|Varies)\\)$`);
 function pricedBlocks(text: string): Priced[] {
   const out: Priced[] = [];
   for (const l of srdLines(text)) {

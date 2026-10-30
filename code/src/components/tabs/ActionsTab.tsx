@@ -1,11 +1,11 @@
 import type { CSSProperties } from 'react';
+import { COMBAT_ACTIONS } from '../../logic';
 import { removeEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { Attack, Rider } from '../../types';
 import { AddButton, DieBadge, EntryForm, EntryRow, TextField } from '../ui';
 
 const ATTACK_BLANK = { name: '', hit: '', dmg: '', info: '', mastery: '' };
 const RIDER_BLANK = { name: '', dice: '' };
-const COMBAT_ACTIONS = ['Attack', 'Dash', 'Disengage', 'Dodge', 'Help', 'Hide', 'Influence', 'Magic', 'Ready', 'Search', 'Study', 'Utilize'];
 
 export function ActionsTab() {
   const { c, update } = useSheet();

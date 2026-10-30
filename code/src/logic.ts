@@ -15,6 +15,9 @@ export const SKILLS: [string, string, Ability][] = [
   ['deception', 'Deception', 'cha'], ['intimidation', 'Intimidation', 'cha'], ['performance', 'Performance', 'cha'], ['persuasion', 'Persuasion', 'cha']
 ];
 
+// The 12 actions anyone can take (PHB p.360).
+export const COMBAT_ACTIONS = ['Attack', 'Dash', 'Disengage', 'Dodge', 'Help', 'Hide', 'Influence', 'Magic', 'Ready', 'Search', 'Study', 'Utilize'];
+
 export const TABS: [Tab, string][] = [['actions', 'Actions'], ['spells', 'Spells'], ['inventory', 'Inventory'], ['features', 'Features & Traits'], ['notes', 'Notes']];
 
 // Kinds of source an entry can name (roadmap, "Source kinds"), with their labels.

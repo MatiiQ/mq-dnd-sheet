@@ -1,0 +1,119 @@
+Attack [Action]
+
+When you take the Attack action, you can make one
+attack roll with a weapon or an Unarmed Strike.
+Equipping and Unequipping Weapons. You can
+either equip or unequip one weapon when you make
+an attack as part of this action. You do so either
+before or after the attack. If you equip a weapon
+before an attack, you don’t need to use it for that attack. Equipping a weapon includes drawing it from
+a sheath or picking it up. Unequipping a weapon includes sheathing, stowing, or dropping it.
+Moving between Attacks. If you move on your
+turn and have a feature, such as Extra Attack, that
+gives you more than one attack as part of the Attack
+action, you can use some or all of that movement to
+move between those attacks.
+
+177
+
+System Reference Document 5.2.1
+
+Blindsight
+
+If you have Blindsight, you can see within a specific
+range without relying on physical sight. Within that
+range, you can see anything that isn’t behind Total
+Cover even if you have the Blinded condition or are
+in Darkness. Moreover, in that range, you can see
+something that has the Invisible condition.
+
+Bloodied
+
+Darkvision
+
+If you have Darkvision, you can see in Dim Light
+within a specified range as if it were Bright Light
+and in Darkness within that range as if it were
+Dim Light. You discern colors in that Darkness
+only as shades of gray. See also “Playing the Game”
+(“Exploration”).
+
+Opportunity Attacks
+
+You can make an Opportunity Attack when a creature that you can see leaves your reach using its
+action, its Bonus Action, its Reaction, or one of its
+speeds. To make the Opportunity Attack, take a Reaction to make one melee attack with a weapon or
+an Unarmed Strike against the provoking creature.
+The attack occurs right before the creature leaves
+your reach. See also “Playing the Game” (“Combat”).
+
+Standard Languages
+1d12
+
+Language
+
+—
+
+Common
+
+1
+
+Common Sign Language
+
+2
+
+Draconic
+
+3–4
+
+Dwarvish
+
+5–6
+
+Elvish
+
+7
+
+Giant
+
+8
+
+Gnomish
+
+9
+
+Goblin
+
+10–11 Halfling
+12
+
+Orc
+
+The Rare Languages table lists languages that are
+either secret or derived from other planes of existence and thus less widespread in the worlds of the
+Material Plane. Some features let a character learn a
+rare language.
+
+Rare Languages
+Language
+
+Language
+
+Abyssal
+
+Primordial*
+
+Celestial
+
+Sylvan
+
+Deep Speech
+
+Thieves’ Cant
+
+Druidic
+
+Undercommon
+
+Infernal
+*Primordial includes the Aquan, Auran, Ignan, and Terran dialects.

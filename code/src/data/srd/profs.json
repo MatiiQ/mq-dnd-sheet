@@ -1,0 +1,824 @@
+[
+  {
+    "id": "prof/abyssal",
+    "kind": "prof",
+    "name": "Abyssal",
+    "src": "srd",
+    "desc": "",
+    "cat": "language"
+  },
+  {
+    "id": "prof/alchemists-supplies",
+    "kind": "prof",
+    "name": "Alchemist’s Supplies",
+    "src": "srd",
+    "desc": "",
+    "cat": "tool"
+  },
+  {
+    "id": "prof/bagpipes",
+    "kind": "prof",
+    "name": "Bagpipes",
+    "src": "srd",
+    "desc": "",
+    "cat": "tool"
+  },
+  {
+    "id": "prof/battleaxe",
+    "kind": "prof",
+    "name": "Battleaxe",
+    "src": "srd",
+    "desc": "",
+    "cat": "weapon"
+  },
+  {
+    "id": "prof/blowgun",
+    "kind": "prof",
+    "name": "Blowgun",
+    "src": "srd",
+    "desc": "",
+    "cat": "weapon"
+  },
+  {
+    "id": "prof/brewers-supplies",
+    "kind": "prof",
+    "name": "Brewer’s Supplies",
+    "src": "srd",
+    "desc": "",
+    "cat": "tool"
+  },
+  {
+    "id": "prof/calligraphers-supplies",
+    "kind": "prof",
+    "name": "Calligrapher’s Supplies",
+    "src": "srd",
+    "desc": "",
+    "cat": "tool"
+  },
+  {
+    "id": "prof/carpenters-tools",
+    "kind": "prof",
+    "name": "Carpenter’s Tools",
+    "src": "srd",
+    "desc": "",
+    "cat": "tool"
+  },
+  {
+    "id": "prof/cartographers-tools",
+    "kind": "prof",
+    "name": "Cartographer’s Tools",
+    "src": "srd",
+    "desc": "",
+    "cat": "tool"
+  },
+  {
+    "id": "prof/celestial",
+    "kind": "prof",
+    "name": "Celestial",
+    "src": "srd",
+    "desc": "",
+    "cat": "language"
+  },
+  {
+    "id": "prof/club",
+    "kind": "prof",
+    "name": "Club",
+    "src": "srd",
+    "desc": "",
+    "cat": "weapon"
+  },
+  {
+    "id": "prof/cobblers-tools",
+    "kind": "prof",
+    "name": "Cobbler’s Tools",
+    "src": "srd",
+    "desc": "",
+    "cat": "tool"
+  },
+  {
+    "id": "prof/common",
+    "kind": "prof",
+    "name": "Common",
+    "src": "srd",
+    "desc": "",
+    "cat": "language"
+  },
+  {
+    "id": "prof/common-sign-language",
+    "kind": "prof",
+    "name": "Common Sign Language",
+    "src": "srd",
+    "desc": "",
+    "cat": "language"
+  },
+  {
+    "id": "prof/cooks-utensils",
+    "kind": "prof",
+    "name": "Cook’s Utensils",
+    "src": "srd",
+    "desc": "",
+    "cat": "tool"
+  },
+  {
+    "id": "prof/dagger",
+    "kind": "prof",
+    "name": "Dagger",
+    "src": "srd",
+    "desc": "",
+    "cat": "weapon"
+  },
+  {
+    "id": "prof/dart",
+    "kind": "prof",
+    "name": "Dart",
+    "src": "srd",
+    "desc": "",
+    "cat": "weapon"
+  },
+  {
+    "id": "prof/deep-speech",
+    "kind": "prof",
+    "name": "Deep Speech",
+    "src": "srd",
+    "desc": "",
+    "cat": "language"
+  },
+  {
+    "id": "prof/dice",
+    "kind": "prof",
+    "name": "Dice",
+    "src": "srd",
+    "desc": "",
+    "cat": "tool"
+  },
+  {
+    "id": "prof/disguise-kit",
+    "kind": "prof",
+    "name": "Disguise Kit",
+    "src": "srd",
+    "desc": "",
+    "cat": "tool"
+  },
+  {
+    "id": "prof/draconic",
+    "kind": "prof",
+    "name": "Draconic",
+    "src": "srd",
+    "desc": "",
+    "cat": "language"
+  },
+  {
+    "id": "prof/dragonchess",
+    "kind": "prof",
+    "name": "Dragonchess",
+    "src": "srd",
+    "desc": "",
+    "cat": "tool"
+  },
+  {
+    "id": "prof/druidic",
+    "kind": "prof",
+    "name": "Druidic",
+    "src": "srd",
+    "desc": "",
+    "cat": "language"
+  },
+  {
+    "id": "prof/drum",
+    "kind": "prof",
+    "name": "Drum",
+    "src": "srd",
+    "desc": "",
+    "cat": "tool"
+  },
+  {
+    "id": "prof/dulcimer",
+    "kind": "prof",
+    "name": "Dulcimer",
+    "src": "srd",
+    "desc": "",
+    "cat": "tool"
+  },
+  {
+    "id": "prof/dwarvish",
+    "kind": "prof",
+    "name": "Dwarvish",
+    "src": "srd",
+    "desc": "",
+    "cat": "language"
+  },
+  {
+    "id": "prof/elvish",
+    "kind": "prof",
+    "name": "Elvish",
+    "src": "srd",
+    "desc": "",
+    "cat": "language"
+  },
+  {
+    "id": "prof/flail",
+    "kind": "prof",
+    "name": "Flail",
+    "src": "srd",
+    "desc": "",
+    "cat": "weapon"
+  },
+  {
+    "id": "prof/flute",
+    "kind": "prof",
+    "name": "Flute",
+    "src": "srd",
+    "desc": "",
+    "cat": "tool"
+  },
+  {
+    "id": "prof/forgery-kit",
+    "kind": "prof",
+    "name": "Forgery Kit",
+    "src": "srd",
+    "desc": "",
+    "cat": "tool"
+  },
+  {
+    "id": "prof/gaming-set",
+    "kind": "prof",
+    "name": "Gaming Set",
+    "src": "srd",
+    "desc": "",
+    "cat": "tool"
+  },
+  {
+    "id": "prof/giant",
+    "kind": "prof",
+    "name": "Giant",
+    "src": "srd",
+    "desc": "",
+    "cat": "language"
+  },
+  {
+    "id": "prof/glaive",
+    "kind": "prof",
+    "name": "Glaive",
+    "src": "srd",
+    "desc": "",
+    "cat": "weapon"
+  },
+  {
+    "id": "prof/glassblowers-tools",
+    "kind": "prof",
+    "name": "Glassblower’s Tools",
+    "src": "srd",
+    "desc": "",
+    "cat": "tool"
+  },
+  {
+    "id": "prof/gnomish",
+    "kind": "prof",
+    "name": "Gnomish",
+    "src": "srd",
+    "desc": "",
+    "cat": "language"
+  },
+  {
+    "id": "prof/goblin",
+    "kind": "prof",
+    "name": "Goblin",
+    "src": "srd",
+    "desc": "",
+    "cat": "language"
+  },
+  {
+    "id": "prof/greataxe",
+    "kind": "prof",
+    "name": "Greataxe",
+    "src": "srd",
+    "desc": "",
+    "cat": "weapon"
+  },
+  {
+    "id": "prof/greatclub",
+    "kind": "prof",
+    "name": "Greatclub",
+    "src": "srd",
+    "desc": "",
+    "cat": "weapon"
+  },
+  {
+    "id": "prof/greatsword",
+    "kind": "prof",
+    "name": "Greatsword",
+    "src": "srd",
+    "desc": "",
+    "cat": "weapon"
+  },
+  {
+    "id": "prof/halberd",
+    "kind": "prof",
+    "name": "Halberd",
+    "src": "srd",
+    "desc": "",
+    "cat": "weapon"
+  },
+  {
+    "id": "prof/halfling",
+    "kind": "prof",
+    "name": "Halfling",
+    "src": "srd",
+    "desc": "",
+    "cat": "language"
+  },
+  {
+    "id": "prof/hand-crossbow",
+    "kind": "prof",
+    "name": "Hand Crossbow",
+    "src": "srd",
+    "desc": "",
+    "cat": "weapon"
+  },
+  {
+    "id": "prof/handaxe",
+    "kind": "prof",
+    "name": "Handaxe",
+    "src": "srd",
+    "desc": "",
+    "cat": "weapon"
+  },
+  {
+    "id": "prof/heavy-armor",
+    "kind": "prof",
+    "name": "Heavy armor",
+    "src": "srd",
+    "desc": "",
+    "cat": "armor",
+    "short": "Heavy"
+  },
+  {
+    "id": "prof/heavy-crossbow",
+    "kind": "prof",
+    "name": "Heavy Crossbow",
+    "src": "srd",
+    "desc": "",
+    "cat": "weapon"
+  },
+  {
+    "id": "prof/herbalism-kit",
+    "kind": "prof",
+    "name": "Herbalism Kit",
+    "src": "srd",
+    "desc": "",
+    "cat": "tool"
+  },
+  {
+    "id": "prof/horn",
+    "kind": "prof",
+    "name": "Horn",
+    "src": "srd",
+    "desc": "",
+    "cat": "tool"
+  },
+  {
+    "id": "prof/infernal",
+    "kind": "prof",
+    "name": "Infernal",
+    "src": "srd",
+    "desc": "",
+    "cat": "language"
+  },
+  {
+    "id": "prof/javelin",
+    "kind": "prof",
+    "name": "Javelin",
+    "src": "srd",
+    "desc": "",
+    "cat": "weapon"
+  },
+  {
+    "id": "prof/jewelers-tools",
+    "kind": "prof",
+    "name": "Jeweler’s Tools",
+    "src": "srd",
+    "desc": "",
+    "cat": "tool"
+  },
+  {
+    "id": "prof/lance",
+    "kind": "prof",
+    "name": "Lance",
+    "src": "srd",
+    "desc": "",
+    "cat": "weapon"
+  },
+  {
+    "id": "prof/leatherworkers-tools",
+    "kind": "prof",
+    "name": "Leatherworker’s Tools",
+    "src": "srd",
+    "desc": "",
+    "cat": "tool"
+  },
+  {
+    "id": "prof/light-armor",
+    "kind": "prof",
+    "name": "Light armor",
+    "src": "srd",
+    "desc": "",
+    "cat": "armor",
+    "short": "Light"
+  },
+  {
+    "id": "prof/light-crossbow",
+    "kind": "prof",
+    "name": "Light Crossbow",
+    "src": "srd",
+    "desc": "",
+    "cat": "weapon"
+  },
+  {
+    "id": "prof/light-hammer",
+    "kind": "prof",
+    "name": "Light Hammer",
+    "src": "srd",
+    "desc": "",
+    "cat": "weapon"
+  },
+  {
+    "id": "prof/longbow",
+    "kind": "prof",
+    "name": "Longbow",
+    "src": "srd",
+    "desc": "",
+    "cat": "weapon"
+  },
+  {
+    "id": "prof/longsword",
+    "kind": "prof",
+    "name": "Longsword",
+    "src": "srd",
+    "desc": "",
+    "cat": "weapon"
+  },
+  {
+    "id": "prof/lute",
+    "kind": "prof",
+    "name": "Lute",
+    "src": "srd",
+    "desc": "",
+    "cat": "tool"
+  },
+  {
+    "id": "prof/lyre",
+    "kind": "prof",
+    "name": "Lyre",
+    "src": "srd",
+    "desc": "",
+    "cat": "tool"
+  },
+  {
+    "id": "prof/mace",
+    "kind": "prof",
+    "name": "Mace",
+    "src": "srd",
+    "desc": "",
+    "cat": "weapon"
+  },
+  {
+    "id": "prof/martial-weapons",
+    "kind": "prof",
+    "name": "Martial weapons",
+    "src": "srd",
+    "desc": "",
+    "cat": "weapon",
+    "short": "Martial"
+  },
+  {
+    "id": "prof/masons-tools",
+    "kind": "prof",
+    "name": "Mason’s Tools",
+    "src": "srd",
+    "desc": "",
+    "cat": "tool"
+  },
+  {
+    "id": "prof/maul",
+    "kind": "prof",
+    "name": "Maul",
+    "src": "srd",
+    "desc": "",
+    "cat": "weapon"
+  },
+  {
+    "id": "prof/medium-armor",
+    "kind": "prof",
+    "name": "Medium armor",
+    "src": "srd",
+    "desc": "",
+    "cat": "armor",
+    "short": "Medium"
+  },
+  {
+    "id": "prof/morningstar",
+    "kind": "prof",
+    "name": "Morningstar",
+    "src": "srd",
+    "desc": "",
+    "cat": "weapon"
+  },
+  {
+    "id": "prof/musical-instrument",
+    "kind": "prof",
+    "name": "Musical Instrument",
+    "src": "srd",
+    "desc": "",
+    "cat": "tool"
+  },
+  {
+    "id": "prof/musket",
+    "kind": "prof",
+    "name": "Musket",
+    "src": "srd",
+    "desc": "",
+    "cat": "weapon"
+  },
+  {
+    "id": "prof/navigators-tools",
+    "kind": "prof",
+    "name": "Navigator’s Tools",
+    "src": "srd",
+    "desc": "",
+    "cat": "tool"
+  },
+  {
+    "id": "prof/orc",
+    "kind": "prof",
+    "name": "Orc",
+    "src": "srd",
+    "desc": "",
+    "cat": "language"
+  },
+  {
+    "id": "prof/painters-supplies",
+    "kind": "prof",
+    "name": "Painter’s Supplies",
+    "src": "srd",
+    "desc": "",
+    "cat": "tool"
+  },
+  {
+    "id": "prof/pan-flute",
+    "kind": "prof",
+    "name": "Pan Flute",
+    "src": "srd",
+    "desc": "",
+    "cat": "tool"
+  },
+  {
+    "id": "prof/pike",
+    "kind": "prof",
+    "name": "Pike",
+    "src": "srd",
+    "desc": "",
+    "cat": "weapon"
+  },
+  {
+    "id": "prof/pistol",
+    "kind": "prof",
+    "name": "Pistol",
+    "src": "srd",
+    "desc": "",
+    "cat": "weapon"
+  },
+  {
+    "id": "prof/playing-cards",
+    "kind": "prof",
+    "name": "Playing Cards",
+    "src": "srd",
+    "desc": "",
+    "cat": "tool"
+  },
+  {
+    "id": "prof/poisoners-kit",
+    "kind": "prof",
+    "name": "Poisoner’s Kit",
+    "src": "srd",
+    "desc": "",
+    "cat": "tool"
+  },
+  {
+    "id": "prof/potters-tools",
+    "kind": "prof",
+    "name": "Potter’s Tools",
+    "src": "srd",
+    "desc": "",
+    "cat": "tool"
+  },
+  {
+    "id": "prof/primordial",
+    "kind": "prof",
+    "name": "Primordial",
+    "src": "srd",
+    "desc": "",
+    "cat": "language"
+  },
+  {
+    "id": "prof/quarterstaff",
+    "kind": "prof",
+    "name": "Quarterstaff",
+    "src": "srd",
+    "desc": "",
+    "cat": "weapon"
+  },
+  {
+    "id": "prof/rapier",
+    "kind": "prof",
+    "name": "Rapier",
+    "src": "srd",
+    "desc": "",
+    "cat": "weapon"
+  },
+  {
+    "id": "prof/scimitar",
+    "kind": "prof",
+    "name": "Scimitar",
+    "src": "srd",
+    "desc": "",
+    "cat": "weapon"
+  },
+  {
+    "id": "prof/shawm",
+    "kind": "prof",
+    "name": "Shawm",
+    "src": "srd",
+    "desc": "",
+    "cat": "tool"
+  },
+  {
+    "id": "prof/shields",
+    "kind": "prof",
+    "name": "Shields",
+    "src": "srd",
+    "desc": "",
+    "cat": "armor",
+    "short": "Shield"
+  },
+  {
+    "id": "prof/shortbow",
+    "kind": "prof",
+    "name": "Shortbow",
+    "src": "srd",
+    "desc": "",
+    "cat": "weapon"
+  },
+  {
+    "id": "prof/shortsword",
+    "kind": "prof",
+    "name": "Shortsword",
+    "src": "srd",
+    "desc": "",
+    "cat": "weapon"
+  },
+  {
+    "id": "prof/sickle",
+    "kind": "prof",
+    "name": "Sickle",
+    "src": "srd",
+    "desc": "",
+    "cat": "weapon"
+  },
+  {
+    "id": "prof/simple-weapons",
+    "kind": "prof",
+    "name": "Simple weapons",
+    "src": "srd",
+    "desc": "",
+    "cat": "weapon",
+    "short": "Simple"
+  },
+  {
+    "id": "prof/sling",
+    "kind": "prof",
+    "name": "Sling",
+    "src": "srd",
+    "desc": "",
+    "cat": "weapon"
+  },
+  {
+    "id": "prof/smiths-tools",
+    "kind": "prof",
+    "name": "Smith’s Tools",
+    "src": "srd",
+    "desc": "",
+    "cat": "tool"
+  },
+  {
+    "id": "prof/spear",
+    "kind": "prof",
+    "name": "Spear",
+    "src": "srd",
+    "desc": "",
+    "cat": "weapon"
+  },
+  {
+    "id": "prof/sylvan",
+    "kind": "prof",
+    "name": "Sylvan",
+    "src": "srd",
+    "desc": "",
+    "cat": "language"
+  },
+  {
+    "id": "prof/thieves-cant",
+    "kind": "prof",
+    "name": "Thieves’ Cant",
+    "src": "srd",
+    "desc": "",
+    "cat": "language"
+  },
+  {
+    "id": "prof/thieves-tools",
+    "kind": "prof",
+    "name": "Thieves’ Tools",
+    "src": "srd",
+    "desc": "",
+    "cat": "tool"
+  },
+  {
+    "id": "prof/three-dragon-ante",
+    "kind": "prof",
+    "name": "Three-Dragon Ante",
+    "src": "srd",
+    "desc": "",
+    "cat": "tool"
+  },
+  {
+    "id": "prof/tinkers-tools",
+    "kind": "prof",
+    "name": "Tinker’s Tools",
+    "src": "srd",
+    "desc": "",
+    "cat": "tool"
+  },
+  {
+    "id": "prof/trident",
+    "kind": "prof",
+    "name": "Trident",
+    "src": "srd",
+    "desc": "",
+    "cat": "weapon"
+  },
+  {
+    "id": "prof/undercommon",
+    "kind": "prof",
+    "name": "Undercommon",
+    "src": "srd",
+    "desc": "",
+    "cat": "language"
+  },
+  {
+    "id": "prof/viol",
+    "kind": "prof",
+    "name": "Viol",
+    "src": "srd",
+    "desc": "",
+    "cat": "tool"
+  },
+  {
+    "id": "prof/war-pick",
+    "kind": "prof",
+    "name": "War Pick",
+    "src": "srd",
+    "desc": "",
+    "cat": "weapon"
+  },
+  {
+    "id": "prof/warhammer",
+    "kind": "prof",
+    "name": "Warhammer",
+    "src": "srd",
+    "desc": "",
+    "cat": "weapon"
+  },
+  {
+    "id": "prof/weavers-tools",
+    "kind": "prof",
+    "name": "Weaver’s Tools",
+    "src": "srd",
+    "desc": "",
+    "cat": "tool"
+  },
+  {
+    "id": "prof/whip",
+    "kind": "prof",
+    "name": "Whip",
+    "src": "srd",
+    "desc": "",
+    "cat": "weapon"
+  },
+  {
+    "id": "prof/woodcarvers-tools",
+    "kind": "prof",
+    "name": "Woodcarver’s Tools",
+    "src": "srd",
+    "desc": "",
+    "cat": "tool"
+  }
+]
