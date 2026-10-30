@@ -46,6 +46,11 @@ describe('validateEntry', () => {
   it('rejects a grant with a malformed value', () => {
     expect(validateEntry({ ...darkvision, grants: [{ id: 'g1', kind: 'sense', name: 'x', range: 'sixty' }] })).not.toEqual([]);
   });
+  it('links a lineage option to its trait', () => {
+    const wood = { id: 'trait/elf/wood-elf', kind: 'trait', name: 'Wood Elf', src: 'srd', desc: '…', species: 'elf', lvl: 1, grants: [] };
+    expect(validateEntry({ ...wood, of: 'trait/elf/elven-lineage' })).toEqual([]);
+    expect(validateEntry({ ...wood, of: 'elven-lineage' })).not.toEqual([]);
+  });
   it('accepts an AC grant on a magic item', () => {
     const ring = { id: 'item/ring-of-protection', kind: 'item', name: 'Ring of Protection', src: 'srd', desc: '…', cat: 'magic', rarity: 'rare', attune: true,
       grants: [{ id: 'g1', kind: 'ac', name: '+1 AC', acMode: 'bonus', val: '1', needEq: true, needAtt: true }] };

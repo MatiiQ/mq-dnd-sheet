@@ -4,6 +4,7 @@ import type { Entry } from '../../src/catalog/schema.ts';
 import { applyOverlay, type Overlay } from '../lib/overlay.ts';
 import { writeEntries } from '../lib/write.ts';
 import { parseArmor, parseGear, parseMagicItems, parseTools, parseWeapons } from './items.ts';
+import { parseBackgrounds, parseFeats, parseSpecies } from './origins.ts';
 import { parseSpells } from './spells.ts';
 import { layoutBetween, section } from './text.ts';
 
@@ -27,4 +28,10 @@ out('items', [
     layoutBetween(layout, /^\s+Adventuring Gear\s+Item\s+Weight/, /^\s+Ink\s+—/) + '\n' + layoutBetween(layout, /^\s+Type\s+Amount Storage/, /^\s+Needles\s/)),
   ...parseTools(section(srdText, 'Alchemist’s Supplies (50 GP)', 'Adventuring Gear')),
   ...parseMagicItems(section(srdText, 'Adamantine Armor', 'Monsters', 'Magic Items A–Z'))
+]);
+const [species, traits] = parseSpecies(section(srdText, 'Dragonborn', 'Feats', 'Species Descriptions'), layout);
+out('origins', [
+  ...parseFeats(section(srdText, 'Origin Feats', 'Equipment', 'Feat Descriptions')),
+  ...parseBackgrounds(section(srdText, 'Acolyte', 'Character Species', 'Background Descriptions')),
+  ...species, ...traits
 ]);

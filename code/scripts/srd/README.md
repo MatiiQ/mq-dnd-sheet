@@ -46,3 +46,28 @@ cost.
 Magic item grants cover lasting effects of worn or held items (AC, saving throws, resistances, senses, speeds,
 proficiencies, score settings). Effects that are conditional (only against ranged attacks, only in Dim Light), Advantage
 on ability checks or Initiative, spells cast from an item and a magic weapon's own attack bonus stay as text.
+
+## Choices
+
+A choice offers `options` (grants) or a `pool` (`<kind>:<filter>`) the app generates. Pools used so far:
+
+| Pool | Means |
+|---|---|
+| `skill:any`, `skill:athletics\|survival` | any skill, or one of the listed skill keys |
+| `tool:any`, `tool:gaming-set` | any tool, or a variant of the named tool |
+| `prof:skill\|tool` | any skill or tool (Skilled) |
+| `language:any`, `weapon:any` | any language; any weapon kind (Weapon Mastery) |
+| `feat:cat=origin` | a feat of a category |
+| `spell:list=druid;lvl=0`, `spell:list=$list;lvl=1` | spells of a class list and level; `$list` names another choice |
+| `list:cleric\|druid\|wizard` | one of the named class spell lists (Magic Initiate) |
+| `ability:int\|wis\|cha` | one ability, usually the spellcasting ability for the entry's spells (`castAb: '$ab'`) |
+| `trait:of=<trait id>` | one of the lineage options that name that trait in `of` |
+
+`repeat: true` on a choice means one option may be picked more than once: Ability Score Improvement picks two `+1`
+options (the same one twice gives `+2`), a background picks three (`+2`/`+1` or `+1` to all three).
+
+## Schema changes found while authoring
+
+- `TraitEntry.of` (Task 6): a lineage or ancestry option (Wood Elf, Forest Gnome, Cloud’s Jaunt) is a trait of its own,
+  because one option carries several grants; `of` names the trait that offers it, and that trait holds a choice with
+  the pool `trait:of=<its id>`. Plan 3 follow-up: apply the chosen option's grants as the trait's.

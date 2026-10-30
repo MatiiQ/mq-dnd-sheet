@@ -1,0 +1,10 @@
+     Elven Lineages
+      Lineage     Level 1                                                       Level 3               Level 5
+     Drow         The range of your Darkvision increases to 120 feet. ​         Faerie Fire           Darkness
+                  You also know the Dancing Lights cantrip.
+     High Elf     You know the Prestidigitation cantrip. Whenever you finish    Detect Magic          Misty Step
+                  a Long Rest, you can replace that cantrip with a different
+                  cantrip from the Wizard spell list.
+     Wood Elf     Your Speed increases to 35 feet. You also know the            Longstrider           Pass without Trace
+                  Druidcraft cantrip.
+

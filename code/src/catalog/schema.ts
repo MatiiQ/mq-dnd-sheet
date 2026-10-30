@@ -27,8 +27,9 @@ export interface ItemEntry extends EntryBase {
 export interface FeatEntry extends EntryBase { kind: 'feat'; cat: 'origin' | 'general' | 'style' | 'boon'; prereq?: string; repeat?: boolean; grants: Spec[] }
 export interface BackgroundEntry extends EntryBase { kind: 'background'; abils: string; feat: string; skills: string; tool: string; equip: string; grants: Spec[] }
 export interface SpeciesEntry extends EntryBase { kind: 'species'; sizes: string; speed: number }
-// A species trait or a lineage option.
-export interface TraitEntry extends EntryBase { kind: 'trait'; species: string; lvl: number; grants: Spec[] }
+// A species trait or a lineage option. of: the trait an option belongs to (Wood Elf → trait/elf/elven-lineage), which
+// offers its options as a choice with the pool 'trait:of=<trait id>'.
+export interface TraitEntry extends EntryBase { kind: 'trait'; species: string; lvl: number; of?: string; grants: Spec[] }
 export interface ClassEntry extends EntryBase {
   kind: 'class'; hd: number; saves: string; skills: ChoiceSpec; armor: string; weapons: string; tools?: string;
   castAb?: Ability; slots?: number[][]; pact?: boolean; cantrips?: string; prepared?: string;
@@ -155,7 +156,7 @@ const FIELDS: Record<Kind, Record<string, [Check, boolean]>> = {
   feat: { cat: [oneOf('origin', 'general', 'style', 'boon'), true], prereq: [(v) => typeof v === 'string' && v.split(';').every((t) => PREREQ_TERM.test(t)), false], repeat: [bool, false] },
   background: { abils: [list(ability), true], feat: [str, true], skills: [str, true], tool: [str, true], equip: [str, true] },
   species: { sizes: [(v) => typeof v === 'string' && v.split(',').every((s) => SIZE_KEYS.includes(s as Size)), true], speed: [num, true] },
-  trait: { species: [str, true], lvl: [whole(1, 20), true] },
+  trait: { species: [str, true], lvl: [whole(1, 20), true], of: [(v) => typeof v === 'string' && v.startsWith('trait/'), false] },
   class: {
     hd: [oneOf(6, 8, 10, 12), true], saves: [list(ability), true], armor: [str, true], weapons: [str, true], tools: [str, false],
     castAb: [ability, false], slots: [slotRows, false], pact: [bool, false], cantrips: [value, false], prepared: [value, false]

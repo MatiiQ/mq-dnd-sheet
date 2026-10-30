@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { AC_SPELLS, ARMORS } from '../logic';
+import { AC_SPELLS, ARMORS, SKILLS } from '../logic';
 import items from '../data/srd/items.json';
+import origins from '../data/srd/origins.json';
 import spells from '../data/srd/spells.json';
-import { validateEntry, type Entry, type ItemEntry, type SpellEntry } from './schema';
+import { validateEntry, type Entry, type BackgroundEntry, type ChoiceSpec, type FeatEntry, type GrantSpec, type ItemEntry, type Spec, type SpellEntry } from './schema';
 
 // Every committed SRD data file, read through Vite so no Node types are needed under src/.
 const files = import.meta.glob<{ default: Entry[] }>('../data/srd/*.json', { eager: true });
@@ -41,5 +42,43 @@ describe('SRD items', () => {
   it('give non-armor magic items their AC as a grant, never acBonus', () => {
     for (const e of list.filter((x) => x.acBonus !== undefined)) expect([e.name, e.armor]).toEqual([e.name, expect.any(String)]);
     expect(by('Ring of Protection')!.grants).toContainEqual(expect.objectContaining({ kind: 'ac', val: '1', needEq: true, needAtt: true }));
+  });
+});
+
+const specs = (e: Entry): Spec[] => ('grants' in e && e.grants ? e.grants : []);
+const flat = (e: Entry): GrantSpec[] => specs(e).flatMap((s) => (s.kind === 'choice' ? s.options ?? [] : [s]));
+
+describe('SRD origins', () => {
+  const list = origins as Entry[];
+  const ids = new Set(all.map((e) => e.id));
+  it('give every feat that raises a score an abil grant or choice with the right cap', () => {
+    for (const f of list.filter((e): e is FeatEntry => e.kind === 'feat' && /Increase (one|your|two)/.test(e.desc))) {
+      const caps = flat(f).filter((g) => g.kind === 'abil').map((g) => g.cap);
+      expect([f.id, caps.length > 0 && caps.every((c) => c === (f.cat === 'boon' ? 30 : 20))]).toEqual([f.id, true]);
+    }
+  });
+  it('give every background a three-ability choice, a real feat and real skills', () => {
+    const bgs = list.filter((e): e is BackgroundEntry => e.kind === 'background');
+    expect(bgs).toHaveLength(4);
+    const keys = SKILLS.map(([k]) => k);
+    for (const b of bgs) {
+      const abil = specs(b).find((s): s is ChoiceSpec => s.kind === 'choice' && !!s.options?.every((o) => o.kind === 'abil'));
+      expect([b.id, abil?.pick, abil?.options?.map((o) => o.ab).join(',')]).toEqual([b.id, 3, b.abils]);
+      expect(ids.has(b.feat.split(':')[0])).toBe(true);
+      for (const k of b.skills.split(',')) expect(keys).toContain(k);
+    }
+  });
+  it('point every grant at entries that exist', () => {
+    for (const e of all) {
+      for (const g of flat(e)) {
+        for (const ref of [g.spell, g.casts]) if (ref && !ref.startsWith('$')) expect([e.id, ids.has(ref) && ref]).toEqual([e.id, ref]);
+        if (g.kind === 'prof' && g.cat === 'skill' && g.target) expect(SKILLS.map(([k]) => k)).toContain(g.target);
+      }
+      for (const s of specs(e)) {
+        const of = s.kind === 'choice' && /^trait:of=(.+)$/.exec(s.pool ?? '')?.[1];
+        if (of) expect([e.id, ids.has(of)]).toEqual([e.id, true]);
+      }
+      if (e.kind === 'trait' && e.of) expect([e.id, ids.has(e.of)]).toEqual([e.id, true]);
+    }
   });
 });

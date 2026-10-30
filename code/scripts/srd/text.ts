@@ -12,12 +12,15 @@ export function srdLines(text: string): Line[] {
     return { text: l.replace(/\f/g, '').trimEnd(), page };
   });
   const near = (i: number) => [i - 2, i - 1, i + 1, i + 2].some((j) => raw[j]?.text.trim() === FOOTER);
-  return raw.filter((l, i) => l.text.trim() !== FOOTER && !(/^\d+$/.test(l.text.trim()) && near(i)));
+  // A lone number that is the page's own number is its footer too, cut from its title by the column crop.
+  return raw.filter((l, i) => l.text.trim() !== FOOTER && !(/^\d+$/.test(l.text.trim()) && (near(i) || Number(l.text.trim()) === l.page)));
 }
 
 const HEADINGS = /^(Using a Higher-Level Spell Slot|Cantrip Upgrade)\./;
+// A run-in heading: up to six title-case words, then '. ' ("Darkvision. You have…", "Cloud’s Jaunt (Cloud Giant). As…").
+export const RUN_IN = /^((?:[A-Z(][\w’'()-]*|of|the|and|a|with|without)(?: (?:[A-Z(][\w’'()-]*|of|the|and|a|with|without)){0,5})\. (.*)$/;
 // Joins wrapped lines into paragraphs, one per line of the result. Blank lines end a paragraph unless it stops
-// mid-sentence (a page or column break), and a known run-in heading starts a new one.
+// mid-sentence (a page or column break); a run-in heading after the end of a sentence starts a new one.
 export function paragraphs(lines: string[]): string[] {
   const out: string[] = [];
   let cur = '', blank = false;
@@ -25,7 +28,7 @@ export function paragraphs(lines: string[]): string[] {
   for (const raw of lines) {
     const l = raw.trim();
     if (!l) { blank = true; continue; }
-    if (cur && (HEADINGS.test(l) || (blank && /[.:!?”)]$/.test(cur)))) flush();
+    if (cur && (HEADINGS.test(l) || ((blank || RUN_IN.test(l)) && /[.:!?”)]$/.test(cur)))) flush();
     blank = false;
     if (!cur) cur = l;
     else if (/[a-z]-$/.test(cur) && /^[a-z]/.test(l)) cur = cur.slice(0, -1) + l;

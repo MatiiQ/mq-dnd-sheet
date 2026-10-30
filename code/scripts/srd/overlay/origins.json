@@ -1,0 +1,1804 @@
+{
+  "background/acolyte": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "abil",
+        "name": "Ability scores: +2 and +1, or +1 to all three",
+        "pick": 3,
+        "repeat": true,
+        "options": [
+          {
+            "id": "o1",
+            "kind": "abil",
+            "name": "INT +1",
+            "ab": "int",
+            "val": "1",
+            "cap": 20
+          },
+          {
+            "id": "o2",
+            "kind": "abil",
+            "name": "WIS +1",
+            "ab": "wis",
+            "val": "1",
+            "cap": 20
+          },
+          {
+            "id": "o3",
+            "kind": "abil",
+            "name": "CHA +1",
+            "ab": "cha",
+            "val": "1",
+            "cap": 20
+          }
+        ]
+      },
+      {
+        "id": "g1",
+        "kind": "prof",
+        "name": "Insight proficiency",
+        "cat": "skill",
+        "target": "insight"
+      },
+      {
+        "id": "g2",
+        "kind": "prof",
+        "name": "Religion proficiency",
+        "cat": "skill",
+        "target": "religion"
+      },
+      {
+        "id": "g3",
+        "kind": "prof",
+        "name": "Calligrapher’s Supplies",
+        "cat": "tool",
+        "target": "Calligrapher’s Supplies"
+      }
+    ]
+  },
+  "background/criminal": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "abil",
+        "name": "Ability scores: +2 and +1, or +1 to all three",
+        "pick": 3,
+        "repeat": true,
+        "options": [
+          {
+            "id": "o1",
+            "kind": "abil",
+            "name": "DEX +1",
+            "ab": "dex",
+            "val": "1",
+            "cap": 20
+          },
+          {
+            "id": "o2",
+            "kind": "abil",
+            "name": "CON +1",
+            "ab": "con",
+            "val": "1",
+            "cap": 20
+          },
+          {
+            "id": "o3",
+            "kind": "abil",
+            "name": "INT +1",
+            "ab": "int",
+            "val": "1",
+            "cap": 20
+          }
+        ]
+      },
+      {
+        "id": "g1",
+        "kind": "prof",
+        "name": "Sleight proficiency",
+        "cat": "skill",
+        "target": "sleight"
+      },
+      {
+        "id": "g2",
+        "kind": "prof",
+        "name": "Stealth proficiency",
+        "cat": "skill",
+        "target": "stealth"
+      },
+      {
+        "id": "g3",
+        "kind": "prof",
+        "name": "Thieves’ Tools",
+        "cat": "tool",
+        "target": "Thieves’ Tools"
+      }
+    ]
+  },
+  "background/sage": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "abil",
+        "name": "Ability scores: +2 and +1, or +1 to all three",
+        "pick": 3,
+        "repeat": true,
+        "options": [
+          {
+            "id": "o1",
+            "kind": "abil",
+            "name": "CON +1",
+            "ab": "con",
+            "val": "1",
+            "cap": 20
+          },
+          {
+            "id": "o2",
+            "kind": "abil",
+            "name": "INT +1",
+            "ab": "int",
+            "val": "1",
+            "cap": 20
+          },
+          {
+            "id": "o3",
+            "kind": "abil",
+            "name": "WIS +1",
+            "ab": "wis",
+            "val": "1",
+            "cap": 20
+          }
+        ]
+      },
+      {
+        "id": "g1",
+        "kind": "prof",
+        "name": "Arcana proficiency",
+        "cat": "skill",
+        "target": "arcana"
+      },
+      {
+        "id": "g2",
+        "kind": "prof",
+        "name": "History proficiency",
+        "cat": "skill",
+        "target": "history"
+      },
+      {
+        "id": "g3",
+        "kind": "prof",
+        "name": "Calligrapher’s Supplies",
+        "cat": "tool",
+        "target": "Calligrapher’s Supplies"
+      }
+    ]
+  },
+  "background/soldier": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "abil",
+        "name": "Ability scores: +2 and +1, or +1 to all three",
+        "pick": 3,
+        "repeat": true,
+        "options": [
+          {
+            "id": "o1",
+            "kind": "abil",
+            "name": "STR +1",
+            "ab": "str",
+            "val": "1",
+            "cap": 20
+          },
+          {
+            "id": "o2",
+            "kind": "abil",
+            "name": "DEX +1",
+            "ab": "dex",
+            "val": "1",
+            "cap": 20
+          },
+          {
+            "id": "o3",
+            "kind": "abil",
+            "name": "CON +1",
+            "ab": "con",
+            "val": "1",
+            "cap": 20
+          }
+        ]
+      },
+      {
+        "id": "g1",
+        "kind": "prof",
+        "name": "Athletics proficiency",
+        "cat": "skill",
+        "target": "athletics"
+      },
+      {
+        "id": "g2",
+        "kind": "prof",
+        "name": "Intimidation proficiency",
+        "cat": "skill",
+        "target": "intimidation"
+      },
+      {
+        "kind": "choice",
+        "id": "tool",
+        "name": "Gaming Set",
+        "pick": 1,
+        "pool": "tool:gaming-set"
+      }
+    ]
+  },
+  "feat/ability-score-improvement": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "asi",
+        "name": "Ability Score Improvement",
+        "pick": 2,
+        "repeat": true,
+        "options": [
+          {
+            "id": "o1",
+            "kind": "abil",
+            "name": "STR +1",
+            "ab": "str",
+            "val": "1",
+            "cap": 20
+          },
+          {
+            "id": "o2",
+            "kind": "abil",
+            "name": "DEX +1",
+            "ab": "dex",
+            "val": "1",
+            "cap": 20
+          },
+          {
+            "id": "o3",
+            "kind": "abil",
+            "name": "CON +1",
+            "ab": "con",
+            "val": "1",
+            "cap": 20
+          },
+          {
+            "id": "o4",
+            "kind": "abil",
+            "name": "INT +1",
+            "ab": "int",
+            "val": "1",
+            "cap": 20
+          },
+          {
+            "id": "o5",
+            "kind": "abil",
+            "name": "WIS +1",
+            "ab": "wis",
+            "val": "1",
+            "cap": 20
+          },
+          {
+            "id": "o6",
+            "kind": "abil",
+            "name": "CHA +1",
+            "ab": "cha",
+            "val": "1",
+            "cap": 20
+          }
+        ]
+      }
+    ]
+  },
+  "feat/alert": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "init",
+        "name": "Initiative + Proficiency Bonus",
+        "val": "pb"
+      }
+    ]
+  },
+  "feat/archery": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "atkBonus",
+        "name": "+2 to attack rolls with Ranged weapons",
+        "val": "2",
+        "wrange": "ranged"
+      }
+    ]
+  },
+  "feat/boon-of-combat-prowess": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "c1",
+        "name": "Ability Score Increase",
+        "pick": 1,
+        "options": [
+          {
+            "id": "o1",
+            "kind": "abil",
+            "name": "STR +1",
+            "ab": "str",
+            "val": "1",
+            "cap": 30
+          },
+          {
+            "id": "o2",
+            "kind": "abil",
+            "name": "DEX +1",
+            "ab": "dex",
+            "val": "1",
+            "cap": 30
+          },
+          {
+            "id": "o3",
+            "kind": "abil",
+            "name": "CON +1",
+            "ab": "con",
+            "val": "1",
+            "cap": 30
+          },
+          {
+            "id": "o4",
+            "kind": "abil",
+            "name": "INT +1",
+            "ab": "int",
+            "val": "1",
+            "cap": 30
+          },
+          {
+            "id": "o5",
+            "kind": "abil",
+            "name": "WIS +1",
+            "ab": "wis",
+            "val": "1",
+            "cap": 30
+          },
+          {
+            "id": "o6",
+            "kind": "abil",
+            "name": "CHA +1",
+            "ab": "cha",
+            "val": "1",
+            "cap": 30
+          }
+        ]
+      }
+    ]
+  },
+  "feat/boon-of-dimensional-travel": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "c1",
+        "name": "Ability Score Increase",
+        "pick": 1,
+        "options": [
+          {
+            "id": "o1",
+            "kind": "abil",
+            "name": "STR +1",
+            "ab": "str",
+            "val": "1",
+            "cap": 30
+          },
+          {
+            "id": "o2",
+            "kind": "abil",
+            "name": "DEX +1",
+            "ab": "dex",
+            "val": "1",
+            "cap": 30
+          },
+          {
+            "id": "o3",
+            "kind": "abil",
+            "name": "CON +1",
+            "ab": "con",
+            "val": "1",
+            "cap": 30
+          },
+          {
+            "id": "o4",
+            "kind": "abil",
+            "name": "INT +1",
+            "ab": "int",
+            "val": "1",
+            "cap": 30
+          },
+          {
+            "id": "o5",
+            "kind": "abil",
+            "name": "WIS +1",
+            "ab": "wis",
+            "val": "1",
+            "cap": 30
+          },
+          {
+            "id": "o6",
+            "kind": "abil",
+            "name": "CHA +1",
+            "ab": "cha",
+            "val": "1",
+            "cap": 30
+          }
+        ]
+      }
+    ]
+  },
+  "feat/boon-of-fate": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "c1",
+        "name": "Ability Score Increase",
+        "pick": 1,
+        "options": [
+          {
+            "id": "o1",
+            "kind": "abil",
+            "name": "STR +1",
+            "ab": "str",
+            "val": "1",
+            "cap": 30
+          },
+          {
+            "id": "o2",
+            "kind": "abil",
+            "name": "DEX +1",
+            "ab": "dex",
+            "val": "1",
+            "cap": 30
+          },
+          {
+            "id": "o3",
+            "kind": "abil",
+            "name": "CON +1",
+            "ab": "con",
+            "val": "1",
+            "cap": 30
+          },
+          {
+            "id": "o4",
+            "kind": "abil",
+            "name": "INT +1",
+            "ab": "int",
+            "val": "1",
+            "cap": 30
+          },
+          {
+            "id": "o5",
+            "kind": "abil",
+            "name": "WIS +1",
+            "ab": "wis",
+            "val": "1",
+            "cap": 30
+          },
+          {
+            "id": "o6",
+            "kind": "abil",
+            "name": "CHA +1",
+            "ab": "cha",
+            "val": "1",
+            "cap": 30
+          }
+        ]
+      },
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Improve Fate",
+        "max": "1",
+        "recharge": "short"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Improve Fate: ±2d4 on a D20 Test",
+        "econ": "other",
+        "res": "g1"
+      }
+    ]
+  },
+  "feat/boon-of-irresistible-offense": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "c1",
+        "name": "Ability Score Increase",
+        "pick": 1,
+        "options": [
+          {
+            "id": "o1",
+            "kind": "abil",
+            "name": "STR +1",
+            "ab": "str",
+            "val": "1",
+            "cap": 30
+          },
+          {
+            "id": "o2",
+            "kind": "abil",
+            "name": "DEX +1",
+            "ab": "dex",
+            "val": "1",
+            "cap": 30
+          }
+        ]
+      }
+    ]
+  },
+  "feat/boon-of-spell-recall": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "c1",
+        "name": "Ability Score Increase",
+        "pick": 1,
+        "options": [
+          {
+            "id": "o1",
+            "kind": "abil",
+            "name": "INT +1",
+            "ab": "int",
+            "val": "1",
+            "cap": 30
+          },
+          {
+            "id": "o2",
+            "kind": "abil",
+            "name": "WIS +1",
+            "ab": "wis",
+            "val": "1",
+            "cap": 30
+          },
+          {
+            "id": "o3",
+            "kind": "abil",
+            "name": "CHA +1",
+            "ab": "cha",
+            "val": "1",
+            "cap": 30
+          }
+        ]
+      }
+    ]
+  },
+  "feat/boon-of-the-night-spirit": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "c1",
+        "name": "Ability Score Increase",
+        "pick": 1,
+        "options": [
+          {
+            "id": "o1",
+            "kind": "abil",
+            "name": "STR +1",
+            "ab": "str",
+            "val": "1",
+            "cap": 30
+          },
+          {
+            "id": "o2",
+            "kind": "abil",
+            "name": "DEX +1",
+            "ab": "dex",
+            "val": "1",
+            "cap": 30
+          },
+          {
+            "id": "o3",
+            "kind": "abil",
+            "name": "CON +1",
+            "ab": "con",
+            "val": "1",
+            "cap": 30
+          },
+          {
+            "id": "o4",
+            "kind": "abil",
+            "name": "INT +1",
+            "ab": "int",
+            "val": "1",
+            "cap": 30
+          },
+          {
+            "id": "o5",
+            "kind": "abil",
+            "name": "WIS +1",
+            "ab": "wis",
+            "val": "1",
+            "cap": 30
+          },
+          {
+            "id": "o6",
+            "kind": "abil",
+            "name": "CHA +1",
+            "ab": "cha",
+            "val": "1",
+            "cap": 30
+          }
+        ]
+      }
+    ]
+  },
+  "feat/boon-of-truesight": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "c1",
+        "name": "Ability Score Increase",
+        "pick": 1,
+        "options": [
+          {
+            "id": "o1",
+            "kind": "abil",
+            "name": "STR +1",
+            "ab": "str",
+            "val": "1",
+            "cap": 30
+          },
+          {
+            "id": "o2",
+            "kind": "abil",
+            "name": "DEX +1",
+            "ab": "dex",
+            "val": "1",
+            "cap": 30
+          },
+          {
+            "id": "o3",
+            "kind": "abil",
+            "name": "CON +1",
+            "ab": "con",
+            "val": "1",
+            "cap": 30
+          },
+          {
+            "id": "o4",
+            "kind": "abil",
+            "name": "INT +1",
+            "ab": "int",
+            "val": "1",
+            "cap": 30
+          },
+          {
+            "id": "o5",
+            "kind": "abil",
+            "name": "WIS +1",
+            "ab": "wis",
+            "val": "1",
+            "cap": 30
+          },
+          {
+            "id": "o6",
+            "kind": "abil",
+            "name": "CHA +1",
+            "ab": "cha",
+            "val": "1",
+            "cap": 30
+          }
+        ]
+      },
+      {
+        "id": "g1",
+        "kind": "sense",
+        "name": "Truesight 60 ft",
+        "range": "60"
+      }
+    ]
+  },
+  "feat/defense": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "ac",
+        "name": "+1 AC while wearing armor",
+        "acMode": "bonus",
+        "val": "1",
+        "when": "armor"
+      }
+    ]
+  },
+  "feat/grappler": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "c1",
+        "name": "Ability Score Increase",
+        "pick": 1,
+        "options": [
+          {
+            "id": "o1",
+            "kind": "abil",
+            "name": "STR +1",
+            "ab": "str",
+            "val": "1",
+            "cap": 20
+          },
+          {
+            "id": "o2",
+            "kind": "abil",
+            "name": "DEX +1",
+            "ab": "dex",
+            "val": "1",
+            "cap": 20
+          }
+        ]
+      }
+    ]
+  },
+  "feat/magic-initiate": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "list",
+        "name": "Spell list",
+        "pick": 1,
+        "pool": "list:cleric|druid|wizard"
+      },
+      {
+        "kind": "choice",
+        "id": "cantrips",
+        "name": "Cantrips",
+        "pick": 2,
+        "pool": "spell:list=$list;lvl=0"
+      },
+      {
+        "kind": "choice",
+        "id": "spell1",
+        "name": "Level 1 spell",
+        "pick": 1,
+        "pool": "spell:list=$list;lvl=1"
+      },
+      {
+        "kind": "choice",
+        "id": "ab",
+        "name": "Spellcasting ability",
+        "pick": 1,
+        "pool": "ability:int|wis|cha"
+      },
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Cantrips",
+        "spell": "$cantrips",
+        "castAb": "$ab"
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Level 1 spell",
+        "spell": "$spell1",
+        "always": true,
+        "castAb": "$ab"
+      },
+      {
+        "id": "g3",
+        "kind": "resource",
+        "name": "Level 1 spell (free cast)",
+        "max": "1",
+        "recharge": "long",
+        "casts": "$spell1"
+      }
+    ]
+  },
+  "feat/skilled": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "c1",
+        "name": "Skills or tools",
+        "pick": 3,
+        "pool": "prof:skill|tool"
+      }
+    ]
+  },
+  "feat/two-weapon-fighting": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "lightExtra",
+        "name": "Add your ability modifier to the extra attack",
+        "addMod": true
+      }
+    ]
+  },
+  "trait/dragonborn/breath-weapon": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Breath Weapon",
+        "max": "pb",
+        "recharge": "long"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Breath Weapon",
+        "econ": "other",
+        "res": "g1",
+        "note": "Replaces one attack of the Attack action. 15-ft Cone or 30-ft Line; DEX save, DC 8 + CON mod + PB; 1d10 (2d10 at level 5, 3d10 at 11, 4d10 at 17) of your ancestry’s damage type, half on a success."
+      }
+    ]
+  },
+  "trait/dragonborn/darkvision": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "sense",
+        "name": "Darkvision 60 ft",
+        "range": "60"
+      }
+    ]
+  },
+  "trait/dragonborn/draconic-ancestry": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "anc",
+        "name": "Draconic ancestor",
+        "pick": 1,
+        "options": [
+          {
+            "id": "o1",
+            "kind": "defense",
+            "name": "Black dragon: Acid Resistance",
+            "def": "res",
+            "target": "Acid"
+          },
+          {
+            "id": "o2",
+            "kind": "defense",
+            "name": "Blue dragon: Lightning Resistance",
+            "def": "res",
+            "target": "Lightning"
+          },
+          {
+            "id": "o3",
+            "kind": "defense",
+            "name": "Brass dragon: Fire Resistance",
+            "def": "res",
+            "target": "Fire"
+          },
+          {
+            "id": "o4",
+            "kind": "defense",
+            "name": "Bronze dragon: Lightning Resistance",
+            "def": "res",
+            "target": "Lightning"
+          },
+          {
+            "id": "o5",
+            "kind": "defense",
+            "name": "Copper dragon: Acid Resistance",
+            "def": "res",
+            "target": "Acid"
+          },
+          {
+            "id": "o6",
+            "kind": "defense",
+            "name": "Gold dragon: Fire Resistance",
+            "def": "res",
+            "target": "Fire"
+          },
+          {
+            "id": "o7",
+            "kind": "defense",
+            "name": "Green dragon: Poison Resistance",
+            "def": "res",
+            "target": "Poison"
+          },
+          {
+            "id": "o8",
+            "kind": "defense",
+            "name": "Red dragon: Fire Resistance",
+            "def": "res",
+            "target": "Fire"
+          },
+          {
+            "id": "o9",
+            "kind": "defense",
+            "name": "Silver dragon: Cold Resistance",
+            "def": "res",
+            "target": "Cold"
+          },
+          {
+            "id": "o10",
+            "kind": "defense",
+            "name": "White dragon: Cold Resistance",
+            "def": "res",
+            "target": "Cold"
+          }
+        ]
+      }
+    ]
+  },
+  "trait/dragonborn/draconic-flight": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Draconic Flight",
+        "max": "1",
+        "recharge": "long"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Draconic Flight",
+        "econ": "bonus",
+        "res": "g1",
+        "note": "Fly Speed equal to your Speed for 10 minutes."
+      }
+    ]
+  },
+  "trait/dwarf/darkvision": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "sense",
+        "name": "Darkvision 120 ft",
+        "range": "120"
+      }
+    ]
+  },
+  "trait/dwarf/dwarven-resilience": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "defense",
+        "name": "Poison Resistance",
+        "def": "res",
+        "target": "Poison"
+      },
+      {
+        "id": "g2",
+        "kind": "defense",
+        "name": "Advantage on saves vs Poisoned",
+        "def": "adv",
+        "target": "vs Poisoned"
+      }
+    ]
+  },
+  "trait/dwarf/dwarven-toughness": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "hpLvl",
+        "name": "+1 Hit Point per level",
+        "val": "1"
+      }
+    ]
+  },
+  "trait/dwarf/stonecunning": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Stonecunning",
+        "max": "pb",
+        "recharge": "long"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Stonecunning",
+        "econ": "bonus",
+        "res": "g1",
+        "note": "Tremorsense 60 ft for 10 minutes while on or touching stone."
+      }
+    ]
+  },
+  "trait/elf/darkvision": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "sense",
+        "name": "Darkvision 60 ft",
+        "range": "60"
+      }
+    ]
+  },
+  "trait/elf/drow": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "ab",
+        "name": "Spellcasting ability",
+        "pick": 1,
+        "pool": "ability:int|wis|cha"
+      },
+      {
+        "id": "g6",
+        "kind": "sense",
+        "name": "Darkvision 120 ft",
+        "range": "120"
+      },
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Dancing Lights",
+        "spell": "spell/dancing-lights",
+        "castAb": "$ab"
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Faerie Fire",
+        "spell": "spell/faerie-fire",
+        "always": true,
+        "castAb": "$ab",
+        "lvl": 3
+      },
+      {
+        "id": "g3",
+        "kind": "resource",
+        "name": "Faerie Fire (free cast)",
+        "max": "1",
+        "recharge": "long",
+        "casts": "spell/faerie-fire",
+        "lvl": 3
+      },
+      {
+        "id": "g4",
+        "kind": "spell",
+        "name": "Darkness",
+        "spell": "spell/darkness",
+        "always": true,
+        "castAb": "$ab",
+        "lvl": 5
+      },
+      {
+        "id": "g5",
+        "kind": "resource",
+        "name": "Darkness (free cast)",
+        "max": "1",
+        "recharge": "long",
+        "casts": "spell/darkness",
+        "lvl": 5
+      }
+    ]
+  },
+  "trait/elf/elven-lineage": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "lin",
+        "name": "Elven lineage",
+        "pick": 1,
+        "pool": "trait:of=trait/elf/elven-lineage"
+      }
+    ]
+  },
+  "trait/elf/fey-ancestry": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "defense",
+        "name": "Advantage on saves vs Charmed",
+        "def": "adv",
+        "target": "vs Charmed"
+      }
+    ]
+  },
+  "trait/elf/high-elf": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "ab",
+        "name": "Spellcasting ability",
+        "pick": 1,
+        "pool": "ability:int|wis|cha"
+      },
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Prestidigitation",
+        "spell": "spell/prestidigitation",
+        "castAb": "$ab"
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Detect Magic",
+        "spell": "spell/detect-magic",
+        "always": true,
+        "castAb": "$ab",
+        "lvl": 3
+      },
+      {
+        "id": "g3",
+        "kind": "resource",
+        "name": "Detect Magic (free cast)",
+        "max": "1",
+        "recharge": "long",
+        "casts": "spell/detect-magic",
+        "lvl": 3
+      },
+      {
+        "id": "g4",
+        "kind": "spell",
+        "name": "Misty Step",
+        "spell": "spell/misty-step",
+        "always": true,
+        "castAb": "$ab",
+        "lvl": 5
+      },
+      {
+        "id": "g5",
+        "kind": "resource",
+        "name": "Misty Step (free cast)",
+        "max": "1",
+        "recharge": "long",
+        "casts": "spell/misty-step",
+        "lvl": 5
+      }
+    ]
+  },
+  "trait/elf/keen-senses": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "c1",
+        "name": "Keen Senses",
+        "pick": 1,
+        "options": [
+          {
+            "id": "o1",
+            "kind": "prof",
+            "name": "Insight proficiency",
+            "cat": "skill",
+            "target": "insight"
+          },
+          {
+            "id": "o2",
+            "kind": "prof",
+            "name": "Perception proficiency",
+            "cat": "skill",
+            "target": "perception"
+          },
+          {
+            "id": "o3",
+            "kind": "prof",
+            "name": "Survival proficiency",
+            "cat": "skill",
+            "target": "survival"
+          }
+        ]
+      }
+    ]
+  },
+  "trait/elf/wood-elf": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "ab",
+        "name": "Spellcasting ability",
+        "pick": 1,
+        "pool": "ability:int|wis|cha"
+      },
+      {
+        "id": "g6",
+        "kind": "speed",
+        "name": "Speed +5 ft",
+        "mode": "walk",
+        "val": "5"
+      },
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Druidcraft",
+        "spell": "spell/druidcraft",
+        "castAb": "$ab"
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Longstrider",
+        "spell": "spell/longstrider",
+        "always": true,
+        "castAb": "$ab",
+        "lvl": 3
+      },
+      {
+        "id": "g3",
+        "kind": "resource",
+        "name": "Longstrider (free cast)",
+        "max": "1",
+        "recharge": "long",
+        "casts": "spell/longstrider",
+        "lvl": 3
+      },
+      {
+        "id": "g4",
+        "kind": "spell",
+        "name": "Pass Without Trace",
+        "spell": "spell/pass-without-trace",
+        "always": true,
+        "castAb": "$ab",
+        "lvl": 5
+      },
+      {
+        "id": "g5",
+        "kind": "resource",
+        "name": "Pass Without Trace (free cast)",
+        "max": "1",
+        "recharge": "long",
+        "casts": "spell/pass-without-trace",
+        "lvl": 5
+      }
+    ]
+  },
+  "trait/gnome/darkvision": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "sense",
+        "name": "Darkvision 60 ft",
+        "range": "60"
+      }
+    ]
+  },
+  "trait/gnome/forest-gnome": {
+    "of": "trait/gnome/gnomish-lineage",
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "ab",
+        "name": "Spellcasting ability",
+        "pick": 1,
+        "pool": "ability:int|wis|cha"
+      },
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Minor Illusion",
+        "spell": "spell/minor-illusion",
+        "castAb": "$ab"
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Speak with Animals",
+        "spell": "spell/speak-with-animals",
+        "always": true,
+        "castAb": "$ab"
+      },
+      {
+        "id": "g3",
+        "kind": "resource",
+        "name": "Speak with Animals (free cast)",
+        "max": "pb",
+        "recharge": "long",
+        "casts": "spell/speak-with-animals"
+      }
+    ]
+  },
+  "trait/gnome/gnomish-cunning": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "defense",
+        "name": "Advantage on saves Intelligence saves",
+        "def": "adv",
+        "target": "Intelligence saves"
+      },
+      {
+        "id": "g2",
+        "kind": "defense",
+        "name": "Advantage on saves Wisdom saves",
+        "def": "adv",
+        "target": "Wisdom saves"
+      },
+      {
+        "id": "g3",
+        "kind": "defense",
+        "name": "Advantage on saves Charisma saves",
+        "def": "adv",
+        "target": "Charisma saves"
+      }
+    ]
+  },
+  "trait/gnome/gnomish-lineage": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "lin",
+        "name": "Gnomish lineage",
+        "pick": 1,
+        "pool": "trait:of=trait/gnome/gnomish-lineage"
+      }
+    ]
+  },
+  "trait/gnome/rock-gnome": {
+    "of": "trait/gnome/gnomish-lineage",
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "ab",
+        "name": "Spellcasting ability",
+        "pick": 1,
+        "pool": "ability:int|wis|cha"
+      },
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Mending",
+        "spell": "spell/mending",
+        "castAb": "$ab"
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Prestidigitation",
+        "spell": "spell/prestidigitation",
+        "castAb": "$ab"
+      }
+    ]
+  },
+  "trait/goliath/clouds-jaunt-cloud-giant": {
+    "of": "trait/goliath/giant-ancestry",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Cloud’s Jaunt",
+        "max": "pb",
+        "recharge": "long"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Cloud’s Jaunt",
+        "econ": "bonus",
+        "res": "g1",
+        "note": "Teleport up to 30 feet to an unoccupied space you can see."
+      }
+    ]
+  },
+  "trait/goliath/fires-burn-fire-giant": {
+    "of": "trait/goliath/giant-ancestry",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Fire’s Burn",
+        "max": "pb",
+        "recharge": "long"
+      },
+      {
+        "id": "g2",
+        "kind": "xdmg",
+        "name": "Fire’s Burn",
+        "dice": "1d10",
+        "dtype": "Fire",
+        "on": "a hit with an attack roll (one use)"
+      }
+    ]
+  },
+  "trait/goliath/frosts-chill-frost-giant": {
+    "of": "trait/goliath/giant-ancestry",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Frost’s Chill",
+        "max": "pb",
+        "recharge": "long"
+      },
+      {
+        "id": "g2",
+        "kind": "xdmg",
+        "name": "Frost’s Chill",
+        "dice": "1d6",
+        "dtype": "Cold",
+        "on": "a hit with an attack roll (one use); Speed −10 ft"
+      }
+    ]
+  },
+  "trait/goliath/giant-ancestry": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "anc",
+        "name": "Giant ancestry",
+        "pick": 1,
+        "pool": "trait:of=trait/goliath/giant-ancestry"
+      }
+    ]
+  },
+  "trait/goliath/hills-tumble-hill-giant": {
+    "of": "trait/goliath/giant-ancestry",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Hill’s Tumble",
+        "max": "pb",
+        "recharge": "long"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Hill’s Tumble",
+        "econ": "other",
+        "res": "g1",
+        "note": "On a hit against a Large or smaller creature, knock it Prone."
+      }
+    ]
+  },
+  "trait/goliath/large-form": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Large Form",
+        "max": "1",
+        "recharge": "long"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Large Form",
+        "econ": "bonus",
+        "res": "g1",
+        "note": "Become Large for 10 minutes: Advantage on Strength checks, Speed +10 ft."
+      }
+    ]
+  },
+  "trait/goliath/powerful-build": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "carryUp",
+        "name": "Counts as one size larger for carrying capacity"
+      }
+    ]
+  },
+  "trait/goliath/stones-endurance-stone-giant": {
+    "of": "trait/goliath/giant-ancestry",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Stone’s Endurance",
+        "max": "pb",
+        "recharge": "long"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Stone’s Endurance",
+        "econ": "reaction",
+        "res": "g1",
+        "note": "When you take damage, reduce it by 1d12 + CON modifier."
+      }
+    ]
+  },
+  "trait/goliath/storms-thunder-storm-giant": {
+    "of": "trait/goliath/giant-ancestry",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Storm’s Thunder",
+        "max": "pb",
+        "recharge": "long"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Storm’s Thunder",
+        "econ": "reaction",
+        "res": "g1",
+        "note": "When a creature within 60 feet damages you, deal it 1d8 Thunder damage."
+      }
+    ]
+  },
+  "trait/halfling/brave": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "defense",
+        "name": "Advantage on saves vs Frightened",
+        "def": "adv",
+        "target": "vs Frightened"
+      }
+    ]
+  },
+  "trait/human/skillful": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "c1",
+        "name": "Skill",
+        "pick": 1,
+        "pool": "skill:any"
+      }
+    ]
+  },
+  "trait/human/versatile": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "c1",
+        "name": "Origin feat",
+        "pick": 1,
+        "pool": "feat:cat=origin"
+      }
+    ]
+  },
+  "trait/orc/adrenaline-rush": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Adrenaline Rush",
+        "max": "pb",
+        "recharge": "short"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Adrenaline Rush",
+        "econ": "bonus",
+        "res": "g1",
+        "note": "Dash, and gain Temporary Hit Points equal to your Proficiency Bonus."
+      }
+    ]
+  },
+  "trait/orc/darkvision": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "sense",
+        "name": "Darkvision 120 ft",
+        "range": "120"
+      }
+    ]
+  },
+  "trait/orc/relentless-endurance": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Relentless Endurance",
+        "max": "1",
+        "recharge": "long"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Relentless Endurance",
+        "econ": "other",
+        "res": "g1",
+        "note": "Drop to 1 Hit Point instead of 0."
+      }
+    ]
+  },
+  "trait/tiefling/abyssal": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "ab",
+        "name": "Spellcasting ability",
+        "pick": 1,
+        "pool": "ability:int|wis|cha"
+      },
+      {
+        "id": "g6",
+        "kind": "defense",
+        "name": "Poison Resistance",
+        "def": "res",
+        "target": "Poison"
+      },
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Poison Spray",
+        "spell": "spell/poison-spray",
+        "castAb": "$ab"
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Ray Of Sickness",
+        "spell": "spell/ray-of-sickness",
+        "always": true,
+        "castAb": "$ab",
+        "lvl": 3
+      },
+      {
+        "id": "g3",
+        "kind": "resource",
+        "name": "Ray Of Sickness (free cast)",
+        "max": "1",
+        "recharge": "long",
+        "casts": "spell/ray-of-sickness",
+        "lvl": 3
+      },
+      {
+        "id": "g4",
+        "kind": "spell",
+        "name": "Hold Person",
+        "spell": "spell/hold-person",
+        "always": true,
+        "castAb": "$ab",
+        "lvl": 5
+      },
+      {
+        "id": "g5",
+        "kind": "resource",
+        "name": "Hold Person (free cast)",
+        "max": "1",
+        "recharge": "long",
+        "casts": "spell/hold-person",
+        "lvl": 5
+      }
+    ]
+  },
+  "trait/tiefling/chthonic": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "ab",
+        "name": "Spellcasting ability",
+        "pick": 1,
+        "pool": "ability:int|wis|cha"
+      },
+      {
+        "id": "g6",
+        "kind": "defense",
+        "name": "Necrotic Resistance",
+        "def": "res",
+        "target": "Necrotic"
+      },
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Chill Touch",
+        "spell": "spell/chill-touch",
+        "castAb": "$ab"
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "False Life",
+        "spell": "spell/false-life",
+        "always": true,
+        "castAb": "$ab",
+        "lvl": 3
+      },
+      {
+        "id": "g3",
+        "kind": "resource",
+        "name": "False Life (free cast)",
+        "max": "1",
+        "recharge": "long",
+        "casts": "spell/false-life",
+        "lvl": 3
+      },
+      {
+        "id": "g4",
+        "kind": "spell",
+        "name": "Ray Of Enfeeblement",
+        "spell": "spell/ray-of-enfeeblement",
+        "always": true,
+        "castAb": "$ab",
+        "lvl": 5
+      },
+      {
+        "id": "g5",
+        "kind": "resource",
+        "name": "Ray Of Enfeeblement (free cast)",
+        "max": "1",
+        "recharge": "long",
+        "casts": "spell/ray-of-enfeeblement",
+        "lvl": 5
+      }
+    ]
+  },
+  "trait/tiefling/darkvision": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "sense",
+        "name": "Darkvision 60 ft",
+        "range": "60"
+      }
+    ]
+  },
+  "trait/tiefling/fiendish-legacy": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "lin",
+        "name": "Fiendish legacy",
+        "pick": 1,
+        "pool": "trait:of=trait/tiefling/fiendish-legacy"
+      }
+    ]
+  },
+  "trait/tiefling/infernal": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "ab",
+        "name": "Spellcasting ability",
+        "pick": 1,
+        "pool": "ability:int|wis|cha"
+      },
+      {
+        "id": "g6",
+        "kind": "defense",
+        "name": "Fire Resistance",
+        "def": "res",
+        "target": "Fire"
+      },
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Fire Bolt",
+        "spell": "spell/fire-bolt",
+        "castAb": "$ab"
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Hellish Rebuke",
+        "spell": "spell/hellish-rebuke",
+        "always": true,
+        "castAb": "$ab",
+        "lvl": 3
+      },
+      {
+        "id": "g3",
+        "kind": "resource",
+        "name": "Hellish Rebuke (free cast)",
+        "max": "1",
+        "recharge": "long",
+        "casts": "spell/hellish-rebuke",
+        "lvl": 3
+      },
+      {
+        "id": "g4",
+        "kind": "spell",
+        "name": "Darkness",
+        "spell": "spell/darkness",
+        "always": true,
+        "castAb": "$ab",
+        "lvl": 5
+      },
+      {
+        "id": "g5",
+        "kind": "resource",
+        "name": "Darkness (free cast)",
+        "max": "1",
+        "recharge": "long",
+        "casts": "spell/darkness",
+        "lvl": 5
+      }
+    ]
+  },
+  "trait/tiefling/otherworldly-presence": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Thaumaturgy",
+        "spell": "spell/thaumaturgy"
+      }
+    ]
+  }
+}
