@@ -62,6 +62,15 @@ export const saveMod = (c: Character, k: Ability) => abilityMod(c, k) + (c.saveP
 // Spell save DC = 8 + spellcasting ability modifier + PB; spell attack = modifier + PB (PHB p.41). null without a spellcasting ability.
 export const spellSaveDC = (c: Character) => (c.castAb === 'none' ? null : 8 + abilityMod(c, c.castAb) + profBonus(c.level));
 export const spellAttack = (c: Character) => (c.castAb === 'none' ? null : abilityMod(c, c.castAb) + profBonus(c.level));
+// The same two numbers as parts, for the breakdown under each badge (PHB p.41). Their sums equal the values above.
+export function spellAttackParts(c: Character): AcPart[] | null {
+  if (c.castAb === 'none') return null;
+  return [{ label: CAST_NAMES[c.castAb] + ' modifier', value: abilityMod(c, c.castAb) }, { label: 'Proficiency Bonus', value: profBonus(c.level) }];
+}
+export const spellDcParts = (c: Character): AcPart[] | null => {
+  const parts = spellAttackParts(c);
+  return parts && [{ label: 'Base', value: 8 }, ...parts];
+};
 // Initiative is a Dexterity check (PHB p.23); initMisc holds extra bonuses from features or items.
 export const initiative = (c: Character) => abilityMod(c, 'dex') + c.initMisc;
 

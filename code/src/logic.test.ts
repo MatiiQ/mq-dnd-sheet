@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import {
   applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, NEW_FIELDS, passiveScore, pillView, resPill, setPill, preparedCount, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
-  setExhaustion, sortSpells, speedNow, spellAttack, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, toggleFreeCast, undoHp
+  setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, toggleFreeCast, undoHp
 } from './logic';
 import type { Character, Item, Spell } from './types';
 
@@ -41,6 +41,11 @@ describe('derived numbers', () => {
     expect(spellUsable(make(), sp())).toBe(false);
     expect(spellUsable(make({ usePrep: false }), sp())).toBe(true);
     expect(preparedCount(make())).toBe(5); // leaves out always-prepared spells and cantrips
+  });
+  it('breaks spell save DC and spell attack into their parts (PHB p.41)', () => {
+    expect(spellDcParts(make())).toEqual([{ label: 'Base', value: 8 }, { label: 'Wisdom modifier', value: 2 }, { label: 'Proficiency Bonus', value: 3 }]);
+    expect(spellAttackParts(make())).toEqual([{ label: 'Wisdom modifier', value: 2 }, { label: 'Proficiency Bonus', value: 3 }]);
+    expect(spellDcParts(make({ castAb: 'none' }))).toBeNull();
   });
   it('keeps max HP at least 1, HP at or under it, and spent Hit Dice at most the level', () => {
     expect(setMaxHp(make({ hp: 40, maxHp: 44 }), 30)).toEqual({ maxHp: 30, hp: 30 });
