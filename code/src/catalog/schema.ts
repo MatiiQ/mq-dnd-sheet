@@ -50,13 +50,13 @@ export type GrantKind = 'sense' | 'resource' | 'defense' | 'abil' | 'abilSet' | 
 // Every grant is flat, so a character can store it as a plain entry. Fields that take a Value also accept '$<choiceId>'.
 export interface GrantSpec {
   id: string; kind: GrantKind; name: string;
-  when?: 'armor' | 'noHeavy' | 'noArmor' | 'noShield' | 'noArmorNoShield';
+  when?: 'armor' | 'noHeavy' | 'noArmor' | 'noShield' | 'noArmorNoShield' | 'active';   // active: while the entry's effect is on (Rage, Starry Form)
   lvl?: number; needEq?: boolean; needAtt?: boolean;
   opt?: string;                                                                     // in choice options: grants with the same opt are one pick
   range?: string;                                                                   // sense
   max?: string; recharge?: Recharge4; regain?: string; regainOn?: 'short' | 'dawn'; casts?: string;   // resource
   def?: 'res' | 'vul' | 'imm' | 'adv'; target?: string;                              // defense, prof, checkBonus
-  ab?: string; val?: string; cap?: 20 | 30;                                         // abil, abilSet, saveBonus, ac, atkAbil
+  ab?: string; val?: string; cap?: 20 | 25 | 30;                                         // abil, abilSet, saveBonus, ac, atkAbil
   cat?: 'armor' | 'weapon' | 'tool' | 'language' | 'skill' | 'save' | 'expertise' | 'mastery' | 'half';   // prof
   spell?: string; always?: boolean; castAb?: string;                                // spell
   mode?: 'walk' | 'climb' | 'swim' | 'fly' | 'burrow'; hover?: boolean;             // speed
@@ -114,14 +114,14 @@ const or = (...cs: Check[]): Check => (v) => cs.some((c) => c(v));
 const list = (c: Check): Check => (v) => typeof v === 'string' && (v === '' || v.split(',').every((x) => c(x)));
 
 const RECHARGE = oneOf('short', 'long', 'dawn', 'none');
-const WHEN = oneOf('armor', 'noHeavy', 'noArmor', 'noShield', 'noArmorNoShield');
+const WHEN = oneOf('armor', 'noHeavy', 'noArmor', 'noShield', 'noArmorNoShield', 'active');
 const RANGE_KIND = oneOf('melee', 'ranged');
 // Own fields per grant kind: [check, required].
 const GRANTS: Record<GrantKind, Record<string, [Check, boolean]>> = {
   sense: { range: [value, true] },
   resource: { max: [value, false], recharge: [RECHARGE, true], regain: [value, false], regainOn: [oneOf('short', 'dawn'), false], casts: [str, false] },
   defense: { def: [oneOf('res', 'vul', 'imm', 'adv'), true], target: [str, true] },
-  abil: { ab: [or(ability, ref), true], val: [value, true], cap: [oneOf(20, 30), true] },
+  abil: { ab: [or(ability, ref), true], val: [value, true], cap: [oneOf(20, 25, 30), true] },
   abilSet: { ab: [or(ability, ref), true], val: [value, true] },
   prof: { cat: [oneOf('armor', 'weapon', 'tool', 'language', 'skill', 'save', 'expertise', 'mastery', 'half'), true], target: [str, false], val: [value, false] },
   saveBonus: { ab: [or(ability, oneOf('all'), ref), true], val: [value, true] },

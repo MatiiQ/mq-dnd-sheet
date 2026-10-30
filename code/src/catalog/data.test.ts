@@ -73,7 +73,7 @@ describe('SRD origins', () => {
     for (const e of all) {
       for (const g of flat(e)) {
         for (const ref of [g.spell, g.casts]) if (ref && !ref.startsWith('$')) expect([e.id, ids.has(ref) && ref]).toEqual([e.id, ref]);
-        if (g.kind === 'prof' && g.cat === 'skill' && g.target) expect(SKILLS.map(([k]) => k)).toContain(g.target);
+        if (g.kind === 'prof' && g.cat === 'skill' && g.target && !g.target.startsWith('$')) expect(SKILLS.map(([k]) => k)).toContain(g.target);
       }
       for (const s of specs(e)) {
         const of = s.kind === 'choice' && /^trait:of=(.+)$/.exec(s.pool ?? '')?.[1];

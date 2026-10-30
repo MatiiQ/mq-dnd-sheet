@@ -21,6 +21,293 @@
       }
     ]
   },
+  "feature/barbarian/brutal-strike": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "xdmg",
+        "name": "Brutal Strike",
+        "dice": "9:1d10,17:2d10",
+        "on": "a Strength attack hit after giving up Reckless Attack’s Advantage on it",
+        "perTurn": true
+      }
+    ]
+  },
+  "feature/barbarian/danger-sense": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "defense",
+        "name": "Advantage on Dexterity saves",
+        "def": "adv",
+        "target": "Dexterity saves"
+      }
+    ]
+  },
+  "feature/barbarian/epic-boon": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "feat",
+        "name": "Epic Boon feat",
+        "pick": 1,
+        "pool": "feat:cat=boon"
+      }
+    ]
+  },
+  "feature/barbarian/extra-attack": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "attacks",
+        "name": "Two attacks per Attack action",
+        "val": "2"
+      }
+    ]
+  },
+  "feature/barbarian/fast-movement": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "speed",
+        "name": "Fast Movement +10 ft",
+        "mode": "walk",
+        "val": "10",
+        "when": "noHeavy"
+      }
+    ]
+  },
+  "feature/barbarian/instinctive-pounce": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Instinctive Pounce",
+        "econ": "other",
+        "note": "Move up to half your Speed as part of the Bonus Action that starts your Rage."
+      }
+    ]
+  },
+  "feature/barbarian/path-of-the-berserker/frenzy": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "xdmg",
+        "name": "Frenzy",
+        "dice": "3:2d6,9:3d6,16:4d6",
+        "on": "the first target you hit with a Strength attack on a Reckless Attack turn",
+        "perTurn": true,
+        "when": "active"
+      }
+    ]
+  },
+  "feature/barbarian/path-of-the-berserker/intimidating-presence": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Intimidating Presence",
+        "max": "1",
+        "recharge": "long"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Intimidating Presence",
+        "econ": "bonus",
+        "res": "g1",
+        "note": "30-ft Emanation: WIS save (DC 8 + STR + PB) or Frightened for 1 minute. Or expend a Rage use to restore it."
+      }
+    ]
+  },
+  "feature/barbarian/path-of-the-berserker/mindless-rage": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "defense",
+        "name": "Charmed Immunity",
+        "def": "imm",
+        "target": "Charmed",
+        "when": "active"
+      },
+      {
+        "id": "g2",
+        "kind": "defense",
+        "name": "Frightened Immunity",
+        "def": "imm",
+        "target": "Frightened",
+        "when": "active"
+      }
+    ]
+  },
+  "feature/barbarian/path-of-the-berserker/retaliation": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Retaliation",
+        "econ": "reaction",
+        "note": "When a creature within 5 ft damages you, make one melee attack against it."
+      }
+    ]
+  },
+  "feature/barbarian/persistent-rage": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Persistent Rage",
+        "max": "1",
+        "recharge": "long"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Persistent Rage",
+        "econ": "free",
+        "res": "g1",
+        "note": "On rolling Initiative, regain all Rage uses. Rage lasts 10 minutes without extending."
+      }
+    ]
+  },
+  "feature/barbarian/primal-champion": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "abil",
+        "name": "STR +4",
+        "ab": "str",
+        "val": "4",
+        "cap": 25
+      },
+      {
+        "id": "g2",
+        "kind": "abil",
+        "name": "CON +4",
+        "ab": "con",
+        "val": "4",
+        "cap": 25
+      }
+    ]
+  },
+  "feature/barbarian/primal-knowledge": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "skill",
+        "name": "Primal Knowledge skill",
+        "pick": 1,
+        "pool": "skill:animal|athletics|intimidation|nature|perception|survival"
+      },
+      {
+        "id": "pskill",
+        "kind": "prof",
+        "name": "Primal Knowledge skill",
+        "cat": "skill",
+        "target": "$skill"
+      }
+    ]
+  },
+  "feature/barbarian/rage": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Rage",
+        "max": "1:2,3:3,6:4,12:5,17:6",
+        "recharge": "long",
+        "regain": "1",
+        "regainOn": "short"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Rage",
+        "econ": "bonus",
+        "res": "g1",
+        "dice": "1:2,9:3,16:4",
+        "note": "Not in Heavy armor. Rage Damage bonus on Strength-based weapon and Unarmed Strike damage; Advantage on Strength checks; no spells or Concentration."
+      },
+      {
+        "id": "g3",
+        "kind": "defense",
+        "name": "Bludgeoning Resistance",
+        "def": "res",
+        "target": "Bludgeoning",
+        "when": "active"
+      },
+      {
+        "id": "g4",
+        "kind": "defense",
+        "name": "Piercing Resistance",
+        "def": "res",
+        "target": "Piercing",
+        "when": "active"
+      },
+      {
+        "id": "g5",
+        "kind": "defense",
+        "name": "Slashing Resistance",
+        "def": "res",
+        "target": "Slashing",
+        "when": "active"
+      },
+      {
+        "id": "g6",
+        "kind": "defense",
+        "name": "Advantage on Strength saves",
+        "def": "adv",
+        "target": "Strength saves",
+        "when": "active"
+      }
+    ]
+  },
+  "feature/barbarian/reckless-attack": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Reckless Attack",
+        "econ": "other",
+        "note": "On your first attack roll of the turn: Advantage on Strength attacks until your next turn; attacks against you have Advantage."
+      }
+    ]
+  },
+  "feature/barbarian/relentless-rage": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Relentless Rage",
+        "econ": "other",
+        "note": "At 0 HP while raging: DC 10 CON save (+5 per use until a rest) to have HP equal to twice your Barbarian level."
+      }
+    ]
+  },
+  "feature/barbarian/unarmored-defense": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "ac",
+        "name": "Unarmored Defense: 10 + DEX + CON",
+        "acMode": "unarmored",
+        "ab": "con",
+        "shieldOk": true,
+        "when": "noArmor"
+      }
+    ]
+  },
+  "feature/barbarian/weapon-mastery": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "prof",
+        "name": "Weapon Mastery: Melee weapons",
+        "cat": "mastery",
+        "val": "1:2,4:3,10:4"
+      }
+    ]
+  },
   "feature/bard/ability-score-improvement": {
     "grants": [
       {
@@ -43,6 +330,174 @@
       }
     ]
   },
+  "feature/bard/bardic-inspiration": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Bardic Inspiration",
+        "max": "cha>=1",
+        "recharge": "long"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Bardic Inspiration",
+        "econ": "bonus",
+        "res": "g1",
+        "dice": "1:1d6,5:1d8,10:1d10,15:1d12",
+        "note": "A creature within 60 ft gains a die to add to a failed D20 Test within the hour."
+      }
+    ]
+  },
+  "feature/bard/college-of-lore/bonus-proficiencies": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "sk",
+        "name": "Bonus Proficiencies",
+        "pick": 3,
+        "pool": "skill:any"
+      },
+      {
+        "id": "psk",
+        "kind": "prof",
+        "name": "Bonus Proficiencies",
+        "cat": "skill",
+        "target": "$sk"
+      }
+    ]
+  },
+  "feature/bard/college-of-lore/cutting-words": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Cutting Words",
+        "econ": "reaction",
+        "note": "Expend a Bardic Inspiration die and subtract it from a creature’s damage roll, ability check or attack roll within 60 ft."
+      }
+    ]
+  },
+  "feature/bard/college-of-lore/magical-discoveries": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "md",
+        "name": "Magical Discoveries",
+        "pick": 2,
+        "pool": "spell:list=cleric|druid|wizard"
+      },
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Magical Discoveries",
+        "spell": "$md",
+        "always": true
+      }
+    ]
+  },
+  "feature/bard/college-of-lore/peerless-skill": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Peerless Skill",
+        "econ": "free",
+        "note": "On a failed ability check or attack roll, add a Bardic Inspiration die; it isn’t spent if you still fail."
+      }
+    ]
+  },
+  "feature/bard/countercharm": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Countercharm",
+        "econ": "reaction",
+        "note": "When you or a creature within 30 ft fails a save against Charmed or Frightened, reroll with Advantage."
+      }
+    ]
+  },
+  "feature/bard/epic-boon": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "feat",
+        "name": "Epic Boon feat",
+        "pick": 1,
+        "pool": "feat:cat=boon"
+      }
+    ]
+  },
+  "feature/bard/expertise": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "exp",
+        "name": "Expertise",
+        "pick": 2,
+        "pool": "skill:proficient"
+      },
+      {
+        "id": "pexp",
+        "kind": "prof",
+        "name": "Expertise",
+        "cat": "expertise",
+        "target": "$exp"
+      }
+    ]
+  },
+  "feature/bard/font-of-inspiration": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Font of Inspiration",
+        "econ": "free",
+        "note": "Bardic Inspiration returns on a Short or Long Rest; expend a spell slot to regain one use."
+      }
+    ]
+  },
+  "feature/bard/jack-of-all-trades": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "prof",
+        "name": "Jack of All Trades",
+        "cat": "half"
+      }
+    ]
+  },
+  "feature/bard/superior-inspiration": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Superior Inspiration",
+        "econ": "free",
+        "note": "On rolling Initiative, regain Bardic Inspiration uses up to 2."
+      }
+    ]
+  },
+  "feature/bard/words-of-creation": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Power Word Heal",
+        "spell": "spell/power-word-heal",
+        "always": true
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Power Word Kill",
+        "spell": "spell/power-word-kill",
+        "always": true
+      }
+    ]
+  },
   "feature/cleric/ability-score-improvement": {
     "grants": [
       {
@@ -54,6 +509,64 @@
       }
     ]
   },
+  "feature/cleric/blessed-strikes": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "strike",
+        "name": "Blessed Strikes",
+        "pick": 1,
+        "options": [
+          {
+            "id": "o1",
+            "kind": "xdmg",
+            "name": "Divine Strike",
+            "dice": "7:1d8,14:2d8",
+            "dtype": "Necrotic or Radiant",
+            "on": "a weapon attack hit",
+            "perTurn": true
+          },
+          {
+            "id": "o2",
+            "kind": "dmgBonus",
+            "name": "Potent Spellcasting",
+            "val": "wis",
+            "cantrip": true
+          }
+        ]
+      }
+    ]
+  },
+  "feature/cleric/channel-divinity": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Channel Divinity",
+        "max": "2:2,6:3,18:4",
+        "recharge": "long",
+        "regain": "1",
+        "regainOn": "short"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Divine Spark",
+        "econ": "action",
+        "res": "g1",
+        "dice": "1:1d8,7:2d8,13:3d8,18:4d8",
+        "note": "Heal a creature within 30 ft the roll + WIS, or deal it as Necrotic or Radiant damage (CON save for half)."
+      },
+      {
+        "id": "g3",
+        "kind": "action",
+        "name": "Turn Undead",
+        "econ": "action",
+        "res": "g1",
+        "note": "Undead of your choice within 30 ft: WIS save or Frightened and Incapacitated for 1 minute."
+      }
+    ]
+  },
   "feature/cleric/cleric-subclass": {
     "grants": [
       {
@@ -62,6 +575,193 @@
         "name": "Subclass",
         "pick": 1,
         "pool": "subclass:cls=cleric"
+      }
+    ]
+  },
+  "feature/cleric/divine-intervention": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Divine Intervention",
+        "max": "1",
+        "recharge": "long"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Divine Intervention",
+        "econ": "action",
+        "res": "g1",
+        "note": "Cast a Cleric spell of level 5 or lower without a slot or Material components."
+      }
+    ]
+  },
+  "feature/cleric/divine-order": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "order",
+        "name": "Divine Order",
+        "pick": 1,
+        "options": [
+          {
+            "id": "o1",
+            "kind": "prof",
+            "name": "Protector: Martial weapons",
+            "cat": "weapon",
+            "target": "Martial weapons",
+            "opt": "Protector"
+          },
+          {
+            "id": "o2",
+            "kind": "prof",
+            "name": "Protector: Heavy armor",
+            "cat": "armor",
+            "target": "Heavy armor",
+            "opt": "Protector"
+          },
+          {
+            "id": "o3",
+            "kind": "checkBonus",
+            "name": "Thaumaturge: Arcana + WIS",
+            "target": "arcana",
+            "val": "wis>=1",
+            "opt": "Thaumaturge"
+          },
+          {
+            "id": "o4",
+            "kind": "checkBonus",
+            "name": "Thaumaturge: Religion + WIS",
+            "target": "religion",
+            "val": "wis>=1",
+            "opt": "Thaumaturge"
+          }
+        ]
+      }
+    ]
+  },
+  "feature/cleric/epic-boon": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "feat",
+        "name": "Epic Boon feat",
+        "pick": 1,
+        "pool": "feat:cat=boon"
+      }
+    ]
+  },
+  "feature/cleric/life-domain/disciple-of-life": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Disciple of Life",
+        "econ": "other",
+        "note": "A slot spell that restores HP restores 2 + the slot’s level more."
+      }
+    ]
+  },
+  "feature/cleric/life-domain/life-domain-spells": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Aid",
+        "spell": "spell/aid",
+        "always": true
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Bless",
+        "spell": "spell/bless",
+        "always": true
+      },
+      {
+        "id": "g3",
+        "kind": "spell",
+        "name": "Cure Wounds",
+        "spell": "spell/cure-wounds",
+        "always": true
+      },
+      {
+        "id": "g4",
+        "kind": "spell",
+        "name": "Lesser Restoration",
+        "spell": "spell/lesser-restoration",
+        "always": true
+      },
+      {
+        "id": "g5",
+        "kind": "spell",
+        "name": "Mass Healing Word",
+        "spell": "spell/mass-healing-word",
+        "always": true,
+        "lvl": 5
+      },
+      {
+        "id": "g6",
+        "kind": "spell",
+        "name": "Revivify",
+        "spell": "spell/revivify",
+        "always": true,
+        "lvl": 5
+      },
+      {
+        "id": "g7",
+        "kind": "spell",
+        "name": "Aura of Life",
+        "spell": "spell/aura-of-life",
+        "always": true,
+        "lvl": 7
+      },
+      {
+        "id": "g8",
+        "kind": "spell",
+        "name": "Death Ward",
+        "spell": "spell/death-ward",
+        "always": true,
+        "lvl": 7
+      },
+      {
+        "id": "g9",
+        "kind": "spell",
+        "name": "Greater Restoration",
+        "spell": "spell/greater-restoration",
+        "always": true,
+        "lvl": 9
+      },
+      {
+        "id": "g10",
+        "kind": "spell",
+        "name": "Mass Cure Wounds",
+        "spell": "spell/mass-cure-wounds",
+        "always": true,
+        "lvl": 9
+      }
+    ]
+  },
+  "feature/cleric/life-domain/preserve-life": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Preserve Life",
+        "econ": "action",
+        "note": "Spend Channel Divinity: restore 5 × Cleric level HP among Bloodied creatures within 30 ft, up to half their maximum."
+      }
+    ]
+  },
+  "feature/cleric/sear-undead": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Sear Undead",
+        "econ": "other",
+        "note": "Turn Undead also deals Radiant damage to each Undead that fails: roll a number of d8s equal to your WIS modifier (min 1)."
       }
     ]
   },
@@ -130,6 +830,17 @@
             "perTurn": true
           }
         ]
+      }
+    ]
+  },
+  "feature/druid/epic-boon": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "feat",
+        "name": "Epic Boon feat",
+        "pick": 1,
+        "pool": "feat:cat=boon"
       }
     ]
   },
@@ -239,6 +950,17 @@
       }
     ]
   },
+  "feature/fighter/epic-boon": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "feat",
+        "name": "Epic Boon feat",
+        "pick": 1,
+        "pool": "feat:cat=boon"
+      }
+    ]
+  },
   "feature/fighter/fighter-subclass": {
     "grants": [
       {
@@ -261,6 +983,17 @@
       }
     ]
   },
+  "feature/monk/epic-boon": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "feat",
+        "name": "Epic Boon feat",
+        "pick": 1,
+        "pool": "feat:cat=boon"
+      }
+    ]
+  },
   "feature/monk/monk-subclass": {
     "grants": [
       {
@@ -280,6 +1013,17 @@
         "name": "Feat",
         "pick": 1,
         "pool": "feat:cat=general"
+      }
+    ]
+  },
+  "feature/paladin/epic-boon": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "feat",
+        "name": "Epic Boon feat",
+        "pick": 1,
+        "pool": "feat:cat=boon"
       }
     ]
   },
@@ -334,6 +1078,17 @@
         "name": "Languages",
         "cat": "language",
         "target": "$lang"
+      }
+    ]
+  },
+  "feature/ranger/epic-boon": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "feat",
+        "name": "Epic Boon feat",
+        "pick": 1,
+        "pool": "feat:cat=boon"
       }
     ]
   },
@@ -437,6 +1192,17 @@
       }
     ]
   },
+  "feature/rogue/epic-boon": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "feat",
+        "name": "Epic Boon feat",
+        "pick": 1,
+        "pool": "feat:cat=boon"
+      }
+    ]
+  },
   "feature/rogue/rogue-subclass": {
     "grants": [
       {
@@ -456,6 +1222,17 @@
         "name": "Feat",
         "pick": 1,
         "pool": "feat:cat=general"
+      }
+    ]
+  },
+  "feature/sorcerer/epic-boon": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "feat",
+        "name": "Epic Boon feat",
+        "pick": 1,
+        "pool": "feat:cat=boon"
       }
     ]
   },
@@ -481,6 +1258,17 @@
       }
     ]
   },
+  "feature/warlock/epic-boon": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "feat",
+        "name": "Epic Boon feat",
+        "pick": 1,
+        "pool": "feat:cat=boon"
+      }
+    ]
+  },
   "feature/warlock/warlock-subclass": {
     "grants": [
       {
@@ -500,6 +1288,17 @@
         "name": "Feat",
         "pick": 1,
         "pool": "feat:cat=general"
+      }
+    ]
+  },
+  "feature/wizard/epic-boon": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "feat",
+        "name": "Epic Boon feat",
+        "pick": 1,
+        "pool": "feat:cat=boon"
       }
     ]
   },

@@ -86,6 +86,17 @@ Each needs a small plan 3 follow-up to apply it.
 - `dice` on `action`: the action's die as a Value (Cosmic Omen's Weal `1d6` and Woe `-1d6`, Starry Form's Archer
   `1:1d8,10:2d8`, Healing Hands `pb` d4s).
 
+## Vocabulary changes found by the class batches
+
+Each needs a small plan 3 follow-up to apply it.
+
+- `when: 'active'` (Task 14): the grant counts only while the entry's effect is switched on, like an AC spell in
+  `acOn`: Rage's resistances, Frenzy, Rage of the Gods' flight. A new value of the existing condition field.
+- `cap: 25` on `abil` (Task 14): Primal Champion raises STR and CON by 4 to a maximum of 25.
+
+Effects that stay text: changes to another feature's numbers or recharge (Font of Inspiration, Improved Warding Flare),
+rerolls and minimum rolls (Supreme Healing), damage that adds half a level (Divine Fury's dice carry only the 1d6).
+
 ## What check-phb does not catch
 
 `npm run check-phb` and the pre-push hook look for phrases taken from the condensed `reference/` descriptions, which

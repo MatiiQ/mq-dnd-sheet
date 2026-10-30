@@ -70,6 +70,14 @@ describe('validateEntry', () => {
     expect(validateEntry({ ...feat, prereq: 'lvl>=4;armor=heavy;str>=13' })).toEqual([]);
     expect(validateEntry({ ...feat, prereq: 'level 4' })).not.toEqual([]);
   });
+  it('takes grants that count only while the entry’s effect is on', () => {
+    expect(validateEntry({ ...feature, grants: [{ id: 'g1', kind: 'defense', name: 'Rage: Slashing', def: 'res', target: 'Slashing', when: 'active' }] })).toEqual([]);
+  });
+  it('raises a score to 20, 25 (Primal Champion) or 30 (Epic Boons)', () => {
+    const g = { id: 'g1', kind: 'abil', name: 'STR +4', ab: 'str', val: '4' };
+    for (const cap of [20, 25, 30]) expect(validateEntry({ ...feature, grants: [{ ...g, cap }] })).toEqual([]);
+    expect(validateEntry({ ...feature, grants: [{ ...g, cap: 24 }] })).not.toEqual([]);
+  });
   it('accepts an AC grant on a magic item', () => {
     const ring = { id: 'item/ring-of-protection', kind: 'item', name: 'Ring of Protection', src: 'srd', desc: '…', cat: 'magic', rarity: 'rare', attune: true,
       grants: [{ id: 'g1', kind: 'ac', name: '+1 AC', acMode: 'bonus', val: '1', needEq: true, needAtt: true }] };
