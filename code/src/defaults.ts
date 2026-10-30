@@ -14,7 +14,7 @@ export function sampleCharacter(): Character {
     hp: 31, maxHp: 44, origHp: 44, origOn: false, temp: 0, amount: 5, insp: 1, pills: ['hp', 'ac', 'res:favored'], tab: 'actions', prepMax: 6, spellFilter: 'all', spellSort: 'az', usePrep: true,
     hdUsed: 1, ds: 0, df: 0, exh: 0, conds: {}, free: {}, conc: null, hpUndo: null, concCheck: null, restMsg: null,
     slotMax: [0, 4, 2, 0, 0, 0, 0, 0, 0, 0], slotUsed: [0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
-    def: { res: [], vul: [], imm: [], adv: ['vs Charmed'] },
+    def: { res: [], vul: [], imm: [], adv: ['vs Charmed'] }, // Fey Ancestry (PHB p.190)
     senses: [{ id: 'se1', name: 'Darkvision', range: '60 ft', srcKind: 'species', srcName: 'Wood Elf' }],
     res: [
       { id: 'favored', name: 'Favored Enemy', note: 'Cast Hunter’s Mark without a slot', count: 2, max: 3, recharge: 'long' }
@@ -99,7 +99,7 @@ export function druidSample(): Character {
     hdUsed: 3, ds: 0, df: 0, exh: 1, conds: { Poisoned: true }, free: { ds12: true }, conc: { id: 'ds9', name: 'Moonbeam' },
     hpUndo: null, concCheck: null, restMsg: null,
     slotMax: [0, 4, 3, 3, 3, 2, 1, 0, 0, 0], slotUsed: [0, 2, 1, 1, 0, 1, 0, 0, 0, 0],
-    def: { res: ['Necrotic', 'Radiant'], vul: [], imm: [], adv: ['Concentration saves'] },
+    def: { res: ['Necrotic', 'Radiant'], vul: [], imm: [], adv: ['Concentration saves'] }, // Celestial Resistance; War Caster
     senses: [{ id: 'se1', name: 'Darkvision', range: '60 ft', srcKind: 'species', srcName: 'Aasimar' }],
     res: [
       { id: 'wild', name: 'Wild Shape', note: 'Bonus Action · beast form or Starry Form · regain 1 on a Short Rest', count: 2, max: 3, recharge: 'long' },
