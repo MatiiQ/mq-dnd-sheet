@@ -1,0 +1,24 @@
+import { expect, it } from 'vitest';
+import { isValue, valueAt, type ValueCtx } from './value';
+
+const ctx = (level: number, wis = 2): ValueCtx => ({ level, pb: 2 + Math.floor((level - 1) / 4), mod: (a) => (a === 'wis' ? wis : 0) });
+it('evaluates numbers, PB, level and ability modifiers with a minimum', () => {
+  expect(valueAt('2', ctx(1))).toBe(2);
+  expect(valueAt('pb', ctx(5))).toBe(3);
+  expect(valueAt('wis>=1', ctx(1, -1))).toBe(1);
+  expect(valueAt('wis+pb', ctx(5))).toBe(5);
+  expect(valueAt('lvl', ctx(12))).toBe(12);
+});
+it('reads level tables, including dice and levels before the first step', () => {
+  expect([1, 2, 6, 16, 17].map((l) => valueAt('2:2,6:3,17:4', ctx(l)))).toEqual([0, 2, 3, 3, 4]); // Wild Shape (PHB p.80)
+  expect([1, 5, 11, 17].map((l) => valueAt('1:1d8,5:1d10,11:1d12,17:2d6', ctx(l)))).toEqual(['1d8', '1d10', '1d12', '2d6']); // Shillelagh (PHB p.316)
+});
+it('keeps dice expressions as text', () => {
+  expect(valueAt('1d6+1', ctx(1))).toBe('1d6+1');
+  expect(valueAt('-1d6', ctx(1))).toBe('-1d6');
+  expect(valueAt('-2', ctx(1))).toBe(-2);
+});
+it('rejects malformed values', () => {
+  expect(['', 'sixty', '1:2,1:3', '6:3,2:2', '1:2,lvl', 'wiz>=1', '2d', '1:pb', 'pb>=x', '--1', '1:-2', '1:2,5:d8'].map(isValue)).toEqual(Array(12).fill(false));
+  expect(['60', 'pb', 'cha>=1', '1:2,5:3', '1d6+1', 'str+2', '-1d6'].map(isValue)).toEqual(Array(7).fill(true));
+});

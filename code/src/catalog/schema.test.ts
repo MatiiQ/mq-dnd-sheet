@@ -43,6 +43,9 @@ describe('validateEntry', () => {
     expect(validateEntry({ ...feature, grants: [{ ...feature.grants[0], lvl: 0 }] })).not.toEqual([]);
     expect(validateEntry({ ...feature, grants: [{ ...feature.grants[0], lvl: 21 }] })).not.toEqual([]);
   });
+  it('rejects a grant with a malformed value', () => {
+    expect(validateEntry({ ...darkvision, grants: [{ id: 'g1', kind: 'sense', name: 'x', range: 'sixty' }] })).not.toEqual([]);
+  });
   it('accepts an AC grant on a magic item', () => {
     const ring = { id: 'item/ring-of-protection', kind: 'item', name: 'Ring of Protection', src: 'srd', desc: '…', cat: 'magic', rarity: 'rare', attune: true,
       grants: [{ id: 'g1', kind: 'ac', name: '+1 AC', acMode: 'bonus', val: '1', needEq: true, needAtt: true }] };

@@ -1,6 +1,7 @@
 // Catalog schema shared by the app and both builders (SRD in the repo, PHB pack on the device). Node runs this
 // file directly from the build scripts, so it uses erasable TypeScript only and imports types with `import type`.
 import type { AcEffect, Ability, ArmorKind, Size } from '../types';
+import { isValue } from './value.ts';
 
 export const SRD_VERSION: string = '';
 
@@ -88,9 +89,6 @@ export function catalogId(kind: Kind, name: string, scope: (string | undefined)[
 export function entryScope(e: Entry): (string | undefined)[] {
   return e.kind === 'feature' ? [e.cls, e.sub] : e.kind === 'trait' ? [e.species] : e.kind === 'subclass' ? [e.cls] : [];
 }
-
-// Replaced by the value grammar (value.ts).
-const isValue = (v: string) => typeof v === 'string';
 
 type Check = (v: unknown) => boolean;
 const str: Check = (v) => typeof v === 'string';
