@@ -14,7 +14,7 @@ export function sampleCharacter(): Character {
     hdUsed: 1, ds: 0, df: 0, exh: 0, conds: {}, free: {}, conc: null, hpUndo: null, concCheck: null, restMsg: null,
     slotMax: [0, 4, 2, 0, 0, 0, 0, 0, 0, 0], slotUsed: [0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
     def: { res: [], vul: [], imm: [] }, saveNotes: 'Advantage on saves to avoid or end Charmed (Fey Ancestry).',
-    senses: [{ id: 'se1', name: 'Darkvision', range: '60 ft' }],
+    senses: [{ id: 'se1', name: 'Darkvision', range: '60 ft', srcKind: 'species', srcName: 'Wood Elf' }],
     res: [
       { id: 'favored', name: 'Favored Enemy', note: 'Cast Hunter’s Mark without a slot', count: 2, max: 3, recharge: 'long' },
       { id: 'arrows', name: 'Arrows', note: 'Tap − after each Longbow shot', count: 20, recharge: 'none', inv: true },
@@ -97,7 +97,7 @@ export function druidSample(): Character {
     slotMax: [0, 4, 3, 3, 3, 2, 1, 0, 0, 0], slotUsed: [0, 2, 1, 1, 0, 1, 0, 0, 0, 0],
     def: { res: ['Necrotic', 'Radiant'], vul: [], imm: [] },
     saveNotes: 'Advantage on CON saves to keep Concentration (War Caster). Starry Form · Dragon: a d20 of 9 or lower counts as 10 on those saves.',
-    senses: [{ id: 'se1', name: 'Darkvision', range: '60 ft' }],
+    senses: [{ id: 'se1', name: 'Darkvision', range: '60 ft', srcKind: 'species', srcName: 'Aasimar' }],
     res: [
       { id: 'wild', name: 'Wild Shape', note: 'Bonus Action · beast form or Starry Form · regain 1 on a Short Rest', count: 2, max: 3, recharge: 'long' },
       { id: 'bolt', name: 'Star Map · Guiding Bolt', note: 'Cast Guiding Bolt without a slot', count: 4, max: 5, recharge: 'long' },

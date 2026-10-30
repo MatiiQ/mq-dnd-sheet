@@ -1,6 +1,6 @@
 // D&D 2024 rules used by the sheet. Pure functions: each takes a character and returns the next one.
 import { blankCharacter, sampleCharacter } from './defaults';
-import type { AcEffect, Ability, ArmorKind, CastAbility, Character, Concentration, HpSnapshot, Item, Resource, Spell, SpellSort, Tab, Unarmored } from './types';
+import type { AcEffect, Ability, ArmorKind, CastAbility, Character, Concentration, HpSnapshot, Item, Resource, Spell, SpellSort, SrcKind, Tab, Unarmored } from './types';
 
 export const ABILITIES: [Ability, string][] = [
   ['str', 'Strength'], ['dex', 'Dexterity'], ['con', 'Constitution'],
@@ -16,6 +16,12 @@ export const SKILLS: [string, string, Ability][] = [
 ];
 
 export const TABS: [Tab, string][] = [['actions', 'Actions'], ['spells', 'Spells'], ['inventory', 'Inventory'], ['features', 'Features & Traits'], ['notes', 'Notes']];
+
+// Kinds of source an entry can name (roadmap, "Source kinds"), with their labels.
+export const SRC_KINDS: [SrcKind, string][] = [
+  ['species', 'Species'], ['background', 'Background'], ['class', 'Class'], ['subclass', 'Subclass'],
+  ['feat', 'Feat'], ['item', 'Item'], ['spell', 'Spell'], ['other', 'Other']
+];
 
 export const CAST_NAMES: Record<CastAbility, string> = { none: 'None', int: 'Intelligence', wis: 'Wisdom', cha: 'Charisma' };
 
@@ -447,6 +453,13 @@ export function migrate(data: unknown): Character {
     d[k] = (d[k] as unknown[]).filter(isEntry).map((x) => (typeof x.id === 'string' ? x : { ...x, id: newId() }));
   }
   const c = d as unknown as Character;
+  // Sense sources: an unknown kind reads as Other; text that isn't a string goes.
+  c.senses = c.senses.map(({ desc, srcKind, srcName, ...se }) => ({
+    ...se,
+    ...(typeof desc === 'string' ? { desc } : {}),
+    ...(srcKind == null ? {} : { srcKind: SRC_KINDS.some(([k]) => k === srcKind) ? srcKind : 'other' }),
+    ...(typeof srcName === 'string' ? { srcName } : {})
+  }));
   c.def = { res: strings(c.def.res), vul: strings(c.def.vul), imm: strings(c.def.imm) };
   c.attune = [0, 1, 2].map((i) => strings(c.attune)[i] ?? '');
   c.slotMax = slots(c.slotMax);

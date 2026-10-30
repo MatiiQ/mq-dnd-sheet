@@ -324,6 +324,14 @@ describe('loading saves and backups', () => {
     expect(c.attune).toEqual(['', '', '']);
     expect(migrate({ attune: ['a', 'b', 'c', 'd'] }).attune).toEqual(['a', 'b', 'c']);
   });
+  it('keeps a sense source kind from the list; any other value becomes other', () => {
+    const c = migrate({ ...sampleCharacter(), senses: [
+      { id: 'x', name: 'Darkvision', range: '60 ft', srcKind: 'race' },
+      { id: 'y', name: 'Blindsight', range: '10 ft', srcKind: 'item', srcName: 'Goggles', desc: 'See without light' },
+      { id: 'z', name: 'Tremorsense', range: '5 ft' }] });
+    expect(c.senses.map((s) => s.srcKind)).toEqual(['other', 'item', undefined]);
+    expect(c.senses[1]).toMatchObject({ srcName: 'Goggles', desc: 'See without light' });
+  });
   it('turns the old refill flag into a recharge and lists old sample consumables in Inventory', () => {
     const c = migrate({ res: [{ id: 'a', name: 'Ki', count: 1, refill: true }, { id: 'b', name: 'Rage', count: 1, refill: true, recharge: 'short' }, { id: 'c', name: 'Gold', count: 1 }] });
     expect(c.res.map((r) => r.recharge)).toEqual(['long', 'short', 'none']);

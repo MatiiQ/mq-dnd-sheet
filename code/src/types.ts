@@ -11,9 +11,11 @@ export type ArmorKind = 'light' | 'medium' | 'heavy' | 'shield';
 export type AcEffect = 'bonus' | 'base' | 'floor';
 export type Unarmored = 'none' | 'barbarian' | 'monk' | 'draconic' | 'dance';
 export type SpellSort = 'az' | 'prep' | 'time';
+export type SrcKind = 'species' | 'background' | 'class' | 'subclass' | 'feat' | 'item' | 'spell' | 'other';
 
 export interface Details { name: string; species: string; cls: string; sub: string; bg: string; align: string }
-export interface Sense { id: string; name: string; range: string }
+// srcKind + srcName: where the sense comes from ("Species · Wood Elf"). No srcKind means no source given.
+export interface Sense { id: string; name: string; range: string; desc?: string; srcKind?: SrcKind; srcName?: string }
 export interface Resource { id: string; name: string; note?: string; count: number; max?: number; recharge?: Recharge; refill?: boolean; inv?: boolean }
 export interface Attack { id: string; name: string; hit: string; dmg: string; info: string; mastery: string }
 export interface Rider { id: string; name: string; dice: string }

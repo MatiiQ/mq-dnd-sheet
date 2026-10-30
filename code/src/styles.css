@@ -87,6 +87,9 @@ h1, h2, h3 { margin: 0; }
   font: inherit; color: inherit; text-align: left; cursor: pointer; display: flex; flex-direction: column; gap: 2px;
 }
 .entry-body { display: flex; flex-direction: column; gap: 6px; padding: 0 0 8px; }
+/* Senses sit in a wrapping row beside the passive scores: rows shrink to their content, an open form takes the full width. */
+.sense-entry .entry-head { flex: 0 1 auto; }
+.sense-form { flex-basis: 100%; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .edit-details { gap: 12px; border-left: 3px solid var(--accent); padding-left: 12px; }
 
