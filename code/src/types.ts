@@ -42,7 +42,9 @@ export interface Character {
   acOpen: boolean; acUnarm: Unarmored; acOn: string[]; acMods: AcMod[];
   abil: Record<Ability, number>; abilAdj: Partial<Record<Ability, number>>;
   saveProf: Partial<Record<Ability, boolean>>; skillProf: Record<string, number>;
-  hp: number; maxHp: number; origHp: number; origOn: boolean; temp: number; amount: number; insp: boolean;
+  hp: number; maxHp: number; origHp: number; origOn: boolean; temp: number; amount: number;
+  /** Inspiration: the table's counter, 0 or more. */
+  insp: number;
   /** Top bar pills, 3 slots: a stat key, 'res:<resource id>', or '' for an empty slot. */
   pills: string[];
   tab: Tab; prepMax: number; spellFilter: 'all' | 'prepared'; spellSort: SpellSort; usePrep: boolean;

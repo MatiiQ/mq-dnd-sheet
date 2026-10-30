@@ -492,6 +492,10 @@ export function migrate(data: unknown): Character {
   // Older versions kept Concentration on a spell after removing it. Checked after the entry filter above.
   if (c.conc && !c.spells.some((x) => x.id === c.conc!.id)) c.conc = null;
   c.hpUndo = null;
+  // Inspiration is a counter, 0 or more. This deliberately departs from the rules, where a character has at most one
+  // Heroic Inspiration (PHB p.13, p.368). Older saves had an on/off flag; the type changed, so read the raw save.
+  const insp = data.insp;
+  c.insp = typeof insp === 'boolean' ? Number(insp) : finite(insp) ? Math.max(0, Math.floor(insp)) : 0;
   if (typeof c.concCheck !== 'string') c.concCheck = null;
   const msg = c.restMsg as unknown;
   c.restMsg = isObj(msg) && typeof msg.title === 'string' && typeof msg.body === 'string' ? c.restMsg : null;
@@ -530,7 +534,7 @@ export const PILL_STATS: [PillStat, string, string][] = [
   ['init', 'Initiative', 'Init'], ['atk', 'Spell attack', 'Atk'], ['hd', 'Hit Dice left', 'HD'], ['insp', 'Inspiration', 'Insp']
 ];
 export const resPill = (id: string) => 'res:' + id;
-export type PillTarget = { sec: 'sec-hp' | 'sec-vitals' | 'sec-senses' | 'sec-resources' } | { tab: Tab } | 'insp';
+export type PillTarget = { sec: 'sec-hp' | 'sec-vitals' | 'sec-senses' | 'sec-resources' } | { tab: Tab };
 export interface PillView { key: string; label: string; value: string; max?: string; target: PillTarget }
 
 // What a slot shows. Null for an empty slot, an unknown key, or a resource that was deleted.
@@ -551,7 +555,7 @@ export function pillView(c: Character, key: string): PillView | null {
     case 'init': return { key, label, value: fmt(initiative(c)), target: { sec: 'sec-vitals' } };
     case 'atk': return { key, label, value: atk === null ? '—' : fmt(atk), target: { tab: 'spells' } };
     case 'hd': return { key, label, value: String(c.level - hdSpent(c)), max: String(c.level), target: { sec: 'sec-hp' } };
-    case 'insp': return { key, label, value: c.insp ? 'On' : 'Off', target: 'insp' };
+    case 'insp': return { key, label, value: String(c.insp), target: { sec: 'sec-resources' } };
   }
 }
 

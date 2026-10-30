@@ -86,7 +86,7 @@ h1, h2, h3 { margin: 0; }
   flex: 1 1 200px; min-width: 0; min-height: 44px; padding: 10px 0; border: none; background: transparent;
   font: inherit; color: inherit; text-align: left; cursor: pointer; display: flex; flex-direction: column; gap: 2px;
 }
-.entry-body { display: flex; flex-direction: column; gap: 6px; padding: 0 0 8px; }
+.entry-body, .entry-extra { display: flex; flex-direction: column; gap: 6px; padding: 0 0 8px; }
 /* Senses sit in a wrapping row beside the passive scores: rows shrink to their content, an open form takes the full width. */
 .sense-entry .entry-head { flex: 0 1 auto; }
 .sense-form { flex-basis: 100%; }
@@ -233,8 +233,6 @@ button.pill { border: none; font: inherit; font-size: 13px; cursor: pointer; }
 }
 .bar-icon.on { border-color: var(--accent); background: var(--accent); color: var(--on-accent); }
 .bar-icon.on-light { border-color: var(--text); background: var(--text); color: var(--bg); }
-.insp-toggle { width: 100%; min-height: 44px; border: none; cursor: pointer; text-align: left; font: inherit; color: inherit; }
-.insp-toggle .bar-icon { flex: none; }
 .status-chip {
   display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 8px 0 12px; border-radius: 18px;
   border: none; background: var(--blue-bg); color: var(--blue-fg); font: 600 13px var(--sans); cursor: pointer;

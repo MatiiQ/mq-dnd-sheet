@@ -332,6 +332,10 @@ describe('loading saves and backups', () => {
     expect(c.senses.map((s) => s.srcKind)).toEqual(['other', 'item', undefined]);
     expect(c.senses[1]).toMatchObject({ srcName: 'Goggles', desc: 'See without light' });
   });
+  it('turns the old Heroic Inspiration flag into a count with no maximum (house rule)', () => {
+    const vals = [true, false, 3, 2.7, -4, 'x', null, undefined];
+    expect(vals.map((insp) => migrate({ ...sampleCharacter(), insp }).insp)).toEqual([1, 0, 3, 2, 0, 0, 0, 0]);
+  });
   it('turns the old refill flag into a recharge and lists old sample consumables in Inventory', () => {
     const c = migrate({ res: [{ id: 'a', name: 'Ki', count: 1, refill: true }, { id: 'b', name: 'Rage', count: 1, refill: true, recharge: 'short' }, { id: 'c', name: 'Gold', count: 1 }] });
     expect(c.res.map((r) => r.recharge)).toEqual(['long', 'short', 'none']);
@@ -363,7 +367,7 @@ describe('top bar pills', () => {
     expect(pillView(s, 'pp')).toMatchObject({ value: '15', target: { sec: 'sec-senses' } });
     expect(pillView(s, 'init')!.value).toBe('+4');
     expect(pillView(s, 'hd')).toMatchObject({ value: '4', max: '5' });
-    expect(pillView(s, 'insp')).toMatchObject({ value: 'On', target: 'insp' });
+    expect(pillView(s, 'insp')).toMatchObject({ value: '1', target: { sec: 'sec-resources' } });
   });
   it('resolves a resource, with and without a maximum', () => {
     expect(pillView(s, resPill('favored'))).toMatchObject({ label: 'Favored Enemy', value: '2', max: '3', target: { sec: 'sec-resources' } });
