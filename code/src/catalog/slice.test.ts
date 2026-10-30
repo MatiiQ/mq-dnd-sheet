@@ -3,7 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import srdEntries from '../data/srd/index';
 import { druidSample, sampleCharacter } from '../defaults';
-import { catalogId, validateEntry, type ChoiceSpec, type Entry, type GrantSpec, type Spec } from './schema';
+import { catalogId, validateEntry, type ChoiceSpec, type GrantSpec, type Spec } from './schema';
 
 const byId = new Map(srdEntries.map((e) => [e.id, e]));
 const get = (id: string) => { const e = byId.get(id); if (!e) throw new Error(`${id} missing`); return e; };
