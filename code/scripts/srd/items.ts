@@ -16,6 +16,19 @@ export const playName = (n: string) => (n.includes(', ') ? n.split(', ').reverse
 // Splits on commas outside parentheses.
 const splitTop = (s: string) => s.split(/,(?![^(]*\))/).map((x) => x.trim()).filter(Boolean);
 
+// "Finesse, Light, Thrown (Range 20/60)" → props 'finesse,light,thrown' and thrown '20/60'; versatile and ammunition alike.
+export function weaponProps(e: ItemEntry, text: string): void {
+  const names: string[] = [];
+  for (const p of splitTop(text).filter((p) => p !== '—')) {
+    const name = slug(p.replace(/\s*\(.*\)$/, '')), arg = /\((.*)\)/.exec(p)?.[1];
+    names.push(name);
+    if (name === 'thrown' && arg) e.thrown = arg.replace(/^Range /, '');
+    if (name === 'versatile' && arg) e.vers = arg;
+    if (name === 'ammunition' && arg) { const [r, kind] = arg.replace(/^Range /, '').split(';'); e.ammo = `${r.trim()};${slug(kind)}`; }
+  }
+  if (names.length) e.props = names.join(',');
+}
+
 const WEAPON_ROW = new RegExp(`^\\s+(.+?)\\s+(\\d+d\\d+|\\d+) (Bludgeoning|Piercing|Slashing)\\s+(.+?)\\s{2,}(Cleave|Graze|Nick|Push|Sap|Slow|Topple|Vex)\\s+(\\S+ lb\\.|—)\\s+(${COST})\\s*$`);
 export function parseWeapons(layout: string): ItemEntry[] {
   const out: ItemEntry[] = [];
@@ -23,16 +36,7 @@ export function parseWeapons(layout: string): ItemEntry[] {
   const props: string[] = [];
   const finish = () => {
     const e = out[out.length - 1];
-    if (!e) return;
-    const names: string[] = [];
-    for (const p of splitTop(props.join(' ')).filter((p) => p !== '—')) {
-      const name = slug(p.replace(/\s*\(.*\)$/, '')), arg = /\((.*)\)/.exec(p)?.[1];
-      names.push(name);
-      if (name === 'thrown' && arg) e.thrown = arg.replace(/^Range /, '');
-      if (name === 'versatile' && arg) e.vers = arg;
-      if (name === 'ammunition' && arg) { const [r, kind] = arg.replace(/^Range /, '').split(';'); e.ammo = `${r.trim()};${slug(kind)}`; }
-    }
-    if (names.length) e.props = names.join(',');
+    if (e) weaponProps(e, props.join(' '));
     props.length = 0;
   };
   for (const line of layout.split('\n')) {

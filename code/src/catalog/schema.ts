@@ -158,7 +158,7 @@ const ITEM: Record<string, [Check, boolean]> = {
   cap: [num, false], capVol: [str, false], xdim: [bool, false],
   rarity: [str, false], attune: [bool, false], charges: [value, false], recharge: [RECHARGE, false], regain: [value, false], regainOn: [oneOf('short', 'dawn'), false]
 };
-const PREREQ_TERM = /^(lvl>=\d+|(str|dex|con|int|wis|cha)(\|(str|dex|con|int|wis|cha))*>=\d+|feature=[a-z0-9-]+|armor=(light|medium|heavy|shield))$/;
+const PREREQ_TERM = /^(lvl>=\d+|(str|dex|con|int|wis|cha)(\|(str|dex|con|int|wis|cha))*>=\d+|feature=[a-z0-9-]+(\|[a-z0-9-]+)*|armor=(light|medium|heavy|shield))$/;
 const slotRows: Check = (v) => Array.isArray(v) && (v.length === 0 || (v.length === 20 && v.every((r) => Array.isArray(r) && r.length === 9 && r.every(whole(0, 9)))));
 const FIELDS: Record<Kind, Record<string, [Check, boolean]>> = {
   spell: SPELL,

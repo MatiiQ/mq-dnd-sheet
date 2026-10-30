@@ -64,6 +64,12 @@ describe('validateEntry', () => {
     expect(validateEntry({ ...feature, grants: [{ id: 'g1', kind: 'action', name: 'Woe', econ: 'reaction', dice: '-1d6' }] })).toEqual([]);
     expect(validateEntry({ ...feature, grants: [{ id: 'g1', kind: 'action', name: 'Woe', econ: 'reaction', dice: 'd6-' }] })).not.toEqual([]);
   });
+  it('reads feat prerequisites, including a choice of features', () => {
+    const feat = { id: 'feat/war-caster', kind: 'feat', name: 'War Caster', src: 'phb', desc: '…', cat: 'general', grants: [] };
+    expect(validateEntry({ ...feat, prereq: 'lvl>=4;feature=spellcasting|pact-magic' })).toEqual([]);
+    expect(validateEntry({ ...feat, prereq: 'lvl>=4;armor=heavy;str>=13' })).toEqual([]);
+    expect(validateEntry({ ...feat, prereq: 'level 4' })).not.toEqual([]);
+  });
   it('accepts an AC grant on a magic item', () => {
     const ring = { id: 'item/ring-of-protection', kind: 'item', name: 'Ring of Protection', src: 'srd', desc: '…', cat: 'magic', rarity: 'rare', attune: true,
       grants: [{ id: 'g1', kind: 'ac', name: '+1 AC', acMode: 'bonus', val: '1', needEq: true, needAtt: true }] };
