@@ -23,3 +23,8 @@ Open the Pages URL in Safari › Share › **Add to Home Screen** (keep "Open as
 
 Data lives only in that Home Screen app. Deleting the icon deletes the characters, so use
 Menu › Backup › **Export all** now and then (saves a JSON file to Files / iCloud Drive).
+
+## Rules data
+
+`src/data/srd/` holds rules data from the System Reference Document 5.2.1 (CC-BY-4.0); see
+[SRD-ATTRIBUTION.md](SRD-ATTRIBUTION.md) and `scripts/srd/README.md` for how it is built.

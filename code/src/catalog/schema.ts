@@ -75,8 +75,16 @@ export const ARMOR_KINDS: ArmorKind[] = ['light', 'medium', 'heavy', 'shield'];
 export const AC_EFFECTS: AcEffect[] = ['bonus', 'base', 'floor'];
 export const SIZE_KEYS: Size[] = ['tiny', 'small', 'medium', 'large', 'huge', 'gargantuan'];
 
-// PHB names that SRD releases publish under another name, mapped to the SRD name. Both builders apply it.
-export const PHB_TO_SRD: Record<string, string> = {};
+// PHB names that SRD releases publish under another name, mapped to the SRD name. Both builders apply it. Built from
+// scripts/srd/names-diff.ts (SRD 5.2.1 against reference/): only spells named after a person differ.
+export const PHB_TO_SRD: Record<string, string> = {
+  "Bigby's Hand": 'Arcane Hand', "Drawmij's Instant Summons": 'Instant Summons', "Evard's Black Tentacles": 'Black Tentacles',
+  "Leomund's Secret Chest": 'Secret Chest', "Leomund's Tiny Hut": 'Tiny Hut', "Melf's Acid Arrow": 'Acid Arrow',
+  "Mordenkainen's Faithful Hound": 'Faithful Hound', "Mordenkainen's Magnificent Mansion": 'Magnificent Mansion',
+  "Mordenkainen's Private Sanctum": 'Private Sanctum', "Mordenkainen's Sword": 'Arcane Sword', "Nystul's Magic Aura": 'Arcanist’s Magic Aura',
+  "Otiluke's Freezing Sphere": 'Freezing Sphere', "Otiluke's Resilient Sphere": 'Resilient Sphere', "Otto's Irresistible Dance": 'Irresistible Dance',
+  "Rary's Telepathic Bond": 'Telepathic Bond', "Tasha's Hideous Laughter": 'Hideous Laughter', "Tenser's Floating Disk": 'Floating Disk'
+};
 
 // Lower case, apostrophes dropped, every other run of characters that are not letters or digits becomes '-'.
 export const slug = (name: string) => name.toLowerCase().replace(/[’']/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
