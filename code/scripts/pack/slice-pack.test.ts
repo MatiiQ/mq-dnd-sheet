@@ -123,3 +123,14 @@ it.skipIf(!existsSync(PACK))('gives Twinkling Constellations and Revelation in F
     expect([id, fly?.mode, fly?.val, fly?.hover, fly?.when]).toEqual([id, 'fly', val, true, 'active']);
   }
 });
+
+// Elemental Weapon's extra damage and attack bonus are grants while it is on (lowest slot; weapon and type at the table).
+it.skipIf(!existsSync(PACK))('gives Elemental Weapon an extra 1d4 and +1 to attack while it is on', () => {
+  const cat = mergeCatalog(srdEntries, (JSON.parse(readFileSync(PACK, 'utf8')) as { entries: Entry[] }).entries);
+  const e = cat.byId.get('spell/elemental-weapon') as Entry & { fx: string; grants?: G[] };
+  expect(e.fx).toBe('other');
+  expect(e.grants).toEqual([
+    expect.objectContaining({ kind: 'xdmg', dice: '1d4', dtype: 'Acid/Cold/Fire/Lightning/Thunder', when: 'active' }),
+    expect.objectContaining({ kind: 'atkBonus', val: '1', when: 'active' })]);
+  expect(e.grants!.some((g) => g.weapon || g.wrange || g.prop)).toBe(false);
+});

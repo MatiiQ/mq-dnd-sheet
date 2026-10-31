@@ -30,6 +30,34 @@ describe('SRD spells', () => {
   });
 });
 
+describe('SRD spell damage (plan 7)', () => {
+  const sp = (id: string) => (spells as SpellEntry[]).find((e) => e.id === id)!;
+  const pick = (e: SpellEntry) => ({ fx: e.fx, dice: e.dice, dtype: e.dtype, dtypes: e.dtypes, dmgMod: e.dmgMod, save: e.save, atk: e.atk });
+  it('reads damage plus the spellcasting ability modifier', () => {
+    for (const [id, dice, dtype] of [['spell/spiritual-weapon', '1d8', 'Force'], ['spell/flame-blade', '3d6', 'Fire'], ['spell/arcane-sword', '4d12', 'Force'], ['spell/conjure-fey', '3d12', 'Psychic']])
+      expect([id, pick(sp(id))]).toEqual([id, { fx: 'damage', dice, dtype, dtypes: undefined, dmgMod: true, save: undefined, atk: 'melee' }]);
+  });
+  it('reads a chosen damage type as its list of types', () => {
+    const want: Record<string, [string, string]> = {
+      'spell/chromatic-orb': ['3d8', 'Acid,Cold,Fire,Lightning,Poison,Thunder'], 'spell/dragons-breath': ['3d6', 'Acid,Cold,Fire,Lightning,Poison'],
+      'spell/sorcerous-burst': ['1d8', 'Acid,Cold,Fire,Lightning,Poison,Psychic,Thunder'], 'spell/conjure-elemental': ['8d8', 'Lightning,Thunder,Fire,Cold'],
+      'spell/forbiddance': ['5d10', 'Radiant,Necrotic'], 'spell/glyph-of-warding': ['5d8', 'Acid,Cold,Fire,Lightning,Thunder'],
+      'spell/spirit-guardians': ['3d8', 'Radiant,Necrotic'], 'spell/fire-shield': ['2d8', 'Fire,Cold']
+    };
+    for (const [id, [dice, dtypes]] of Object.entries(want)) expect([id, sp(id).fx, sp(id).dice, sp(id).dtypes, sp(id).dtype]).toEqual([id, 'damage', dice, dtypes, undefined]);
+    expect([sp('spell/fire-shield').save, sp('spell/fire-shield').atk]).toEqual([undefined, undefined]);
+  });
+  it('reads Delayed Blast Fireball’s base damage, and no damage from Animate Objects’ stat block', () => {
+    expect(pick(sp('spell/delayed-blast-fireball'))).toMatchObject({ fx: 'damage', dice: '12d6', dtype: 'Fire', save: 'dex' });
+    expect(pick(sp('spell/animate-objects'))).toMatchObject({ fx: 'other', dice: undefined, dtype: undefined });
+  });
+  it('gives Conjure Minor Elementals an extra-damage grant while it is on, and no damage of its own', () => {
+    const e = sp('spell/conjure-minor-elementals');
+    expect([e.fx, e.dice]).toEqual(['other', undefined]);
+    expect(e.grants).toEqual([expect.objectContaining({ kind: 'xdmg', dice: '2d8', dtype: 'Acid/Cold/Fire/Lightning', when: 'active' })]);
+  });
+});
+
 describe('SRD items', () => {
   const list = items as ItemEntry[];
   const by = (name: string) => list.find((e) => e.name === name);

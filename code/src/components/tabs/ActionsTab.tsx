@@ -3,6 +3,7 @@ import {
   attacksPerAction, extraDamage, extraText, featureActions, lightExtra, masterySlots, otherWeapons, spellActions, unarmedStrike, weaponAttacks,
   type SpellAction, type WeaponAttack
 } from '../../actions';
+import { dtypeText } from '../../catalog/copy';
 import { entriesOf, useCatalog } from '../../catalog/useCatalog';
 import { isWeapon, putAway, putInHand, shieldOn as shieldOf, twoHanded, versatile, weaponKind, weaponsHeld } from '../../hands';
 import { linkOf, sourceLabel } from '../../links';
@@ -238,7 +239,7 @@ export function ActionsTab() {
         side={<div className="row wrap gap-8 act-nums">
           {x.hit !== undefined && <><span className="sr-only">Spell attack</span><DieBadge value={fmt(x.hit)} /></>}
           {x.dc !== undefined && <span className="act-dc">DC {x.dc}{x.save ? ' ' + x.save.toUpperCase() : ''}</span>}
-          {x.dice && <span className="act-dmg">{x.dice}{x.dtype ? ' ' + x.dtype : ''}</span>}
+          {x.dice && <span className="act-dmg">{x.dice}{dtypeText(x) ? ' ' + dtypeText(x) : ''}</span>}
           <CastButtons sp={sp} effect={!!x.effect} />
         </div>}
         body={<>

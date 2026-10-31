@@ -257,6 +257,21 @@ describe('spell actions', () => {
     expect(cure(8, true).dice).toBe('2d8 + WIS (−1)');
     expect(cure(14).dice).toBe('2d8');
   });
+  it('adds the spellcasting modifier to damage that says so (Spiritual Weapon) and shows a chosen type’s list', () => {
+    const sw = actionOf(ilyra({ spells: [catSpell('spell/spiritual-weapon')] }), 'spiritual-weapon')!;
+    expect(sw).toMatchObject({ group: 'damage', dice: '1d8 + WIS (+2)', dtype: 'Force' });
+    const orb = actionOf(ilyra({ spells: [catSpell('spell/chromatic-orb')] }), 'chromatic-orb')!;
+    expect(orb).toMatchObject({ group: 'damage', dice: '3d8', dtypes: 'Acid,Cold,Fire,Lightning,Poison,Thunder' });
+    expect(orb.dtype).toBeUndefined();
+  });
+  it('gives Conjure Minor Elementals no row, and its extra damage only while it is on', () => {
+    const c = addFromCatalog({ ...ilyra(), level: 7 }, cat, cat.byId.get('spell/conjure-minor-elementals')!, { picks: {}, counted: {}, links: {} });
+    const sp = c.spells.find((s) => s.cid === 'spell/conjure-minor-elementals')!;
+    expect(spellActions(c).some((a) => a.spellId === sp.id)).toBe(false);
+    const extra = (x: Character) => extraDamage(x).filter((e) => e.name === 'Conjure Minor Elementals');
+    expect(extra(c)).toEqual([]);
+    expect(extra({ ...c, conc: { id: sp.id, name: sp.name } })).toEqual([expect.objectContaining({ dice: '2d8', dtype: 'Acid/Cold/Fire/Lightning' })]);
+  });
   it('adds a cantrip damage bonus to the feature’s class cantrips only', () => {
     const bonus = (from: string) => grant({ id: 'gp', kind: 'dmgBonus', name: 'Potent Spellcasting', val: 'wis', cantrip: true, from });
     const c = { ...druidSample(), grants: [...druidSample().grants, bonus('feature:f7')] };

@@ -232,7 +232,7 @@ export function cantripDice(dice: string, level: number): string {
 
 export interface SpellAction {
   spellId: string; name: string; group: 'damage' | 'save' | 'healing'; econ: Econ; hit?: number; dc?: number; save?: Ability;
-  dice: string; dtype?: string; upcast?: string; range: string; source?: string; effect?: boolean; note?: string;
+  dice: string; dtype?: string; dtypes?: string; upcast?: string; range: string; source?: string; effect?: boolean; note?: string;
 }
 const ABBR = (a: Ability) => a.toUpperCase();
 // An On/Off effect of the spell: an atkAbil grant from it that counts while its effect is on (Shillelagh).
@@ -268,8 +268,9 @@ export function spellActions(c: Character): SpellAction[] {
       dice = `${cantripTier(c.level)} beams × ${dice}`;
     } else if (dice && sp.scale === 'cantrip') {
       dice = diceText(cantripDice(dice, c.level), cantripBonus(c, sp));
-    } else if (dice && sp.fx === 'healing' && sp.healMod) {
-      // Cure Wounds, Healing Word, Mass Cure Wounds: "+ your spellcasting ability modifier" (PHB pp.259, 284, 296).
+    } else if (dice && ((sp.fx === 'healing' && sp.healMod) || (sp.fx === 'damage' && sp.dmgMod))) {
+      // Cure Wounds, Healing Word, Mass Cure Wounds: "+ your spellcasting ability modifier" (PHB pp.259, 284, 296);
+      // damage that says the same: Spiritual Weapon, Flame Blade (PHB pp.319, 275).
       const ab = sp.castAb ?? (c.castAb === 'none' ? null : c.castAb);
       if (ab) dice = `${dice} + ${ABBR(ab)} (${fmt(abilityMod(c, ab))})`;
     }
@@ -279,7 +280,7 @@ export function spellActions(c: Character): SpellAction[] {
     out.push({
       spellId: sp.id, name: sp.name, group, econ, dice, range: sp.range,
       ...(hit !== null ? { hit } : {}), ...(dc !== null ? { dc } : {}), ...(sp.save ? { save: sp.save } : {}),
-      ...(sp.dtype ? { dtype: sp.dtype } : {}), ...(sp.higher ? { upcast: sp.higher } : {}), ...(source ? { source } : {}),
+      ...(sp.dtype ? { dtype: sp.dtype } : {}), ...(sp.dtypes ? { dtypes: sp.dtypes } : {}), ...(sp.higher ? { upcast: sp.higher } : {}), ...(source ? { source } : {}),
       ...(effect ? { effect: true } : {}), ...(note ? { note } : {})
     });
   }

@@ -33,3 +33,35 @@ it('reads a ritual from the casting time', () => {
   const [alarm] = parseSpells('Alarm\n\nLevel 1 Abjuration (Ranger, Wizard)\n\nCasting Time: 1 minute or Ritual\nRange: 30 feet\nComponents: V, S, M (a bell and silver wire)\nDuration: 8 hours\n\nYou set an alarm.\n');
   expect(alarm).toMatchObject({ time: '1 minute', ritual: true, fx: 'other' });
 });
+
+// One SRD spell block around a body text, for the damage wordings.
+const block = (body: string) => parseSpells(`Test Spell\n\nLevel 2 Evocation (Wizard)\n\nCasting Time: Action\nRange: 60 feet\nComponents: V\nDuration: Instantaneous\n\n${body}\n`)[0];
+
+it('reads damage equal to dice plus the spellcasting ability modifier', () => {
+  const e = block('Make a melee spell attack. On a hit, the target takes Force damage equal to 1d8 plus your spellcasting ability modifier.');
+  expect(e).toMatchObject({ fx: 'damage', dice: '1d8', dtype: 'Force', dmgMod: true, atk: 'melee' });
+  expect(block('The target takes Fire damage equal to 3d6.').dmgMod).toBeUndefined();
+});
+
+it('reads a chosen damage type as the list of types the text offers', () => {
+  const orb = block('Choose Acid, Cold, Fire, Lightning, Poison, or Thunder for the type of orb you create, and then make a ranged spell attack against the target. On a hit, the target takes 3d8 damage of the chosen type.');
+  expect(orb).toMatchObject({ fx: 'damage', dice: '3d8', dtypes: 'Acid,Cold,Fire,Lightning,Poison,Thunder' });
+  expect(orb.dtype).toBeUndefined();
+  expect(block('Make a ranged spell attack. On a hit, the target takes 1d8 damage of a type you choose: Acid, Cold, Fire, Lightning, Poison, Psychic, or Thunder.'))
+    .toMatchObject({ dice: '1d8', dtypes: 'Acid,Cold,Fire,Lightning,Poison,Psychic,Thunder' });
+  expect(block('Choose the spirit’s element, which determines its damage type: air (Lightning), earth (Thunder), fire (Fire), or water (Cold). On a failed save, the target takes 8d8 damage of the spirit’s type.'))
+    .toMatchObject({ dice: '8d8', dtypes: 'Lightning,Thunder,Fire,Cold' });
+});
+
+it('reads "<Type> or <Type> damage" and a list of types as a chosen type', () => {
+  expect(block('The creature takes 5d10 Radiant or Necrotic damage (your choice when you cast this spell).')).toMatchObject({ dice: '5d10', dtypes: 'Radiant,Necrotic' });
+  expect(block('A creature takes 5d8 Acid, Cold, Fire, Lightning, or Thunder damage (your choice when you create the glyph) on a failed save.'))
+    .toMatchObject({ dice: '5d8', dtypes: 'Acid,Cold,Fire,Lightning,Thunder' });
+});
+
+it('reads the same dice of two types, "NdM <Type> damage (…) or NdM <Type> damage", as a chosen type', () => {
+  const g = block('On a failed save, the creature takes 3d8 Radiant damage (if you are good or neutral) or 3d8 Necrotic damage (if you are evil).');
+  expect(g).toMatchObject({ fx: 'damage', dice: '3d8', dtypes: 'Radiant,Necrotic' });
+  expect(g.dtype).toBeUndefined();
+  expect(block('The target takes 8d6 Fire damage on a failed save.')).toMatchObject({ dice: '8d6', dtype: 'Fire' });
+});

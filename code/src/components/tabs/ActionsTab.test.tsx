@@ -29,6 +29,10 @@ describe('ActionsTab', () => {
     expect(html).toContain('Take off the Shield first');
     expect(html).toContain('Shillelagh');
   });
+  it('shows a chosen damage type as its list on a spell row', () => {
+    const orb = { id: 'orb', name: 'Chromatic Orb', lvl: 1, time: 'Action', range: '90 feet', prep: true, atk: 'ranged' as const, fx: 'damage' as const, dmg: '3d8', dtypes: 'Acid,Cold,Fire' };
+    expect(render({ ...sampleCharacter(), spells: [...sampleCharacter().spells, orb] })).toContain('3d8 Acid/Cold/Fire');
+  });
   it('shows the Light extra attack with two Daggers in hand', () => {
     const c: Character = { ...sampleCharacter(), inv: [...sampleCharacter().inv, dagger({ id: 'dg', qty: 2 })], hands: ['dg', 'dg'] };
     expect(render(c)).toContain('Light extra attack · Dagger');

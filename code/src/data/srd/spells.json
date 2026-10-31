@@ -325,8 +325,11 @@
     "dur": "Concentration, up to 1 minute",
     "conc": true,
     "ritual": false,
-    "fx": "other",
-    "atk": "melee"
+    "fx": "damage",
+    "atk": "melee",
+    "dice": "4d12",
+    "dtype": "Force",
+    "dmgMod": true
   },
   {
     "id": "spell/arcanists-magic-aura",
@@ -845,8 +848,10 @@
     "dur": "Instantaneous",
     "conc": false,
     "ritual": false,
-    "fx": "other",
+    "fx": "damage",
     "atk": "ranged",
+    "dice": "3d8",
+    "dtypes": "Acid,Cold,Fire,Lightning,Poison,Thunder",
     "scale": "1d8/slot",
     "higher": "The damage increases by 1d8 for each spell slot level above 1. The orb can leap a maximum number of times equal to the level of the slot expended, and a creature can be targeted only once by each casting of this spell."
   },
@@ -1149,8 +1154,10 @@
     "dur": "Concentration, up to 10 minutes",
     "conc": true,
     "ritual": false,
-    "fx": "other",
+    "fx": "damage",
     "save": "dex",
+    "dice": "8d8",
+    "dtypes": "Lightning,Thunder,Fire,Cold",
     "scale": "1d8/slot",
     "higher": "The damage increases by 1d8 for each spell slot level above 5."
   },
@@ -1170,8 +1177,11 @@
     "dur": "Concentration, up to 10 minutes",
     "conc": true,
     "ritual": false,
-    "fx": "other",
+    "fx": "damage",
     "atk": "melee",
+    "dice": "3d12",
+    "dtype": "Psychic",
+    "dmgMod": true,
     "scale": "1d12/slot",
     "higher": "The damage increases by 1d12 for each spell slot level above 6."
   },
@@ -1193,7 +1203,18 @@
     "ritual": false,
     "fx": "other",
     "scale": "1d8/slot",
-    "higher": "The damage increases by 1d8 for each spell slot level above 4."
+    "higher": "The damage increases by 1d8 for each spell slot level above 4.",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "xdmg",
+        "name": "Conjure Minor Elementals",
+        "dice": "2d8",
+        "dtype": "Acid/Cold/Fire/Lightning",
+        "on": "hits on a creature in the Emanation; type chosen at the table",
+        "when": "active"
+      }
+    ]
   },
   {
     "id": "spell/conjure-woodland-beings",
@@ -1557,10 +1578,12 @@
     "dur": "Concentration, up to 1 minute",
     "conc": true,
     "ritual": false,
-    "fx": "other",
+    "fx": "damage",
     "save": "dex",
     "scale": "1d6/slot",
-    "higher": "The base damage increases by 1d6 for each spell slot level above 7."
+    "higher": "The base damage increases by 1d6 for each spell slot level above 7.",
+    "dice": "12d6",
+    "dtype": "Fire"
   },
   {
     "id": "spell/demiplane",
@@ -1930,8 +1953,10 @@
     "dur": "Concentration, up to 1 minute",
     "conc": true,
     "ritual": false,
-    "fx": "other",
+    "fx": "damage",
     "save": "dex",
+    "dice": "3d6",
+    "dtypes": "Acid,Cold,Fire,Lightning,Poison",
     "scale": "1d6/slot",
     "higher": "The damage increases by 1d6 for each spell slot level above 2."
   },
@@ -2438,7 +2463,7 @@
     "ritual": false,
     "fx": "damage",
     "dice": "2d8",
-    "dtype": "Fire"
+    "dtypes": "Fire,Cold"
   },
   {
     "id": "spell/fire-storm",
@@ -2500,8 +2525,11 @@
     "dur": "Concentration, up to 10 minutes",
     "conc": true,
     "ritual": false,
-    "fx": "other",
+    "fx": "damage",
     "atk": "melee",
+    "dice": "3d6",
+    "dtype": "Fire",
+    "dmgMod": true,
     "scale": "1d6/slot",
     "higher": "The damage increases by 1d6 for each spell slot level above 2."
   },
@@ -2642,7 +2670,9 @@
     "dur": "1 day",
     "conc": false,
     "ritual": true,
-    "fx": "other"
+    "fx": "damage",
+    "dice": "5d10",
+    "dtypes": "Radiant,Necrotic"
   },
   {
     "id": "spell/forcecage",
@@ -2875,8 +2905,10 @@
     "dur": "Until dispelled or triggered",
     "conc": false,
     "ritual": false,
-    "fx": "other",
+    "fx": "damage",
     "save": "dex",
+    "dice": "5d8",
+    "dtypes": "Acid,Cold,Fire,Lightning,Thunder",
     "scale": "1d8/slot",
     "higher": "The damage of an explosive rune increases by 1d8 for each spell slot level above 3. If you create a spell glyph, you can store any spell of up to the same level as the spell slot you use for the Glyph of Warding."
   },
@@ -5616,8 +5648,10 @@
     "dur": "Instantaneous",
     "conc": false,
     "ritual": false,
-    "fx": "other",
+    "fx": "damage",
     "atk": "ranged",
+    "dice": "1d8",
+    "dtypes": "Acid,Cold,Fire,Lightning,Poison,Psychic,Thunder",
     "scale": "cantrip"
   },
   {
@@ -5751,7 +5785,7 @@
     "fx": "damage",
     "save": "wis",
     "dice": "3d8",
-    "dtype": "Radiant",
+    "dtypes": "Radiant,Necrotic",
     "scale": "1d8/slot",
     "higher": "The damage increases by 1d8 for each spell slot level above 3."
   },
@@ -5771,8 +5805,11 @@
     "dur": "Concentration, up to 1 minute",
     "conc": true,
     "ritual": false,
-    "fx": "other",
+    "fx": "damage",
     "atk": "melee",
+    "dice": "1d8",
+    "dtype": "Force",
+    "dmgMod": true,
     "higher": "The damage increases by 1d8 for every slot level above 2."
   },
   {
