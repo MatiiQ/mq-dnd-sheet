@@ -1,12 +1,13 @@
 import { useState, type CSSProperties } from 'react';
-import { ARMORS, CARRY_MULT, SIZES, carriedWeight, carryCapacity, carryUpOf, sizeOf, detectArmor, effScore, fmt, parseWeight, removeItem } from '../../logic';
+import { ARMORS, CARRY_MULT, SIZES, carriedWeight, carryCapacity, carryUpOf, sizeOf, detectArmor, effScore, fmt, itemAcGrants, newId, num, parseWeight, removeItem } from '../../logic';
 import { patchEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
-import type { Coin, Item } from '../../types';
+import type { Character, Coin, Item } from '../../types';
 import { AddButton, EntryForm, EntryRow, NumInput, TextField } from '../ui';
 
 const COINS: [Coin, string, string][] = [['cp', 'CP', 'var(--coin-cp)'], ['sp', 'SP', 'var(--coin-sp)'], ['ep', 'EP', 'var(--coin-ep)'], ['gp', 'GP', 'var(--accent)'], ['pp', 'PP', 'var(--coin-pp)']];
-// armor: an ARMORS name or '' for None. wt: the weight as typed.
-const BLANK = { name: '', armor: '', bonus: 0, wt: '', desc: '' };
+// armor: an ARMORS name or '' for None. bonus: armor's magic bonus. itemAc / needAtt: another item's AC bonus grant.
+// wt: the weight as typed.
+const BLANK = { name: '', armor: '', bonus: 0, itemAc: 0, needAtt: false, wt: '', desc: '' };
 // Weights show to one decimal place.
 const lb = (n: number) => String(Math.round(n * 10) / 10);
 const sizeName = (s: string) => SIZES.find(([k]) => k === s)?.[1] ?? s;
@@ -16,6 +17,17 @@ const armorName = (it: Item) => {
   const rows = ARMORS.filter(([, k, b]) => k === it.armor && b === it.acBase);
   return (rows.find(([n]) => it.name.toLowerCase().includes(n.toLowerCase().replace(/ armor$/, ''))) ?? rows[0])?.[0] ?? '';
 };
+
+// An item's draft. A non-armor item shows its AC bonus grant, or an old acBonus that didn't convert (not counted
+// until saved here).
+function itemDraft(c: Character, it: Item): typeof BLANK {
+  const g = c.grants.find((x) => x.from === 'item:' + it.id && x.kind === 'ac' && x.acMode === 'bonus');
+  return {
+    name: it.name, armor: armorName(it), bonus: it.armor ? it.acBonus || 0 : 0,
+    itemAc: it.armor ? 0 : g ? num(c, g.val) : Math.round(it.acBonus || 0), needAtt: !!g?.needAtt,
+    wt: it.wt === undefined ? '' : String(it.wt), desc: it.desc || ''
+  };
+}
 
 const acNote = (it: Item) => {
   const bonus = it.acBonus ? fmt(it.acBonus) : '';
@@ -37,12 +49,18 @@ export function InventoryTab() {
     const a = ARMORS.find(([n]) => n === f.draft.armor);
     // A new item named like armor (e.g. "+1 Chain Mail") fills itself in. Editing never re-detects, so None sticks.
     const found = !f.editingId && !a ? detectArmor(name) : null;
-    // All keys always present: an undefined one clears the field when editing.
+    const armor = a?.[1] ?? found?.armor;
+    // All keys always present: an undefined one clears the field when editing. acBonus is only for armor and Shields;
+    // any other item's AC bonus is its AC bonus grant, which follows equip and attunement.
     const built = {
-      name, armor: a?.[1] ?? found?.armor, acBase: a?.[2] ?? found?.acBase, acBonus: (f.draft.bonus || found?.acBonus) || undefined,
+      name, armor, acBase: a?.[2] ?? found?.acBase, acBonus: armor ? (f.draft.bonus || found?.acBonus) || undefined : undefined,
       wt: parseWeight(f.draft.wt), desc: f.draft.desc.trim() || undefined
     };
-    update((p) => ({ inv: saveEntry<Item>(p.inv, built, f.editingId, { qty: 1, eq: false }) }));
+    const id = f.editingId ?? newId();
+    update((p) => ({
+      inv: saveEntry<Item>(p.inv, built, f.editingId, { qty: 1, eq: false, id }),
+      grants: itemAcGrants(p, id, armor ? 0 : f.draft.itemAc, f.draft.needAtt)
+    }));
     f.close();
   };
   const form = f.isOpen && (
@@ -55,9 +73,18 @@ export function InventoryTab() {
             {ARMORS.map(([n]) => <option key={n} value={n}>{n}</option>)}
           </select>
         </label>
-        <label className="field" style={{ flex: '1 1 80px' }}>AC bonus
-          <NumInput className="input" value={f.draft.bonus} min={-5} max={10} onCommit={(bonus) => f.set({ bonus })} />
-        </label>
+        {f.draft.armor ? (
+          <label className="field" style={{ flex: '1 1 80px' }}>AC bonus
+            <NumInput className="input" value={f.draft.bonus} min={-5} max={10} onCommit={(bonus) => f.set({ bonus })} />
+          </label>
+        ) : (
+          <>
+            <label className="field" style={{ flex: '1 1 80px' }}>AC bonus while equipped
+              <NumInput className="input" value={f.draft.itemAc} min={-5} max={10} onCommit={(itemAc) => f.set({ itemAc })} />
+            </label>
+            <label className="check" style={{ flex: '1 1 140px' }}><input type="checkbox" checked={f.draft.needAtt} onChange={(e) => f.set({ needAtt: e.target.checked })} />Needs attunement</label>
+          </>
+        )}
       </div>
       <div className="row wrap gap-6">
         <label className="field" style={{ flex: '1 1 100px' }}>Weight (lb each)
@@ -156,7 +183,7 @@ export function InventoryTab() {
                   </div>
                 </div>}
                 body={it.desc ? <span>{it.desc}</span> : undefined}
-                onEdit={() => f.openEdit(it.id, { name: it.name, armor: armorName(it), bonus: it.acBonus || 0, wt: it.wt === undefined ? '' : String(it.wt), desc: it.desc || '' })}
+                onEdit={() => f.openEdit(it.id, itemDraft(c, it))}
                 onRemove={() => update((p) => removeItem(p, it.id))} />
             )}
           </li>

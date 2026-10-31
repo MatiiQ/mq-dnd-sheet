@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import {
-  ABILITIES, SKILLS, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, splitTraining, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, NEW_FIELDS, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, removeItem, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
+  ABILITIES, SKILLS, itemAcGrants, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, splitTraining, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, NEW_FIELDS, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, removeItem, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
   setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, toggleFreeCast, undoHp
 } from './logic';
 import { oldIlyra, oldSeren } from './test-fixtures';
@@ -434,9 +434,10 @@ describe('armor class', () => {
       it_({ id: 'a', name: '+1 Chain Mail', armor: 'heavy', acBase: 16, acBonus: 1 }),
       it_({ id: 'b', name: 'Leather', armor: 'light', acBase: 11 }),
       it_({ id: 's', name: 'Shield', armor: 'shield', acBase: 2 }),
-      it_({ id: 'c', name: 'Cloak of Protection', acBonus: 1 }),
-      it_({ id: 'r', name: 'Ring of Protection', acBonus: 1, eq: false })
-    ] });
+      it_({ id: 'c', name: 'Cloak of Protection' }),
+      it_({ id: 'r', name: 'Ring of Protection', eq: false })
+    ], grants: [{ id: 'g1', kind: 'ac', name: 'Cloak of Protection', acMode: 'bonus', val: '1', from: 'item:c', needEq: true },
+      { id: 'g2', kind: 'ac', name: 'Ring of Protection', acMode: 'bonus', val: '1', from: 'item:r', needEq: true }] });
     expect(r.total).toBe(20); // 17 chain beats 15 leather, +2 shield, +1 cloak
     expect(r.parts.map((p) => [p.label, p.value])).toEqual([['+1 Chain Mail', 17], ['Shield', 2], ['Cloak of Protection', 1]]);
   });
@@ -574,12 +575,12 @@ describe('AC migration', () => {
       inv: [{ id: 'a', name: 'A', qty: 1, eq: true, armor: 'light', acBase: '12' },
         { id: 'b', name: 'B', qty: 1, eq: true, armor: 'robe', acBase: 11 },
         { id: 'c', name: 'C', qty: 1, eq: true, armor: 'heavy', acBase: 16, acBonus: '1' },
-        { id: 'd', name: 'D', qty: 1, eq: false, acBonus: 1 }],
+        { id: 'd', name: 'D', qty: 1, eq: false, acBonus: '1' }],
       spells: [{ id: 'x', name: 'X', lvl: 1, time: 'Action', range: 'Self', source: 'W', acFx: 'bonus', acVal: 'x' },
         { id: 'y', name: 'Y', lvl: 1, time: 'Action', range: 'Self', source: 'W', acFx: 'wall', acVal: 3 }]
     }));
     expect(c.inv.map((i) => [i.armor, i.acBase, i.acBonus])).toEqual([
-      [undefined, undefined, undefined], [undefined, undefined, undefined], ['heavy', 16, undefined], [undefined, undefined, 1]
+      [undefined, undefined, undefined], [undefined, undefined, undefined], ['heavy', 16, undefined], [undefined, undefined, undefined]
     ]);
     expect(c.spells.map((s) => [s.acFx, s.acVal])).toEqual([[undefined, undefined], [undefined, undefined]]);
     expect(Number.isFinite(armorClass(c).total)).toBe(true);
@@ -914,5 +915,75 @@ describe('speed, initiative, size and HP per level', () => {
     expect(sizeOf(make({ grants: [large] }))).toBe('large');
     expect(sizeOf(make({ size: 'large', grants: [{ ...large, size: 'medium' }] }))).toBe('large');
     expect(carryCapacity(make({ grants: [large] })).size).toBe('large');
+  });
+});
+
+describe('AC grants', () => {
+  const ringItem: Item = { id: 'r', name: 'Ring of Protection', qty: 1, eq: false };
+  const ringAc: Grant = { id: 'ga', kind: 'ac', name: '+1 AC', acMode: 'bonus', val: '1', from: 'item:r', srcKind: 'item', needEq: true, needAtt: true };
+  const leather = it_({ id: 'l', name: 'Leather Armor', armor: 'light', acBase: 11 });
+  const shield = it_({ id: 's', name: 'Shield', armor: 'shield', acBase: 2 });
+  it('an item bonus counts only while equipped and attuned', () => {
+    expect(ac({ inv: [ringItem], grants: [ringAc] }).total).toBe(14);
+    expect(ac({ inv: [{ ...ringItem, eq: true }], grants: [ringAc] }).total).toBe(14);
+    const on = ac({ inv: [{ ...ringItem, eq: true }], grants: [ringAc], attuneIds: ['r', '', ''] });
+    expect(on.total).toBe(15);
+    expect(on.parts.at(-1)).toMatchObject({ label: '+1 AC', value: 1, note: 'Item · Ring of Protection' });
+  });
+  it('conditional bonuses follow armor and Shield (Defense, Bracers of Defense)', () => {
+    const defense: Grant = { id: 'd', kind: 'ac', name: 'Defense', acMode: 'bonus', val: '1', when: 'armor', from: 'feature:f5' };
+    expect(ac({ grants: [defense] }).total).toBe(14);
+    expect(ac({ grants: [defense], inv: [leather] }).total).toBe(16);
+    const bracers: Grant = { id: 'b', kind: 'ac', name: 'Bracers', acMode: 'bonus', val: '2', when: 'noArmorNoShield', from: 'feature:f5' };
+    expect(ac({ grants: [bracers] }).total).toBe(16);
+    expect(ac({ grants: [bracers], inv: [shield] }).total).toBe(16); // +2 Shield, bracers off
+  });
+  it('an unarmored grant is a base candidate, lost with a Shield when it says so', () => {
+    const barb: Grant = { id: 'u', kind: 'ac', name: 'Unarmored Defense', acMode: 'unarmored', ab: 'con', from: 'feature:f5' };
+    expect(ac({ grants: [barb] }).total).toBe(16); // 10 + DEX 4 + CON 2
+    expect(ac({ grants: [barb] }).parts.at(-1)).toMatchObject({ label: 'Constitution', value: 2, note: 'Unarmored Defense' });
+    expect(ac({ grants: [barb], inv: [shield] }).total).toBe(18);
+    expect(ac({ grants: [{ ...barb, shieldOk: false }], inv: [shield] }).total).toBe(16);
+  });
+  it('a counted bonus adds nothing next to the custom bonus that holds it', () => {
+    const defense: Grant = { id: 'd', kind: 'ac', name: 'Defense', acMode: 'bonus', val: '1', from: 'feature:f5', counted: true };
+    expect(ac({ grants: [defense], acMods: [{ id: 'm', name: 'Defense +1', val: 1 }] }).total).toBe(15);
+  });
+  it('no longer counts acBonus on an item that is not armor', () => {
+    expect(ac({ inv: [it_({ name: 'Cloak', acBonus: 1 })] }).total).toBe(14);
+  });
+  it('the item form writes, updates or removes the item\'s single AC bonus grant', () => {
+    const c = make({ inv: [ringItem], grants: [] });
+    const one = itemAcGrants(c, 'r', 1, true);
+    expect(one).toEqual([{ id: expect.any(String), kind: 'ac', name: '+1 AC', acMode: 'bonus', val: '1', from: 'item:r', srcKind: 'item', needEq: true, needAtt: true }]);
+    const two = itemAcGrants({ ...c, grants: one }, 'r', 2, false);
+    expect(two).toEqual([{ id: one[0].id, kind: 'ac', name: '+2 AC', acMode: 'bonus', val: '2', from: 'item:r', srcKind: 'item', needEq: true }]);
+    expect(itemAcGrants({ ...c, grants: two }, 'r', 0, false)).toEqual([]);
+    expect(itemAcGrants(c, 'r', 0, false)).toBe(c.grants);
+  });
+  it('removing the item removes its grants', () => {
+    expect(removeItem(make({ inv: [ringItem], grants: [ringAc] }), 'r').grants).toEqual([]);
+  });
+});
+
+describe('AC bonus migration', () => {
+  const old = (p: Record<string, unknown>) => ({ ...blankCharacter(), ...p }) as Record<string, unknown>;
+  it('turns a bonus on an item that isn\'t armor into a grant that needs it equipped, once', () => {
+    const c = migrate(old({ inv: [{ id: 'r', name: 'Ring', qty: 1, eq: true, acBonus: 1 }, { id: 'm', name: '+1 Chain Mail', qty: 1, eq: true, armor: 'heavy', acBase: 16, acBonus: 1 }] }));
+    expect(c.inv.map((i) => i.acBonus)).toEqual([undefined, 1]);
+    expect(c.grants).toEqual([{ id: expect.any(String), kind: 'ac', name: '+1 AC', acMode: 'bonus', val: '1', from: 'item:r', srcKind: 'item', needEq: true }]);
+    expect(armorClass(c).total).toBe(18);
+    expect(migrate(c)).toEqual(c);
+  });
+  it('drops a zero bonus and keeps a broken one on the item, uncounted', () => {
+    const c = migrate(old({ inv: [{ id: 'a', name: 'A', qty: 1, eq: true, acBonus: 0 }, { id: 'b', name: 'B', qty: 1, eq: true, acBonus: 0.5 }] }));
+    expect(c.inv.map((i) => i.acBonus)).toEqual([undefined, 0.5]);
+    expect(c.grants).toEqual([]);
+    expect(armorClass(c).total).toBe(10);
+  });
+  it('keeps the AC total of an old save with both a typed ac and an item bonus', () => {
+    const c = migrate(old({ ac: 13, inv: [{ id: 'r', name: 'Ring', qty: 1, eq: true, acBonus: 1 }] }));
+    expect(armorClass(c).total).toBe(13);
+    expect(c.acMods).toEqual([{ id: expect.any(String), name: 'Adjustment (from old AC)', val: 2 }]);
   });
 });

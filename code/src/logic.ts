@@ -204,6 +204,10 @@ export function armorClass(c: Character): { total: number; parts: AcPart[] } {
     if (ab && (shieldOk || !shield)) {
       candidates.push([unarmored, dexPart(Infinity), { label: ABILITIES.find(([k]) => k === ab)![1], value: abilityMod(c, ab), note }]);
     }
+    // Unarmored base grants work like UNARMORED: 10 + DEX + an ability, lost with a Shield unless shieldOk.
+    for (const g of activeGrants(c, 'ac').filter((x) => x.acMode === 'unarmored' && x.ab && (x.shieldOk !== false || !shield))) {
+      candidates.push([unarmored, dexPart(Infinity), { label: ABILITIES.find(([k]) => k === g.ab)?.[1] ?? g.ab!, value: abilityMod(c, g.ab as Ability), note: g.name }]);
+    }
     // Mage Armor sets a base AC on a creature not wearing armor (PHB p.293).
     for (const sp of spells.filter((x) => x.acFx === 'base')) candidates.push([spellPart(sp), dexPart(Infinity)]);
     candidates.push([unarmored, dexPart(Infinity)]);
@@ -213,7 +217,9 @@ export function armorClass(c: Character): { total: number; parts: AcPart[] } {
   const parts: AcPart[] = [
     ...base,
     ...(shield ? [{ label: shield.name, value: (shield.acBase || 0) + (shield.acBonus || 0), note: 'shield' }] : []),
-    ...c.inv.filter((i) => i.eq && !i.armor && i.acBonus).map((i) => ({ label: i.name, value: i.acBonus!, note: 'equipped item' })),
+    // AC bonus grants (Ring of Protection, Defense): they follow equip, attunement and armor conditions through
+    // activeGrants. acBonus counts only on armor and Shields, inside their own part above.
+    ...activeGrants(c, 'ac').filter((g) => g.acMode === 'bonus').map((g) => ({ label: g.name, value: num(c, g.val), ...(sourceLabel(c, g) ? { note: sourceLabel(c, g) } : {}) })),
     ...spells.filter((sp) => sp.acFx === 'bonus').map(spellPart),
     ...c.acMods.map((m) => ({ label: m.name, value: m.val, note: 'custom' }))
   ].filter((p) => p.value !== 0);
@@ -678,6 +684,16 @@ export function migrate(data: unknown): Character {
   }));
   c.spells = c.spells.map(({ acFx, acVal, ...x }) => ({ ...x, ...(AC_EFFECTS.includes(acFx as AcEffect) && finite(acVal) ? { acFx, acVal } : {}) }));
   c.acOn = strings(c.acOn).filter((id) => c.spells.some((x) => x.id === id && x.acFx && !x.c));
+  // An AC bonus on an item that isn't armor becomes an AC bonus grant that needs the item equipped, as it counted before;
+  // only armor and Shields keep acBonus. A whole non-zero number converts; 0 goes; anything else stays on the item,
+  // uncounted, for the player to fix. Runs before the old-ac step, whose total must already include the grant.
+  c.inv = c.inv.map((i) => {
+    if (i.armor || i.acBonus === undefined) return i;
+    const { acBonus: v, ...rest } = i;
+    if (!Number.isInteger(v) || v === 0) return v === 0 ? rest : i;
+    c.grants = [...c.grants, { id: newId(), kind: 'ac', name: fmt(v) + ' AC', acMode: 'bonus', val: String(v), from: linkOf('item', i.id), srcKind: 'item', needEq: true }];
+    return rest;
+  });
   // Old saves had a typed `ac`. Fill armor and AC spells from their names (switching none on), then add the
   // difference as a custom bonus so the number doesn't move. New saves have no `ac`, so this runs once.
   if (typeof data.ac === 'number') {
@@ -778,9 +794,19 @@ export function splitTraining(feats: Feature[]): { feats: Feature[]; profs: Prof
 // Names match after trimming, ignoring case and treating ’ and ' as the same character.
 export const normName = (s: string) => s.trim().toLowerCase().replace(/’/g, "'");
 
-// The one way to remove an item: its attunement slot empties with it.
+// The item form's "AC bonus while equipped": the item's single AC bonus grant is written, updated or (at 0) removed.
+export function itemAcGrants(c: Character, itemId: string, v: number, needAtt: boolean): Grant[] {
+  const from = linkOf('item', itemId);
+  const old = c.grants.find((g) => g.from === from && g.kind === 'ac' && g.acMode === 'bonus');
+  if (!v) return old ? c.grants.filter((g) => g !== old) : c.grants;
+  const g: Grant = { id: old?.id ?? newId(), kind: 'ac', name: fmt(v) + ' AC', acMode: 'bonus', val: String(v), from, srcKind: 'item', needEq: true, ...(needAtt ? { needAtt } : {}) };
+  return old ? c.grants.map((x) => (x === old ? g : x)) : [...c.grants, g];
+}
+
+// The one way to remove an item: its attunement slot empties with it, and its grants go.
 export function removeItem(c: Character, id: string): Character {
-  return { ...c, inv: c.inv.filter((i) => i.id !== id), attuneIds: c.attuneIds.map((x) => (x === id ? '' : x)) };
+  const link = linkOf('item', id);
+  return { ...c, inv: c.inv.filter((i) => i.id !== id), attuneIds: c.attuneIds.map((x) => (x === id ? '' : x)), grants: c.grants.filter((g) => g.from !== link) };
 }
 
 // Top bar pills. [key, picker name, short label], in picker order.
