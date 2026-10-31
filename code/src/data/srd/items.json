@@ -1435,6 +1435,7 @@
     "page": 216,
     "rarity": "Rare",
     "attune": true,
+    "charges": "10",
     "recharge": "dawn",
     "regain": "1d6",
     "regainOn": "dawn"
@@ -1972,7 +1973,8 @@
     "cat": "magic",
     "page": 221,
     "rarity": "Rarity Varies",
-    "charges": "24"
+    "charges": "24",
+    "recharge": "none"
   },
   {
     "id": "item/fine-clothes",
@@ -2118,7 +2120,8 @@
     "cat": "magic",
     "page": 223,
     "rarity": "Uncommon",
-    "charges": "50"
+    "charges": "50",
+    "recharge": "none"
   },
   {
     "id": "item/gem-of-seeing",
@@ -2979,6 +2982,8 @@
     "page": 229,
     "rarity": "Legendary",
     "attune": true,
+    "charges": "1d3",
+    "recharge": "none",
     "grants": [
       {
         "id": "g1",
@@ -3388,6 +3393,8 @@
     "page": 233,
     "rarity": "Very Rare",
     "attune": true,
+    "charges": "1d8+1",
+    "recharge": "none",
     "base": "weapon"
   },
   {
@@ -4416,7 +4423,9 @@
     "desc": "While wearing this ring, you can expend 1 of its 3 charges to cast Wish from it. The ring becomes nonmagical when you use the last charge.",
     "cat": "magic",
     "page": 239,
-    "rarity": "Legendary"
+    "rarity": "Legendary",
+    "charges": "3",
+    "recharge": "none"
   },
   {
     "id": "item/ring-of-warmth",
@@ -4612,7 +4621,10 @@
     "page": 242,
     "rarity": "Legendary",
     "attune": true,
-    "charges": "5"
+    "charges": "5",
+    "recharge": "dawn",
+    "regain": "1",
+    "regainOn": "dawn"
   },
   {
     "id": "item/rod-of-rulership",
@@ -4703,6 +4715,7 @@
     "rarity": "Legendary",
     "attune": true,
     "charges": "12",
+    "recharge": "none",
     "grants": [
       {
         "id": "g1",
@@ -5418,7 +5431,8 @@
     "page": 248,
     "rarity": "Legendary",
     "attune": true,
-    "charges": "7"
+    "charges": "7",
+    "recharge": "none"
   },
   {
     "id": "item/talisman-of-the-sphere",
@@ -5441,7 +5455,8 @@
     "page": 249,
     "rarity": "Legendary",
     "attune": true,
-    "charges": "6"
+    "charges": "6",
+    "recharge": "none"
   },
   {
     "id": "item/tent",

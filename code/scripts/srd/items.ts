@@ -157,10 +157,13 @@ export function parseMagicItems(text: string): ItemEntry[] {
     const attune = /\(Requires Attunement[^)]*\)/.test(h);
     const rarity = splitTop(h.replace(/\s*\(Requires Attunement[^)]*\)/, '')).slice(1).join(', ');
     const e = item(name, { cat: 'magic', page: lines[s].page, desc, rarity, ...(attune ? { attune: true } : {}) });
-    const charges = /(?:has|have) (\d+) charges/.exec(desc);
-    if (charges) e.charges = charges[1];
-    const regain = /regains? (\d+d\d+(?: ?\+ ?\d+)?|\d+|all) expended charges daily at dawn/.exec(desc);
+    // "has 7 charges", "has 1d8 + 1 charges" (rolled when found), "starts with 10 charges", "1 of its 3 charges".
+    const charges = /(?:has|have|starts with) (\d+d\d+(?: ?\+ ?\d+)?|\d+) charges/.exec(desc) ?? /\d+ of its (\d+) charges/.exec(desc);
+    if (charges) e.charges = charges[1].replace(/ /g, '');
+    const regain = /regains? (\d+d\d+(?: ?\+ ?\d+)?|\d+|all) expended charges? daily at dawn/.exec(desc);
     if (regain) { e.recharge = 'dawn'; if (regain[1] !== 'all') { e.regain = regain[1].replace(/ /g, ''); e.regainOn = 'dawn'; } }
+    // Charges the text never gives back (Luck Blade, Gem of Brightness): the player resets them by hand.
+    else if (charges) e.recharge = 'none';
     const cap = /hold up to (\d+) pounds, not exceeding a volume of (\d+ cubic feet)/.exec(desc);
     if (cap) { e.xdim = true; e.cap = Number(cap[1]); e.capVol = cap[2]; }
     const wt = /weighs (\d+) pounds/.exec(desc);

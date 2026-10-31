@@ -46,3 +46,19 @@ export function valueAt(v: string, ctx: ValueCtx): number | string {
   if (dice.length) return dice.join('') + (sum > 0 ? `+${sum}` : sum < 0 ? `${sum}` : '');
   return min === undefined ? sum : Math.max(sum, Number(min));
 }
+
+// The lowest and highest total of rolled dice with whole-number terms ('1d3' → [1, 3], '1d8+1' → [2, 9]); null for
+// anything else, a value with no dice included (Luck Blade's starting charges are rolled when found).
+export function diceRange(v: string): [number, number] | null {
+  if (!/^\d*d\d+(?:[+-]\d*d?\d+)*$/.test(v) && !/^\d+(?:[+-]\d*d?\d+)+$/.test(v)) return null;
+  let lo = 0, hi = 0, dice = false;
+  for (const [, sign, term] of v.matchAll(/([+-]?)([^+-]+)/g)) {
+    const k = sign === '-' ? -1 : 1, d = /^(\d*)d(\d+)$/.exec(term);
+    if (d) {
+      const n = Number(d[1] || 1), m = Number(d[2]);
+      dice = true;
+      if (k > 0) { lo += n; hi += n * m; } else { lo -= n * m; hi -= n; }
+    } else { lo += k * Number(term); hi += k * Number(term); }
+  }
+  return dice ? [lo, hi] : null;
+}

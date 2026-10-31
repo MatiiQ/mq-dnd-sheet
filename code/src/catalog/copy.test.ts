@@ -9,7 +9,7 @@ import { mergeCatalog } from './merge';
 import type { Entry, FeatureEntry, ItemEntry, SpellEntry } from './schema';
 import {
   addFromCatalog, draftFromItem, featureCandidates, grantSpellName, withDetectedArmor, BLANK_ITEM, BLANK_SPELL, catForKind, countedDefault, draftFromSpell, spellFromForm, type SpellDraft, choicesOf, classIdOf, matchId, nestedEntries, subclassIdOf, type AddChoices, freeText, itemFromEntry, itemFromForm, missingPicks, needed, optionGroups, poolOptions, prereqMet, resolveChoices,
-  spellFromEntry, spellSummary, validPicks, type ItemDraft
+  spellFromEntry, spellSummary, validPicks, itemQuestions, type ItemDraft
 } from './copy';
 
 const cat = mergeCatalog(srdEntries, null);
@@ -71,6 +71,28 @@ describe('spellSummary', () => {
   it('names a chosen damage type as the list of types', () => {
     const base = spell('spell/fire-bolt');
     expect(spellSummary({ ...base, dice: '3d8', dtype: undefined, dtypes: 'Acid,Cold,Fire' })).toBe('3d8 Acid/Cold/Fire · ranged attack');
+  });
+});
+
+describe('rolled starting charges (plan 7, Task 8)', () => {
+  it('asks for the roll, with its range', () => {
+    expect(itemQuestions(cat, item('item/luck-blade')).filter((q) => q.key === 'charges')).toEqual([{ key: 'charges', label: 'Starting charges (roll 1d3)', min: 1, max: 3 }]);
+    expect(itemQuestions(cat, item('item/nine-lives-stealer')).find((q) => q.key === 'charges')).toMatchObject({ min: 2, max: 9 });
+    expect(itemQuestions(cat, item('item/wand-of-magic-missiles'))).toEqual([]);
+  });
+  it('sets count and maximum from the answer, and gives no counter without one', () => {
+    expect(itemFromEntry(item('item/nine-lives-stealer'), { charges: 5 })).toMatchObject({ count: 5, max: 5, recharge: 'none' });
+    const none = itemFromEntry(item('item/nine-lives-stealer'));
+    expect([none.count, none.max, none.maxV, none.recharge, none.regain, none.regainOn]).toEqual([undefined, undefined, undefined, undefined, undefined, undefined]);
+    expect(itemFromEntry(item('item/wand-of-magic-missiles'))).toMatchObject({ count: 7, max: 7, recharge: 'dawn' });
+  });
+  it('refuses a missing or out-of-range roll before anything changes', () => {
+    const blank = blankCharacter(), blade = item('item/nine-lives-stealer');
+    expect(() => addFromCatalog(blank, cat, blade, A())).toThrow(/charges/i);
+    expect(() => addFromCatalog(blank, cat, blade, A({}, undefined, { item: { charges: 1 } }))).toThrow(/charges/i);
+    expect(() => addFromCatalog(blank, cat, blade, A({}, undefined, { item: { charges: 10 } }))).toThrow(/charges/i);
+    expect(() => addFromCatalog(blank, cat, blade, A({}, undefined, { item: { charges: 2.5 } }))).toThrow(/charges/i);
+    expect(addFromCatalog(blank, cat, blade, A({}, undefined, { item: { charges: 9 } })).inv.at(-1)).toMatchObject({ name: 'Nine Lives Stealer', count: 9, max: 9 });
   });
 });
 

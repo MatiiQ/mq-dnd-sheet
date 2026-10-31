@@ -56,6 +56,15 @@ describe('magic items', () => {
     expect(by(list, 'Wand of Magic Missiles')).toMatchObject({ cat: 'magic', rarity: 'Uncommon', charges: '7', recharge: 'dawn', regain: '1d6+1', regainOn: 'dawn' });
     expect(by(list, 'Wand of Magic Missiles')!.attune).toBeUndefined();
   });
+  it('reads rolled, starting and "N of its M" charges, a singular regain, and no recharge when none comes back', () => {
+    const one = (type: string, body: string) => parseMagicItems(`Test Item\n${type}\n\n${body}\n`)[0];
+    expect(one('Weapon (Any Sword), Legendary', 'The weapon has 1d3 charges. While holding it, you can expend 1 charge.')).toMatchObject({ charges: '1d3', recharge: 'none' });
+    expect(one('Weapon (Any Sword), Very Rare', 'The weapon has 1d8 + 1 charges.')).toMatchObject({ charges: '1d8+1', recharge: 'none' });
+    expect(one('Ring, Legendary', 'While wearing this ring, you can expend 1 of its 3 charges to cast Wish from it.')).toMatchObject({ charges: '3', recharge: 'none' });
+    expect(one('Wondrous Item, Rare', 'The cube starts with 10 charges, and it regains 1d6 expended charges daily at dawn.')).toMatchObject({ charges: '10', recharge: 'dawn', regain: '1d6' });
+    expect(one('Rod, Legendary', 'The rod has 5 charges. The rod regains 1 expended charge daily at dawn.')).toMatchObject({ charges: '5', recharge: 'dawn', regain: '1', regainOn: 'dawn' });
+    expect(one('Wondrous Item, Rare', 'No charges here.').recharge).toBeUndefined();
+  });
   it('reads Bag of Holding’s capacity from its text', () => {
     expect(by(list, 'Bag of Holding')).toMatchObject({ rarity: 'Uncommon', xdim: true, cap: 500, capVol: '64 cubic feet', wt: 5 });
   });

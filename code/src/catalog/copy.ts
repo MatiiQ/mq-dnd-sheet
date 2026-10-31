@@ -5,6 +5,7 @@ import { ABILITIES, addGrants, detectArmor, effScore, hasProf, maxFields, maxOf,
 import type { AcEffect, Ability, ArmorKind, Character, Feature, FeatureGroup, Item, Linked, Recharge, Size, Spell, SrcKind } from '../types';
 import type { Catalog } from './merge';
 import { slug, type ChoiceSpec, type Entry, type FeatEntry, type FeatureEntry, type GrantSpec, type ItemEntry, type ProfEntry, type SpellEntry, type SpellPart, type TraitEntry } from './schema';
+import { diceRange } from './value';
 
 // Drops undefined values and empty strings, so a copied entry holds only what the catalog has.
 const compact = <T extends object>(x: T): T =>
@@ -45,16 +46,42 @@ const ITEM_COPY = ['cost', 'wt', 'wcat', 'wrange', 'dmg', 'dtype', 'props', 'thr
 // A catalog item as a character's item: one, not equipped. Charges: a whole number fills count and max; a formula
 // ('pb') is maxV with count 0 (addFromCatalog fills it to the maximum). `base` is copied only as an item id, never
 // the generic 'armor'/'weapon'. Grants are not copied here (addFromCatalog adds them, linked to the new item).
-export function itemFromEntry(e: ItemEntry): Omit<Item, 'id'> {
+// Rolled starting charges ('1d3', '1d8+1') are the add flow's answer (`item.charges`): without one the item gets no
+// counter at all (a preview, a test).
+export function itemFromEntry(e: ItemEntry, item?: ItemAnswers): Omit<Item, 'id'> {
   const out: Record<string, unknown> = { name: e.name, qty: 1, eq: false, cat: e.cat, desc: e.desc, cid: e.id };
   for (const k of ITEM_COPY) out[k] = e[k];
   if (e.base?.startsWith('item/')) out.base = e.base;
-  if (e.charges !== undefined) {
-    if (/^\d+$/.test(e.charges)) Object.assign(out, { count: Number(e.charges), max: Number(e.charges) });
+  const rolled = e.charges !== undefined && diceRange(e.charges) !== null;
+  if (e.charges !== undefined && (!rolled || item?.charges !== undefined)) {
+    if (rolled) Object.assign(out, { count: item!.charges, max: item!.charges });
+    else if (/^\d+$/.test(e.charges)) Object.assign(out, { count: Number(e.charges), max: Number(e.charges) });
     else Object.assign(out, { count: 0, maxV: e.charges });
     Object.assign(out, { recharge: e.recharge, regain: e.regain, regainOn: e.regainOn });
   }
   return compact(out) as Omit<Item, 'id'>;
+}
+
+// The add flow's answers about an item, next to the picks (plan 7): its starting charges when they are rolled.
+export interface ItemAnswers { base?: string; bonus?: 1 | 2 | 3; charges?: number }
+// One question the add flow asks about an item, in the order base, bonus, charges. `min`/`max` bound a number answer.
+export interface ItemQuestion { key: 'base' | 'bonus' | 'charges'; label: string; options?: { value: string; label: string }[]; min?: number; max?: number }
+// The questions an entry needs answered when it is added: the item questions screen and checkAnswers both read them.
+export function itemQuestions(_cat: Catalog, e: Entry): ItemQuestion[] {
+  if (e.kind !== 'item') return [];
+  const out: ItemQuestion[] = [];
+  const range = e.charges === undefined ? null : diceRange(e.charges);
+  if (range) out.push({ key: 'charges', label: `Starting charges (roll ${e.charges!.replace(/\+/g, ' + ')})`, min: range[0], max: range[1] });
+  return out;
+}
+// Throws when an item question is unanswered or out of range.
+function checkItemAnswers(cat: Catalog, e: Entry, a: ItemAnswers | undefined): void {
+  for (const q of itemQuestions(cat, e)) {
+    if (q.key === 'charges') {
+      const n = a?.charges;
+      if (n === undefined || !Number.isInteger(n) || n < q.min! || n > q.max!) throw new Error(`${e.name}: give its starting charges (${q.min}–${q.max})`);
+    }
+  }
 }
 
 export type ItemKind = 'none' | 'weapon' | 'armor' | 'container';
@@ -436,7 +463,7 @@ export function prereqMet(c: Character, prereq: string | undefined, adding: Entr
 // a species' traits, a lineage option, a feat picked by a choice), keyed by that entry's id; choice ids are unique only
 // within one entry. counted/links: by resolved spec id. group: the feature group to use instead of groupOf's. from:
 // the source the new entry hangs from.
-export interface AddChoices { picks: Record<string, string[]>; counted: Record<string, boolean>; links: Record<string, string>; nested?: Record<string, AddChoices>; group?: FeatureGroup; from?: string }
+export interface AddChoices { picks: Record<string, string[]>; counted: Record<string, boolean>; links: Record<string, string>; nested?: Record<string, AddChoices>; group?: FeatureGroup; from?: string; item?: ItemAnswers }
 const NO_ANSWERS: AddChoices = { picks: {}, counted: {}, links: {} };
 
 // The feature group an entry is added under; null for kinds that are never features.
@@ -480,6 +507,7 @@ function checkAnswers(cat: Catalog, c: Character, e: Entry, ans: AddChoices): vo
     const names = missing.map((id) => choicesOf(e).find((ch) => ch.id === id)?.name ?? id);
     throw new Error(`${e.name}: choose ${names.join(', ')}`);
   }
+  checkItemAnswers(cat, e, ans.item);
   for (const n of nestedEntries(cat, e, ans.picks)) checkAnswers(cat, c, n.entry, answersFor(ans, n));
 }
 
@@ -596,7 +624,7 @@ function addEntry(c: Character, cat: Catalog, e: Entry, ans: AddChoices): Charac
   }
   if (e.kind === 'item') {
     const id = newId();
-    const it: Item = { id, ...itemFromEntry(e) };
+    const it: Item = { id, ...itemFromEntry(e, ans.item) };
     if (it.maxV !== undefined) it.count = maxOf(c, it) ?? 0;
     return addWithSpells({ ...c, inv: [...c.inv, it] }, cat, linkOf('item', id), inputsOf(cat, e, ans, r.specs));
   }

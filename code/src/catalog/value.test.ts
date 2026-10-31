@@ -1,5 +1,5 @@
-import { expect, it } from 'vitest';
-import { isValue, valueAt, type ValueCtx } from './value';
+import { describe, expect, it } from 'vitest';
+import { diceRange, isValue, valueAt, type ValueCtx } from './value';
 
 const ctx = (level: number, wis = 2): ValueCtx => ({ level, pb: 2 + Math.floor((level - 1) / 4), mod: (a) => (a === 'wis' ? wis : 0) });
 it('evaluates numbers, PB, level and ability modifiers with a minimum', () => {
@@ -21,4 +21,19 @@ it('keeps dice expressions as text', () => {
 it('rejects malformed values', () => {
   expect(['', 'sixty', '1:2,1:3', '6:3,2:2', '1:2,lvl', 'wiz>=1', '2d', '1:pb', 'pb>=x', '--1', '1:-2', '1:2,5:d8'].map(isValue)).toEqual(Array(12).fill(false));
   expect(['60', 'pb', 'cha>=1', '1:2,5:3', '1d6+1', 'str+2', '-1d6'].map(isValue)).toEqual(Array(7).fill(true));
+});
+
+describe('diceRange', () => {
+  it('sums each term’s lowest and highest roll, constants as they are', () => {
+    expect(diceRange('1d3')).toEqual([1, 3]);
+    expect(diceRange('1d8+1')).toEqual([2, 9]);
+    expect(diceRange('2d6')).toEqual([2, 12]);
+    expect(diceRange('d4')).toEqual([1, 4]);
+  });
+  it('is null for anything that isn’t dice and whole numbers', () => {
+    expect(diceRange('pb')).toBeNull();
+    expect(diceRange('7')).toBeNull();
+    expect(diceRange('1d6+wis')).toBeNull();
+    expect(diceRange('1:1d6,5:1d8')).toBeNull();
+  });
 });
