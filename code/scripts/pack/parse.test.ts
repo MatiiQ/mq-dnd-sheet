@@ -23,6 +23,11 @@ describe('spells', () => {
     expect(parseSpellsMd(md('A creature you touch regains 2d8 Hit Points.'))[0].healMod).toBeUndefined();
     expect(parseSpellsMd(md('Make a melee spell attack: 1d8 + your spellcasting ability modifier Force damage.'))[0].healMod).toBeUndefined();
   });
+  it('reads the dice and type of a condensed damage line (the damage regex is built from the type list)', () => {
+    const md = '### Spark (PHB p.904)\n- **Level/School:** 1 Evocation\n- **Classes:** Wizard\n- **Casting Time:** Action\n- **Range:** 60 feet\n' +
+      '- **Components:** V\n- **Duration:** Instantaneous\n- **Effect:** One creature makes a Dex save or takes 2d10 Lightning damage.\n';
+    expect(parseSpellsMd(md)[0]).toMatchObject({ fx: 'damage', dice: '2d10', dtype: 'Lightning', save: 'dex' });
+  });
   it('reads a ritual marked on the level line', () => {
     const [bell] = parseSpellsMd('### Quiet Bell (PHB p.904)\n- **Level/School:** 1 Divination (Ritual)\n- **Classes:** Wizard\n- **Casting Time:** 1 minute\n' +
       '- **Range:** Self\n- **Components:** V\n- **Duration:** 1 hour\n- **Effect:** A soundless chime rings.\n');

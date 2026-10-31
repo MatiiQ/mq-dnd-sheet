@@ -1,13 +1,14 @@
 // SRD spell descriptions → SpellEntry. Input: the plain pdftotext output (reading order).
-import { catalogId, slug, type SpellEntry } from '../../src/catalog/schema.ts';
+import { catalogId, DAMAGE_TYPES, slug, type SpellEntry } from '../../src/catalog/schema.ts';
 import type { Ability } from '../../src/types.ts';
 import { paragraphs, srdLines } from './text.ts';
 
 const LEVEL = /^(?:Level (\d) (\w+)|(\w+) Cantrip) \(/;
 const FIELD = /^(Casting Time|Range|Components?|Duration): ?(.*)$/;
 export const ABILITY_NAMES: Record<string, Ability> = { Strength: 'str', Dexterity: 'dex', Constitution: 'con', Intelligence: 'int', Wisdom: 'wis', Charisma: 'cha' };
-export const DAMAGE_TYPES = 'Acid|Bludgeoning|Cold|Fire|Force|Lightning|Necrotic|Piercing|Poison|Psychic|Radiant|Slashing|Thunder';
-const DAMAGE = new RegExp(`(\\d+d\\d+(?: ?\\+ ?\\d+)?) (${DAMAGE_TYPES}) damage`);
+// The damage types as a regex alternation (Acid|Bludgeoning|…), for both spell builders.
+export const DAMAGE_ALT = DAMAGE_TYPES.join('|');
+const DAMAGE = new RegExp(`(\\d+d\\d+(?: ?\\+ ?\\d+)?) (${DAMAGE_ALT}) damage`);
 const HEALING = /regains? (?:a number of )?Hit Points equal to (\d+d\d+)|regains? (\d+d\d+(?: ?\+ ?\d+)?) Hit Points|regains? .{0,40}Hit Points/;
 const unbalanced = (s: string) => (s.match(/\(/g) ?? []).length > (s.match(/\)/g) ?? []).length;
 const first = (text: string, res: RegExp[]) => res.map((re) => re.exec(text)).map((m) => m?.index ?? Infinity);

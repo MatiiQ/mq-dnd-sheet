@@ -8,7 +8,7 @@ import type { Ability, ArmorKind } from '../../src/types.ts';
 import { skillKey } from '../lib/skills.ts';
 import { profList } from '../srd/classes.ts';
 import { playName, pounds, weaponProps } from '../srd/items.ts';
-import { DAMAGE_TYPES } from '../srd/spells.ts';
+import { DAMAGE_ALT } from '../srd/spells.ts';
 
 const ABILITY: Record<string, Ability> = { str: 'str', dex: 'dex', con: 'con', int: 'int', wis: 'wis', cha: 'cha' };
 const ab = (name: string) => ABILITY[name.trim().slice(0, 3).toLowerCase()];
@@ -47,7 +47,7 @@ function named<T>(b: Block, f: () => T): T {
 }
 const none = (v: string | undefined) => !v || v === '—' || v === '-' || /^none$/i.test(v);
 
-const DAMAGE = new RegExp(`(\\d+d\\d+(?: ?\\+ ?\\d+)?) (${DAMAGE_TYPES}) damage`);
+const DAMAGE = new RegExp(`(\\d+d\\d+(?: ?\\+ ?\\d+)?) (${DAMAGE_ALT}) damage`);
 const SAVE = /\b(Str|Dex|Con|Int|Wis|Cha)[a-z]*\.? (?:save|saving throw)/;
 export function parseSpellsMd(md: string): SpellEntry[] {
   return blocks(md).filter((b) => b.depth === 3 && b.lines.some((l) => l.startsWith('- **Level/School:**'))).map((b) => named(b, () => {

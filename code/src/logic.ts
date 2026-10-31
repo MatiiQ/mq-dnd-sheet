@@ -1,6 +1,6 @@
 // D&D 2024 rules used by the sheet. Pure functions: each takes a character and returns the next one.
 import { blankCharacter, sampleCharacter } from './defaults';
-import { grantErrors, ITEM_CATS, type GrantSpec } from './catalog/schema';
+import { DAMAGE_TYPES, grantErrors, ITEM_CATS, type GrantSpec } from './catalog/schema';
 import { isValue, valueAt, type ValueCtx } from './catalog/value';
 import { PROF_NAMES, type ProfCat } from './catalog/names';
 import { setHands } from './hands';
@@ -46,7 +46,7 @@ export const CONDITION_RULES: Record<string, string> = {
   Unconscious: 'Incapacitated and Prone; you drop what you hold. Speed 0. Auto-fail STR and DEX saves. Attacks against you have Advantage; hits within 5 ft are critical hits.'
 };
 export const CONDITIONS = Object.keys(CONDITION_RULES);
-export const DAMAGE_TYPES = ['Acid', 'Bludgeoning', 'Cold', 'Fire', 'Force', 'Lightning', 'Necrotic', 'Piercing', 'Poison', 'Psychic', 'Radiant', 'Slashing', 'Thunder'];
+export { DAMAGE_TYPES };
 // Conditions a defense can name: the list above plus Exhaustion, which the sheet tracks as a level.
 export const CONDITION_OPTIONS = [...CONDITIONS.slice(0, 3), 'Exhaustion', ...CONDITIONS.slice(3)];
 const INCAPACITATING = ['Incapacitated', 'Paralyzed', 'Petrified', 'Stunned', 'Unconscious'];
