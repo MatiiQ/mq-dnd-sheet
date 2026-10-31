@@ -4,9 +4,9 @@ import { mergeCatalog } from './catalog/merge';
 import type { ItemEntry } from './catalog/schema';
 import { itemFromEntry } from './catalog/copy';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
-import { hasMastery, masterySlots, weaponAbility, weaponAttacks, weaponProficient, type Use } from './actions';
+import { attacksPerAction, hasMastery, lightExtra, masterySlots, unarmedStrike, weaponAbility, weaponAttacks, weaponProficient, type Use } from './actions';
 import { weaponKind } from './hands';
-import { migrate, normalize } from './logic';
+import { addGrants, migrate, normalize } from './logic';
 import { applyPatch } from './storage';
 import { dagger, dart, handaxe, handCrossbow, longbow, longsword, quarterstaff, rapier, shield, shortsword, spear } from './test-fixtures';
 import type { Character, Grant, Item, Prof } from './types';
@@ -163,5 +163,62 @@ describe('weapon attacks', () => {
     const quick = withGrants(fighter({ str: 10, dex: 16 }, [quarterstaff({ id: 'qs' })], ['Simple weapons']), ma);
     expect(weaponAbility(quick, quick.inv[0], 'melee')).toBe('dex');
     expect(use(quick, quick.inv[0], 'melee').dmg).toBe('1d6+3');
+  });
+});
+
+describe('Unarmed Strike (PHB p.377)', () => {
+  it('uses Strength and PB, with the Grapple and Shove DC', () => {
+    expect(unarmedStrike(ilyra())).toMatchObject({ name: 'Unarmed Strike', hit: 4, dmg: '2', dtype: 'Bludgeoning', dc: 12 });
+    expect(unarmedStrike(druidSample())).toMatchObject({ hit: 3, dmg: '0', dc: 11 });
+    expect(unarmedStrike(fighter({ str: 6 }, [])).dmg).toBe('0');
+  });
+  it('uses the Martial Arts die and the better ability (PHB p.101)', () => {
+    const ma = grant({ kind: 'unarmed', name: 'Martial Arts', die: '1:1d6,5:1d8,11:1d10,17:1d12', abs: 'str,dex', when: 'noArmorNoShield' });
+    const monk = withGrants(fighter({ str: 10, dex: 16 }, [], ['Simple weapons'], { level: 5 }), ma);
+    expect(unarmedStrike(monk)).toMatchObject({ hit: 6, dmg: '1d8+3', dc: 14 });
+  });
+  it('adds bonuses for Unarmed Strikes from an equipped, attuned item', () => {
+    const c = withGrants(ilyra({ inv: [...sampleCharacter().inv, { id: 'gl', name: 'Gloves', qty: 1, eq: true }], attuneIds: ['i9', 'gl', ''] }),
+      grant({ id: 'ga', kind: 'atkBonus', name: '+1 to Unarmed Strikes', val: '1', weapon: 'unarmed-strike', from: 'item:gl', needEq: true, needAtt: true } as Grant),
+      grant({ id: 'gb', kind: 'dmgBonus', name: '+1 damage', val: '1', weapon: 'unarmed-strike', from: 'item:gl', needEq: true, needAtt: true } as Grant),
+      grant({ id: 'gc', kind: 'atkBonus', name: 'Archery', val: '2', wrange: 'ranged' }));
+    expect(unarmedStrike(c)).toMatchObject({ hit: 5, dmg: '3', dc: 12 });
+  });
+  it('deals Demon Armor’s Slashing damage', () => {
+    const e = cat.byId.get('item/demon-armor') as ItemEntry;
+    const base = ilyra({ inv: [...sampleCharacter().inv.filter((i) => i.id !== 'i1'), catItem('item/demon-armor')], attuneIds: ['i9', 'demon-armor', ''] });
+    const c = addGrants(base, 'item:demon-armor', e.grants!.map((spec) => ({ spec: spec as Exclude<typeof spec, { kind: 'choice' }> })));
+    expect(unarmedStrike(c)).toMatchObject({ hit: 5, dmg: '1d8+2', dtype: 'Slashing' });
+  });
+});
+
+describe('attacks per Attack action', () => {
+  it('reads Extra Attack (PHB p.120)', () => {
+    expect(attacksPerAction(ilyra())).toBe(2);
+    expect(attacksPerAction(ilyra({ grants: sampleCharacter().grants.filter((g) => g.kind !== 'attacks') }))).toBe(1);
+  });
+});
+
+describe('the Light extra attack (PHB p.213)', () => {
+  // DEX 18 (+4), STR 10, PB 3, two Weapon Mastery picks.
+  const duo = (inv: Item[], hands: string[], mastery: string[] = [], ...gs: Grant[]) => withGrants(
+    fighter({ dex: 18, str: 10 }, inv, undefined, { level: 5, hands, mastery }),
+    grant({ id: 'gm', kind: 'prof', name: 'Weapon Mastery', cat: 'mastery', val: '2' }), ...gs);
+  const twf = grant({ id: 'gt2', kind: 'lightExtra', name: 'Two-Weapon Fighting', addMod: true });
+  it('needs two Light weapons in hand and adds no positive modifier', () => {
+    const pair = duo([dagger({ id: 'd', qty: 2 })], ['d', 'd']);
+    expect(lightExtra(pair)).toMatchObject({ itemId: 'd', dmg: '1d4', econ: 'bonus', nick: false });
+    expect(lightExtra(duo([dagger({ id: 'd', qty: 2 })], ['d', 'd'], [], twf))!.dmg).toBe('1d4+4');
+    expect(lightExtra(applyPatch(pair, (s) => ({ inv: s.inv.map((i) => ({ ...i, qty: 1 })) })))).toBeNull();
+    expect(lightExtra(duo([shortsword({ id: 'ss' })], ['ss']))).toBeNull();
+    expect(lightExtra(duo([shortsword({ id: 'ss' }), handaxe({ id: 'ax' })], ['ss', 'ax']))!.itemId).toBe('ax');
+    expect(lightExtra(duo([shortsword({ id: 'ss' }), longsword({ id: 'ls' })], ['ss', 'ls']))).toBeNull();
+    expect(lightExtra(duo([shortsword({ id: 'ss' }), dagger({ id: 'd' })], ['ss', 'd']))!.itemId).toBe('d');
+  });
+  it('is part of the Attack action with Nick (PHB p.214)', () => {
+    const nick = lightExtra(duo([dagger({ id: 'd', qty: 2 })], ['d', 'd'], ['dagger']))!;
+    expect(nick).toMatchObject({ nick: true, econ: 'action', note: 'part of the Attack action, once per turn' });
+    expect(lightExtra(duo([dagger({ id: 'd' }), shortsword({ id: 'ss' })], ['d', 'ss'], ['dagger']))).toMatchObject({ itemId: 'd', nick: true });
+    expect(lightExtra(duo([dagger({ id: 'd' }), shortsword({ id: 'ss' })], ['d', 'ss'], []))).toMatchObject({ itemId: 'ss', nick: false });
   });
 });

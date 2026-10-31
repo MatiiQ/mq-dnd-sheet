@@ -1580,6 +1580,7 @@
         "name": "Unarmed Strike 1d8 Slashing",
         "die": "1d8",
         "abs": "str",
+        "dtype": "Slashing",
         "needEq": true,
         "needAtt": true
       },

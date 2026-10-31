@@ -69,7 +69,7 @@ export interface GrantSpec {
   size?: Size;                                                                      // size
   econ?: 'action' | 'bonus' | 'reaction' | 'free' | 'other'; res?: string; note?: string;   // action (also dice)
   dice?: string; dtype?: string; on?: string; perTurn?: boolean;                    // xdmg
-  die?: string; abs?: string;                                                       // unarmed, atkAbil
+  die?: string; abs?: string;                                                       // unarmed (also dtype), atkAbil
   wrange?: 'melee' | 'ranged'; amode?: 'melee' | 'ranged'; prop?: string; weapon?: string; oneHand?: boolean;   // atkBonus, dmgBonus
   cantrip?: boolean;                                                                // dmgBonus: damage of the entry's class cantrips
   addMod?: boolean;                                                                 // lightExtra
@@ -144,7 +144,8 @@ const GRANTS: Record<GrantKind, Record<string, [Check, boolean]>> = {
   action: { econ: [oneOf('action', 'bonus', 'reaction', 'free', 'other'), true], res: [str, false], note: [str, false], dice: [value, false] },
   xdmg: { dice: [value, true], dtype: [str, false], on: [str, true], perTurn: [bool, false] },
   attacks: { val: [value, true] },
-  unarmed: { die: [value, true], abs: [str, true] },
+  // dtype: the damage type when not Bludgeoning (Demon Armor: "your unarmed strikes deal 1d8 Slashing").
+  unarmed: { die: [value, true], abs: [str, true], dtype: [str, false] },
   atkBonus: { val: [value, true], wrange: [RANGE_KIND, false], amode: [RANGE_KIND, false], prop: [str, false], weapon: [str, false], oneHand: [bool, false] },
   dmgBonus: { val: [value, true], wrange: [RANGE_KIND, false], amode: [RANGE_KIND, false], prop: [str, false], weapon: [str, false], oneHand: [bool, false], cantrip: [bool, false] },
   lightExtra: { addMod: [bool, true] },

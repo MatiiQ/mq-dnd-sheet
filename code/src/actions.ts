@@ -113,29 +113,90 @@ const isShillelagh = (c: Character, g: Grant) => {
 export function weaponAttacks(c: Character, it: Item): WeaponAttack[] {
   const uses: Use[] = it.wrange === 'ranged' ? ['ranged']
     : ['melee', ...(hasProp(it, 'thrown') ? ['thrown' as Use] : []), ...(versatile(it) ? ['two-handed' as Use] : [])];
+  return uses.map((use) => attackFor(c, it, use).attack);
+}
+
+function attackFor(c: Character, it: Item, use: Use): { attack: WeaponAttack; die: string; abilityPart: boolean } {
   const inHand = c.hands.filter((id) => id === it.id).length;
-  const kind = weaponKind(it), pb = profBonus(c.level), ctx = valueCtx(c);
-  return uses.map((use) => {
-    const ab = weaponAbility(c, it, use), mod = abilityMod(c, ab);
-    const magic = it.magic ? [{ label: 'Magic', value: it.magic }] : [];
-    const hitParts: AcPart[] = [{ label: abilityName(ab), value: mod }, ...(weaponProficient(c, it) ? [{ label: 'Proficiency Bonus', value: pb }] : []),
-      ...magic, ...grantParts(c, 'atkBonus', it, use)].filter((p) => p.value !== 0);
-    const dmgParts: AcPart[] = [{ label: abilityName(ab), value: mod }, ...magic, ...grantParts(c, 'dmgBonus', it, use)].filter((p) => p.value !== 0);
-    // An override's die (evaluated at the level with valueAt: num would read dice as 0) replaces the grip's die when its
-    // average is larger, on either grip: Shillelagh's d12 beats a Quarterstaff's d6 and its two-handed d8.
-    let die = (use === 'two-handed' ? it.vers : it.dmg) ?? '';
-    const overs = overridesFor(c, it, use);
-    for (const g of overs) {
-      const d = g.die ? valueAt(g.die, ctx) : 0;
-      if (typeof d === 'string' && average(d) > average(die)) die = d;
-    }
-    // Shillelagh: "Force damage or the weapon's normal damage type (your choice)" (PHB p.316).
-    const dtype = overs.some((g) => isShillelagh(c, g)) ? [it.dtype, 'Force'].filter(Boolean).join(' or ') : it.dtype ?? '';
-    const held = use === 'two-handed' ? inHand >= 2 : inHand >= 1;
-    return {
-      itemId: it.id, name: it.name, use, econ: 'action' as Econ, hit: sum(hitParts), hitParts, dmg: diceText(die, sum(dmgParts)), dmgParts, dtype,
-      range: rangeOf(it, use), props: it.props ?? '', ...(it.mastery && hasMastery(c, kind) ? { mastery: it.mastery } : {}), held,
-      ...(USE_NOTE[use] ? { note: USE_NOTE[use] } : {})
-    };
-  });
+  const pb = profBonus(c.level), ctx = valueCtx(c);
+  const ab = weaponAbility(c, it, use), mod = abilityMod(c, ab);
+  const magic = it.magic ? [{ label: 'Magic', value: it.magic }] : [];
+  const hitParts: AcPart[] = [{ label: abilityName(ab), value: mod }, ...(weaponProficient(c, it) ? [{ label: 'Proficiency Bonus', value: pb }] : []),
+    ...magic, ...grantParts(c, 'atkBonus', it, use)].filter((p) => p.value !== 0);
+  const dmgParts: AcPart[] = [{ label: abilityName(ab), value: mod }, ...magic, ...grantParts(c, 'dmgBonus', it, use)].filter((p) => p.value !== 0);
+  // An override's die (evaluated at the level with valueAt: num would read dice as 0) replaces the grip's die when its
+  // average is larger, on either grip: Shillelagh's d12 beats a Quarterstaff's d6 and its two-handed d8.
+  let die = (use === 'two-handed' ? it.vers : it.dmg) ?? '';
+  const overs = overridesFor(c, it, use);
+  for (const g of overs) {
+    const d = g.die ? valueAt(g.die, ctx) : 0;
+    if (typeof d === 'string' && average(d) > average(die)) die = d;
+  }
+  // Shillelagh: "Force damage or the weapon's normal damage type (your choice)" (PHB p.316).
+  const dtype = overs.some((g) => isShillelagh(c, g)) ? [it.dtype, 'Force'].filter(Boolean).join(' or ') : it.dtype ?? '';
+  const held = use === 'two-handed' ? inHand >= 2 : inHand >= 1;
+  const attack: WeaponAttack = {
+    itemId: it.id, name: it.name, use, econ: 'action', hit: sum(hitParts), hitParts, dmg: diceText(die, sum(dmgParts)), dmgParts, dtype,
+    range: rangeOf(it, use), props: it.props ?? '', ...(it.mastery && hasMastery(c, weaponKind(it)) ? { mastery: it.mastery } : {}), held,
+    ...(USE_NOTE[use] ? { note: USE_NOTE[use] } : {})
+  };
+  return { attack, die, abilityPart: mod !== 0 };
+}
+
+// Unarmed Strike (PHB p.377): to-hit Strength modifier + PB; damage 1 + Strength modifier, Bludgeoning; Grapple and
+// Shove save DC 8 + Strength modifier + PB. An unarmed grant (Martial Arts, PHB p.101) offers its abilities (the best
+// one counts, for the DC too) and its die at the level, which replaces the 1 when its grant is the one used; its dtype,
+// if any, replaces Bludgeoning (Demon Armor). Attack and damage bonus grants count only when their weapon list names
+// 'unarmed-strike'; a range, property or one-hand filter never matches it, a melee attack mode does. A damage total
+// below 0 shows 0 (PHB p.27: no negative damage).
+export function unarmedStrike(c: Character): WeaponAttack & { dc: number } {
+  const ctx = valueCtx(c), pb = profBonus(c.level);
+  const grants = activeGrants(c, 'unarmed');
+  const abs: Ability[] = ['str', ...grants.flatMap((g) => (g.abs ?? '').split(',').map((a) => a.trim()).filter((a): a is Ability => ABILITIES.some(([k]) => k === a)))];
+  const ab = abs.reduce((b, a) => (abilityMod(c, a) > abilityMod(c, b) ? a : b), 'str' as Ability), mod = abilityMod(c, ab);
+  let die = '', dtype = 'Bludgeoning';
+  for (const g of grants) {
+    const d = valueAt(g.die ?? '', ctx);
+    if (typeof d === 'string' && average(d) > Math.max(1, average(die))) { die = d; dtype = g.dtype || 'Bludgeoning'; }
+  }
+  const fits = (g: Grant) => !!g.weapon && g.weapon.split(',').map((x) => x.trim()).includes('unarmed-strike') && !g.wrange && !g.prop && !g.oneHand && g.amode !== 'ranged';
+  const bonus = (kind: 'atkBonus' | 'dmgBonus') => activeGrants(c, kind).filter(fits).map((g) => ({ label: g.name, value: num(c, g.val) }));
+  const hitParts = [{ label: abilityName(ab), value: mod }, { label: 'Proficiency Bonus', value: pb }, ...bonus('atkBonus')].filter((p) => p.value !== 0);
+  const dmgParts = [...(die ? [] : [{ label: 'Unarmed Strike', value: 1 }]), { label: abilityName(ab), value: mod }, ...bonus('dmgBonus')].filter((p) => p.value !== 0);
+  const total = sum(dmgParts);
+  return {
+    itemId: '', name: 'Unarmed Strike', use: 'melee', econ: 'action', hit: sum(hitParts), hitParts,
+    dmg: die ? diceText(die, total) : String(Math.max(0, total)), dmgParts, dtype, range: 'Melee 5 ft', props: '', held: true, dc: 8 + mod + pb
+  };
+}
+
+// Attacks per Attack action: the highest active Extra Attack grant ("attack twice", PHB p.120), else 1. Extra Attack
+// from several classes doesn't stack (PHB p.44), so the highest wins.
+export const attacksPerAction = (c: Character) => Math.max(1, ...activeGrants(c, 'attacks').map((g) => num(c, g.val)));
+
+// The Light property's extra attack (PHB p.213): only with two Light weapons in hand (two rows, or one row with 2 or
+// more held twice: "a different Light weapon" means another weapon, not another kind). It is a Bonus Action and adds no
+// ability modifier to damage unless it is negative; Two-Weapon Fighting (a lightExtra grant with addMod, PHB p.210)
+// adds it. Nick (PHB p.214): "When you make the extra attack of the Light property, you can make it as part of the
+// Attack action". A mastery property applies to attacks with the weapon that has it, so the app reads it as: the extra
+// attack's weapon has Nick and the character has its mastery. Either held weapon may make the extra attack, so it is the
+// one whose Nick counts when exactly one does (at the table: attack with the Nick weapon second), else the newer one.
+export function lightExtra(c: Character): (WeaponAttack & { nick: boolean }) | null {
+  const held = weaponsHeld(c);
+  if (held.length !== 2 || held.some((w) => w.two)) return null;
+  const items = held.map((w) => c.inv.find((i) => i.id === w.id)!);
+  if (!items.every((it) => it && hasProp(it, 'light'))) return null;
+  const nickOf = (it: Item) => it.mastery === 'nick' && hasMastery(c, weaponKind(it));
+  const nicks = items.filter(nickOf);
+  const it = nicks.length === 1 ? nicks[0] : items[1];
+  const use: Use = it.wrange === 'ranged' ? 'ranged' : 'melee';
+  const { attack, die, abilityPart } = attackFor(c, it, use);
+  const mod = abilityMod(c, weaponAbility(c, it, use));
+  const addMod = activeGrants(c, 'lightExtra').some((g) => g.addMod);
+  const dmgParts = abilityPart && mod > 0 && !addMod ? attack.dmgParts.slice(1) : attack.dmgParts;
+  const nick = nickOf(it);
+  return {
+    ...attack, dmgParts, dmg: diceText(die, sum(dmgParts)), econ: nick ? 'action' : 'bonus', nick,
+    ...(nick ? { note: 'part of the Attack action, once per turn' } : { note: 'Bonus Action, after the Attack action' })
+  };
 }
