@@ -180,7 +180,8 @@ describe('Wizard (PHB p.165–174)', () => {
   it('Arcane Recovery, Scholar Expertise, Signature Spells', () => {
     expect(grants(F('wizard', 'arcane-recovery'))[0]).toMatchObject({ kind: 'resource', max: '1', recharge: 'long' });
     expect(choices(F('wizard', 'scholar'))[0]).toMatchObject({ pick: 1, pool: 'skill:arcana|history|investigation|medicine|nature|religion' });
-    expect(grants(F('wizard', 'signature-spells'))).toContainEqual(expect.objectContaining({ kind: 'resource', max: '2', recharge: 'short' }));
+    // One free cast per spell: the resource is copied once per picked spell (PHB p.167, "cast each of them once").
+    expect(grants(F('wizard', 'signature-spells'))).toContainEqual(expect.objectContaining({ kind: 'resource', max: '1', recharge: 'short' }));
   });
   it('Evoker has a grant at every level', () => expect(subLevels('wizard', 'evoker')).toEqual([]));
 });

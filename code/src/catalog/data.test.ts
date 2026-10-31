@@ -109,6 +109,15 @@ describe('SRD classes', () => {
     expect(list.map((c) => c.name)).toEqual(['Barbarian', 'Bard', 'Cleric', 'Druid', 'Fighter', 'Monk', 'Paladin', 'Ranger', 'Rogue', 'Sorcerer', 'Warlock', 'Wizard']);
     expect((classes as Entry[]).filter((e) => e.kind === 'subclass')).toHaveLength(12);
   });
+  it('name every Fighting Style choice after its pool', () => {
+    const styles = (classes as Entry[]).filter((e) => /^feature\/[a-z]+\/fighting-style$/.test(e.id));
+    expect(styles.length).toBeGreaterThanOrEqual(3);
+    for (const f of styles) expect([f.id, specs(f).filter((s) => s.kind === 'choice').map((s) => s.name)]).toEqual([f.id, ['Fighting Style feat']]);
+  });
+  it('give each Signature Spell one free cast', () => {
+    const g2 = flat((classes as Entry[]).find((e) => e.id === 'feature/wizard/signature-spells')!).find((g) => g.kind === 'resource');
+    expect(g2!.max).toBe('1');
+  });
   it('offer skills by the app’s keys and mark only the Warlock as Pact Magic', () => {
     const keys = SKILLS.map(([k]) => k);
     for (const c of list) {
