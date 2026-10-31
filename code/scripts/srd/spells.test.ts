@@ -83,3 +83,9 @@ it('skips a saving throw the spell gives Advantage or Disadvantage on, and takes
   // A Disadvantage after the save doesn't count.
   expect(block('The target must succeed on a Wisdom saving throw or take 1d6 Psychic damage and have Disadvantage on the next attack roll it makes.').save).toBe('wis');
 });
+
+it('reads the upcast die from "for every slot level above" too (Spiritual Weapon)', () => {
+  const sw = parseSpells('Test Spell\n\nLevel 2 Evocation (Cleric)\n\nCasting Time: Bonus Action\nRange: 60 feet\nComponents: V, S\nDuration: 1 minute\n\n' +
+    'On a hit, the target takes Force damage equal to 1d8 plus your spellcasting ability modifier.\nUsing a Higher-Level Spell Slot. The damage increases by 1d8 for every slot level above 2.\n')[0];
+  expect(sw.scale).toBe('1d8/slot');
+});

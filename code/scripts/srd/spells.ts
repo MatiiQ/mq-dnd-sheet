@@ -92,7 +92,7 @@ export function parseSpells(text: string): SpellEntry[] {
     const dmg = damageOf(body), heal = HEALING.exec(body), dmgAt = dmg?.at ?? Infinity;
     const fx = dmgAt === Infinity && healAt === Infinity ? 'other' : dmgAt <= healAt ? 'damage' : 'healing';
     const dice = fx === 'damage' ? dmg!.dice : fx === 'healing' ? (heal![1] ?? heal![2])?.replace(/ /g, '') : undefined;
-    const slotDice = higher && /increases? by (\d+d\d+) for each spell slot level above/.exec(higher)?.[1];
+    const slotDice = higher && /increases? by (\d+d\d+) for (?:each|every) (?:spell )?slot level above/.exec(higher)?.[1];
     const scale = lvl === 0 ? (/^Cantrip Upgrade\..*\b5\b/m.test(body) ? 'cantrip' : undefined) : slotDice ? `${slotDice}/slot` : undefined;
     const name = block[0].trim();
     const e: SpellEntry = {

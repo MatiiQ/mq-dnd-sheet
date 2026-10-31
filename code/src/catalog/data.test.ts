@@ -88,6 +88,15 @@ describe('SRD spell saves (plan 7, Task 6)', () => {
   });
 });
 
+describe('SRD spell upcast data (plan 7, Task 7)', () => {
+  const sp = (id: string) => (spells as SpellEntry[]).find((e) => e.id === id)!;
+  it('reads Spiritual Weapon’s upcast die and keeps the dice SRD 5.2.1 prints for the conjure spells', () => {
+    expect(sp('spell/spiritual-weapon').scale).toBe('1d8/slot');
+    // SRD 5.2.1 prints 1d8/1d12/1d8 where the PHB prints 2d8/2d12/2d8 (README).
+    expect(['spell/conjure-elemental', 'spell/conjure-fey', 'spell/conjure-minor-elementals'].map((id) => sp(id).scale)).toEqual(['1d8/slot', '1d12/slot', '1d8/slot']);
+  });
+});
+
 describe('SRD items', () => {
   const list = items as ItemEntry[];
   const by = (name: string) => list.find((e) => e.name === name);

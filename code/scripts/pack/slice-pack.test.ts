@@ -153,3 +153,9 @@ it.skipIf(!existsSync(PACK))('gives the PHB multi-damage spells their parts', ()
     expect([id, [row(e), ...(e.parts ?? []).map((p) => `${p.label}: ${row(p)}`)]]).toEqual([id, rows]);
   }
 });
+
+// "Cantrip Upgrade: None" gives no scale.
+it.skipIf(!existsSync(PACK))('gives Blade Ward and Friends no cantrip scaling', () => {
+  const cat = mergeCatalog(srdEntries, (JSON.parse(readFileSync(PACK, 'utf8')) as { entries: Entry[] }).entries);
+  for (const id of ['spell/blade-ward', 'spell/friends']) expect([id, (cat.byId.get(id) as { scale?: string }).scale]).toEqual([id, undefined]);
+});

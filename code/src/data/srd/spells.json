@@ -5869,6 +5869,7 @@
     "dice": "1d8",
     "dtype": "Force",
     "dmgMod": true,
+    "scale": "1d8/slot",
     "higher": "The damage increases by 1d8 for every slot level above 2."
   },
   {
