@@ -1,11 +1,13 @@
 import { useState, type CSSProperties } from 'react';
 import { catalogId, grantErrors, type GrantKind, type GrantSpec } from '../catalog/schema';
 import type { SourceKind } from '../links';
-import { ABILITIES, DAMAGE_TYPES, SIZES, findUnlinked, newId, type GrantInput } from '../logic';
+import { ABILITIES, DAMAGE_TYPES, SIZES, SKILLS, findUnlinked, newId, type GrantInput } from '../logic';
 import { useSheet } from '../sheet';
 
 interface FieldDef { key: string; label: string; type: 'text' | 'value' | 'bool' | 'select'; options?: [string, string][] }
 const ABIL: [string, string][] = ABILITIES.map(([k, n]) => [k, n]);
+const SKILL_OPTS: [string, string][] = SKILLS.map(([k, n]) => [k, n]);
+const ABIL_CHECKS: [string, string][] = ABILITIES.map(([k, n]) => [k, n + ' (every check)']);
 const RANGE: [string, string][] = [['', '—'], ['melee', 'Melee'], ['ranged', 'Ranged']];
 const v = (key: string, label: string): FieldDef => ({ key, label, type: 'value' });
 const t = (key: string, label: string): FieldDef => ({ key, label, type: 'text' });
@@ -32,7 +34,7 @@ export const GRANT_FIELDS: Record<GrantKind, FieldDef[]> = {
   abil: [sel('ab', 'Ability', ABIL), v('val', 'Increase'), sel('cap', 'Up to', [['20', '20'], ['25', '25'], ['30', '30']])],
   abilSet: [sel('ab', 'Ability', ABIL), v('val', 'Score')],
   prof: [sel('cat', 'Kind', [['skill', 'Skill'], ['expertise', 'Expertise'], ['save', 'Saving throw'], ['armor', 'Armor'], ['weapon', 'Weapon'], ['tool', 'Tool'],
-    ['language', 'Language'], ['mastery', 'Weapon Mastery'], ['half', 'Half proficiency (Jack of All Trades)']]), t('target', 'Which (skill key, ability or name)'), v('val', 'Count')],
+    ['language', 'Language'], ['mastery', 'Weapon Mastery'], ['half', 'Half proficiency (Jack of All Trades)']]), t('target', 'Which (e.g. Thieves’ Tools, Elvish)'), v('val', 'Count')],
   saveBonus: [sel('ab', 'Saves', [['all', 'All'], ...ABIL]), v('val', 'Bonus')],
   checkBonus: [t('target', 'Skill key or ability (e.g. arcana, int)'), v('val', 'Bonus')],
   speed: [sel('mode', 'Speed', [['walk', 'Walk'], ['climb', 'Climb'], ['swim', 'Swim'], ['fly', 'Fly'], ['burrow', 'Burrow']]), t('val', 'Feet, a formula, or walk'), b('hover', 'Can hover')],
@@ -68,11 +70,17 @@ export function GrantEditor({ fromKind, onAdd, onCancel }: { fromKind: SourceKin
   const [counted, setCounted] = useState<boolean | null>(null);
   const [choice, setChoice] = useState<'link' | 'new' | null>(null);
   const set = (k: string, val: string | boolean) => setD((x) => ({ ...x, [k]: val }));
-  const fields = GRANT_FIELDS[kind];
+  // A skill or save target must be the rules' key ('arcana', 'int'): a typed name would match nothing, so pick it.
+  const target = kind === 'checkBonus' ? sel('target', 'Skill or ability', [...SKILL_OPTS, ...ABIL_CHECKS])
+    : kind === 'prof' && (d.cat === 'skill' || d.cat === 'expertise') ? sel('target', 'Skill', SKILL_OPTS)
+      : kind === 'prof' && d.cat === 'save' ? sel('target', 'Saving throw', ABIL) : null;
+  const fields = GRANT_FIELDS[kind].map((f) => (f.key === 'target' && target ? target : f));
+  // A select shows its first option while its value isn't one of them, so that option is the value.
+  const valOf = (f: FieldDef) => (f.type === 'select' && !f.options!.some(([k]) => k === d[f.key]) ? f.options![0][0] : d[f.key]);
 
   const spec: Record<string, unknown> = { id: newId(), kind, name: name.trim() };
   for (const f of fields) {
-    const val = d[f.key];
+    const val = valOf(f);
     if (f.key === 'spellLvl' || val === '' || val === false || val === undefined) continue;
     if (kind === 'ac' && d.acMode !== 'unarmored' && (f.key === 'ab' || f.key === 'shieldOk')) continue;
     if (kind === 'ac' && d.acMode === 'unarmored' && f.key === 'val') continue;
@@ -107,7 +115,7 @@ export function GrantEditor({ fromKind, onAdd, onCancel }: { fromKind: SourceKin
   };
 
   const input = (f: FieldDef) => {
-    const val = d[f.key];
+    const val = valOf(f);
     if (f.type === 'bool') return <label key={f.key} className="check"><input type="checkbox" checked={val === true} onChange={(e) => set(f.key, e.target.checked)} />{f.label}</label>;
     if (f.type === 'select') {
       return (
