@@ -3,7 +3,9 @@ import type { GrantSpec } from './catalog/schema';
 
 export type Ability = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
 export type CastAbility = 'none' | 'int' | 'wis' | 'cha';
-export type Recharge = 'none' | 'short' | 'long';
+export type Recharge = 'none' | 'short' | 'long' | 'dawn';
+// A partial regain: on a Short Rest (for a Long Rest counter) or at dawn (for a Dawn counter).
+export type RegainOn = 'short' | 'dawn';
 export type Tab = 'actions' | 'spells' | 'inventory' | 'features' | 'notes';
 export type FeatureGroup = 'class' | 'sub' | 'feat' | 'species' | 'background' | 'training' | 'other';
 // When a grant or a granted entry counts: with armor, without Heavy armor, without armor and/or a Shield, or while its source's effect is on.
@@ -35,8 +37,12 @@ export interface Prof { id: string; cat: ProfCat; name: string }
 // A resistance, vulnerability, immunity or Advantage on saves. Several with one name show once (mergedDefenses).
 export interface Defense extends Linked { id: string; kind: DefenseKind; name: string }
 export interface Sense extends Linked { id: string; name: string; range: string; desc?: string }
+// A counter that refills. No max and no maxV = no maximum; a computed 0 (maxV) is a real maximum of 0. regain: a Value
+// (number or die) added on regainOn instead of a full refill.
+export interface Counter { count: number; max?: number; maxV?: string; recharge?: Recharge; regain?: string; regainOn?: RegainOn }
+// typeName: a custom group name (else the source kind groups it). casts: the id of the spell this resource casts.
 // inv: legacy "Also list in Inventory" flag, kept only on resources with a max or a recharge (plan 3 moves them onto items).
-export interface Resource { id: string; name: string; note?: string; count: number; max?: number; recharge?: Recharge; refill?: boolean; inv?: boolean }
+export interface Resource extends Linked, Counter { id: string; name: string; note?: string; typeName?: string; casts?: string; inv?: boolean }
 export interface Attack extends Linked { id: string; name: string; hit: string; dmg: string; info: string; mastery: string }
 export interface Rider { id: string; name: string; dice: string }
 // armor/acBase: a suit of armor or a Shield and its table base. acBonus: a magic or other bonus, counted while equipped.

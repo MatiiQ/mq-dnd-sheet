@@ -1,10 +1,10 @@
 // D&D 2024 rules used by the sheet. Pure functions: each takes a character and returns the next one.
 import { blankCharacter, sampleCharacter } from './defaults';
 import { grantErrors } from './catalog/schema';
-import { valueAt, type ValueCtx } from './catalog/value';
+import { isValue, valueAt, type ValueCtx } from './catalog/value';
 import { PROF_NAMES, type ProfCat } from './catalog/names';
-import { activeGrants, dropLinkOnly, fixLinks, hasActiveEffect, isActive, linkOf, parseLink, sourceLabel, sourceOf, SRC_KINDS } from './links';
-import type { AcEffect, Ability, ArmorKind, CastAbility, Character, Concentration, DefenseKind, Feature, Grant, HpSnapshot, Item, Prof, Linked, Resource, Size, Spell, SpeedKind, SpellSort, Tab, Unarmored, When } from './types';
+import { activeGrants, dropLinkOnly, fixLinks, hasActiveEffect, isActive, srcKindOfLink, linkOf, parseLink, sourceLabel, sourceOf, SRC_KINDS } from './links';
+import type { AcEffect, Ability, ArmorKind, CastAbility, Character, Concentration, Counter, DefenseKind, Feature, Grant, HpSnapshot, Item, Prof, Linked, Recharge, Resource, Size, Spell, SpeedKind, SpellSort, Tab, Unarmored, When } from './types';
 
 export const ABILITIES: [Ability, string][] = [
   ['str', 'Strength'], ['dex', 'Dexterity'], ['con', 'Constitution'],
@@ -501,17 +501,59 @@ export function healHitDie(c: Character): Character {
   return { ...next, hpUndo: { ...next.hpUndo, prev: { ...next.hpUndo.prev, hdUsed: Math.max(0, c.hdUsed - 1) } } };
 }
 
-export const rechargeOf = (r: Resource) => r.recharge || 'none';
+export const rechargeOf = (r: Partial<Counter>) => r.recharge || 'none';
+
+// A counter's maximum now: a formula (maxV, never below 0), else a fixed max of at least 1, else none (null). It
+// ignores whether the counter's source is active, so an inactive resource keeps its count (spec).
+export function maxOf(c: Character, x: Partial<Counter>): number | null {
+  if (x.maxV !== undefined) return Math.max(0, num(c, x.maxV));
+  return x.max && x.max >= 1 ? x.max : null;
+}
+// The resource form's Maximum: None, a Number (whole, 1 or more) or a Formula (a Value without dice; '0' is a real
+// maximum of 0). null = refused.
+export function maxFields(kind: 'none' | 'number' | 'formula', text: string): Pick<Counter, 'max' | 'maxV'> | null {
+  const t = text.trim();
+  if (kind === 'none') return {};
+  if (kind === 'number') return /^\d+$/.test(t) && Number(t) >= 1 ? { max: Number(t) } : null;
+  return isValue(t) && !/d/.test(t) ? { maxV: t } : null;
+}
+
+// The single clamp, run by update() and migrate() after every change: resource counts at most their maximum, HP at
+// most max HP. Uses lost while a maximum is lower are not given back when it rises (spec). Returns c when nothing moves.
+export function normalize(c: Character): Character {
+  let changed = false;
+  const res = c.res.map((r) => {
+    const m = maxOf(c, r);
+    if (m === null || r.count <= m) return r;
+    changed = true;
+    return { ...r, count: m };
+  });
+  const top = maxHpOf(c);
+  if (c.hp > top) changed = true;
+  return changed ? { ...c, res, hp: Math.min(c.hp, top) } : c;
+}
+
+// Resource groups: a custom type name, else the source kind, else Other. Source kinds in SRC_KINDS order, then custom
+// names A–Z.
+export function resourceGroups(c: Character): { title: string; list: Resource[] }[] {
+  const title = (r: Resource) => r.typeName || SRC_KINDS.find(([k]) => k === (r.srcKind ?? (r.from ? srcKindOfLink(c, r.from) : null)))?.[1] || 'Other';
+  const kinds = SRC_KINDS.map(([, l]) => l);
+  const titles = [...new Set(c.res.map(title))].sort((a, b) => {
+    const i = kinds.indexOf(a), j = kinds.indexOf(b);
+    return i >= 0 && j >= 0 ? i - j : i >= 0 ? -1 : j >= 0 ? 1 : a.localeCompare(b);
+  });
+  return titles.map((t) => ({ title: t, list: c.res.filter((r) => title(r) === t) }));
+}
 
 // Refills resources for a rest; returns the new list and the names that went up.
-export function refillFor(res: Resource[], kind: 'short' | 'long'): [Resource[], string[]] {
+export function refillFor(c: Character, kind: 'short' | 'long'): [Resource[], string[]] {
   const names: string[] = [];
-  const list = res.map((r) => {
-    const rc = rechargeOf(r);
+  const list = c.res.map((r) => {
+    const rc = rechargeOf(r), m = maxOf(c, r);
     const hit = kind === 'long' ? rc === 'long' || rc === 'short' : rc === 'short';
-    if (!hit || !r.max) return r;
-    if (r.count < r.max) names.push(r.name);
-    return { ...r, count: r.max };
+    if (!hit || m === null) return r;
+    if (r.count < m) names.push(r.name);
+    return { ...r, count: m };
   });
   return [list, names];
 }
@@ -527,7 +569,7 @@ const restBlocked = (c: Character, title: string): Character | null =>
 export function longRest(c: Character): Character {
   const blocked = restBlocked(c, 'No Long Rest');
   if (blocked) return blocked;
-  const [res, refilled] = refillFor(c.res, 'long');
+  const [res, refilled] = refillFor(c, 'long');
   const maxHp = c.origOn && c.maxHp < c.origHp ? c.origHp : c.maxHp;
   const abilAdj = Object.fromEntries(Object.entries(c.abilAdj).map(([k, v]) => [k, Math.max(0, v || 0)]));
   // Shield lasts a round, Mage Armor 8 hours, Barkskin 1 hour (PHB p.316, p.293, p.245): none outlasts a Long Rest.
@@ -551,7 +593,7 @@ export function longRest(c: Character): Character {
 export function shortRest(c: Character): Character {
   const blocked = restBlocked(c, 'No Short Rest');
   if (blocked) return blocked;
-  const [res, refilled] = refillFor(c.res, 'short');
+  const [res, refilled] = refillFor(c, 'short');
   const left = c.level - hdSpent(c);
   return {
     ...c, res,
@@ -593,6 +635,21 @@ function cleanLinked<T extends Linked>(x: T): T {
     ...(typeof needAtt === 'boolean' ? { needAtt } : {})
   } as unknown as T;
   return out.from === undefined ? dropLinkOnly(out) : out;
+}
+const RECHARGES: Recharge[] = ['none', 'short', 'long', 'dawn'];
+// Resource fields on load: a fixed max of at least 1, a formula without dice, a known recharge, a regain only with the
+// recharge it goes with (on a Short Rest for Long Rest, at dawn for Dawn), text fields as strings.
+function cleanResource(r: Resource): Resource {
+  const { count, max, maxV, recharge, regain, regainOn, typeName, note, casts, ...rest } = r as Resource & Record<string, unknown>;
+  const rc = RECHARGES.includes(recharge as Recharge) ? (recharge as Recharge) : 'none';
+  const pair = typeof regain === 'string' && isValue(regain) && ((regainOn === 'short' && rc === 'long') || (regainOn === 'dawn' && rc === 'dawn'));
+  return cleanLinked({
+    ...rest, count: finite(count) ? count : 0,
+    ...(finite(max) && max >= 1 ? { max } : {}),
+    ...(typeof maxV === 'string' && isValue(maxV) && !/d/.test(maxV) ? { maxV } : {}),
+    recharge: rc, ...(pair ? { regain, regainOn } : {}),
+    ...(typeof typeName === 'string' ? { typeName } : {}), ...(typeof note === 'string' ? { note } : {}), ...(typeof casts === 'string' ? { casts } : {})
+  } as Resource);
 }
 const cleanCid = <T extends { cid?: string }>(x: T): T => { const { cid, ...rest } = x; return (typeof cid === 'string' ? { ...rest, cid } : rest) as T; };
 
@@ -712,8 +769,11 @@ export function migrate(data: unknown): Character {
   // never change entries the player adds later (roadmap, "Saves keep working").
   const oldSave = data.attuneIds === undefined;
   if (oldSave) c.res = c.res.map((r) => (r.inv === undefined && OLD_INVENTORY_RESOURCES.includes(r.id) ? { ...r, inv: true } : r));
-  // Older saves had a `refill` flag that meant a Long Rest recharge.
-  c.res = c.res.map((r) => ({ ...r, recharge: r.recharge || (r.refill ? 'long' : 'none') }));
+  // Older saves had a `refill` flag that meant a Long Rest recharge. Resource no longer declares it: read it untyped.
+  c.res = c.res.map((r) => {
+    const { refill, ...x } = r as Resource & { refill?: unknown };
+    return { ...x, recharge: x.recharge || (refill ? 'long' : 'none') };
+  });
   const converted: string[] = [];
   if (oldSave) {
     // Resources also listed in the Inventory become items. One with a maximum or a recharge stays a resource and keeps
@@ -744,6 +804,7 @@ export function migrate(data: unknown): Character {
       return id;
     });
   }
+  c.res = c.res.map(cleanResource);
   // Three slots, each an existing item id or ''. Checked slot by slot, so a bad slot never shifts the ones after it.
   const ids: unknown[] = c.attuneIds;
   c.attuneIds = [];
@@ -758,7 +819,7 @@ export function migrate(data: unknown): Character {
   c.effectsOn = strings(c.effectsOn).filter((l, i, all) => all.indexOf(l) === i && sourceOf(c, l) && !(parseLink(l)!.kind === 'spell' && (sourceOf(c, l) as Spell).c));
   const fixed = fixLinks(c);
   // A grant exists only through its source: one whose link fixLinks cleared goes.
-  return { ...fixed, grants: fixed.grants.filter((g) => g.from) };
+  return normalize({ ...fixed, grants: fixed.grants.filter((g) => g.from) });
 }
 
 const DEFENSE_KINDS: DefenseKind[] = ['res', 'vul', 'imm', 'adv'];
@@ -857,7 +918,8 @@ export interface PillView { key: string; label: string; value: string; max?: str
 export function pillView(c: Character, key: string): PillView | null {
   if (key.startsWith('res:')) {
     const r = c.res.find((x) => resPill(x.id) === key);
-    return r ? { key, label: r.name, value: String(r.count), max: r.max ? String(r.max) : undefined, target: { sec: 'sec-resources' } } : null;
+    const m = r && maxOf(c, r);
+    return r ? { key, label: r.name, value: String(r.count), max: m === null ? undefined : String(m), target: { sec: 'sec-resources' } } : null;
   }
   const stat = PILL_STATS.find(([k]) => k === key);
   if (!stat) return null;

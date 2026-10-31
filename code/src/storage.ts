@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
-import { migrate, newId } from './logic';
+import { migrate, newId, normalize } from './logic';
 import type { Character } from './types';
 
 const INDEX_KEY = 'dnd-index-v3';
@@ -8,6 +8,10 @@ const sheetKey = (id: string) => 'dnd-sheet-v3:' + id;
 
 export interface IndexEntry { id: string; name: string; info?: string }
 export type Patch = Partial<Character> | ((c: Character) => Partial<Character>);
+
+// Every change goes through here: the patch, then the single clamp (normalize) on the result.
+export const applyPatch = (c: Character, patch: Patch): Character =>
+  normalize({ ...c, ...(typeof patch === 'function' ? patch(c) : patch) });
 
 function readJSON(key: string): unknown {
   try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : null; } catch { return null; }
@@ -141,7 +145,7 @@ export function useCharacters() {
 
   return {
     c: s.c, charId: s.id, list, saveFailed, isExample: isExample(s.id),
-    update: (patch: Patch) => setS((p) => ({ ...p, c: { ...p.c, ...(typeof patch === 'function' ? patch(p.c) : patch) } })),
+    update: (patch: Patch) => setS((p) => ({ ...p, c: applyPatch(p.c, patch) })),
     switchTo: (id: string) => setS((p) => switchStore(p, id, load(id))),
     newBlank: () => add(blankCharacter()),
     newSample: () => add(sampleCharacter()),

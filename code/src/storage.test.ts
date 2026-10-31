@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
-import { addToStore, deleteFromStore, exportStore, freshList, initialStore, load, persistStore, switchStore, writeBackup, type Store } from './storage';
+import { isActive } from './links';
+import { longRest } from './logic';
+import { addToStore, applyPatch, deleteFromStore, exportStore, freshList, initialStore, load, persistStore, switchStore, writeBackup, type Store } from './storage';
 
 const renamed = (): Store => ({
   id: 'a', list: [{ id: 'a', name: 'Ilyra Moonbrook' }, { id: 'b', name: 'Other' }],
@@ -107,5 +109,39 @@ describe('example characters', () => {
   it('never deletes an example', () => {
     const s: Store = { id: 'example:ilyra', list: [{ id: 'a', name: 'Bob' }], c: sampleCharacter() };
     expect(deleteFromStore(s)).toBe(s);
+  });
+});
+
+describe('one clamp after every change', () => {
+  const wild = { id: 'wild', name: 'Wild Shape', count: 3, maxV: '2:2,6:3,17:4', recharge: 'long' as const };
+  const base = () => ({ ...druidSample(), level: 6, res: [wild] });
+  it('lowers a count when the level lowers its maximum, and never gives it back', () => {
+    const lower = applyPatch(base(), { level: 5 });
+    expect(lower.res[0].count).toBe(2);
+    expect(applyPatch(lower, { level: 6 }).res[0].count).toBe(2);
+  });
+  const wis = (count = 5) => ({ ...druidSample(), res: [{ id: 'o', name: 'Omen', count, maxV: 'wis>=1', recharge: 'none' as const }] });
+  it('follows a lower ability score, a negative adjustment and a removed ability grant', () => {
+    expect(applyPatch(wis(), (c) => ({ abil: { ...c.abil, wis: 18 } })).res[0].count).toBe(4);
+    expect(applyPatch(wis(), { abilAdj: { wis: -2 } }).res[0].count).toBe(4);
+    const granted = { ...wis(), abil: { ...druidSample().abil, wis: 18 },
+      grants: [{ id: 'g', kind: 'abil' as const, name: 'ASI', ab: 'wis', val: '2', cap: 20 as const, from: 'feature:f13' }] };
+    expect(applyPatch(granted, { grants: [] }).res[0].count).toBe(4);
+  });
+  it('a Long Rest that restores a score doesn\'t raise a count that doesn\'t recharge', () => {
+    const low = applyPatch(wis(), { abilAdj: { wis: -2 } });
+    expect(applyPatch(low, (c) => longRest(c)).res[0].count).toBe(4);
+  });
+  it('lowers HP when Heavy armor switches off an HP grant', () => {
+    const c = { ...sampleCharacter(), hp: 54, inv: [], grants: [{ id: 't', kind: 'hpLvl' as const, name: 'Tough', val: '2', when: 'noHeavy' as const, from: 'feature:f10' }] };
+    expect(applyPatch(c, { inv: [{ id: 'm', name: 'Chain Mail', qty: 1, eq: true, armor: 'heavy', acBase: 16 }] }).hp).toBe(44);
+  });
+  it('keeps the count of an item\'s resource while the item is off', () => {
+    const c = { ...sampleCharacter(), inv: [{ id: 'r', name: 'Ring', qty: 1, eq: true }],
+      res: [{ id: 'x', name: 'Charge', count: 1, max: 1, from: 'item:r', needEq: true }] };
+    const off = applyPatch(c, { inv: [{ ...c.inv[0], eq: false }] });
+    expect(off.res[0].count).toBe(1);
+    expect(isActive(off, off.res[0])).toBe(false);
+    expect(applyPatch(off, { inv: c.inv }).res[0].count).toBe(1);
   });
 });

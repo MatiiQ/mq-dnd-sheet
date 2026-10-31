@@ -34,6 +34,9 @@ function AbilityCard({ k, name }: { k: Ability; name: string }) {
   const save = saveProficient(c, k);
   const scoreColor = cur > base ? 'var(--blue)' : cur < base ? 'var(--danger)' : 'var(--text)';
   const lower = name.toLowerCase();
+  // Accepted: the steppers commit per tap. A mis-tap that lowers a score lowers a formula maximum such as 'wis>=1', and
+  // normalize() cuts that resource's count for good; tapping + again doesn't give it back. That is the spec's rule for
+  // drops (uses lost while a score is reduced are not given back); only typed numbers (Level) commit once.
   const adjust = (d: number) => update((p) => {
     const adj = p.abilAdj[k] || 0, next = p.abil[k] + adj + d;
     return next < 1 || next > 30 ? {} : { abilAdj: { ...p.abilAdj, [k]: adj + d } };

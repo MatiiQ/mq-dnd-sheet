@@ -427,3 +427,5 @@ button.mod-token { border: none; color: inherit; cursor: pointer; padding: 0; }
 
 /* A value that opens its breakdown: looks like the text it replaces, still a 44 px target. */
 button.link-btn { background: none; border: none; padding: 0; cursor: pointer; text-align: left; color: inherit; min-height: 44px; display: inline-flex; align-items: center; }
+/* An entry whose source or condition doesn't count right now (inactiveReason). */
+.inactive { opacity: 0.55; }

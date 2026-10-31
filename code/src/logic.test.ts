@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import {
-  ABILITIES, SKILLS, itemAcGrants, mergedDefenses, mergedSenses, removeDefense, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, splitTraining, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, NEW_FIELDS, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, removeItem, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
+  ABILITIES, SKILLS, maxFields, maxOf, normalize, resourceGroups, itemAcGrants, mergedDefenses, mergedSenses, removeDefense, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, splitTraining, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, NEW_FIELDS, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, removeItem, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
   setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, toggleFreeCast, undoHp
 } from './logic';
 import { oldIlyra, oldSeren } from './test-fixtures';
@@ -776,7 +776,7 @@ describe('sample numbers', () => {
     eff: ABILITIES.map(([k]) => effScore(c, k)), save: ABILITIES.map(([k]) => saveMod(c, k)),
     skills: Object.fromEntries(SKILLS.map(([k, , ab]) => [k, skillMod(c, k, ab)])),
     speed: speedNow(c), ac: armorClass(c).total, init: initiative(c), maxHp: maxHpOf(c), pp: passiveScore(c, 'perception'),
-    res: Object.fromEntries(c.res.map((r) => [r.id, r.max ?? null]))
+    res: Object.fromEntries(c.res.map((r) => [r.id, maxOf(c, r)]))
   });
   const ILYRA = { eff: [12, 18, 14, 10, 14, 8], save: [4, 7, 2, 0, 2, -1], skills: { athletics: 1, acrobatics: 4, sleight: 4, stealth: 7, arcana: 0, history: 0, investigation: 0, nature: 3, religion: 0, animal: 5, insight: 5, medicine: 2, perception: 5, survival: 8, deception: -1, intimidation: -1, performance: -1, persuasion: -1 }, speed: 35, ac: 16, init: 4, maxHp: 44, pp: 15, res: { favored: 3 } };
   const SEREN = { eff: [8, 13, 16, 13, 20, 10], save: [-1, 1, 3, 5, 9, 0], skills: { athletics: -1, acrobatics: 1, sleight: 1, stealth: 1, arcana: 5, history: 5, investigation: 1, nature: 1, religion: 1, animal: 5, insight: 5, medicine: 9, perception: 9, survival: 5, deception: 0, intimidation: 0, performance: 0, persuasion: 0 }, speed: 25, ac: 14, init: 1, maxHp: 99, pp: 19, res: { wild: 3, bolt: 5, omen: 5, resurge: 1, hands: 1, reveal: 1 } };
@@ -1023,5 +1023,63 @@ describe('AC bonus migration', () => {
     const c = migrate(old({ ac: 13, inv: [{ id: 'r', name: 'Ring', qty: 1, eq: true, acBonus: 1 }] }));
     expect(armorClass(c).total).toBe(13);
     expect(c.acMods).toEqual([{ id: expect.any(String), name: 'Adjustment (from old AC)', val: 2 }]);
+  });
+});
+
+describe('resources', () => {
+  const seren = druidSample(); // WIS 20 (+5), level 12
+  it('reads a maximum: a number of at least 1, a formula, or none', () => {
+    expect(maxOf(seren, { max: 3 })).toBe(3);
+    expect(maxOf(seren, {})).toBeNull();
+    expect(maxOf(seren, { max: 0 })).toBeNull();
+    expect(maxOf(make({ abil: { ...make().abil, wis: 8 } }), { maxV: 'wis' })).toBe(0);
+    expect(maxOf(seren, { maxV: 'wis>=1' })).toBe(5);
+    expect(maxOf(make({ level: 1 }), { maxV: '2:2,6:3' })).toBe(0);
+  });
+  it('turns the form\'s maximum into fields: Number needs 1 or more, a 0 is the Formula 0', () => {
+    expect(maxFields('none', '')).toEqual({});
+    expect(maxFields('number', '3')).toEqual({ max: 3 });
+    expect(maxFields('number', '0')).toBeNull();
+    expect(maxFields('number', '2.5')).toBeNull();
+    expect(maxFields('formula', '0')).toEqual({ maxV: '0' });
+    expect(maxFields('formula', 'wis>=1')).toEqual({ maxV: 'wis>=1' });
+    expect(maxFields('formula', '1d4')).toBeNull();
+    expect(maxFields('formula', 'lots')).toBeNull();
+    expect(maxOf(seren, maxFields('formula', '0')!)).toBe(0);
+  });
+  it('shows a computed maximum on a pill, none without one, and 0 when it computes to 0', () => {
+    const c = make({ level: 1, res: [{ id: 'a', name: 'A', count: 0, maxV: 'pb' }, { id: 'b', name: 'B', count: 1 }, { id: 'z', name: 'Z', count: 0, maxV: '2:2' }] });
+    expect(pillView(c, resPill('a'))!.max).toBe('2');
+    expect(pillView(c, resPill('b'))!.max).toBeUndefined();
+    expect(pillView(c, resPill('z'))!.max).toBe('0');
+  });
+  it('groups resources by type, source kind or Other, kinds first and custom names A–Z', () => {
+    const c = make({ res: [{ id: 'a', name: 'A', count: 0, typeName: 'Zeal' }, { id: 'b', name: 'B', count: 0, srcKind: 'class' },
+      { id: 'c', name: 'C', count: 0 }, { id: 'd', name: 'D', count: 0, typeName: 'Arcane' }, { id: 'e', name: 'E', count: 0, srcKind: 'species' }] });
+    expect(resourceGroups(c).map((g) => [g.title, g.list.map((r) => r.id)])).toEqual([
+      ['Species', ['e']], ['Class', ['b']], ['Other', ['c']], ['Arcane', ['d']], ['Zeal', ['a']]]);
+  });
+  it('clamps counts to their maximum, and HP to max HP, in one place', () => {
+    const c = make({ level: 1, hp: 60, res: [{ id: 'w', name: 'W', count: 2, maxV: '2:2,6:3' }, { id: 'x', name: 'X', count: 9 }] });
+    const n = normalize(c);
+    expect(n.res.map((r) => r.count)).toEqual([0, 9]);
+    expect(n.hp).toBe(44);
+    const fine = make();
+    expect(normalize(fine)).toBe(fine);
+  });
+  it('checks resource fields on load', () => {
+    const c = migrate({ ...sampleCharacter(), res: [
+      { id: 'a', name: 'A', count: 1, max: 0, recharge: 'long' }, { id: 'b', name: 'B', count: 1, recharge: 'weekly' },
+      { id: 'c', name: 'C', count: 1, max: 2, recharge: 'dawn', regain: '1', regainOn: 'short' },
+      { id: 'd', name: 'D', count: 1, max: 2, recharge: 'long', regain: '1', regainOn: 'short', typeName: 'Ki', note: 3 },
+      { id: 'e', name: 'E', count: 1, maxV: '1d4' }, { id: 'f', name: 'F', count: 1, maxV: 'wis>=1' },
+      { id: 'g', name: 'G', count: 1, from: 'feature:gone', srcKind: 'class', srcName: 'Monk' }, { id: 'h', name: 'H', count: 'x', refill: true }] });
+    expect(c.res).toEqual([
+      { id: 'a', name: 'A', count: 1, recharge: 'long' }, { id: 'b', name: 'B', count: 1, recharge: 'none' },
+      { id: 'c', name: 'C', count: 1, max: 2, recharge: 'dawn' },
+      { id: 'd', name: 'D', count: 1, max: 2, recharge: 'long', regain: '1', regainOn: 'short', typeName: 'Ki' },
+      { id: 'e', name: 'E', count: 1, recharge: 'none' }, { id: 'f', name: 'F', count: 1, maxV: 'wis>=1', recharge: 'none' },
+      { id: 'g', name: 'G', count: 1, srcKind: 'class', srcName: 'Monk', recharge: 'none' }, { id: 'h', name: 'H', count: 0, recharge: 'long' }]);
+    expect(migrate(c)).toEqual(c);
   });
 });
