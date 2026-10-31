@@ -4,7 +4,7 @@ import { packSummary, parsePackFile } from '../catalog/pack';
 import { deletePack, getPack, putPack } from '../catalog/pack-db';
 import { SRD_VERSION } from '../catalog/schema';
 import { setLayoutMode, useLayoutMode, useWide, type LayoutMode } from '../layout';
-import { CONDITIONS, PILL_STATS, TABS, fmt, hpColor, pillView, resPill, setConc, setPill, toggleAcSpell, type PillView } from '../logic';
+import { CONDITIONS, PILL_STATS, TABS, fmt, hpColor, maxHpOf, pillView, resPill, setConc, setPill, toggleAcSpell, type PillView } from '../logic';
 import { useSheet } from '../sheet';
 import { EXAMPLES, charInfo, charName, saveBackupFile, type CharacterStore } from '../storage';
 import type { Spell, Tab } from '../types';
@@ -212,7 +212,7 @@ function PillBody({ v }: { v: PillView }) {
   if (v.key === 'hp') {
     return (
       <>
-        HP <strong style={{ color: hpColor(c) }}>{c.hp}</strong><span style={{ color: 'var(--muted)' }}>/{c.maxHp}</span>
+        HP <strong style={{ color: hpColor(c) }}>{c.hp}</strong><span style={{ color: 'var(--muted)' }}>/{maxHpOf(c)}</span>
         {c.temp > 0 && <span style={{ color: 'var(--blue)', fontWeight: 600 }}>+{c.temp}</span>}
       </>
     );

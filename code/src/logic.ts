@@ -4,7 +4,7 @@ import { grantErrors } from './catalog/schema';
 import { valueAt, type ValueCtx } from './catalog/value';
 import { PROF_NAMES, type ProfCat } from './catalog/names';
 import { activeGrants, dropLinkOnly, fixLinks, hasActiveEffect, linkOf, parseLink, sourceLabel, sourceOf, SRC_KINDS } from './links';
-import type { AcEffect, Ability, ArmorKind, CastAbility, Character, Concentration, Feature, Grant, HpSnapshot, Item, Prof, Linked, Resource, Size, Spell, SpellSort, Tab, Unarmored, When } from './types';
+import type { AcEffect, Ability, ArmorKind, CastAbility, Character, Concentration, Feature, Grant, HpSnapshot, Item, Prof, Linked, Resource, Size, Spell, SpeedKind, SpellSort, Tab, Unarmored, When } from './types';
 
 export const ABILITIES: [Ability, string][] = [
   ['str', 'Strength'], ['dex', 'Dexterity'], ['con', 'Constitution'],
@@ -136,7 +136,8 @@ export const spellDcParts = (c: Character): AcPart[] | null => {
 // Initiative is a Dexterity check (PHB p.23), so Dexterity check bonus grants add; initMisc holds extra bonuses from
 // features or items. No half PB: Jack of All Trades needs a skill check you aren't proficient in (PHB p.60), and
 // Initiative uses no skill (the 2014 rule applied it to Initiative; the 2024 one doesn't).
-export const initiative = (c: Character) => abilityMod(c, 'dex') + c.initMisc + checkBonus(c, ['dex']);
+export const initiative = (c: Character) => abilityMod(c, 'dex') + c.initMisc + checkBonus(c, ['dex']) +
+  activeGrants(c, 'init').reduce((t, g) => t + num(c, g.val), 0);
 
 // Armor table: name, category, base AC; a Shield adds 2. One suit of armor and one Shield at a time (PHB p.219).
 export const ARMORS: [string, ArmorKind, number][] = [
@@ -310,9 +311,15 @@ export function concAfterEdit(c: Character, sp: Pick<Spell, 'id' | 'name' | 'c'>
 // last row. Going over only matters while dragging, lifting or pushing (Speed at most 5 ft), so Speed never changes here.
 export const SIZES: [Size, string][] = [['tiny', 'Tiny'], ['small', 'Small'], ['medium', 'Medium'], ['large', 'Large'], ['huge', 'Huge'], ['gargantuan', 'Gargantuan']];
 export const CARRY_MULT: Record<Size, number> = { tiny: 7.5, small: 15, medium: 15, large: 30, huge: 60, gargantuan: 120 };
+// Size: the larger of the hand size and every active size grant, so a grant never lowers a size set by hand (a
+// Goliath in Large Form, PHB p.192, set to Large by hand stays Large).
+const sizeRank = (s: Size) => SIZES.findIndex(([k]) => k === s);
+export const sizeOf = (c: Character): Size =>
+  activeGrants(c, 'size').reduce<Size>((s, g) => (g.size && sizeRank(g.size) > sizeRank(s) ? g.size : s), c.size);
+export const carryUpOf = (c: Character) => c.carryUp || activeGrants(c, 'carryUp').length > 0;
 export function carryCapacity(c: Character): { carry: number; push: number; size: Size } {
-  const i = SIZES.findIndex(([k]) => k === c.size);
-  const size = c.carryUp ? SIZES[Math.min(i + 1, SIZES.length - 1)][0] : c.size;
+  const own = sizeOf(c), i = sizeRank(own);
+  const size = carryUpOf(c) ? SIZES[Math.min(i + 1, SIZES.length - 1)][0] : own;
   const carry = effScore(c, 'str') * CARRY_MULT[size];
   return { carry, push: carry * 2, size };
 }
@@ -329,15 +336,32 @@ export function parseWeight(s: string): number | undefined {
 
 export const zeroSpeedBy = (c: Character) => CONDITIONS.filter((n) => c.conds[n] && ZERO_SPEED.includes(n));
 export const speedOf = (c: Character, base: number) => (zeroSpeedBy(c).length ? 0 : Math.max(0, base - 5 * c.exh));
-export const speedNow = (c: Character) => speedOf(c, c.speedBase);
+// Walking Speed before Exhaustion and conditions: the typed base plus walking speed grants (Wood Elf +5 ft).
+export const walkSpeed = (c: Character) => c.speedBase + activeGrants(c, 'speed').filter((g) => g.mode === 'walk').reduce((t, g) => t + num(c, g.val), 0);
+// Another speed: the typed one or the best grant, whichever is higher ('walk' means equal to the walking Speed).
+export function modeSpeed(c: Character, k: SpeedKind): { base: number; hover: boolean; by?: string } {
+  const typed = c.speeds[k] || 0;
+  let base = typed, by: string | undefined;
+  const mine = activeGrants(c, 'speed').filter((g) => g.mode === k);
+  for (const g of mine) {
+    const v = g.val === 'walk' ? walkSpeed(c) : num(c, g.val);
+    if (v > base) { base = v; by = sourceLabel(c, g) ?? g.name; }
+  }
+  const hover = mine.some((g) => g.hover);
+  return by ? { base, hover, by } : { base, hover };
+}
+export const speedNow = (c: Character) => speedOf(c, walkSpeed(c));
+// The HP maximum every reader uses: the typed maxHp plus HP-per-level grants × level (Tough, PHB p.202). maxHp and
+// origHp stay typed (base) values, so a Long Rest restoring origHp never counts a grant twice.
+export const maxHpOf = (c: Character) => c.maxHp + activeGrants(c, 'hpLvl').reduce((t, g) => t + num(c, g.val) * c.level, 0);
 // Current HP against max, temp HP ignored: green from 65%, yellow from 30%, red below.
 export const hpColor = (c: Character) =>
-  (c.hp * 100 >= c.maxHp * 65 ? 'var(--hp-high)' : c.hp * 100 >= c.maxHp * 30 ? 'var(--hp-mid)' : 'var(--hp-low)');
+  (c.hp * 100 >= maxHpOf(c) * 65 ? 'var(--hp-high)' : c.hp * 100 >= maxHpOf(c) * 30 ? 'var(--hp-mid)' : 'var(--hp-low)');
 
 // Display geometry for the HP ring, not a rule: HP and temp HP as percentages of max + temp.
 // The cumulative stop is rounded, not each segment, so the two never add up past 100.
 export function hpRingStops(c: Character): { hp: number; temp: number } {
-  const total = Math.max(1, c.maxHp + c.temp);
+  const total = Math.max(1, maxHpOf(c) + c.temp);
   const r = (x: number) => Math.round(x * 10) / 10;
   const hp = r((c.hp / total) * 100);
   return { hp, temp: r(r(((c.hp + c.temp) / total) * 100) - hp) };
@@ -366,7 +390,7 @@ export function applyDamage(c: Character): Character {
   // Damage at 0 HP (PHB p.29): one failure, or death if it equals or exceeds max HP. A Stable character starts rolling again.
   // Becoming Stable resets both counts (PHB p.29). Simplification: the app keeps ds at 3 to mark Stable, so it can't
   // reset them at that moment; it ignores the old failures when the next damage comes in, and shows them until then.
-  if (amt > 0 && c.hp === 0 && amt >= c.maxHp) {
+  if (amt > 0 && c.hp === 0 && amt >= maxHpOf(c)) {
     next.df = 3;
     text += ' Damage at 0 HP equals or exceeds max HP, so the character dies instantly.';
   } else if (amt > 0 && c.hp === 0) {
@@ -376,7 +400,7 @@ export function applyDamage(c: Character): Character {
       next.ds = 0;
       text += ' No longer Stable: roll death saves again.';
     }
-  } else if (amt > 0 && amt - c.hp >= c.maxHp) {
+  } else if (amt > 0 && amt - c.hp >= maxHpOf(c)) {
     next.df = 3;
     text += ' Massive damage: the leftover damage equals or exceeds max HP, so the character dies instantly.';
   }
@@ -402,7 +426,7 @@ export const isDead = (c: Character) => (c.hp === 0 && c.df >= 3) || c.exh >= 6;
 export function applyHeal(c: Character): Character {
   // Healing can't bring back a dead character; clear the failures first (e.g. after Revivify).
   if (!c.amount || isDead(c)) return c;
-  const hp = Math.min(c.maxHp, c.hp + c.amount);
+  const hp = Math.min(maxHpOf(c), c.hp + c.amount);
   const next: Character = { ...c, hp, hpUndo: { prev: snapshot(c), text: 'Healed ' + (hp - c.hp) + ' HP.' } };
   if (c.hp === 0 && hp > 0) {
     next.ds = 0;
@@ -428,7 +452,7 @@ export function applySetTemp(c: Character): Character {
 // Typing a new current HP is a correction, not damage or healing: no concentration check, no conditions change.
 // Leaving 0 HP still resets the death saves, as regaining any HP does (PHB p.29). Kept between 0 and max HP.
 export function setHp(c: Character, n: number): Character {
-  const hp = clamp(n, 0, c.maxHp);
+  const hp = clamp(n, 0, maxHpOf(c));
   if (hp === c.hp) return c;
   return { ...c, hp, ...(c.hp === 0 ? { ds: 0, df: 0 } : {}), hpUndo: { prev: snapshot(c), text: 'HP set to ' + hp + ' (was ' + c.hp + ').' } };
 }
@@ -443,10 +467,10 @@ export function clearHpUndo(c: Character, shown: Character['hpUndo']): Character
   return c.hpUndo === shown ? { ...c, hpUndo: null } : c;
 }
 
-// A patch for a new HP maximum: at least 1, and current HP never above it.
+// A patch for a new typed HP maximum: at least 1, and current HP never above the effective maximum it gives.
 export function setMaxHp(c: Character, maxHp: number): Pick<Character, 'maxHp' | 'hp'> {
   const m = Math.max(1, maxHp);
-  return { maxHp: m, hp: Math.min(c.hp, m) };
+  return { maxHp: m, hp: Math.min(c.hp, maxHpOf({ ...c, maxHp: m })) };
 }
 
 // A character has one Hit Die per level (PHB p.41–42).
@@ -507,7 +531,7 @@ export function longRest(c: Character): Character {
     Object.values(c.abilAdj).some((v) => (v || 0) < 0) ? ', reduced ability scores restored' : ''
   ].join('');
   return {
-    ...c, maxHp, abilAdj, hp: maxHp, temp: 0, slotUsed: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], hdUsed: 0, ds: 0, df: 0, free: {}, acOn: [], effectsOn: [],
+    ...c, maxHp, abilAdj, hp: maxHpOf({ ...c, maxHp, abilAdj }), temp: 0, slotUsed: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], hdUsed: 0, ds: 0, df: 0, free: {}, acOn: [], effectsOn: [],
     hpUndo: null, concCheck: null, res, exh: Math.max(0, c.exh - 1),
     restMsg: {
       title: 'Long Rest complete',
@@ -779,7 +803,7 @@ export function pillView(c: Character, key: string): PillView | null {
   if (!stat) return null;
   const label = stat[2], atk = spellAttack(c);
   switch (stat[0]) {
-    case 'hp': return { key, label, value: String(c.hp), max: String(c.maxHp), target: { sec: 'sec-hp' } };
+    case 'hp': return { key, label, value: String(c.hp), max: String(maxHpOf(c)), target: { sec: 'sec-hp' } };
     case 'ac': return { key, label, value: String(armorClass(c).total), target: { sec: 'sec-vitals' } };
     case 'dc': return { key, label, value: String(spellSaveDC(c) ?? '—'), target: { tab: 'spells' } };
     case 'speed': return { key, label, value: String(speedNow(c)), target: { sec: 'sec-vitals' } };

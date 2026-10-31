@@ -424,3 +424,6 @@ button.mod-token { border: none; color: inherit; cursor: pointer; padding: 0; }
 .wide .abil-cur-label { margin-right: auto; }
 .wide .abil-stepper { order: 1; }
 .wide .stat-hint { display: none; } /* the Speed value still turns red at 0 */
+
+/* A value that opens its breakdown: looks like the text it replaces, still a 44 px target. */
+button.link-btn { background: none; border: none; padding: 0; cursor: pointer; text-align: left; color: inherit; min-height: 44px; display: inline-flex; align-items: center; }

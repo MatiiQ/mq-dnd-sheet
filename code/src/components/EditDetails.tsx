@@ -1,11 +1,11 @@
-import { CAST_NAMES, SIZES } from '../logic';
+import { CAST_NAMES, clamp, SIZES } from '../logic';
 import { useSheet } from '../sheet';
 import type { CastAbility, Details, Size } from '../types';
-import { NumInput, TextField, useArmed } from './ui';
+import { NumInput, TextField, TypeInNumber, useArmed } from './ui';
 
 const TEXT_FIELDS: [string, keyof Details][] = [['Name', 'name'], ['Species', 'species'], ['Class', 'cls'], ['Subclass', 'sub'], ['Background', 'bg'], ['Alignment', 'align']];
-const NUM_FIELDS: [string, 'level' | 'speedBase' | 'initMisc', number, number][] = [
-  ['Level', 'level', 1, 20], ['Base speed (ft)', 'speedBase', 0, 200], ['Initiative bonus (extra)', 'initMisc', -20, 20]
+const NUM_FIELDS: [string, 'speedBase' | 'initMisc', number, number][] = [
+  ['Base speed (ft)', 'speedBase', 0, 200], ['Initiative bonus (extra)', 'initMisc', -20, 20]
 ];
 
 export function EditDetails({ onReset }: { onReset: () => void }) {
@@ -23,6 +23,11 @@ export function EditDetails({ onReset }: { onReset: () => void }) {
         {TEXT_FIELDS.map(([label, key]) => (
           <TextField key={key} label={label} value={c.ch[key]} onChange={(v) => update((p) => ({ ch: { ...p.ch, [key]: v } }))} />
         ))}
+        {/* Level commits once, on blur or Enter: typing "12" never passes through level 1, because a level drop lowers
+            level-table resource maxima and HP per level for good (normalize() clamps counts and HP). */}
+        <label className="field">Level
+          <TypeInNumber className="input" value={c.level} onCommit={(v) => update({ level: clamp(v, 1, 20) })} />
+        </label>
         {NUM_FIELDS.map(([label, key, min, max]) => (
           <label key={key} className="field">{label}
             <NumInput className="input" value={c[key]} min={min} max={max}

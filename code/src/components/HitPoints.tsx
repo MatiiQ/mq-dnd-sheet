@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { flushSync } from 'react-dom';
-import { abilityMod, applyDamage, applyHeal, applySetTemp, clearHpUndo, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, isDead, setHp, setMaxHp, spendHitDie, undoHp } from '../logic';
+import { activeGrants, sourceLabel } from '../links';
+import { abilityMod, applyDamage, maxHpOf, num, applyHeal, applySetTemp, clearHpUndo, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, isDead, setHp, setMaxHp, spendHitDie, undoHp } from '../logic';
 import { useWide } from '../layout';
 import { useSheet } from '../sheet';
 import type { Character } from '../types';
@@ -14,7 +15,12 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
   // Bumping the key remounts the amount field, dropping whatever was half-typed.
   const [amtKey, setAmtKey] = useState(0);
   const ring = hpRingStops(c);
+  // The delta is in typed values; the max and the original show with HP-per-level grants added (Tough), so a typed
+  // 40 with original 44 and Tough at level 5 reads "/ 50 … max −4 (original 54)".
   const delta = c.maxHp - c.origHp;
+  const max = maxHpOf(c), origShown = maxHpOf({ ...c, maxHp: c.origHp });
+  const perLevel = activeGrants(c, 'hpLvl');
+  const [maxOpen, setMaxOpen] = useState(false);
   const hdUsed = hdSpent(c);
   const hdLeft = c.level - hdUsed;
   const dead = isDead(c);
@@ -69,8 +75,13 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
         </div>
         <div className="col grow" style={{ gap: 2 }}>
           <div className="block-title area-title hp-title">Hit points</div>
-          <span className="hp-max">/ {c.maxHp}</span>
-          {!edit && c.origOn && delta !== 0 && <span className="hp-delta" style={{ color: deltaColor }}>max {fmt(delta)} (original {c.origHp})</span>}
+          {perLevel.length > 0
+            ? <button type="button" className="hp-max link-btn" aria-expanded={maxOpen} aria-label={'Max HP ' + max + '. Show breakdown.'} onClick={() => setMaxOpen(!maxOpen)}>/ {max}</button>
+            : <span className="hp-max">/ {max}</span>}
+          {maxOpen && perLevel.length > 0 && (
+            <span className="small">Base {c.maxHp}{perLevel.map((g) => ' · ' + g.name + ' ' + fmt(num(c, g.val) * c.level) + ' (' + fmt(num(c, g.val)) + ' × level ' + c.level + (sourceLabel(c, g) ? ', ' + sourceLabel(c, g) : '') + ')')}</span>
+          )}
+          {!edit && c.origOn && delta !== 0 && <span className="hp-delta" style={{ color: deltaColor }}>max {fmt(delta)} (original {origShown})</span>}
         </div>
         {c.temp > 0 && <div className="hp-temp"><strong>+{c.temp}</strong>temp HP</div>}
       </div>
@@ -100,10 +111,11 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
       {edit && (
         <div className="dashed-box">
           <div className="row gap-6">
-            <span className="muted">Max HP</span>
-            <Step label="Decrease max HP" onClick={() => update((p) => setMaxHp(p, p.maxHp - 1))}>−</Step>
-            <TypeInNumber className="input input-num" aria-label="Max HP" value={c.maxHp} onCommit={(n) => update((p) => setMaxHp(p, n))} />
-            <Step label="Increase max HP" onClick={() => update((p) => setMaxHp(p, p.maxHp + 1))}>+</Step>
+            {/* These edit the typed value; with an HP-per-level grant it differs from the max shown, so say so. */}
+            <span className="muted">{max !== c.maxHp ? 'Base max HP' : 'Max HP'}</span>
+            <Step label={max !== c.maxHp ? 'Decrease base max HP' : 'Decrease max HP'} onClick={() => update((p) => setMaxHp(p, p.maxHp - 1))}>−</Step>
+            <TypeInNumber className="input input-num" aria-label={max !== c.maxHp ? 'Base max HP' : 'Max HP'} value={c.maxHp} onCommit={(n) => update((p) => setMaxHp(p, n))} />
+            <Step label={max !== c.maxHp ? 'Increase base max HP' : 'Increase max HP'} onClick={() => update((p) => setMaxHp(p, p.maxHp + 1))}>+</Step>
           </div>
           {!c.origOn && (
             <button type="button" className="btn btn-add" style={{ fontSize: 14, padding: '0 12px' }} onClick={() => update((p) => ({ origOn: true, origHp: p.maxHp }))}>+ Original max HP</button>

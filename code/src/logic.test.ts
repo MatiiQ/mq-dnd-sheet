@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import {
-  ABILITIES, SKILLS, abilityParts, effScore, hasProf, profList, saveProficient, skillLevel, splitTraining, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, NEW_FIELDS, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, removeItem, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
+  ABILITIES, SKILLS, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, splitTraining, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, NEW_FIELDS, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, removeItem, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
   setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, toggleFreeCast, undoHp
 } from './logic';
 import { oldIlyra, oldSeren } from './test-fixtures';
@@ -736,7 +736,7 @@ describe('sample numbers', () => {
   const numbers = (c: Character) => ({
     eff: ABILITIES.map(([k]) => effScore(c, k)), save: ABILITIES.map(([k]) => saveMod(c, k)),
     skills: Object.fromEntries(SKILLS.map(([k, , ab]) => [k, skillMod(c, k, ab)])),
-    speed: speedNow(c), ac: armorClass(c).total, init: initiative(c), maxHp: c.maxHp, pp: passiveScore(c, 'perception'),
+    speed: speedNow(c), ac: armorClass(c).total, init: initiative(c), maxHp: maxHpOf(c), pp: passiveScore(c, 'perception'),
     res: Object.fromEntries(c.res.map((r) => [r.id, r.max ?? null]))
   });
   const ILYRA = { eff: [12, 18, 14, 10, 14, 8], save: [4, 7, 2, 0, 2, -1], skills: { athletics: 1, acrobatics: 4, sleight: 4, stealth: 7, arcana: 0, history: 0, investigation: 0, nature: 3, religion: 0, animal: 5, insight: 5, medicine: 2, perception: 5, survival: 8, deception: -1, intimidation: -1, performance: -1, persuasion: -1 }, speed: 35, ac: 16, init: 4, maxHp: 44, pp: 15, res: { favored: 3 } };
@@ -861,5 +861,58 @@ describe('Training migration', () => {
   });
   it('drops a proficiency with an unknown category', () => {
     expect(migrate({ ...sampleCharacter(), profs: [{ id: 'a', cat: 'vehicle', name: 'Boat' }, { id: 'b', cat: 'tool', name: 'Lute' }] }).profs).toEqual([{ id: 'b', cat: 'tool', name: 'Lute' }]);
+  });
+});
+
+describe('speed, initiative, size and HP per level', () => {
+  const tough: Grant = { id: 't', kind: 'hpLvl', name: 'Tough', val: '2', from: 'feature:f10' };
+  const t5 = (p: Partial<Character> = {}) => make({ level: 5, maxHp: 44, origHp: 44, hp: 44, grants: [tough], ...p });
+  it('adds HP per level on top of the typed maximum (Tough, PHB p.202)', () => {
+    expect(maxHpOf(t5())).toBe(54);
+    expect(applyHeal(t5({ hp: 50, amount: 10 })).hp).toBe(54);
+    expect(setHp(t5({ hp: 20 }), 60).hp).toBe(54);
+    expect(maxHpOf(t5({ grants: [{ ...tough, counted: true }] }))).toBe(44);
+    expect(pillView(t5(), 'hp')!.max).toBe('54');
+  });
+  it('keeps the typed maximum typed and clamps HP to the effective one', () => {
+    expect(setMaxHp(t5({ hp: 50 }), 40)).toEqual({ maxHp: 40, hp: 50 });
+    expect(setMaxHp(make({ hp: 50, maxHp: 54 }), 40)).toEqual({ maxHp: 40, hp: 40 });
+  });
+  it('a Long Rest restores the typed original, and HP to it plus the grant', () => {
+    const c = longRest(t5({ hp: 20, maxHp: 40, origOn: true }));
+    expect(c).toMatchObject({ maxHp: 44, hp: 54 });
+    expect(maxHpOf({ ...t5({ maxHp: 40, origOn: true }), maxHp: 44 })).toBe(54); // the original the HP panel shows
+  });
+  it('massive damage compares with the effective maximum (PHB p.29)', () => {
+    expect(applyDamage(t5({ hp: 10, amount: 64 })).df).toBe(3);
+    expect(applyDamage(t5({ hp: 10, amount: 63 })).df).toBe(0);
+    expect(applyDamage(t5({ hp: 10, amount: 54, grants: [] })).df).toBe(3);
+    expect(applyDamage(t5({ hp: 0, amount: 53 })).df).toBe(1);
+  });
+  it('adds walking speed grants and takes the best of a typed or granted speed', () => {
+    const elf: Grant = { id: 'w', kind: 'speed', name: 'Fleet of Foot', mode: 'walk', val: '5', from: 'feature:f15' };
+    const c = make({ speedBase: 30, grants: [elf] });
+    expect(walkSpeed(c)).toBe(35);
+    expect(speedNow(c)).toBe(35);
+    expect(walkSpeed(make({ speedBase: 30, grants: [{ ...elf, counted: true }] }))).toBe(30);
+    const climb: Grant = { id: 'c', kind: 'speed', name: 'Climber', mode: 'climb', val: 'walk', from: 'feature:f15' };
+    expect(modeSpeed(make({ speedBase: 30, grants: [elf, climb] }), 'climb')).toEqual({ base: 35, hover: false, by: 'Species · Elven Lineage' });
+    expect(modeSpeed(make({ speedBase: 30, speeds: { climb: 40, swim: 0, fly: 0, burrow: 0 }, grants: [climb] }), 'climb')).toEqual({ base: 40, hover: false });
+    const fly: Grant = { id: 'f', kind: 'speed', name: 'Wings', mode: 'fly', val: '30', hover: true, from: 'feature:f15' };
+    expect(modeSpeed(make({ grants: [fly] }), 'fly')).toMatchObject({ base: 30, hover: true });
+  });
+  it('adds Initiative grants (Alert adds PB, PHB p.200)', () => {
+    const alert: Grant = { id: 'a', kind: 'init', name: 'Alert', val: 'pb', from: 'feature:f10' };
+    expect(initiative(make({ level: 5, grants: [alert] }))).toBe(initiative(make({ level: 5 })) + 3);
+    expect(initiative(make({ level: 5, grants: [{ ...alert, counted: true }] }))).toBe(initiative(make({ level: 5 })));
+  });
+  it('size and carrying size grants (Powerful Build, PHB p.192; a grant never lowers a hand size)', () => {
+    const pb: Grant = { id: 'p', kind: 'carryUp', name: 'Powerful Build', from: 'feature:f15' };
+    expect(carryCapacity(make({ grants: [pb] }))).toEqual(carryCapacity(make({ carryUp: true })));
+    expect(carryUpOf(make({ grants: [pb] }))).toBe(true);
+    const large: Grant = { id: 'l', kind: 'size', name: 'Large Form', size: 'large', from: 'feature:f15' };
+    expect(sizeOf(make({ grants: [large] }))).toBe('large');
+    expect(sizeOf(make({ size: 'large', grants: [{ ...large, size: 'medium' }] }))).toBe('large');
+    expect(carryCapacity(make({ grants: [large] })).size).toBe('large');
   });
 });

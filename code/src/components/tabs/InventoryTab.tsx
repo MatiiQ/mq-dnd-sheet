@@ -1,5 +1,5 @@
 import { useState, type CSSProperties } from 'react';
-import { ARMORS, CARRY_MULT, SIZES, carriedWeight, carryCapacity, detectArmor, effScore, fmt, parseWeight, removeItem } from '../../logic';
+import { ARMORS, CARRY_MULT, SIZES, carriedWeight, carryCapacity, carryUpOf, sizeOf, detectArmor, effScore, fmt, parseWeight, removeItem } from '../../logic';
 import { patchEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { Coin, Item } from '../../types';
 import { AddButton, EntryForm, EntryRow, NumInput, TextField } from '../ui';
@@ -114,8 +114,8 @@ export function InventoryTab() {
           <div className="grid speed-grid">
             <div className="tile"><span className="muted">Carry</span><span className="speed-value">{lb(cap.carry)} lb</span>
               <span className="muted">Strength {effScore(c, 'str')} × {CARRY_MULT[cap.size]} lb ({sizeName(cap.size)})</span></div>
-            {c.carryUp && <div className="tile"><span className="muted">Counts as one size larger</span><span className="speed-value">{sizeName(cap.size)}</span>
-              <span className="muted">Size {sizeName(c.size)}</span></div>}
+            {carryUpOf(c) && <div className="tile"><span className="muted">Counts as one size larger</span><span className="speed-value">{sizeName(cap.size)}</span>
+              <span className="muted">Size {sizeName(sizeOf(c))}</span></div>}
             <div className="tile"><span className="muted">Drag, lift or push</span><span className="speed-value">{lb(cap.push)} lb</span>
               <span className="muted">Twice the carry limit</span></div>
             <div className="tile"><span className="muted">Coins</span><span className="speed-value">{lb(Object.values(c.coins).reduce((t, n) => t + n, 0) / 50)} lb</span>

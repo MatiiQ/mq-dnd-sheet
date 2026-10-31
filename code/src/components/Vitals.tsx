@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { armorClass, fmt, initiative, profBonus, speedNow, speedOf, UNARMORED, zeroSpeedBy } from '../logic';
+import { armorClass, fmt, initiative, modeSpeed, profBonus, speedNow, speedOf, UNARMORED, walkSpeed, zeroSpeedBy } from '../logic';
 import { removeEntry, saveEntry, useEntryForm, useSheet } from '../sheet';
 import type { AcMod, SpeedKind, Unarmored } from '../types';
 import { AddButton, ChevronDown, EntryActions, EntryForm, NumInput, Step, TextField } from './ui';
@@ -21,7 +21,7 @@ export function Vitals() {
   };
   const zeroBy = zeroSpeedBy(c);
   const exhCut = 5 * c.exh;
-  const extraCount = SPEEDS.filter(([k]) => k !== 'walk' && c.speeds[k]).length;
+  const extraCount = SPEEDS.filter(([k]) => k !== 'walk' && modeSpeed(c, k).base).length;
   const hint = c.speedOpen ? 'Hide' : zeroBy.length ? 'Speed 0 · ' + zeroBy[0] : extraCount ? '+' + extraCount + ' more' : 'Climb · Swim · Fly';
   const note = (zeroBy.length ? 'Speed 0 while ' + zeroBy.join(', ') + '. ' : '') +
     (exhCut ? 'Exhaustion: −' + exhCut + ' ft applied to every speed. ' : '') +
@@ -99,7 +99,10 @@ export function Vitals() {
           </div>
           <div className="grid speed-grid" style={edit ? { '--min': '150px' } as CSSProperties : undefined}>
             {SPEEDS.map(([k, label]) => {
-              const base = k === 'walk' ? c.speedBase : c.speeds[k] || 0;
+              // The steppers edit the typed base; grants add to the walking Speed or give another speed with its source.
+              const typed = k === 'walk' ? c.speedBase : c.speeds[k] || 0;
+              const mode = k === 'walk' ? null : modeSpeed(c, k);
+              const base = mode ? mode.base : walkSpeed(c);
               const set = (v: number) => update((p) => (k === 'walk' ? { speedBase: v } : { speeds: { ...p.speeds, [k]: v } }));
               return (
                 <div key={k} className="tile">
@@ -107,11 +110,13 @@ export function Vitals() {
                   <span className="speed-value" style={{ color: base ? (exhCut || zeroBy.length ? 'var(--danger)' : 'var(--text)') : 'var(--dim)' }}>
                     {base ? speedOf(c, base) + ' ft' : k === 'climb' || k === 'swim' ? 'Walk ×½' : '—'}
                   </span>
+                  {mode?.by && <span className="muted">{mode.hover ? 'hover · ' : ''}from {mode.by}</span>}
+                  {k === 'walk' && base !== typed && <span className="muted">base {typed} ft {fmt(base - typed)} from grants</span>}
                   {edit && (
                     <div className="row gap-6">
-                      <Step label={'Lower ' + label.toLowerCase() + ' speed'} onClick={() => set(Math.max(0, base - 5))}>−</Step>
-                      <span className="muted">base {base} ft</span>
-                      <Step label={'Raise ' + label.toLowerCase() + ' speed'} onClick={() => set(Math.min(200, base + 5))}>+</Step>
+                      <Step label={'Lower ' + label.toLowerCase() + ' speed'} onClick={() => set(Math.max(0, typed - 5))}>−</Step>
+                      <span className="muted">base {typed} ft</span>
+                      <Step label={'Raise ' + label.toLowerCase() + ' speed'} onClick={() => set(Math.min(200, typed + 5))}>+</Step>
                     </div>
                   )}
                 </div>
