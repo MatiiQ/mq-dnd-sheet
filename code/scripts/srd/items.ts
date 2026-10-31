@@ -76,11 +76,17 @@ export function parseArmor(layout: string): ItemEntry[] {
 // Prose blocks headed "Name (cost)", as in the tool and gear descriptions.
 interface Priced { name: string; cost: string; page: number; lines: string[] }
 const PRICED = new RegExp(`^([A-Z].*?) \\((${COST}|Varies)\\)$`);
+// A heading split over two lines, prices for two sizes: "Spell Scroll (Cantrip, 30 GP;" + "Level 1, 50 GP)".
+const PRICED_TWO = new RegExp(`^([A-Z].*?) \\((.*${COST}.*)\\)$`);
 function pricedBlocks(text: string): Priced[] {
   const out: Priced[] = [];
-  for (const l of srdLines(text)) {
-    const m = PRICED.exec(l.text.trim());
+  const lines = srdLines(text);
+  for (let i = 0; i < lines.length; i++) {
+    const l = lines[i], t = l.text.trim();
+    const m = PRICED.exec(t);
+    const two = !m && /\([^)]*$/.test(t) && lines[i + 1] ? PRICED_TWO.exec(`${t} ${lines[i + 1].text.trim()}`) : null;
     if (m) out.push({ name: m[1], cost: m[2], page: l.page, lines: [] });
+    else if (two) { out.push({ name: two[1], cost: two[2], page: l.page, lines: [] }); i++; }
     else out[out.length - 1]?.lines.push(l.text);
   }
   return out;
@@ -88,15 +94,24 @@ function pricedBlocks(text: string): Priced[] {
 
 const GEAR_CELL = new RegExp(`(\\S+(?: \\S+)*)\\s{2,}(Varies|—|[\\d½/]+ lb\\.(?: \\(full\\))?)\\s+(Varies|${COST})`, 'g');
 const AMMO_ROW = new RegExp(`^\\s+([A-Z][\\w, ]+?)\\s{2,}(\\d+)\\s+(Quiver|Case|Pouch)\\s+([\\d½/]+ lb\\.)\\s+(${COST})`);
+// A gear item's capacity: pounds and the volume they fit in ("holds up to 30 pounds within 1 cubic foot"), or else the
+// volume or count it holds ("12 cubic feet of contents", "20 Arrows"), which `cap` (pounds) can't hold.
+export function capacityOf(desc: string): Pick<ItemEntry, 'cap' | 'capVol'> {
+  const lb = /holds up to (\d+) pounds within (.+?)\./.exec(desc);
+  if (lb) return { cap: Number(lb[1]), capVol: lb[2] };
+  const vol = /holds up to (.+?)\.(?:\s|$)/.exec(desc);
+  return vol ? { capVol: vol[1] } : {};
+}
+
 // The Adventuring Gear table (and the Ammunition table, when the layout text holds it) with descriptions from the prose.
 export function parseGear(text: string, layout: string): ItemEntry[] {
   const prose = new Map(pricedBlocks(text).map((b) => [b.name, b]));
   const out: ItemEntry[] = [];
   const add = (tableName: string, fields: Omit<ItemEntry, 'id' | 'kind' | 'name' | 'src' | 'desc'>) => {
-    const p = prose.get(tableName);
+    // "Spell Scroll (Cantrip)" in the table, one "Spell Scroll" block in the prose.
+    const p = prose.get(tableName) ?? prose.get(tableName.replace(/ \(.*\)$/, ''));
     const desc = p ? paragraphs(p.lines).join('\n') : '';
-    const cap = /holds up to (\d+) pounds within (.+?)\./.exec(desc);
-    out.push(item(playName(tableName), { ...fields, desc, ...(p ? { page: p.page } : {}), ...(cap ? { cap: Number(cap[1]), capVol: cap[2] } : {}) }));
+    out.push(item(playName(tableName), { ...fields, desc, ...(p ? { page: p.page } : {}), ...capacityOf(desc) }));
   };
   for (const line of layout.split('\n')) {
     const a = AMMO_ROW.exec(line);

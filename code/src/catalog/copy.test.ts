@@ -9,7 +9,7 @@ import { mergeCatalog } from './merge';
 import type { Entry, FeatureEntry, ItemEntry, SpellEntry } from './schema';
 import {
   addFromCatalog, draftFromItem, featureCandidates, grantSpellName, withDetectedArmor, BLANK_ITEM, BLANK_SPELL, catForKind, countedDefault, draftFromSpell, spellFromForm, type SpellDraft, choicesOf, classIdOf, matchId, nestedEntries, subclassIdOf, type AddChoices, freeText, itemFromEntry, itemFromForm, missingPicks, needed, optionGroups, poolOptions, prereqMet, resolveChoices,
-  spellFromEntry, spellSummary, validPicks, itemQuestions, answeredName, type ItemAnswers, type ItemDraft
+  spellFromEntry, spellSummary, validPicks, itemQuestions, itemStats, answeredName, type ItemAnswers, type ItemDraft
 } from './copy';
 
 const cat = mergeCatalog(srdEntries, null);
@@ -138,6 +138,19 @@ describe('a magic weapon or armor of the player’s choice (plan 7, Task 9)', ()
     expect(() => added('item/armor-1-2-or-3', { base: 'item/shield', bonus: 1 })).toThrow(/armor/i);
     expect(() => added('item/shield-1-2-or-3', {})).toThrow(/\+1/);
     expect(() => added('item/shield-1-2-or-3', { bonus: 4 as 1 })).toThrow(/\+1/);
+  });
+});
+
+describe('itemStats (plan 7, Task 10)', () => {
+  it('builds a line from a weapon’s or armor’s fields, for one without a description', () => {
+    expect(itemStats(item('item/longsword'))).toBe('Martial melee weapon · 1d8 Slashing · Versatile (1d10) · Mastery: Sap');
+    expect(itemStats(item('item/longbow'))).toBe('Martial ranged weapon · 1d8 Piercing · Ammunition (150/600, Arrow), Heavy, Two-Handed · Mastery: Slow');
+    expect(itemStats(item('item/dagger'))).toBe('Simple melee weapon · 1d4 Piercing · Finesse, Light, Thrown (20/60) · Mastery: Nick');
+    expect(itemStats(item('item/plate-armor'))).toBe('Heavy armor · AC 18 · Strength 15 · Stealth Disadvantage');
+    expect(itemStats(item('item/leather-armor'))).toBe('Light armor · AC 11 + Dex');
+    expect(itemStats(item('item/breastplate'))).toBe('Medium armor · AC 14 + Dex (max 2)');
+    expect(itemStats(item('item/shield'))).toBe('Shield · +2 AC');
+    expect(itemStats(item('item/rope'))).toBe('');
   });
 });
 
@@ -809,7 +822,7 @@ describe('draftFromItem', () => {
     expect(saveEntry<Item>([wand], itemFromForm({ ...draftFromItem(wand), name: 'My Wand' }), 'w1')[0]).toMatchObject({ name: 'My Wand', magic: 2 });
   });
   it('round-trips catalog items and keeps their catalog-only fields', () => {
-    for (const id of ['item/longsword', 'item/longbow', 'item/dagger', 'item/shield', 'item/bag-of-holding', 'item/wand-of-magic-missiles', 'item/dagger-of-venom']) {
+    for (const id of ['item/longsword', 'item/longbow', 'item/dagger', 'item/shield', 'item/bag-of-holding', 'item/wand-of-magic-missiles', 'item/dagger-of-venom', 'item/chest', 'item/quiver']) {
       const x = itemFromEntry(item(id));
       expect([id, round(x)]).toEqual([id, without(x, 'eq')]);
     }

@@ -1,5 +1,5 @@
 import { useState, type CSSProperties } from 'react';
-import { BLANK_ITEM, catForKind, draftFromItem, itemFromForm, withDetectedArmor, WEAPON_PROPS, type ItemDraft, type ItemKind, type WeaponProp } from '../../catalog/copy';
+import { BLANK_ITEM, catForKind, draftFromItem, itemFromForm, itemStats, withDetectedArmor, WEAPON_PROPS, type ItemDraft, type ItemKind, type WeaponProp } from '../../catalog/copy';
 import { isValue } from '../../catalog/value';
 import { CARRY_MULT, DAMAGE_TYPES, SIZES, maxFields, maxOf, rechargeOf, carriedWeight, carryCapacity, carryUpOf, sizeOf, effScore, fmt, addGrants, grantChips, isContainer, newId, removeItem, type GrantInput } from '../../logic';
 import {
@@ -214,7 +214,7 @@ export function InventoryTab() {
               </div>
             )}
           </div>}
-          body={(it.desc || moveControls(it)) ? <>{it.desc && <span className="entry-desc">{it.desc}</span>}{moveControls(it)}</> : undefined}
+          body={(it.desc || itemStats(it) || moveControls(it)) ? <>{(it.desc || itemStats(it)) && <span className="entry-desc">{it.desc || itemStats(it)}</span>}{moveControls(it)}</> : undefined}
           onEdit={() => f.openEdit(it.id, { ...draftFromItem(it), pending: [] })}
           onRemove={() => update((p) => (isContainer(it) ? removeContainer(p, it.id, removeMode(it)) : removeItem(p, it.id)))}
           removeConfirm={isContainer(it) && holds(it) ? bagConfirm(it) : undefined}>

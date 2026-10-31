@@ -474,7 +474,8 @@
     "cat": "gear",
     "wt": 70,
     "cost": "2 GP",
-    "page": 96
+    "page": 96,
+    "capVol": "40 gallons of liquid or up to 4 cubic feet of dry goods"
   },
   {
     "id": "item/basic-poison",
@@ -977,7 +978,8 @@
     "cat": "gear",
     "wt": 2,
     "cost": "5 CP",
-    "page": 96
+    "page": 96,
+    "capVol": "half a cubic foot of contents"
   },
   {
     "id": "item/bullseye-lantern",
@@ -1142,7 +1144,8 @@
     "cat": "gear",
     "wt": 25,
     "cost": "5 GP",
-    "page": 97
+    "page": 97,
+    "capVol": "12 cubic feet of contents"
   },
   {
     "id": "item/chime-of-opening",
@@ -1375,7 +1378,8 @@
     "cat": "gear",
     "wt": 1,
     "cost": "1 GP",
-    "page": 96
+    "page": 96,
+    "capVol": "20 Bolts"
   },
   {
     "id": "item/crowbar",
@@ -2049,7 +2053,8 @@
     "cat": "gear",
     "wt": 1,
     "cost": "2 CP",
-    "page": 97
+    "page": 97,
+    "capVol": "1 pint"
   },
   {
     "id": "item/folding-boat",
@@ -2201,11 +2206,12 @@
     "kind": "item",
     "name": "Glass Bottle",
     "src": "srd",
-    "desc": "A Glass Bottle holds up to 11/2 pints.",
+    "desc": "A Glass Bottle holds up to 1½ pints.",
     "cat": "gear",
     "wt": 2,
     "cost": "2 GP",
-    "page": 96
+    "page": 96,
+    "capVol": "1½ pints"
   },
   {
     "id": "item/glassblowers-tools",
@@ -2772,7 +2778,8 @@
     "cat": "gear",
     "wt": 10,
     "cost": "2 GP",
-    "page": 99
+    "page": 99,
+    "capVol": "1 gallon"
   },
   {
     "id": "item/iron-spikes",
@@ -2841,7 +2848,8 @@
     "cat": "gear",
     "wt": 4,
     "cost": "2 CP",
-    "page": 98
+    "page": 98,
+    "capVol": "1 gallon"
   },
   {
     "id": "item/ladder",
@@ -3194,7 +3202,8 @@
     "cat": "gear",
     "wt": 1,
     "cost": "1 GP",
-    "page": 96
+    "page": 96,
+    "capVol": "10 sheets of paper or 5 sheets of parchment"
   },
   {
     "id": "item/marvelous-pigments",
@@ -4057,7 +4066,8 @@
     "cat": "gear",
     "wt": 1,
     "cost": "1 GP",
-    "page": 99
+    "page": 99,
+    "capVol": "20 Arrows"
   },
   {
     "id": "item/rapier",
@@ -4967,7 +4977,7 @@
     "kind": "item",
     "name": "Signal Whistle",
     "src": "srd",
-    "desc": "When blown as a Utilize action, a Signal Whistle produces a sound that can be heard up to 600 feet away.\nSpell Scroll (Cantrip, 30 GP; Level 1, 50 GP)\nA Spell Scroll (Cantrip) or Spell Scroll (Level 1) is a magic item that bears the words of a cantrip or level 1 spell, respectively, determined by the scroll’s creator. If the spell is on your class’s spell list, you can read the scroll and cast the spell using its normal casting time and without providing any Material components. If the spell requires a saving throw or an attack roll, the spell save DC is 13, and the attack bonus is +5. The scroll disintegrates when the casting is completed.",
+    "desc": "When blown as a Utilize action, a Signal Whistle produces a sound that can be heard up to 600 feet away.",
     "cat": "gear",
     "cost": "5 CP",
     "page": 99
@@ -5074,18 +5084,20 @@
     "kind": "item",
     "name": "Spell Scroll (Cantrip)",
     "src": "srd",
-    "desc": "",
+    "desc": "A Spell Scroll (Cantrip) or Spell Scroll (Level 1) is a magic item that bears the words of a cantrip or level 1 spell, respectively, determined by the scroll’s creator. If the spell is on your class’s spell list, you can read the scroll and cast the spell using its normal casting time and without providing any Material components. If the spell requires a saving throw or an attack roll, the spell save DC is 13, and the attack bonus is +5. The scroll disintegrates when the casting is completed.",
     "cat": "gear",
-    "cost": "30 GP"
+    "cost": "30 GP",
+    "page": 99
   },
   {
     "id": "item/spell-scroll-level-1",
     "kind": "item",
     "name": "Spell Scroll (Level 1)",
     "src": "srd",
-    "desc": "",
+    "desc": "A Spell Scroll (Cantrip) or Spell Scroll (Level 1) is a magic item that bears the words of a cantrip or level 1 spell, respectively, determined by the scroll’s creator. If the spell is on your class’s spell list, you can read the scroll and cast the spell using its normal casting time and without providing any Material components. If the spell requires a saving throw or an attack roll, the spell save DC is 13, and the attack bonus is +5. The scroll disintegrates when the casting is completed.",
     "cat": "gear",
-    "cost": "50 GP"
+    "cost": "50 GP",
+    "page": 99
   },
   {
     "id": "item/spellguard-shield",
@@ -5801,7 +5813,8 @@
     "desc": "A Vial holds up to 4 ounces.",
     "cat": "gear",
     "cost": "1 GP",
-    "page": 100
+    "page": 100,
+    "capVol": "4 ounces"
   },
   {
     "id": "item/vicious-weapon",
@@ -6070,7 +6083,8 @@
     "cat": "gear",
     "wt": 5,
     "cost": "2 SP",
-    "page": 100
+    "page": 100,
+    "capVol": "4 pints"
   },
   {
     "id": "item/weapon-1-2-or-3",

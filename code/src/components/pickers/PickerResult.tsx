@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { itemStats } from '../../catalog/copy';
 import type { Entry } from '../../catalog/schema';
 
 // The line under a result's name: a spell's level, school and casting time; an item's category and cost.
@@ -30,7 +31,7 @@ export function PickerResult({ entry, taken, onAdd, note, marked, disabled }: {
         </button>
         <button type="button" className="btn btn-sm" aria-disabled={disabled} aria-label={'Add ' + entry.name} onClick={() => { if (!disabled) onAdd(); }}>Add</button>
       </div>
-      {open && <div className="entry-body"><span className="entry-desc">{entry.desc || 'No description.'}</span></div>}
+      {open && <div className="entry-body"><span className="entry-desc">{entry.desc || (entry.kind === 'item' && itemStats(entry)) || 'No description.'}</span></div>}
     </div>
   );
 }

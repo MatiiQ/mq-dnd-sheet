@@ -152,6 +152,15 @@ describe('SRD items', () => {
     expect(g('staff-of-power').map((x) => x.kind)).toEqual(['ac', 'saveBonus', 'spellAtk']);
     expect(g('robe-of-the-archmagi').map((x) => x.kind).slice(0, 2)).toEqual(['ac', 'defense']);
   });
+  it('give mundane containers the volume or count they hold, and the scrolls their text (plan 7, Task 10)', () => {
+    const it = (id: string) => (items as ItemEntry[]).find((e) => e.id === 'item/' + id)!;
+    for (const id of ['chest', 'barrel', 'bucket', 'quiver', 'crossbow-bolt-case', 'map-or-scroll-case', 'flask', 'jug', 'iron-pot', 'glass-bottle', 'vial', 'waterskin'])
+      expect([id, typeof it(id).capVol, it(id).cap, it(id).xdim]).toEqual([id, 'string', undefined, undefined]);
+    expect(it('glass-bottle')).toMatchObject({ capVol: '1½ pints', desc: 'A Glass Bottle holds up to 1½ pints.' });
+    expect(it('quiver').capVol).toBe('20 Arrows');
+    expect(it('signal-whistle').desc).not.toContain('Spell Scroll');
+    for (const id of ['spell-scroll-cantrip', 'spell-scroll-level-1']) expect(it(id).desc).toMatch(/^A Spell Scroll \(Cantrip\) or Spell Scroll \(Level 1\)/);
+  });
   it('read Bag of Holding’s capacity from its SRD text', () => {
     expect(by('Bag of Holding')).toMatchObject({ xdim: true, cap: 500, capVol: '64 cubic feet', wt: 5 });
   });

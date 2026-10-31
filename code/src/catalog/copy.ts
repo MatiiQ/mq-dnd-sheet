@@ -112,6 +112,25 @@ function checkItemAnswers(cat: Catalog, e: Entry, a: ItemAnswers | undefined): v
   }
 }
 
+// A line from a weapon's or armor's fields, shown where it has no description (the SRD gives weapons and armor only
+// table rows). Armor adds Dex in full (Light), at most 2 (Medium) or not at all (Heavy) (PHB p.219). '' for anything else.
+type StatFields = Pick<ItemEntry, 'wcat' | 'wrange' | 'dmg' | 'dtype' | 'props' | 'thrown' | 'vers' | 'ammo' | 'mastery' | 'armor' | 'acBase' | 'strReq' | 'stealthDis'>;
+const cap = (s: string) => s.replace(/(^|-)([a-z])/g, (m) => m.toUpperCase());
+export function itemStats(x: StatFields): string {
+  if (x.armor === 'shield') return `Shield · +${x.acBase ?? 2} AC`;
+  if (x.armor) {
+    const dex = x.armor === 'light' ? ' + Dex' : x.armor === 'medium' ? ' + Dex (max 2)' : '';
+    return [`${cap(x.armor)} armor`, `AC ${x.acBase}${dex}`, x.strReq && `Strength ${x.strReq}`, x.stealthDis && 'Stealth Disadvantage'].filter(Boolean).join(' · ');
+  }
+  if (!x.wcat && !x.dmg) return '';
+  const [range, kind] = (x.ammo ?? '').split(';');
+  const props = (x.props ?? '').split(',').filter(Boolean).map((p) =>
+    p === 'thrown' && x.thrown ? `Thrown (${x.thrown})` : p === 'versatile' && x.vers ? `Versatile (${x.vers})`
+      : p === 'ammunition' && x.ammo ? `Ammunition (${[range, kind && cap(kind)].filter(Boolean).join(', ')})` : cap(p)).join(', ');
+  return [[x.wcat && cap(x.wcat), x.wrange, 'weapon'].filter(Boolean).join(' '),
+    [x.dmg, x.dtype].filter(Boolean).join(' '), props, x.mastery && `Mastery: ${cap(x.mastery)}`].filter(Boolean).join(' · ');
+}
+
 export type ItemKind = 'none' | 'weapon' | 'armor' | 'container';
 // The weapon properties in the form's order; the catalog stores them alphabetically.
 export const WEAPON_PROPS = ['finesse', 'light', 'thrown', 'versatile', 'ammunition', 'loading', 'reach', 'two-handed', 'heavy'] as const;
@@ -176,9 +195,10 @@ export function itemFromForm(d: ItemDraft): Omit<Item, 'id' | 'eq'> {
   };
 }
 
-// The form's kind for an item: weapon fields → weapon, armor → armor, a capacity → container, else none.
+// The form's kind for an item: weapon fields → weapon, armor → armor, a capacity (pounds, or a volume or count such as
+// a Chest's 12 cubic feet) → container, else none.
 const kindOfItem = (it: Item): ItemKind =>
-  it.wcat || it.wrange || it.dmg ? 'weapon' : it.armor ? 'armor' : it.xdim || it.cap !== undefined ? 'container' : 'none';
+  it.wcat || it.wrange || it.dmg ? 'weapon' : it.armor ? 'armor' : it.xdim || it.cap !== undefined || it.capVol !== undefined ? 'container' : 'none';
 const str = (v: number | string | undefined) => (v === undefined ? '' : String(v));
 // An item as the custom form's draft; itemFromForm of it gives the item back (minus eq, which the form doesn't own).
 export function draftFromItem(it: Item): ItemDraft {

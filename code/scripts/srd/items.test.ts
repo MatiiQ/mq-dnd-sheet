@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { copyBase, parseArmor, parseGear, parseMagicItems, parseTools, parseWeapons } from './items.ts';
+import { capacityOf, copyBase, parseArmor, parseGear, parseMagicItems, parseTools, parseWeapons } from './items.ts';
 import type { ItemEntry } from '../../src/catalog/schema.ts';
+import { srdLines } from './text.ts';
 
 const fx = (f: string) => readFileSync(new URL(`./fixtures/${f}`, import.meta.url), 'utf8');
 const by = <T extends { name: string }>(list: T[], name: string) => list.find((e) => e.name === name);
@@ -43,6 +44,25 @@ describe('gear and tools', () => {
     expect(by(gear, 'Explorer’s Pack')!.desc).toContain('10 Torches, and Waterskin.');
     // "Clothes, Traveler's" in the table reads as the name used in play
     expect(by(gear, 'Traveler’s Clothes')).toMatchObject({ id: 'item/travelers-clothes', wt: 4, cost: '2 GP' });
+  });
+  it('reads a capacity in pounds, or else the volume or count a container holds (plan 7)', () => {
+    expect(capacityOf('A Backpack holds up to 30 pounds within 1 cubic foot. It can also serve as a saddlebag.')).toEqual({ cap: 30, capVol: '1 cubic foot' });
+    expect(capacityOf('A Chest holds up to 12 cubic feet of contents.')).toEqual({ capVol: '12 cubic feet of contents' });
+    expect(capacityOf('A Quiver holds up to 20 Arrows.')).toEqual({ capVol: '20 Arrows' });
+    expect(capacityOf('A Waterskin holds up to 4 pints. If you don’t drink sufficient water, you risk dehydration.')).toEqual({ capVol: '4 pints' });
+    expect(capacityOf('A Lamp burns for 6 hours.')).toEqual({});
+  });
+  it('reads the Glass Bottle’s extracted "11/2 pints" as 1½ pints, and no other number', () => {
+    expect(srdLines('A Glass Bottle holds up to 11/2 pints.')[0].text).toBe('A Glass Bottle holds up to 1½ pints.');
+    expect(srdLines('Range 11/2 miles')[0].text).toBe('Range 11/2 miles');
+  });
+  it('reads a heading split over two lines, and gives both Spell Scrolls its text (plan 7)', () => {
+    const text = 'Signal Whistle (5 CP)\nWhen blown, it sounds.\n\nSpell Scroll (Cantrip, 30 GP;\nLevel 1, 50 GP)\n\nA Spell Scroll (Cantrip) or Spell Scroll (Level 1) is a magic item.\n';
+    const layout = '  Signal Whistle    —    5 CP    Spell Scroll (Cantrip)    —    30 GP\n  Spell Scroll (Level 1)    —    50 GP\n';
+    const gear = parseGear(text, layout);
+    expect(by(gear, 'Signal Whistle')!.desc).toBe('When blown, it sounds.');
+    expect(by(gear, 'Spell Scroll (Cantrip)')!.desc).toBe('A Spell Scroll (Cantrip) or Spell Scroll (Level 1) is a magic item.');
+    expect(by(gear, 'Spell Scroll (Level 1)')!.desc).toBe(by(gear, 'Spell Scroll (Cantrip)')!.desc);
   });
   it('reads tools', () => {
     const tools = parseTools(fx('tools.txt'));
