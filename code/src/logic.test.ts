@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import {
-  ABILITIES, SKILLS, effScore, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, NEW_FIELDS, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, removeItem, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
+  ABILITIES, SKILLS, abilityParts, effScore, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, NEW_FIELDS, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, removeItem, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
   setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, toggleFreeCast, undoHp
 } from './logic';
 import { oldIlyra, oldSeren } from './test-fixtures';
-import type { Character, Item, Spell } from './types';
+import type { Character, Grant, Item, Spell } from './types';
 
 const make = (p: Partial<Character> = {}): Character => ({ ...sampleCharacter(), ...p });
 const sp = (p: Partial<Spell> = {}): Spell => ({ id: 's1', name: 'Bless', lvl: 1, time: 'Action', range: '30 ft', srcName: 'Cleric', ...p });
@@ -746,5 +746,45 @@ describe('sample numbers', () => {
   it('Seren, and an old save of her', () => {
     expect(numbers(druidSample())).toEqual(SEREN);
     expect(numbers(migrate(oldSeren()))).toEqual(SEREN);
+  });
+});
+
+describe('ability score grants', () => {
+  const g = (id: string, ab: string, val: string, cap: 20 | 25 | 30 = 20, p: Partial<Grant> = {}): Grant =>
+    ({ id, kind: 'abil', name: 'Grant ' + id, ab, val, cap, from: 'feature:f10', ...p });
+  const withAbil = (dex: number, grants: Grant[], p: Partial<Character> = {}) => make({ abil: { ...make().abil, dex }, abilAdj: {}, grants, ...p });
+  it('adds grants up to their cap of 20 (PHB p.38) and marks the one the cap cuts', () => {
+    const c = withAbil(19, [g('a', 'dex', '1'), g('b', 'dex', '1')]);
+    expect(effScore(c, 'dex')).toBe(20);
+    expect(abilityParts(c, 'dex').find((p) => p.label === 'Grant b')).toMatchObject({ value: 0, note: 'capped at 20' });
+  });
+  it('never lowers a score above the cap', () => {
+    expect(effScore(withAbil(21, [g('a', 'dex', '2')]), 'dex')).toBe(21);
+  });
+  it('applies cap-20 grants before higher caps, whatever the list order', () => {
+    expect(effScore(withAbil(20, [g('a', 'dex', '1'), g('b', 'dex', '1', 30)]), 'dex')).toBe(21);
+    expect(effScore(withAbil(20, [g('b', 'dex', '1', 30), g('a', 'dex', '1')]), 'dex')).toBe(21);
+  });
+  it('a set score raises to the highest set, then the adjustment applies', () => {
+    const set = (id: string, val: string): Grant => ({ id, kind: 'abilSet', name: 'Set ' + id, ab: 'dex', val, from: 'feature:f10' });
+    expect(effScore(withAbil(18, [set('a', '19'), set('b', '23')]), 'dex')).toBe(23);
+    expect(effScore(withAbil(18, [set('a', '19'), set('b', '23')], { abilAdj: { dex: -2 } }), 'dex')).toBe(21);
+  });
+  it('a counted grant adds nothing and shows as counted', () => {
+    const c = withAbil(18, [g('a', 'dex', '2', 20, { counted: true })]);
+    expect(effScore(c, 'dex')).toBe(18);
+    expect(abilityParts(c, 'dex').find((p) => p.label === 'Grant a')).toMatchObject({ note: 'counted' });
+  });
+  it('an inactive grant adds nothing', () => {
+    const c = withAbil(14, [g('a', 'dex', '2', 20, { from: 'item:i2', needEq: true })], { inv: [{ id: 'i2', name: 'Gloves', qty: 1, eq: false }] });
+    expect(effScore(c, 'dex')).toBe(14);
+    expect(effScore({ ...c, inv: [{ ...c.inv[0], eq: true }] }, 'dex')).toBe(16);
+  });
+  it('Primal Champion raises to a cap of 25 (PHB p.53)', () => {
+    expect(effScore(withAbil(20, [g('a', 'dex', '4', 25)]), 'dex')).toBe(24);
+  });
+  it('breaks a score into its base, grants and adjustment', () => {
+    const c = withAbil(15, [g('a', 'dex', '2')], { abilAdj: { dex: -1 } });
+    expect(abilityParts(c, 'dex').map((p) => [p.label, p.value])).toEqual([['Score', 15], ['Grant a', 2], ['Adjustment', -1]]);
   });
 });

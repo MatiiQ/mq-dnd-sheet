@@ -1,8 +1,9 @@
 // D&D 2024 rules used by the sheet. Pure functions: each takes a character and returns the next one.
 import { blankCharacter, sampleCharacter } from './defaults';
 import { grantErrors } from './catalog/schema';
-import { dropLinkOnly, fixLinks, hasActiveEffect, linkOf, parseLink, sourceOf, SRC_KINDS } from './links';
-import type { AcEffect, Ability, ArmorKind, CastAbility, Character, Concentration, HpSnapshot, Item, Linked, Resource, Size, Spell, SpellSort, Tab, Unarmored, When } from './types';
+import { valueAt, type ValueCtx } from './catalog/value';
+import { activeGrants, dropLinkOnly, fixLinks, hasActiveEffect, linkOf, parseLink, sourceOf, SRC_KINDS } from './links';
+import type { AcEffect, Ability, ArmorKind, CastAbility, Character, Concentration, Grant, HpSnapshot, Item, Linked, Resource, Size, Spell, SpellSort, Tab, Unarmored, When } from './types';
 
 export const ABILITIES: [Ability, string][] = [
   ['str', 'Strength'], ['dex', 'Dexterity'], ['con', 'Constitution'],
@@ -53,7 +54,39 @@ export const clamp = (n: number, min: number, max: number) => Math.max(min, Math
 export const fmt = (m: number) => (m >= 0 ? '+' + m : '−' + Math.abs(m));
 export const mod = (score: number) => Math.floor((score - 10) / 2);
 export const profBonus = (level: number) => 2 + Math.floor((level - 1) / 4);
-export const effScore = (c: Character, k: Ability) => clamp(c.abil[k] + (c.abilAdj[k] || 0), 1, 30);
+// Context for grant values: level, Proficiency Bonus and ability modifiers.
+export const valueCtx = (c: Character): ValueCtx => ({ level: c.level, pb: profBonus(c.level), mod: (a) => abilityMod(c, a) });
+const numIn = (ctx: ValueCtx, v: string | undefined) => { const n = v === undefined ? 0 : valueAt(v, ctx); return typeof n === 'number' ? n : 0; };
+// A grant value as a number now; dice or no value count as 0.
+export const num = (c: Character, v: string | undefined) => numIn(valueCtx(c), v);
+// Ability grant values are constants: read with modifiers of 0, so a score never depends on itself.
+const constCtx = (c: Character): ValueCtx => ({ level: c.level, pb: profBonus(c.level), mod: () => 0 });
+
+// A score and the parts it is made of. Fixed order (spec): the typed base; each active grant capped at 20 adds, never
+// past the cap and never lowering (no increase can raise a score above 20, PHB p.38); then cap-25 grants (Primal
+// Champion, PHB p.53) and cap-30 grants the same way; a set score raises to the highest set value; the temporary
+// adjustment last; 1–30. Counted grants are already in the typed base and add nothing.
+export function abilityParts(c: Character, k: Ability): AcPart[] {
+  const ctx = constCtx(c);
+  let s = c.abil[k];
+  const parts: AcPart[] = [{ label: 'Score', value: s }];
+  const mine = activeGrants(c, 'abil', true).filter((g) => g.ab === k);
+  parts.push(...mine.filter((g) => g.counted).map((g) => ({ label: g.name, value: numIn(ctx, g.val), note: 'counted' })));
+  for (const cap of [20, 25, 30]) {
+    for (const g of mine.filter((x) => !x.counted && x.cap === cap)) {
+      const next = Math.max(s, Math.min(cap, s + numIn(ctx, g.val)));
+      parts.push({ label: g.name, value: next - s, ...(next - s < numIn(ctx, g.val) ? { note: 'capped at ' + cap } : {}) });
+      s = next;
+    }
+  }
+  const sets = activeGrants(c, 'abilSet').filter((g) => g.ab === k);
+  const top = sets.reduce<Grant | null>((b, g) => (!b || numIn(ctx, g.val) > numIn(ctx, b.val) ? g : b), null);
+  if (top && numIn(ctx, top.val) > s) { parts.push({ label: top.name, value: numIn(ctx, top.val) - s, note: 'sets ' + numIn(ctx, top.val) }); s = numIn(ctx, top.val); }
+  if (c.abilAdj[k]) parts.push({ label: 'Adjustment', value: c.abilAdj[k]! });
+  return parts;
+}
+export const effScore = (c: Character, k: Ability) =>
+  clamp(abilityParts(c, k).reduce((t, p) => t + (p.note === 'counted' ? 0 : p.value), 0), 1, 30);
 export const abilityMod = (c: Character, k: Ability) => mod(effScore(c, k));
 export const skillMod = (c: Character, key: string, ab: Ability) => abilityMod(c, ab) + profBonus(c.level) * (c.skillProf[key] || 0);
 // Passive Perception = 10 + the Perception check bonus (PHB p.372). The sheet uses the same formula for Investigation and Insight, which the rules don't define.

@@ -1,4 +1,5 @@
-import { ABILITIES, SKILLS, abilityMod, clamp, effScore, fmt, saveMod, skillMod } from '../logic';
+import { useState } from 'react';
+import { ABILITIES, SKILLS, abilityMod, abilityParts, clamp, effScore, fmt, saveMod, skillMod } from '../logic';
 import { useWide } from '../layout';
 import { useSheet } from '../sheet';
 import type { Ability } from '../types';
@@ -26,6 +27,7 @@ export function Abilities() {
 function AbilityCard({ k, name }: { k: Ability; name: string }) {
   const { c, update, edit } = useSheet();
   const wide = useWide();
+  const [open, setOpen] = useState(false);
   const cur = effScore(c, k), base = c.abil[k], changed = cur !== base;
   const saveProf = !!c.saveProf[k];
   const scoreColor = cur > base ? 'var(--blue)' : cur < base ? 'var(--danger)' : 'var(--text)';
@@ -52,10 +54,23 @@ function AbilityCard({ k, name }: { k: Ability; name: string }) {
             </label>
           )}
         </div>
-        <div role="img" aria-label={name + ' modifier ' + fmt(abilityMod(c, k)) + ', score ' + cur} className="mod-token">
+        {/* Tapping the modifier shows how the score is made (base, grants, adjustment), in and out of Edit mode. */}
+        <button type="button" aria-expanded={open} aria-label={name + ' modifier ' + fmt(abilityMod(c, k)) + ', score ' + cur + '. Show breakdown.'}
+          className="mod-token" onClick={() => setOpen(!open)}>
           {fmt(abilityMod(c, k))}<span className="score-coin" style={{ color: scoreColor }}>{cur}</span>
-        </div>
+        </button>
       </div>
+      {open && (
+        <div className="grid speed-grid" style={{ paddingBottom: 6 }}>
+          {abilityParts(c, k).map((p, i) => (
+            <div key={i} className="tile">
+              <span className="muted">{p.label}</span>
+              <span className="speed-value">{i === 0 ? p.value : fmt(p.value)}</span>
+              {p.note && <span className="muted">{p.note}</span>}
+            </div>
+          ))}
+        </div>
+      )}
 
       {edit && (
         <div className="row wrap gap-6" style={{ paddingBottom: 6 }}>
