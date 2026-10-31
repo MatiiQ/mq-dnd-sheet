@@ -1,14 +1,19 @@
 import { useState, type CSSProperties } from 'react';
 import { BLANK_ITEM, catForKind, draftFromItem, itemFromForm, withDetectedArmor, WEAPON_PROPS, type ItemDraft, type ItemKind, type WeaponProp } from '../../catalog/copy';
 import { isValue } from '../../catalog/value';
-import { CARRY_MULT, DAMAGE_TYPES, SIZES, maxFields, maxOf, rechargeOf, carriedWeight, carryCapacity, carryUpOf, sizeOf, effScore, fmt, addGrants, grantChips, newId, removeItem, type GrantInput } from '../../logic';
+import { CARRY_MULT, DAMAGE_TYPES, SIZES, maxFields, maxOf, rechargeOf, carriedWeight, carryCapacity, carryUpOf, sizeOf, effScore, fmt, addGrants, grantChips, isContainer, newId, removeItem, type GrantInput } from '../../logic';
+import {
+  addSection, containerLoad, DEFAULT_SECTION, inventoryGroups, moveInto, moveSection, removeContainer, removeContainerSummary, removeSection, renameSection,
+  setItemSection, takeOut
+} from '../../inventory';
 import { equipShield, setHands } from '../../hands';
 import { isEquipped, linkOf } from '../../links';
 import { GrantList, SourceChips } from '../Chips';
 import { ItemPicker } from '../pickers/ItemPicker';
+import { scrollToEntry } from '../pickers/usePicker';
 import { patchEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
-import type { ArmorKind, Character, Coin, Item, Recharge } from '../../types';
-import { AddButton, EntryForm, EntryRow, NumInput, TextField, useNoteUntilChange } from '../ui';
+import type { ArmorKind, Character, Coin, Item, Recharge, Section } from '../../types';
+import { AddButton, EntryForm, EntryRow, MenuIcon, NumInput, TextField, useArmed, useNoteUntilChange } from '../ui';
 
 const COINS: [Coin, string, string][] = [['cp', 'CP', 'var(--coin-cp)'], ['sp', 'SP', 'var(--coin-sp)'], ['ep', 'EP', 'var(--coin-ep)'], ['gp', 'GP', 'var(--accent)'], ['pp', 'PP', 'var(--coin-pp)']];
 // The item form's draft (catalog/copy.ts) plus the grants of a new item (pending), added once it exists.
@@ -47,6 +52,18 @@ export function InventoryTab() {
   // What equipping a Shield put away ("Put away: Longbow"), shown under its row until the next action (spec): the next
   // change to the character hides it.
   const [awayMsg, setAwayMsg] = useNoteUntilChange<{ id: string; names: string[] }>();
+  // Sections and containers (plan 6), UI state only: the section a new item goes in (null: the default list), what
+  // removing each bag does with its contents, the open section menu, a section being renamed, a new section's name.
+  const [addSec, setAddSec] = useState<string | null>(null);
+  const [bagRemove, setBagRemove] = useState<Record<string, 'out' | 'remove'>>({});
+  const [menuOpen, setMenuOpen] = useState<string | null>(null);
+  const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(null);
+  const [newSec, setNewSec] = useState<string | null>(null);
+  // A section removed while its add form is open: the form falls back to the default list.
+  const target = addSec && c.sections.some((x) => x.id === addSec) ? addSec : null;
+  const containers = c.inv.filter(isContainer);
+  const holds = (bag: Item) => c.inv.some((i) => i.in === bag.id) || COINS.some(([k]) => (bag[k] ?? 0) > 0);
+  const removeMode = (bag: Item) => (holds(bag) ? bagRemove[bag.id] ?? 'out' : 'out');
   const cap = carryCapacity(c), carried = carriedWeight(c), over = carried > cap.carry;
   const patch = (id: string, p: Partial<Item>) => { setAwayMsg(null); update((s) => ({ inv: patchEntry(s.inv, id, p) })); };
   // The equip toggle: a Shield takes a hand (equipShield trims hands and names what went); unequipping lets go of it.
@@ -72,7 +89,7 @@ export function InventoryTab() {
     const built = itemFromForm(f.editingId ? d : withDetectedArmor(d));
     const id = f.editingId ?? newId();
     update((p) => {
-      const next: Character = { ...p, inv: saveEntry<Item>(p.inv, built, f.editingId, { eq: false, id }) };
+      const next: Character = { ...p, inv: saveEntry<Item>(p.inv, built, f.editingId, { eq: false, id, ...(target ? { sec: target } : {}) }) };
       return !f.editingId && d.pending.length ? addGrants(next, linkOf('item', id), d.pending) : next;
     });
     f.close();
@@ -85,6 +102,173 @@ export function InventoryTab() {
   const text = (label: string, key: keyof ItemDraft, placeholder?: string, flex = '1 1 120px') => (
     <TextField label={label} style={{ flex }} value={String(d[key] ?? '')} placeholder={placeholder} onChange={(v) => f.set({ [key]: v } as Partial<Draft>)} />
   );
+
+  // ---- sections ----
+  const groups = inventoryGroups(c);
+  const adding = (f.isOpen && !f.editingId) || picking;
+  const addButtons = (sec: Section | null) => !adding && (
+    <div className="row wrap gap-8">
+      <AddButton always onClick={() => { setAddSec(sec?.id ?? null); setForm({ kind: 'pick-item', id: null }); }}>+ Add item</AddButton>
+      <AddButton always onClick={() => { setAddSec(sec?.id ?? null); f.openAdd(); }}>Custom item</AddButton>
+    </div>
+  );
+  // The picker and the add form open in the block whose button was tapped, so the player sees where the item lands.
+  const addHere = (sec: Section | null) => adding && (sec?.id ?? null) === target && <>
+    {f.isOpen && !f.editingId && form}
+    {picking && <ItemPicker sec={target ?? undefined} onClose={() => setForm(null)} />}
+  </>;
+  const sectionHead = (sec: Section | null, n: number) => {
+    if (!sec) return <h3 className="block-title">{DEFAULT_SECTION} <span className="muted">· {n}</span></h3>;
+    const i = c.sections.findIndex((x) => x.id === sec.id);
+    return <>
+      <div className="sec-head">
+        {renaming?.id === sec.id ? (
+          <form className="row wrap gap-6 sec-rename" onSubmit={(e) => { e.preventDefault(); update((p) => renameSection(p, sec.id, renaming.name)); setRenaming(null); }}>
+            <TextField label="Section name" value={renaming.name} style={{ flex: '1 1 160px' }} onChange={(name) => setRenaming({ id: sec.id, name })} />
+            <button type="submit" className="btn btn-sm btn-primary">Save</button>
+            <button type="button" className="btn btn-sm" onClick={() => setRenaming(null)}>Cancel</button>
+          </form>
+        ) : <h3 className="block-title">{sec.name} <span className="muted">· {n}</span></h3>}
+        <button type="button" className="icon-btn" aria-label={'Section options for ' + sec.name} aria-expanded={menuOpen === sec.id}
+          onClick={() => setMenuOpen(menuOpen === sec.id ? null : sec.id)}><MenuIcon /></button>
+      </div>
+      {menuOpen === sec.id && (
+        <SectionMenu first={i === 0} last={i === c.sections.length - 1}
+          onRename={() => { setRenaming({ id: sec.id, name: sec.name }); setMenuOpen(null); }}
+          onMove={(dir) => update((p) => moveSection(p, sec.id, dir))}
+          onRemove={() => { setMenuOpen(null); update((p) => removeSection(p, sec.id)); }} />
+      )}
+    </>;
+  };
+  const newSectionField = newSec === null ? (
+    <div className="row wrap gap-8"><AddButton always onClick={() => setNewSec('')}>+ New section</AddButton></div>
+  ) : (
+    <form className="row wrap gap-6 dashed-box" onSubmit={(e) => { e.preventDefault(); update((p) => addSection(p, newSec)); setNewSec(null); }}>
+      <TextField label="New section" value={newSec} placeholder="e.g. Weapons, Armour, Magic items" style={{ flex: '1 1 200px' }} onChange={setNewSec} />
+      <button type="submit" className="btn btn-sm btn-primary" disabled={!newSec.trim()}>Add</button>
+      <button type="button" className="btn btn-sm" onClick={() => setNewSec(null)}>Cancel</button>
+    </form>
+  );
+
+  // ---- items ----
+  // "Move to": a section, the default list, or into a container (not for a container itself, never into its own one).
+  // An item inside a container shows where it is as a first, disabled option, so picking any section takes it out.
+  const moveTo = (it: Item, v: string) => update((p) => (v.startsWith('in:') ? moveInto(p, it.id, v.slice(3)) : setItemSection(p, it.id, v.slice(4) || null)));
+  const moveControls = (it: Item) => {
+    const into = isContainer(it) ? [] : containers.filter((b) => b.id !== it.in);
+    if (!c.sections.length && !into.length && !it.in) return null;
+    const own = it.sec && c.sections.some((x) => x.id === it.sec) ? it.sec : '';
+    return (
+      <div className="row wrap gap-8 move-to">
+        <label className="field" style={{ flex: '1 1 200px' }}>Move to
+          <select className="input" value={it.in ? 'here' : 'sec:' + own} onChange={(e) => moveTo(it, e.target.value)}>
+            {it.in && <option value="here" disabled>In {c.inv.find((b) => b.id === it.in)?.name ?? 'a container'}</option>}
+            {c.sections.map((x) => <option key={x.id} value={'sec:' + x.id}>{x.name}</option>)}
+            <option value="sec:">{DEFAULT_SECTION}</option>
+            {into.map((b) => <option key={b.id} value={'in:' + b.id}>Into {b.name}</option>)}
+          </select>
+        </label>
+        {it.in && <button type="button" className="btn btn-sm" onClick={() => update((p) => takeOut(p, it.id))}>Take out</button>}
+      </div>
+    );
+  };
+  // A container that holds items or coins: the confirm names what goes and where the rest ends up.
+  const bagConfirm = (bag: Item) => {
+    const mode = removeMode(bag), { goes, keep } = removeContainerSummary(c, bag.id, mode);
+    return <>
+      {goes.length > 0 && <span>Also removes: {goes.join(', ')}</span>}
+      {keep.map((k) => <span key={k}>{k}</span>)}
+      <span>{mode === 'out' ? 'Contents and coins go to your items and purse' : 'Contents and the bag’s coins are removed too'}</span>
+    </>;
+  };
+  const row = (it: Item) => (
+    <li key={it.id}>
+      {f.editingId === it.id ? form : (
+        <EntryRow id={'item-' + it.id} name={it.name}
+          head={<>
+            <span>{it.name}</span>
+            {(weaponNote(it) || acNote(it) || it.wt !== undefined || it.count !== undefined) && <span className="muted">
+              {[weaponNote(it), acNote(it), it.wt !== undefined && lb(it.wt) + ' lb' + (it.qty > 1 ? ' each' : ''),
+                it.count !== undefined && (it.qty !== 1 ? '× ' + it.qty + ' · ' : '') + 'charges: ' + RECHARGE_NAMES[rechargeOf(it)] + (it.regain ? ' +' + it.regain : '')].filter(Boolean).join(' · ')}
+            </span>}
+          </>}
+          side={<div className="row gap-8" style={{ padding: '6px 0' }}>
+            {/* An item inside a container is never equipped (plan 6): no toggle while it is there. */}
+            {!it.in && <button type="button" aria-pressed={it.eq} onClick={() => toggleEq(it)} style={{
+              fontSize: 13, fontWeight: 600, cursor: 'pointer', minHeight: 44, minWidth: 92, padding: '0 10px', borderRadius: 22,
+              border: '1px solid ' + (it.eq ? 'var(--accent)' : 'var(--line-2)'), background: 'transparent', color: it.eq ? 'var(--accent)' : 'var(--muted)'
+            }}>{it.eq ? 'Equipped' : 'Carried'}</button>}
+            {/* An item with charges counts its charges here instead of its quantity (charged items come one at a time). */}
+            {it.count !== undefined ? (
+              <div className="row gap-4">
+                <button type="button" className="step" style={{ fontSize: 18 }} aria-label={'Use a charge of ' + it.name} onClick={() => patch(it.id, { count: Math.max(0, it.count! - 1) })}>−</button>
+                <span style={{ minWidth: 44, textAlign: 'center', fontWeight: 700 }}>{it.count}{maxOf(c, it) !== null && <span className="muted"> / {maxOf(c, it)}</span>}</span>
+                <button type="button" className="step" style={{ fontSize: 18 }} aria-label={'Restore a charge of ' + it.name}
+                  onClick={() => patch(it.id, { count: Math.min(maxOf(c, it) ?? Infinity, it.count! + 1) })}>+</button>
+              </div>
+            ) : (
+              <div className="row gap-4">
+                <button type="button" className="step" style={{ fontSize: 18 }} aria-label={'Decrease ' + it.name} onClick={() => patch(it.id, { qty: Math.max(0, it.qty - 1) })}>−</button>
+                <span style={{ minWidth: 32, textAlign: 'center', fontWeight: 700 }}>{it.qty}</span>
+                <button type="button" className="step" style={{ fontSize: 18 }} aria-label={'Increase ' + it.name} onClick={() => patch(it.id, { qty: it.qty + 1 })}>+</button>
+              </div>
+            )}
+          </div>}
+          body={(it.desc || moveControls(it)) ? <>{it.desc && <span className="entry-desc">{it.desc}</span>}{moveControls(it)}</> : undefined}
+          onEdit={() => f.openEdit(it.id, { ...draftFromItem(it), pending: [] })}
+          onRemove={() => update((p) => (isContainer(it) ? removeContainer(p, it.id, removeMode(it)) : removeItem(p, it.id)))}
+          removeConfirm={isContainer(it) && holds(it) ? bagConfirm(it) : undefined}>
+          {(grantChips(c, linkOf('item', it.id)).length > 0 || awayMsg?.id === it.id) && <>
+            {grantChips(c, linkOf('item', it.id)).length > 0 && <SourceChips link={linkOf('item', it.id)} />}
+            {awayMsg?.id === it.id && <span role="status" className="small muted">Put away: {awayMsg.names.join(', ')}</span>}
+          </>}
+        </EntryRow>
+      )}
+    </li>
+  );
+
+  // ---- containers ----
+  // One block per extradimensional container: its load against its capacity, its own coins and its contents.
+  const bagBlock = (bag: Item) => {
+    const load = containerLoad(c, bag.id), contents = c.inv.filter((i) => i.in === bag.id);
+    const full = load.cap !== null && load.total > load.cap;
+    return (
+      <div key={bag.id} className="col gap-8">
+        <h3 className="block-title">
+          <button type="button" className="bag-link" onClick={() => scrollToEntry('item-' + bag.id)}>{bag.name}</button> <span className="muted">· {contents.length}</span>
+        </h3>
+        <div className="well col gap-8 bag-load">
+          <span className="row between gap-8">
+            <strong>Holds</strong>
+            <span><strong style={full ? { color: 'var(--danger)' } : undefined}>{lb(load.total)}</strong>{load.cap !== null && ' / ' + lb(load.cap)} lb</span>
+          </span>
+          {load.cap !== null && (
+            <span className="carry-track" aria-hidden="true">
+              <span className={'carry-fill' + (full ? ' over' : '')} style={{ width: Math.min(100, load.cap ? (load.total / load.cap) * 100 : 100) + '%' }} />
+            </span>
+          )}
+          {bag.capVol && <span className="small muted">{bag.capVol}</span>}
+          <span className="small muted">Its contents and coins don’t count toward your load; the {bag.name} itself does.</span>
+        </div>
+        <div className="coin-grid">
+          {COINS.map(([k, label, color]) => (
+            <label key={k} className="well col gap-4 coin-cell" style={{ color }}>{label}
+              <NumInput className="input" aria-label={label + ' in ' + bag.name} value={bag[k] ?? 0} min={0} max={999999}
+                onCommit={(v) => update((p) => ({ inv: patchEntry(p.inv, bag.id, { [k]: v } as Partial<Item>) }))} />
+            </label>
+          ))}
+        </div>
+        {holds(bag) && (
+          <div role="group" aria-label={'If ' + bag.name + ' is removed'} className="row wrap gap-4">
+            <span className="label" style={{ flex: '1 1 100%' }}>If this bag is removed</span>
+            <button type="button" className="filter-btn tall" aria-pressed={removeMode(bag) === 'out'} onClick={() => setBagRemove({ ...bagRemove, [bag.id]: 'out' })}>Take contents and coins out</button>
+            <button type="button" className="filter-btn tall" aria-pressed={removeMode(bag) === 'remove'} onClick={() => setBagRemove({ ...bagRemove, [bag.id]: 'remove' })}>Remove them too</button>
+          </div>
+        )}
+        {contents.length > 0 ? <ul className="col gap-6 inv-list">{contents.map(row)}</ul> : <span className="muted small">Empty. Put an item in with “Move to” on its row.</span>}
+      </div>
+    );
+  };
 
   const form = f.isOpen && (
     <EntryForm kind="item" title={f.title} saveLabel={f.saveLabel} onSave={save} onCancel={f.close}>
@@ -164,6 +348,9 @@ export function InventoryTab() {
           <label className="check"><input type="checkbox" checked={d.xdim} onChange={(e) => f.set({ xdim: e.target.checked })} />Extradimensional</label>
         </div>
       )}
+      {editing && isContainer(editing) && holds(editing) && (
+        <span className="small muted">Unticking “Extradimensional” or changing the kind takes its contents out and moves its coins to your purse; ticking it again won’t put them back.</span>
+      )}
       {oldBonus !== 0 && d.kind !== 'armor' && (
         <span className="small" style={{ color: 'var(--danger)' }}>An old AC bonus of {oldBonus} isn’t counted. Add an Armor Class grant below; saving clears the old value.</span>
       )}
@@ -226,10 +413,10 @@ export function InventoryTab() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 8 }}>
+      <div className="coin-grid">
         {COINS.map(([k, label, color]) => (
-          <label key={k} className="well col gap-4" style={{ alignItems: 'center', padding: '8px 6px', fontSize: 12, fontWeight: 700, color }}>{label}
-            <NumInput className="input" value={c.coins[k]} min={0} max={999999} style={{ font: '700 18px var(--serif)', textAlign: 'center', padding: '0 4px' }}
+          <label key={k} className="well col gap-4 coin-cell" style={{ color }}>{label}
+            <NumInput className="input" value={c.coins[k]} min={0} max={999999}
               onCommit={(v) => update((p) => ({ coins: { ...p.coins, [k]: v } }))} />
           </label>
         ))}
@@ -264,62 +451,32 @@ export function InventoryTab() {
         )}
       </div>
 
-      {/* Hidden only by the add form: while an entry below is edited it stays, so the list doesn't shift up. */}
-      {(!f.isOpen || f.editingId) && !picking && (
-        <div className="row wrap gap-8">
-          <AddButton always onClick={() => setForm({ kind: 'pick-item', id: null })}>+ Add item</AddButton>
-          <AddButton always onClick={f.openAdd}>Custom item</AddButton>
+      {groups.map(({ sec, items }, gi) => (
+        <div key={sec?.id ?? 'default'} className="col gap-8">
+          {(sec || c.sections.length > 0) && <div className="block">{sectionHead(sec, items.length)}</div>}
+          {addButtons(sec)}
+          {addHere(sec)}
+          {items.length > 0 ? <ul className="col gap-6 inv-list">{items.map(row)}</ul> : sec && <span className="muted small">No items yet.</span>}
+          {/* New sections go under the last one, or under the list while there are none. */}
+          {gi === groups.length - (c.sections.length ? 2 : 1) && newSectionField}
         </div>
-      )}
-      {f.isOpen && !f.editingId && form}
-      {picking && <ItemPicker onClose={() => setForm(null)} />}
+      ))}
 
-      <ul className="col gap-6" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-        {c.inv.map((it) => (
-          <li key={it.id}>
-            {f.editingId === it.id ? form : (
-              <EntryRow id={'item-' + it.id} name={it.name}
-                head={<>
-                  <span>{it.name}</span>
-                  {(weaponNote(it) || acNote(it) || it.wt !== undefined || it.count !== undefined) && <span className="muted">
-                    {[weaponNote(it), acNote(it), it.wt !== undefined && lb(it.wt) + ' lb' + (it.qty > 1 ? ' each' : ''),
-                      it.count !== undefined && (it.qty !== 1 ? '× ' + it.qty + ' · ' : '') + 'charges: ' + RECHARGE_NAMES[rechargeOf(it)] + (it.regain ? ' +' + it.regain : '')].filter(Boolean).join(' · ')}
-                  </span>}
-                </>}
-                side={<div className="row gap-8" style={{ padding: '6px 0' }}>
-                  <button type="button" aria-pressed={it.eq} onClick={() => toggleEq(it)} style={{
-                    fontSize: 13, fontWeight: 600, cursor: 'pointer', minHeight: 44, minWidth: 92, padding: '0 10px', borderRadius: 22,
-                    border: '1px solid ' + (it.eq ? 'var(--accent)' : 'var(--line-2)'), background: 'transparent', color: it.eq ? 'var(--accent)' : 'var(--muted)'
-                  }}>{it.eq ? 'Equipped' : 'Carried'}</button>
-                  {/* An item with charges counts its charges here instead of its quantity (charged items come one at a time). */}
-                  {it.count !== undefined ? (
-                    <div className="row gap-4">
-                      <button type="button" className="step" style={{ fontSize: 18 }} aria-label={'Use a charge of ' + it.name} onClick={() => patch(it.id, { count: Math.max(0, it.count! - 1) })}>−</button>
-                      <span style={{ minWidth: 44, textAlign: 'center', fontWeight: 700 }}>{it.count}{maxOf(c, it) !== null && <span className="muted"> / {maxOf(c, it)}</span>}</span>
-                      <button type="button" className="step" style={{ fontSize: 18 }} aria-label={'Restore a charge of ' + it.name}
-                        onClick={() => patch(it.id, { count: Math.min(maxOf(c, it) ?? Infinity, it.count! + 1) })}>+</button>
-                    </div>
-                  ) : (
-                    <div className="row gap-4">
-                      <button type="button" className="step" style={{ fontSize: 18 }} aria-label={'Decrease ' + it.name} onClick={() => patch(it.id, { qty: Math.max(0, it.qty - 1) })}>−</button>
-                      <span style={{ minWidth: 32, textAlign: 'center', fontWeight: 700 }}>{it.qty}</span>
-                      <button type="button" className="step" style={{ fontSize: 18 }} aria-label={'Increase ' + it.name} onClick={() => patch(it.id, { qty: it.qty + 1 })}>+</button>
-                    </div>
-                  )}
-                </div>}
-                body={it.desc ? <span className="entry-desc">{it.desc}</span> : undefined}
-                onEdit={() => f.openEdit(it.id, { ...draftFromItem(it), pending: [] })}
-                onRemove={() => update((p) => removeItem(p, it.id))}>
-                {(grantChips(c, linkOf('item', it.id)).length > 0 || awayMsg?.id === it.id) && <>
-                  {grantChips(c, linkOf('item', it.id)).length > 0 && <SourceChips link={linkOf('item', it.id)} />}
-                  {awayMsg?.id === it.id && <span role="status" className="small muted">Put away: {awayMsg.names.join(', ')}</span>}
-                </>}
-              </EntryRow>
-            )}
-          </li>
-        ))}
-      </ul>
+      {containers.map(bagBlock)}
+    </div>
+  );
+}
 
+// A section's options, without Edit mode: rename, move, remove (tap twice; its items go to the default list).
+function SectionMenu({ first, last, onRename, onMove, onRemove }: { first: boolean; last: boolean; onRename: () => void; onMove: (dir: -1 | 1) => void; onRemove: () => void }) {
+  const [armed, tap] = useArmed(6000);
+  return (
+    <div role="group" aria-label="Section options" className="row wrap gap-6 dashed-box">
+      <button type="button" className="btn btn-sm" onClick={onRename}>Rename</button>
+      <button type="button" className="btn btn-sm" aria-disabled={first || undefined} onClick={() => !first && onMove(-1)}>Move up</button>
+      <button type="button" className="btn btn-sm" aria-disabled={last || undefined} onClick={() => !last && onMove(1)}>Move down</button>
+      <button type="button" className={'btn btn-sm btn-danger' + (armed ? ' armed' : '')} onClick={() => tap(onRemove)}>{armed ? 'Tap again to remove' : 'Remove'}</button>
+      {armed && <span role="status" className="small">Its items move to {DEFAULT_SECTION}.</span>}
     </div>
   );
 }

@@ -22,11 +22,13 @@ export function usePickerFlow() {
     flow, msg,
     start: (entry: Entry, preset?: Record<string, string[]>) => { setMsg(null); setFlow({ entry, preset }); },
     cancel: () => setFlow(null),
-    // Adds the entry; returns the character before and after, or null when it was refused.
-    finish: (cat: Catalog, ans: AddChoices): { before: Character; next: Character } | null => {
+    // Adds the entry; returns the character before and the one saved, or null when it was refused. after: a follow-up
+    // step on the added character (the Inventory tab puts new items in a section), saved in the same update.
+    finish: (cat: Catalog, ans: AddChoices, after?: (before: Character, next: Character) => Character): { before: Character; next: Character } | null => {
       if (!flow) return null;
       try {
-        const next = addFromCatalog(c, cat, flow.entry, ans);
+        const added = addFromCatalog(c, cat, flow.entry, ans);
+        const next = after ? after(c, added) : added;
         update(next);
         setFlow(null);
         return { before: c, next };

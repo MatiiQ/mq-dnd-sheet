@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Catalog } from '../../catalog/merge';
 import type { ItemEntry } from '../../catalog/schema';
 import { entriesOf, useCatalog } from '../../catalog/useCatalog';
+import { setItemSection } from '../../inventory';
 import { normName } from '../../logic';
 import { useSheet } from '../../sheet';
 import { ChoiceFlow } from './ChoiceFlow';
@@ -14,14 +15,16 @@ const CATS: [string, string, ItemEntry['cat'][]][] = [
 ];
 
 // Items by category, or by name across all of them. Adding goes through ChoiceFlow (Armor of Resistance asks its type).
-export function ItemPicker({ onClose }: { onClose: () => void }) {
+// sec: the section the new items go in (a pack can add several), from the section whose "+ Add item" was tapped.
+export function ItemPicker({ onClose, sec }: { onClose: () => void; sec?: string }) {
   const state = useCatalog(true);
   const pf = usePickerFlow();
   return (
     <PickerFrame title="Add an item" state={state} msg={pf.msg} onClose={onClose}>
       {(cat) => <>
         {pf.flow && <ChoiceFlow entry={pf.flow.entry} cat={cat} onCancel={pf.cancel} onDone={(ans) => {
-          const r = pf.finish(cat, ans);
+          const r = pf.finish(cat, ans, sec ? (before, next) =>
+            next.inv.filter((i) => !before.inv.some((b) => b.id === i.id)).reduce((x, i) => setItemSection(x, i.id, sec), next) : undefined);
           if (!r) return;
           const added = r.next.inv.find((x) => !r.before.inv.some((b) => b.id === x.id));
           onClose();

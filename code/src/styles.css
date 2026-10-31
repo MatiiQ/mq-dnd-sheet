@@ -478,3 +478,13 @@ button.link-btn { background: none; border: none; padding: 0; cursor: pointer; t
 .hand-btn[aria-pressed="true"], .toggle-btn.on { background: var(--accent) !important; color: var(--on-accent); }
 .hand-btn[aria-disabled="true"] { border-color: var(--line-2); color: var(--off); cursor: not-allowed; }
 .toggle-btn.used { border-color: var(--line-2); color: var(--muted); }
+
+/* Inventory sections and container blocks (plan 6). */
+.coin-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.coin-cell { align-items: center; padding: 8px 6px; font-size: 12px; font-weight: 700; }
+.coin-cell .input { font: 700 18px var(--serif); text-align: center; padding: 0 4px; }
+.inv-list { list-style: none; margin: 0; padding: 0; }
+.sec-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.sec-rename { flex: 1; align-items: flex-end; }
+.move-to { align-items: flex-end; }
+.bag-link { font: inherit; color: inherit; background: none; border: none; padding: 0; min-height: 44px; cursor: pointer; text-align: left; text-decoration: underline; text-decoration-color: var(--line-2); text-underline-offset: 4px; }
