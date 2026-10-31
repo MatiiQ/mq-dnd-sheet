@@ -31,16 +31,16 @@ export function sampleCharacter(): Character {
     attuneIds: ['i9', '', ''],
     notes: { appearance: '', personality: '', backstory: '', session: '' },
     inv: [
-      { id: 'i1', name: 'Studded Leather Armor', qty: 1, eq: true, armor: 'light', acBase: 12, wt: 13, cid: 'item/studded-leather-armor', cat: 'armor', cost: '45 GP' },
-      { id: 'i2', name: 'Longbow', qty: 1, eq: true, wt: 2, cid: 'item/longbow', cat: 'weapon', cost: '50 GP', wcat: 'martial', wrange: 'ranged', dmg: '1d8', dtype: 'Piercing', props: 'ammunition,heavy,two-handed', ammo: '150/600;arrow', mastery: 'slow' },
-      { id: 'i3', name: 'Shortsword', qty: 1, eq: true, wt: 2, cid: 'item/shortsword', cat: 'weapon', cost: '10 GP', wcat: 'martial', wrange: 'melee', dmg: '1d6', dtype: 'Piercing', props: 'finesse,light', mastery: 'vex' },
-      { id: 'i4', name: 'Cartographer’s Tools', qty: 1, eq: false, wt: 6, cid: 'item/cartographers-tools', cat: 'tool', cost: '15 GP' },
-      { id: 'i5', name: 'Explorer’s Pack', qty: 1, eq: false, wt: 55, cid: 'item/explorers-pack', cat: 'pack', cost: '10 GP' },
-      { id: 'i6', name: 'Traveler’s Clothes', qty: 1, eq: false, wt: 4, cid: 'item/travelers-clothes', cat: 'gear', cost: '2 GP' },
+      { id: 'i1', name: 'Studded Leather Armor', qty: 1, eq: true, armor: 'light', acBase: 12, wt: 13, cid: 'item/studded-leather-armor', cat: 'armor', cost: '45 GP', sec: 's2' },
+      { id: 'i2', name: 'Longbow', qty: 1, eq: true, wt: 2, cid: 'item/longbow', cat: 'weapon', cost: '50 GP', wcat: 'martial', wrange: 'ranged', dmg: '1d8', dtype: 'Piercing', props: 'ammunition,heavy,two-handed', ammo: '150/600;arrow', mastery: 'slow', sec: 's1' },
+      { id: 'i3', name: 'Shortsword', qty: 1, eq: true, wt: 2, cid: 'item/shortsword', cat: 'weapon', cost: '10 GP', wcat: 'martial', wrange: 'melee', dmg: '1d6', dtype: 'Piercing', props: 'finesse,light', mastery: 'vex', sec: 's1' },
+      { id: 'i4', name: 'Cartographer’s Tools', qty: 1, eq: false, wt: 6, cid: 'item/cartographers-tools', cat: 'tool', cost: '15 GP', sec: 's4' },
+      { id: 'i5', name: 'Explorer’s Pack', qty: 1, eq: false, wt: 55, cid: 'item/explorers-pack', cat: 'pack', cost: '10 GP', sec: 's4' },
+      { id: 'i6', name: 'Traveler’s Clothes', qty: 1, eq: false, wt: 4, cid: 'item/travelers-clothes', cat: 'gear', cost: '2 GP', sec: 's4' },
       // Arrows weigh 1 lb per 20 (PHB p.222), a Potion of Healing ½ lb (PHB p.223).
-      { id: 'i7', name: 'Arrows', qty: 20, eq: false, wt: 0.05, desc: 'Tap − after each Longbow shot', cid: 'item/arrows', cat: 'ammo', cost: '1 GP' },
-      { id: 'i8', name: 'Potion of Healing', qty: 2, eq: false, wt: 0.5, desc: 'Bonus Action · roll 2d4 +2, then Heal', cid: 'item/potion-of-healing', cat: 'gear', cost: '50 GP' },
-      { id: 'i9', name: 'Cloak of Elvenkind', qty: 1, eq: true, cid: 'item/cloak-of-elvenkind', cat: 'magic', rarity: 'Uncommon', attune: true }
+      { id: 'i7', name: 'Arrows', qty: 20, eq: false, wt: 0.05, desc: 'Tap − after each Longbow shot', cid: 'item/arrows', cat: 'ammo', cost: '1 GP', sec: 's4' },
+      { id: 'i8', name: 'Potion of Healing', qty: 2, eq: false, wt: 0.5, desc: 'Bonus Action · roll 2d4 +2, then Heal', cid: 'item/potion-of-healing', cat: 'gear', cost: '50 GP', sec: 's4' },
+      { id: 'i9', name: 'Cloak of Elvenkind', qty: 1, eq: true, cid: 'item/cloak-of-elvenkind', cat: 'magic', rarity: 'Uncommon', attune: true, sec: 's3' }
     ],
     spells: [
       { id: 'sp1', name: 'Druidcraft', lvl: 0, time: 'Action', range: '30 ft', dur: 'Instantaneous', comp: 'V, S', prep: true, from: 'feature:f15', srcKind: 'species', cid: 'spell/druidcraft', school: 'Transmutation', classes: 'druid', fx: 'other' },
@@ -93,7 +93,8 @@ export function sampleCharacter(): Character {
       { id: 'g-hm', kind: 'xdmg', name: 'Hunter’s Mark', dice: '1d6', dtype: 'Force', on: 'the marked target', when: 'active', from: 'spell:sp4', srcKind: 'spell' }
     ],
     // The Longbow in both hands; Weapon Mastery: Longbow (Slow) and Shortsword (Vex).
-    effectsOn: [], hands: ['i2', 'i2'], mastery: ['longbow', 'shortsword'], sections: [],
+    effectsOn: [], hands: ['i2', 'i2'], mastery: ['longbow', 'shortsword'],
+    sections: [{ id: 's1', name: 'Weapons' }, { id: 's2', name: 'Armour' }, { id: 's3', name: 'Magic items' }, { id: 's4', name: 'Gear' }],
     profs: [
       { id: 'p1', cat: 'armor', name: 'Light armor' }, { id: 'p2', cat: 'armor', name: 'Medium armor' }, { id: 'p3', cat: 'armor', name: 'Shields' },
       { id: 'p4', cat: 'weapon', name: 'Simple weapons' }, { id: 'p5', cat: 'weapon', name: 'Martial weapons' },
@@ -142,7 +143,7 @@ export function druidSample(): Character {
       { id: 'r2', name: 'Celestial Revelation · once per turn', dice: '+4 Radiant or Necrotic' },
       { id: 'r3', name: 'Critical hit', dice: 'Roll damage dice twice' }
     ],
-    coins: { cp: 37, sp: 52, ep: 4, gp: 418, pp: 6 },
+    coins: { cp: 37, sp: 52, ep: 4, gp: 368, pp: 6 },
     attuneIds: ['', '', ''],
     notes: {
       appearance: 'Tall, with silver-flecked dark skin and pale eyes that glint like starlight. Wears a deep blue robe stitched with constellations.',
@@ -151,19 +152,21 @@ export function druidSample(): Character {
       session: 'Fought the blight-wolves at the ruined observatory. Still poisoned from the hag’s bite. Moonbeam is up on the wolf den.'
     },
     inv: [
-      { id: 'i1', name: 'Leather Armor', qty: 1, eq: true, armor: 'light', acBase: 11, wt: 10, cid: 'item/leather-armor', cat: 'armor', cost: '10 GP' },
-      { id: 'i2', name: 'Shield', qty: 1, eq: true, armor: 'shield', acBase: 2, wt: 6, cid: 'item/shield', cat: 'shield', cost: '10 GP' },
-      { id: 'i3', name: 'Quarterstaff', qty: 1, eq: true, wt: 4, cid: 'item/quarterstaff', cat: 'weapon', cost: '2 SP', wcat: 'simple', wrange: 'melee', dmg: '1d6', dtype: 'Bludgeoning', props: 'versatile', vers: '1d8', mastery: 'topple' },
-      { id: 'i4', name: 'Star Map (crystal engraved with starry patterns)', qty: 1, eq: true },
-      { id: 'i5', name: 'Sickle', qty: 1, eq: false, wt: 2, cid: 'item/sickle', cat: 'weapon', cost: '1 GP', wcat: 'simple', wrange: 'melee', dmg: '1d4', dtype: 'Slashing', props: 'light', mastery: 'nick' },
-      { id: 'i6', name: 'Herbalism Kit', qty: 1, eq: false, wt: 3, cid: 'item/herbalism-kit', cat: 'tool', cost: '5 GP' },
-      { id: 'i7', name: 'Calligrapher’s Supplies', qty: 1, eq: false, wt: 5, cid: 'item/calligraphers-supplies', cat: 'tool', cost: '10 GP' },
-      { id: 'i8', name: 'Book (history)', qty: 1, eq: false, wt: 5 },
-      { id: 'i9', name: 'Parchment', qty: 8, eq: false, cid: 'item/parchment', cat: 'gear', cost: '1 SP' },
-      { id: 'i10', name: 'Robe', qty: 1, eq: false, wt: 4, cid: 'item/robe', cat: 'gear', cost: '1 GP' },
-      { id: 'i11', name: 'Explorer’s Pack', qty: 1, eq: false, wt: 55, cid: 'item/explorers-pack', cat: 'pack', cost: '10 GP' },
-      { id: 'i12', name: 'Potion of Healing', qty: 3, eq: false, wt: 0.5, desc: 'Bonus Action · roll 2d4 +2, then Heal', cid: 'item/potion-of-healing', cat: 'gear', cost: '50 GP' },
-      { id: 'i13', name: 'Diamond (300 GP)', qty: 1, eq: false, desc: 'Consumed by Revivify' }
+      { id: 'i1', name: 'Leather Armor', qty: 1, eq: true, armor: 'light', acBase: 11, wt: 10, cid: 'item/leather-armor', cat: 'armor', cost: '10 GP', sec: 's2' },
+      { id: 'i2', name: 'Shield', qty: 1, eq: true, armor: 'shield', acBase: 2, wt: 6, cid: 'item/shield', cat: 'shield', cost: '10 GP', sec: 's2' },
+      { id: 'i3', name: 'Quarterstaff', qty: 1, eq: true, wt: 4, cid: 'item/quarterstaff', cat: 'weapon', cost: '2 SP', wcat: 'simple', wrange: 'melee', dmg: '1d6', dtype: 'Bludgeoning', props: 'versatile', vers: '1d8', mastery: 'topple', sec: 's1' },
+      { id: 'i4', name: 'Star Map (crystal engraved with starry patterns)', qty: 1, eq: true, sec: 's4' },
+      { id: 'i5', name: 'Sickle', qty: 1, eq: false, wt: 2, cid: 'item/sickle', cat: 'weapon', cost: '1 GP', wcat: 'simple', wrange: 'melee', dmg: '1d4', dtype: 'Slashing', props: 'light', mastery: 'nick', sec: 's1' },
+      { id: 'i6', name: 'Herbalism Kit', qty: 1, eq: false, wt: 3, cid: 'item/herbalism-kit', cat: 'tool', cost: '5 GP', sec: 's4' },
+      { id: 'i7', name: 'Calligrapher’s Supplies', qty: 1, eq: false, wt: 5, cid: 'item/calligraphers-supplies', cat: 'tool', cost: '10 GP', sec: 's4' },
+      { id: 'i8', name: 'Book (history)', qty: 1, eq: false, wt: 5, sec: 's4', in: 'i14' },
+      { id: 'i9', name: 'Parchment', qty: 8, eq: false, cid: 'item/parchment', cat: 'gear', cost: '1 SP', sec: 's4', in: 'i14' },
+      { id: 'i10', name: 'Robe', qty: 1, eq: false, wt: 4, cid: 'item/robe', cat: 'gear', cost: '1 GP', sec: 's4' },
+      { id: 'i11', name: 'Explorer’s Pack', qty: 1, eq: false, wt: 55, cid: 'item/explorers-pack', cat: 'pack', cost: '10 GP', sec: 's4' },
+      { id: 'i12', name: 'Potion of Healing', qty: 3, eq: false, wt: 0.5, desc: 'Bonus Action · roll 2d4 +2, then Heal', cid: 'item/potion-of-healing', cat: 'gear', cost: '50 GP', sec: 's4' },
+      { id: 'i13', name: 'Diamond (300 GP)', qty: 1, eq: false, desc: 'Consumed by Revivify', sec: 's4' },
+      // The SRD 5.2 Bag of Holding (catalog item/bag-of-holding), holding the Book and the Parchment and 50 GP of her coins.
+      { id: 'i14', name: 'Bag of Holding', qty: 1, eq: false, wt: 5, desc: 'Holds up to 500 lb; its contents and coins don’t count toward your load', cid: 'item/bag-of-holding', cat: 'magic', rarity: 'Uncommon', xdim: true, cap: 500, capVol: '64 cubic feet', sec: 's3', gp: 50 }
     ],
     // Cantrips carry prep so migrate() leaves them as they are.
     spells: [
@@ -243,7 +246,9 @@ export function druidSample(): Character {
       { id: 'g15', kind: 'atkAbil', name: 'Shillelagh', ab: 'cast', weapons: 'club,quarterstaff', amode: 'melee', die: '1:1d8,5:1d10,11:1d12,17:2d6', when: 'active', from: 'spell:ds3', srcKind: 'spell' }
     ],
     // The Quarterstaff in one hand (the Shield takes the other); Shillelagh off until cast.
-    effectsOn: [], hands: ['i3'], mastery: [], sections: [],
+    effectsOn: [], hands: ['i3'], mastery: [],
+    // Item sections; the Book and the Parchment sit in the Bag of Holding (their Gear section is where they come out).
+    sections: [{ id: 's1', name: 'Weapons' }, { id: 's2', name: 'Armour' }, { id: 's3', name: 'Magic items' }, { id: 's4', name: 'Gear' }],
     profs: [
       { id: 'p1', cat: 'armor', name: 'Light armor' }, { id: 'p2', cat: 'armor', name: 'Shields' }, { id: 'p3', cat: 'weapon', name: 'Simple weapons' },
       { id: 'p4', cat: 'tool', name: 'Herbalism Kit' }, { id: 'p5', cat: 'language', name: 'Common' }, { id: 'p6', cat: 'language', name: 'Elvish' }, { id: 'p7', cat: 'language', name: 'Dwarvish' }
