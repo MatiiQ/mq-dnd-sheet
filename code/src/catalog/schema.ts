@@ -15,6 +15,8 @@ export interface SpellEntry extends EntryBase {
   comp: string; dur: string; conc: boolean; ritual: boolean; atk?: 'melee' | 'ranged'; save?: Ability; fx: 'damage' | 'healing' | 'other';
   dice?: string; dtype?: string; scale?: string; higher?: string; acFx?: AcEffect; acVal?: number;
   healMod?: boolean;   // the healing adds the spellcasting ability modifier (Cure Wounds); data only, no rules text
+  dmgMod?: boolean;    // the damage adds the spellcasting ability modifier (Spiritual Weapon)
+  dtypes?: string;     // a damage type chosen from a list ('Acid,Cold,Fire'); dtype is then left out
   grants?: Spec[];   // effects while the spell is on (Shillelagh), read when it is added to a character
 }
 export interface ItemEntry extends EntryBase {
@@ -166,7 +168,7 @@ const SPELL: Record<string, [Check, boolean]> = {
   lvl: [whole(0, 9), true], school: [str, true], classes: [str, true], time: [str, true], range: [str, true], comp: [str, true], dur: [str, true],
   conc: [bool, true], ritual: [bool, true], atk: [RANGE_KIND, false], save: [ability, false], fx: [oneOf('damage', 'healing', 'other'), true],
   dice: [str, false], dtype: [str, false], scale: [str, false], higher: [str, false], acFx: [oneOf(...AC_EFFECTS), false], acVal: [num, false],
-  healMod: [oneOf(true), false]
+  healMod: [oneOf(true), false], dmgMod: [oneOf(true), false], dtypes: [(v) => isDtypes(v), false]
 };
 const ITEM: Record<string, [Check, boolean]> = {
   cat: [oneOf(...ITEM_CATS), true], cost: [str, false], wt: [num, false],
@@ -176,6 +178,12 @@ const ITEM: Record<string, [Check, boolean]> = {
   cap: [num, false], capVol: [str, false], xdim: [bool, false],
   rarity: [str, false], attune: [bool, false], charges: [value, false], recharge: [RECHARGE, false], regain: [value, false], regainOn: [oneOf('short', 'dawn'), false],
   base: [(v) => v === 'armor' || v === 'weapon' || (typeof v === 'string' && /^item\/[a-z0-9-]+$/.test(v)), false]
+};
+// A comma list of two or more damage types, no repeats.
+export const isDtypes = (v: unknown): boolean => {
+  if (typeof v !== 'string') return false;
+  const xs = v.split(',');
+  return xs.length >= 2 && new Set(xs).size === xs.length && xs.every((x) => DAMAGE_TYPES.includes(x));
 };
 const PREREQ_TERM = /^(lvl>=\d+|(str|dex|con|int|wis|cha)(\|(str|dex|con|int|wis|cha))*>=\d+|feature=[a-z0-9-]+(\|[a-z0-9-]+)*|armor=(light|medium|heavy|shield))$/;
 const slotRows: Check = (v) => Array.isArray(v) && (v.length === 0 || (v.length === 20 && v.every((r) => Array.isArray(r) && r.length === 9 && r.every(whole(0, 9)))));
@@ -263,6 +271,7 @@ export function validateEntry(x: unknown): string[] {
   if (e.kind === 'spell' || e.kind === 'item') {
     for (const [k, v] of Object.entries(x)) if (k !== 'grants' && !primitive(v)) errs.push(`${at}: ${k} is not a plain value`);
   }
+  if (e.kind === 'spell' && e.dtypes !== undefined && e.dtype !== undefined) errs.push(`${at}: dtype and dtypes together`);
   if (e.kind === 'item') {
     checkRegain(x, at, errs);
     if (e.acBonus !== undefined && !e.armor) errs.push(`${at}: acBonus is for armor and Shields; use an ac grant`);

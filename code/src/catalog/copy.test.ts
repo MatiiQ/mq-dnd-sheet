@@ -52,6 +52,10 @@ describe('spellSummary', () => {
     expect(spellSummary({ ...base, atk: undefined, save: undefined })).toBe('1d10 Fire');
     expect(spellSummary({ ...base, atk: 'melee', dtype: undefined })).toBe('1d10 · melee attack');
   });
+  it('names a chosen damage type as the list of types', () => {
+    const base = spell('spell/fire-bolt');
+    expect(spellSummary({ ...base, dice: '3d8', dtype: undefined, dtypes: 'Acid,Cold,Fire' })).toBe('3d8 Acid/Cold/Fire · ranged attack');
+  });
 });
 
 describe('itemFromEntry', () => {
@@ -660,6 +664,16 @@ describe('spellFromForm', () => {
     const fireball = { id: 's1', ...spellFromEntry(spell('spell/fireball')) };
     const renamed = spellFromForm({ ...draftFromSpell(fireball), name: 'Big Fireball' });
     expect(renamed).toMatchObject({ name: 'Big Fireball', cid: 'spell/fireball', school: 'Evocation', classes: fireball.classes, scale: fireball.scale, ritual: false });
+  });
+  it('copies dmgMod and dtypes, keeps them through an edit, and lets a typed damage type win over dtypes', () => {
+    const orb = { ...spell('spell/fire-bolt'), dice: '3d8', dtype: undefined, dtypes: 'Acid,Cold,Fire', dmgMod: true as const };
+    const x = { id: 's1', ...spellFromEntry(orb) };
+    expect([x.dtypes, x.dmgMod, x.dtype]).toEqual(['Acid,Cold,Fire', true, undefined]);
+    expect(spellFromForm(draftFromSpell(x))).toEqual(without(x, 'id', 'prep'));
+    const typed = spellFromForm({ ...draftFromSpell(x), dtype: 'Fire' });
+    expect([typed.dtype, typed.dtypes]).toEqual(['Fire', undefined]);
+    expect(saveEntry<Spell>([x], typed, 's1')[0]).toMatchObject({ dtype: 'Fire', dmgMod: true });
+    expect('dtypes' in saveEntry<Spell>([x], typed, 's1')[0] && saveEntry<Spell>([x], typed, 's1')[0].dtypes !== undefined).toBe(false);
   });
   it('edits clear what the form cleared and keep what it doesn’t own', () => {
     const fireball: Spell = { id: 's1', ...spellFromEntry(spell('spell/fireball')), prep: false };

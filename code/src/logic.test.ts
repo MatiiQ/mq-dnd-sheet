@@ -362,6 +362,14 @@ describe('loading saves and backups', () => {
     expect(c.spells[0]).toMatchObject({ castAb: 'cha', cid: 'spell/light' });
     expect([c.spells[1].castAb, c.spells[1].cid]).toEqual([undefined, undefined]);
   });
+  it('keeps dmgMod and a damage type list only when well formed, and never dtypes next to a typed dtype', () => {
+    const sp = { id: 'a', name: 'Orb', lvl: 1, time: 'Action', range: '90 ft', fx: 'damage', dmg: '3d8' };
+    const c = migrate({ ...sampleCharacter(), spells: [{ ...sp, dmgMod: true, dtypes: 'Acid,Cold' }, { ...sp, id: 'b', dmgMod: 'yes', dtypes: 'Acid' },
+      { ...sp, id: 'c', dtype: 'Fire', dtypes: 'Acid,Cold' }] });
+    expect(c.spells[0]).toMatchObject({ dmgMod: true, dtypes: 'Acid,Cold' });
+    expect([c.spells[1].dmgMod, c.spells[1].dtypes]).toEqual([undefined, undefined]);
+    expect([c.spells[2].dtype, c.spells[2].dtypes]).toEqual(['Fire', undefined]);
+  });
   it('turns the old refill flag into a recharge', () => {
     const c = migrate({ res: [{ id: 'a', name: 'Ki', count: 1, refill: true }, { id: 'b', name: 'Rage', count: 1, refill: true, recharge: 'short' }, { id: 'c', name: 'Gold', count: 1 }] });
     expect(c.res.map((r) => r.recharge)).toEqual(['long', 'short', 'none']);

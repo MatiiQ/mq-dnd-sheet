@@ -70,6 +70,17 @@ describe('validateEntry', () => {
     for (const id of ['spell/cure-wounds', 'spell/healing-word', 'spell/mass-cure-wounds', 'spell/mass-healing-word']) expect([id, flagged(id)]).toEqual([id, true]);
     for (const id of ['spell/heal', 'spell/prayer-of-healing']) expect([id, flagged(id)]).toEqual([id, undefined]);
   });
+  it('takes dmgMod and a list of damage types (dtypes) on a spell', () => {
+    const cure = (srdSpells as unknown as SpellEntry[]).find((e) => e.id === 'spell/cure-wounds')!;
+    const orb = { ...cure, fx: 'damage', dice: '3d8', healMod: undefined };
+    expect(validateEntry({ ...orb, dmgMod: true })).toEqual([]);
+    expect(validateEntry({ ...orb, dmgMod: false })).not.toEqual([]);
+    expect(validateEntry({ ...orb, dtypes: 'Acid,Cold,Fire' })).toEqual([]);
+    expect(validateEntry({ ...orb, dtypes: 'Acid' })).not.toEqual([]);              // two or more
+    expect(validateEntry({ ...orb, dtypes: 'Acid,Acid' })).not.toEqual([]);         // no repeats
+    expect(validateEntry({ ...orb, dtypes: 'Acid,Sonic' })).not.toEqual([]);        // damage types only
+    expect(validateEntry({ ...orb, dtypes: 'Acid,Cold', dtype: 'Acid' })).not.toEqual([]); // never both
+  });
   it('takes a damage type on an Unarmed Strike grant (Demon Armor)', () => {
     expect(validateEntry({ ...feature, grants: [{ id: 'g1', kind: 'unarmed', name: 'Claws', die: '1d8', abs: 'str', dtype: 'Slashing' }] })).toEqual([]);
     const demon = (items as unknown as ItemEntry[]).find((e) => e.id === 'item/demon-armor')!;

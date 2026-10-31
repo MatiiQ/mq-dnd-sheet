@@ -11,11 +11,13 @@ const compact = <T extends object>(x: T): T =>
   Object.fromEntries(Object.entries(x).filter(([, v]) => v !== undefined && v !== '')) as T;
 const ABBR: Record<string, string> = { str: 'STR', dex: 'DEX', con: 'CON', int: 'INT', wis: 'WIS', cha: 'CHA' };
 
+// The damage type a row shows: the type, or a chosen one's list as 'Acid/Cold/Fire'.
+export const dtypeText = (x: { dtype?: string; dtypes?: string }) => x.dtype || x.dtypes?.split(',').join('/') || '';
 // The row summary of a catalog spell: '8d6 Fire · DEX save', '1d10 Fire · ranged attack', '2d8 healing', '' for none.
 export function spellSummary(e: SpellEntry): string {
   if (e.fx === 'other' || !e.dice) return '';
   if (e.fx === 'healing') return e.dice + ' healing';
-  const dmg = [e.dice, e.dtype].filter(Boolean).join(' ');
+  const dmg = [e.dice, dtypeText(e)].filter(Boolean).join(' ');
   const how = e.save ? ABBR[e.save] + ' save' : e.atk ? e.atk + ' attack' : '';
   return [dmg, how].filter(Boolean).join(' · ');
 }
@@ -27,7 +29,7 @@ export function spellFromEntry(e: SpellEntry): Omit<Spell, 'id'> {
   return compact({
     name: e.name, lvl: e.lvl, time: e.time, range: e.range, dur: e.dur, comp: e.comp, cid: e.id, c: e.conc, ritual: e.ritual,
     school: e.school, classes: e.classes, desc: e.desc, atk: e.atk, save: e.save, fx: e.fx, dmg: e.dice, dtype: e.dtype, scale: e.scale,
-    higher: e.higher, acFx: e.acFx, acVal: e.acVal, healMod: e.healMod, prep: true, dice: spellSummary(e)
+    higher: e.higher, acFx: e.acFx, acVal: e.acVal, healMod: e.healMod, dmgMod: e.dmgMod, dtypes: e.dtypes, prep: true, dice: spellSummary(e)
   });
 }
 
@@ -626,7 +628,7 @@ function addEntry(c: Character, cat: Catalog, e: Entry, ans: AddChoices): Charac
 // ---- The custom spell form ----
 
 // The spell form as typed. Linked fields (from, srcKind, srcName) ride along for the SourcePicker; the save handler
-// writes them. Catalog-only fields (cid, school, classes, scale, ritual, healMod) have no input; the draft carries them so an
+// writes them. Catalog-only fields (cid, school, classes, scale, ritual, healMod, dmgMod, dtypes) have no input; the draft carries them so an
 // edit keeps them. freeCast: "Give it a free cast" (a resource the save handler adds or removes).
 export interface SpellDraft {
   name: string; lvl: string; time: string; range: string; dice: string; conc: boolean; dur: string; comp: string; always: boolean;
@@ -634,7 +636,7 @@ export interface SpellDraft {
   desc: string; atk: '' | 'melee' | 'ranged'; save: '' | Ability; fx: '' | 'damage' | 'healing' | 'other'; dmg: string; dtype: string; higher: string;
   freeCast: boolean;
   from?: string; srcKind?: SrcKind; srcName?: string;
-  cid?: string; school?: string; classes?: string; scale?: string; ritual?: boolean; healMod?: boolean;
+  cid?: string; school?: string; classes?: string; scale?: string; ritual?: boolean; healMod?: boolean; dmgMod?: boolean; dtypes?: string;
 }
 export const BLANK_SPELL: SpellDraft = {
   name: '', lvl: '1', time: 'Action', range: '', dice: '', conc: false, dur: '', comp: '', always: false, acFx: '', acVal: 0,
@@ -650,7 +652,9 @@ export function spellFromForm(d: SpellDraft): Omit<Spell, 'id'> {
     dur: text(d.dur), comp: text(d.comp), always: d.always || undefined,
     acFx: d.acFx || undefined, acVal: d.acFx ? d.acVal : undefined,
     desc: text(d.desc), atk: d.atk || undefined, save: d.save || undefined, fx: d.fx || undefined, dmg: text(d.dmg), dtype: text(d.dtype),
-    higher: text(d.higher), cid: d.cid, school: d.school, classes: d.classes, scale: d.scale, ritual: d.ritual, healMod: d.healMod
+    higher: text(d.higher), cid: d.cid, school: d.school, classes: d.classes, scale: d.scale, ritual: d.ritual, healMod: d.healMod,
+    // A typed damage type wins over a chosen one's list, so the two never coexist.
+    dmgMod: d.dmgMod, dtypes: text(d.dtype) ? undefined : d.dtypes
   };
 }
 export function draftFromSpell(sp: Spell): SpellDraft {
@@ -659,7 +663,7 @@ export function draftFromSpell(sp: Spell): SpellDraft {
     dur: sp.dur || '', comp: sp.comp || '', always: !!sp.always, acFx: sp.acFx || '', acVal: sp.acVal ?? 0,
     desc: sp.desc || '', atk: sp.atk || '', save: sp.save || '', fx: sp.fx || '', dmg: sp.dmg || '', dtype: sp.dtype || '', higher: sp.higher || '',
     freeCast: false, from: sp.from, srcKind: sp.srcKind, srcName: sp.srcName,
-    cid: sp.cid, school: sp.school, classes: sp.classes, scale: sp.scale, ritual: sp.ritual, healMod: sp.healMod
+    cid: sp.cid, school: sp.school, classes: sp.classes, scale: sp.scale, ritual: sp.ritual, healMod: sp.healMod, dmgMod: sp.dmgMod, dtypes: sp.dtypes
   };
 }
 

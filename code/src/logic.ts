@@ -1,6 +1,6 @@
 // D&D 2024 rules used by the sheet. Pure functions: each takes a character and returns the next one.
 import { blankCharacter, sampleCharacter } from './defaults';
-import { DAMAGE_TYPES, grantErrors, ITEM_CATS, type GrantSpec } from './catalog/schema';
+import { DAMAGE_TYPES, grantErrors, isDtypes, ITEM_CATS, type GrantSpec } from './catalog/schema';
 import { isValue, valueAt, type ValueCtx } from './catalog/value';
 import { PROF_NAMES, type ProfCat } from './catalog/names';
 import { setHands } from './hands';
@@ -769,7 +769,8 @@ const wholeNonNeg: FieldCheck = (v) => Number.isInteger(v) && (v as number) >= 0
 const among = (...xs: unknown[]): FieldCheck => (v) => xs.includes(v);
 const SPELL_FIELDS: Record<string, FieldCheck> = {
   desc: isStr, school: isStr, classes: isStr, ritual: isBool, atk: among('melee', 'ranged'), save: among(...ABILITIES.map(([k]) => k)),
-  fx: among('damage', 'healing', 'other'), dmg: isStr, dtype: isStr, scale: isStr, higher: isStr, healMod: (v) => v === true
+  fx: among('damage', 'healing', 'other'), dmg: isStr, dtype: isStr, scale: isStr, higher: isStr, healMod: (v) => v === true,
+  dmgMod: (v) => v === true, dtypes: isDtypes
 };
 const ATTACK_FIELDS: Record<string, FieldCheck> = { econ: among('action', 'bonus', 'reaction', 'free', 'other'), group: among('weapon', 'other') };
 const ITEM_FIELDS: Record<string, FieldCheck> = {
@@ -830,7 +831,8 @@ export function migrate(data: unknown): Character {
   // so the item shows in the default list.
   c.sections = c.sections.filter((x, i, all) => typeof x.name === 'string' && x.name.trim() !== '' && all.findIndex((y) => y.id === x.id) === i);
   c.inv = c.inv.map((i) => (i.sec === undefined || c.sections.some((x) => x.id === i.sec) ? i : (({ sec: _, ...x }) => x)(i)));
-  c.spells = c.spells.map((x) => cleanFields(x, SPELL_FIELDS));
+  // A typed damage type wins over a chosen one's list (spellFromForm), so dtypes never stays next to it.
+  c.spells = c.spells.map((x) => cleanFields(x, SPELL_FIELDS)).map((x) => (x.dtype && x.dtypes !== undefined ? (({ dtypes: _d, ...r }) => r)(x) : x));
   // Saves from before defenses were entries kept string lists in `def` (no longer a field, so read from the raw save).
   if (data.defenses === undefined) {
     const raw = isObj(data.def) ? data.def : {};
