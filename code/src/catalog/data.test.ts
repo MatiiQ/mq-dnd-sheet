@@ -76,6 +76,18 @@ describe('SRD spells with false or missing damage and healing (plan 7, Task 5)',
   });
 });
 
+describe('SRD spell saves (plan 7, Task 6)', () => {
+  const sp = (id: string) => (spells as SpellEntry[]).find((e) => e.id === id)!;
+  it('never read a save the spell gives Advantage on as the spell’s save', () => {
+    expect(sp('spell/conjure-animals').save).toBe('dex');
+    for (const id of ['spell/haste', 'spell/gaseous-form', 'spell/beacon-of-hope']) expect([id, sp(id).save]).toEqual([id, undefined]);
+    expect(sp('spell/beacon-of-hope').fx).toBe('other');
+  });
+  it('keep the saves that are the spell’s own', () => {
+    expect([sp('spell/vicious-mockery').save, sp('spell/holy-aura').save]).toEqual(['wis', 'con']);
+  });
+});
+
 describe('SRD items', () => {
   const list = items as ItemEntry[];
   const by = (name: string) => list.find((e) => e.name === name);

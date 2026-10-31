@@ -516,8 +516,7 @@
     "dur": "Concentration, up to 1 minute",
     "conc": true,
     "ritual": false,
-    "fx": "healing",
-    "save": "wis"
+    "fx": "other"
   },
   {
     "id": "spell/befuddlement",
@@ -1128,7 +1127,7 @@
     "conc": true,
     "ritual": false,
     "fx": "damage",
-    "save": "str",
+    "save": "dex",
     "dice": "3d10",
     "dtype": "Slashing",
     "scale": "1d10/slot",
@@ -2806,7 +2805,6 @@
     "conc": true,
     "ritual": false,
     "fx": "other",
-    "save": "con",
     "higher": "You can target one additional creature for each spell slot level above 3."
   },
   {
@@ -3189,8 +3187,7 @@
     "dur": "Concentration, up to 1 minute",
     "conc": true,
     "ritual": false,
-    "fx": "other",
-    "save": "dex"
+    "fx": "other"
   },
   {
     "id": "spell/heal",

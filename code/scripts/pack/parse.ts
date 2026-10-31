@@ -48,7 +48,17 @@ function named<T>(b: Block, f: () => T): T {
 const none = (v: string | undefined) => !v || v === '—' || v === '-' || /^none$/i.test(v);
 
 const DAMAGE = new RegExp(`(\\d+d\\d+(?: ?\\+ ?\\d+)?) (${DAMAGE_ALT}) damage`);
-const SAVE = /\b(Str|Dex|Con|Int|Wis|Cha)[a-z]*\.? (?:save|saving throw)/;
+// The spell's own save: the first "<Ability> save" whose ability (or list of abilities) isn't given Advantage or
+// Disadvantage ("Advantage on Str, Dex, and Con saving throws" is a buff). A Disadvantage after the save doesn't count.
+const AB = '(?:Str|Dex|Con|Int|Wis|Cha)[a-z]*\\.?';
+const SAVES = new RegExp(`\\b(${AB}(?:, ${AB})*(?:,? (?:and|or) ${AB})?) (?:saves?|saving throws?)`, 'g');
+function saveOf(effect: string): { index: number; ab: string } | null {
+  for (const m of effect.matchAll(SAVES)) {
+    if (/\b(?:Advantage|Disadvantage|Adv\.|Disadv\.) on (?:the )?$/.test(effect.slice(0, m.index))) continue;
+    return { index: m.index, ab: m[1].slice(0, 3) };
+  }
+  return null;
+}
 export function parseSpellsMd(md: string): SpellEntry[] {
   return blocks(md).filter((b) => b.depth === 3 && b.lines.some((l) => l.startsWith('- **Level/School:**'))).map((b) => named(b, () => {
     const f = fields(b.lines);
@@ -59,7 +69,7 @@ export function parseSpellsMd(md: string): SpellEntry[] {
     const effect = clean(f.Effect);
     const dmg = DAMAGE.exec(effect), heal = /regains? [^.]*?(\d+d\d+(?: ?\+ ?\d+)?)/.exec(effect);
     const fx = dmg && (!heal || dmg.index <= heal.index) ? 'damage' : heal ? 'healing' : 'other';
-    const atk = /\b(melee|ranged) spell attack/i.exec(effect), save = SAVE.exec(effect);
+    const atk = /\b(melee|ranged) spell attack/i.exec(effect), save = saveOf(effect);
     const e: SpellEntry = {
       id: catalogId('spell', b.title), kind: 'spell', name: b.title, src: 'phb', page: b.page,
       desc: [effect, upgrade && `Cantrip Upgrade: ${clean(upgrade)}`, higher && `Higher Levels: ${clean(higher)}`].filter(Boolean).join('\n'),
@@ -67,7 +77,7 @@ export function parseSpellsMd(md: string): SpellEntry[] {
       range: f.Range, comp: f.Components, dur: f.Duration, conc: /^Concentration/.test(f.Duration), ritual: / or Ritual$/.test(f['Casting Time']) || !!ls[4], fx
     };
     if (atk && (!save || atk.index < save.index)) e.atk = atk[1].toLowerCase() as 'melee' | 'ranged';
-    else if (save) e.save = ab(save[1]);
+    else if (save) e.save = ab(save.ab);
     if (fx === 'damage') { e.dice = dmg![1].replace(/ /g, ''); e.dtype = dmg![2]; }
     if (fx === 'healing') e.dice = heal![1].replace(/ /g, '');
     const slotDice = higher && /(\d+d\d+) per (?:spell )?slot level/.exec(higher)?.[1];

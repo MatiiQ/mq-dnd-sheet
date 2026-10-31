@@ -75,3 +75,11 @@ it('reads a second damage of the same sentence as a part, with the main row’s 
   expect(arrow.parts).toEqual([{ label: 'Acid', fx: 'damage', dice: '2d4', dtype: 'Acid', atk: 'ranged' }]);
   expect(block('The target takes 8d6 Fire damage. Later it takes 2d6 Cold damage.').parts).toBeUndefined();
 });
+
+it('skips a saving throw the spell gives Advantage or Disadvantage on, and takes the next one', () => {
+  expect(block('The target has Advantage on Dexterity saving throws.').save).toBeUndefined();
+  expect(block('While in this form, the target has Advantage on Strength, Dexterity, and Constitution saving throws.').save).toBeUndefined();
+  expect(block('You have Advantage on Strength saving throws while near them. Each creature in the area makes a Dexterity saving throw, taking 3d10 Slashing damage.').save).toBe('dex');
+  // A Disadvantage after the save doesn't count.
+  expect(block('The target must succeed on a Wisdom saving throw or take 1d6 Psychic damage and have Disadvantage on the next attack roll it makes.').save).toBe('wis');
+});

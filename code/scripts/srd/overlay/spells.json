@@ -29,5 +29,6 @@
   "spell/mass-heal": { "fx": "healing", "dice": "700" },
   "spell/power-word-heal": { "dice": "all HP" },
   "spell/wish": { "fx": "other" },
-  "spell/find-steed": { "fx": "other" }
+  "spell/find-steed": { "fx": "other" },
+  "spell/beacon-of-hope": { "fx": "other" }
 }

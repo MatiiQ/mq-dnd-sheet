@@ -25,6 +25,17 @@ const DAMAGE_WORDINGS: RegExp[] = [
 // A second damage right after the first, in the same sentence: "5d6 Fire damage and 5d6 Radiant damage", "10d4 Acid
 // damage and another 5d4 Acid damage". It becomes a part labelled with its type; the overlay corrects the rest.
 const SECOND = new RegExp(`^${DICE} (?:${DAMAGE_ALT}) damage and (?:another )?${DICE} (${DAMAGE_ALT}) damage`);
+// The spell's own saving throw: the first "<Ability> saving throw" not given Advantage or Disadvantage ("Advantage on
+// Strength, Dexterity, and Constitution saving throws" is a buff, not a save). A Disadvantage after the save doesn't count.
+const ABIL_ALT = 'Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma';
+const SAVES = new RegExp(`((?:${ABIL_ALT})(?:, (?:${ABIL_ALT}))*(?:,? (?:and|or) (?:${ABIL_ALT}))?) saving throws?`, 'g');
+function saveOf(body: string): { at: number; ab: Ability } | null {
+  for (const m of body.matchAll(SAVES)) {
+    if (/\b(?:Advantage|Disadvantage) on (?:the )?$/.test(body.slice(0, m.index))) continue;
+    return { at: m.index, ab: ABILITY_NAMES[/^\w+/.exec(m[1])![0]] };
+  }
+  return null;
+}
 const typesIn = (s: string) => [...new Set([...s.matchAll(new RegExp(`\\b(${DAMAGE_ALT})\\b`, 'g'))].map((m) => m[1]))];
 // The first damage the text names: where, its dice, and its type or the list a type is chosen from.
 function damageOf(body: string): { at: number; dice: string; dtype?: string; dtypes?: string; dmgMod?: true } | null {
@@ -75,7 +86,8 @@ export function parseSpells(text: string): SpellEntry[] {
     const higherP = paras.find((p) => p.startsWith('Using a Higher-Level Spell Slot.'));
     const higher = higherP?.replace(/^Using a Higher-Level Spell Slot\.\s*/, '');
     const ritual = / or Ritual$/.test(f['Casting Time']);
-    const [atkAt, saveAt] = first(body, [/(melee|ranged) spell attack/, /(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma) saving throw/]);
+    const [atkAt] = first(body, [/(melee|ranged) spell attack/]);
+    const sv = saveOf(body), saveAt = sv?.at ?? Infinity;
     const [healAt] = first(body, [HEALING]);
     const dmg = damageOf(body), heal = HEALING.exec(body), dmgAt = dmg?.at ?? Infinity;
     const fx = dmgAt === Infinity && healAt === Infinity ? 'other' : dmgAt <= healAt ? 'damage' : 'healing';
@@ -90,7 +102,7 @@ export function parseSpells(text: string): SpellEntry[] {
       conc: /^Concentration/.test(f.Duration), ritual, fx
     };
     if (atkAt < saveAt) e.atk = /(melee|ranged) spell attack/.exec(body)![1] as 'melee' | 'ranged';
-    else if (saveAt < atkAt) e.save = ABILITY_NAMES[/(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma) saving throw/.exec(body)![1]];
+    else if (saveAt < atkAt) e.save = sv!.ab;
     if (dice) e.dice = dice;
     if (fx === 'damage' && dmg!.dtype) e.dtype = dmg!.dtype;
     if (fx === 'damage' && dmg!.dtypes) e.dtypes = dmg!.dtypes;

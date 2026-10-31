@@ -28,6 +28,13 @@ describe('spells', () => {
       '- **Components:** V\n- **Duration:** Instantaneous\n- **Effect:** One creature makes a Dex save or takes 2d10 Lightning damage.\n';
     expect(parseSpellsMd(md)[0]).toMatchObject({ fx: 'damage', dice: '2d10', dtype: 'Lightning', save: 'dex' });
   });
+  it('skips a save the spell gives Advantage or Disadvantage on, and keeps one with a Disadvantage after it', () => {
+    const md = (effect: string) => `### Test Spell (PHB p.904)\n- **Level/School:** 3 Transmutation\n- **Classes:** Wizard\n- **Casting Time:** Action\n- **Range:** Touch\n- **Components:** V\n- **Duration:** 1 minute\n- **Effect:** ${effect}\n`;
+    expect(parseSpellsMd(md('Willing creature: Speed doubled, +2 bonus to AC, Advantage on Dex saving throws.'))[0].save).toBeUndefined();
+    expect(parseSpellsMd(md('A misty cloud: Resistance to damage; Advantage on Str, Dex, and Con saving throws.'))[0].save).toBeUndefined();
+    expect(parseSpellsMd(md('You have Advantage on Strength saving throws near them. Each creature in the area makes a Dex save or takes 3d10 Slashing damage.'))[0].save).toBe('dex');
+    expect(parseSpellsMd(md('A creature makes a Wis save or takes 1d6 Psychic damage and has Disadvantage on its next attack roll.'))[0].save).toBe('wis');
+  });
   it('reads a ritual marked on the level line', () => {
     const [bell] = parseSpellsMd('### Quiet Bell (PHB p.904)\n- **Level/School:** 1 Divination (Ritual)\n- **Classes:** Wizard\n- **Casting Time:** 1 minute\n' +
       '- **Range:** Self\n- **Components:** V\n- **Duration:** 1 hour\n- **Effect:** A soundless chime rings.\n');
