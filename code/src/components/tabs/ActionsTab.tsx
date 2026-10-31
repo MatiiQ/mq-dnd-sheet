@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { COMBAT_ACTIONS } from '../../logic';
+import { COMBAT_ACTIONS, removeRef } from '../../logic';
 import { removeEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { Attack, Rider } from '../../types';
 import { AddButton, DieBadge, EntryForm, EntryRow, TextField } from '../ui';
@@ -62,7 +62,7 @@ export function ActionsTab() {
             <span className="sr-only">Damage</span><span style={{ fontSize: 16, fontWeight: 600 }}>{a.dmg || '—'}</span>
           </div>}
           onEdit={() => fa.openEdit(a.id, { name: a.name, hit: a.hit || '', dmg: a.dmg || '', info: a.info || '', mastery: a.mastery || '' })}
-          onRemove={() => update((p) => ({ attacks: removeEntry(p.attacks, a.id) }))} />
+          onRemove={() => update((p) => removeRef(p, { kind: 'attack', id: a.id }))} />
       )))}
       {!fa.isOpen && <AddButton onClick={fa.openAdd}>+ Add attack</AddButton>}
       {fa.isOpen && !fa.editingId && attackForm}

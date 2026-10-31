@@ -1,8 +1,8 @@
 import type { CSSProperties } from 'react';
 import { isValue } from '../catalog/value';
 import { inactiveReason, sourceLabel } from '../links';
-import { SRC_KINDS, maxFields, maxOf, rechargeOf, resourceGroups } from '../logic';
-import { patchEntry, removeEntry, saveEntry, useEntryForm, useSheet } from '../sheet';
+import { SRC_KINDS, maxFields, maxOf, rechargeOf, removeResource, resourceGroups } from '../logic';
+import { patchEntry, saveEntry, useEntryForm, useSheet } from '../sheet';
 import type { Recharge, Resource, SrcKind } from '../types';
 import { AddButton, EntryForm, EntryRow, NumInput, StarIcon, Step, TextField } from './ui';
 
@@ -140,7 +140,7 @@ export function Resources() {
                     {src && <span className="muted">Source: {src}</span>}
                   </>}
                   onEdit={() => f.openEdit(r.id, toDraft(r))}
-                  onRemove={() => update((p) => ({ res: removeEntry(p.res, r.id) }))}>
+                  onRemove={() => update((p) => removeResource(p, r.id))}>
                   {rc !== 'none' && m === null && <span style={{ fontSize: 12, color: 'var(--danger)' }}>Set a maximum (Edit) so a rest can refill it.</span>}
                 </EntryRow>
                 )

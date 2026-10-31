@@ -1,6 +1,6 @@
 import { useState, type CSSProperties } from 'react';
 import { PROF_NAMES, type ProfCat } from '../../catalog/names';
-import { newId, normName, profList } from '../../logic';
+import { newId, normName, profList, removeFeature } from '../../logic';
 import { removeEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { Feature, FeatureGroup } from '../../types';
 import { AddButton, EntryForm, EntryRow, RemoveButton, TextField } from '../ui';
@@ -55,7 +55,7 @@ export function FeaturesTab() {
                 <EntryRow key={x.id} name={x.name}
                   head={<><strong>{x.name}</strong>{x.desc && <span className="muted">{x.desc}</span>}</>}
                   onEdit={() => f.openEdit(x.id, { g: x.g || 'other', name: x.name, desc: x.desc || '' })}
-                  onRemove={() => update((p) => ({ feats: removeEntry(p.feats, x.id) }))} />
+                  onRemove={() => update((p) => removeFeature(p, x.id))} />
               )))}
             </div>
           );

@@ -1,4 +1,4 @@
-import { SRC_KINDS, mergedSenses, passiveScore } from '../logic';
+import { SRC_KINDS, mergedSenses, passiveScore, removeRef } from '../logic';
 import { saveEntry, useEntryForm, useSheet } from '../sheet';
 import type { Sense, SrcKind } from '../types';
 import { AddButton, EntryForm, EntryRow } from './ui';
@@ -69,7 +69,7 @@ export function Senses() {
             onEdit={() => f.openEdit(se.id, {
               name: se.name, range: se.range === '—' ? '' : se.range, desc: se.desc || '', srcKind: se.srcKind || '', srcName: se.srcName || ''
             })}
-            onRemove={() => update((p) => ({ senses: p.senses.filter((x) => !(hand.length ? hand : all).some((y) => y.id === x.id)) }))} />
+            onRemove={() => update((p) => (hand.length ? hand : all).reduce((x, y) => removeRef(x, { kind: 'sense', id: y.id }), p))} />
         )))}
       </div>
     </section>

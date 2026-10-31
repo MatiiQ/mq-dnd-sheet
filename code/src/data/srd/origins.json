@@ -2099,7 +2099,15 @@
     "species": "human",
     "lvl": 1,
     "desc": "You gain Heroic Inspiration whenever you finish a Long Rest.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Heroic Inspiration",
+        "max": "1",
+        "recharge": "long"
+      }
+    ]
   },
   {
     "id": "trait/human/skillful",

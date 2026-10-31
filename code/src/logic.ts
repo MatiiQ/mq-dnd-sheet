@@ -1,9 +1,9 @@
 // D&D 2024 rules used by the sheet. Pure functions: each takes a character and returns the next one.
 import { blankCharacter, sampleCharacter } from './defaults';
-import { grantErrors } from './catalog/schema';
+import { grantErrors, type GrantSpec } from './catalog/schema';
 import { isValue, valueAt, type ValueCtx } from './catalog/value';
 import { PROF_NAMES, type ProfCat } from './catalog/names';
-import { activeGrants, dropLinkOnly, fixLinks, hasActiveEffect, isActive, srcKindOfLink, linkOf, parseLink, sourceLabel, sourceOf, SRC_KINDS } from './links';
+import { activeGrants, dropLinkOnly, fixLinks, hasActiveEffect, isActive, LINKED_LISTS, srcKindOfLink, type SourceKind, linkOf, parseLink, sourceLabel, sourceOf, SRC_KINDS } from './links';
 import type { AcEffect, Ability, ArmorKind, CastAbility, Character, Concentration, Counter, DefenseKind, Feature, Grant, HpSnapshot, Item, Prof, Linked, Recharge, Resource, Size, Spell, SpeedKind, SpellSort, Tab, Unarmored, When } from './types';
 
 export const ABILITIES: [Ability, string][] = [
@@ -307,18 +307,6 @@ export function acAfterEdit(c: Character, sp: Pick<Spell, 'id' | 'c' | 'acFx'>):
   return c.acOn.includes(sp.id) && (sp.c || !sp.acFx) ? { acOn: c.acOn.filter((x) => x !== sp.id) } : {};
 }
 
-// Removing a spell ends Concentration on it, switches its effects off and removes its own free casts (resources from
-// it, and pills naming them); a resource from elsewhere that casts it stays, without casts.
-export function removeSpell(c: Character, id: string): Character {
-  const link = linkOf('spell', id);
-  const gone = c.res.filter((r) => r.from === link).map((r) => r.id);
-  return {
-    ...c, spells: c.spells.filter((x) => x.id !== id), acOn: c.acOn.filter((x) => x !== id), effectsOn: c.effectsOn.filter((x) => x !== link),
-    res: c.res.filter((r) => !gone.includes(r.id)).map((r) => (r.casts === id ? (({ casts: _, ...x }) => x)(r) : r)),
-    pills: c.pills.map((k) => (gone.some((r) => k === resPill(r)) ? '' : k)),
-    ...(c.conc?.id === id ? setConc(null) : {})
-  };
-}
 
 // After editing the concentrated spell: unticking Concentration ends it, and a new name shows in the chip.
 export function concAfterEdit(c: Character, sp: Pick<Spell, 'id' | 'name' | 'c'>): Partial<Character> {
@@ -678,7 +666,7 @@ const WHENS: When[] = ['armor', 'noHeavy', 'noArmor', 'noShield', 'noArmorNoShie
 // The link fields of an entry, checked on load: an unknown source kind reads as Other, any other bad value goes, and
 // the fields that need a link go from an entry without one. Never touches `lvl` (a spell's level).
 function cleanLinked<T extends Linked>(x: T): T {
-  const { from, srcKind, srcName, when, minLvl, needEq, needAtt, ...rest } = x as Linked & Record<string, unknown>;
+  const { from, srcKind, srcName, when, minLvl, needEq, needAtt, linked, ...rest } = x as Linked & Record<string, unknown>;
   const out = {
     ...rest,
     ...(typeof from === 'string' ? { from } : {}),
@@ -687,7 +675,8 @@ function cleanLinked<T extends Linked>(x: T): T {
     ...(WHENS.includes(when as When) ? { when } : {}),
     ...(Number.isInteger(minLvl) && minLvl! >= 1 && minLvl! <= 20 ? { minLvl } : {}),
     ...(typeof needEq === 'boolean' ? { needEq } : {}),
-    ...(typeof needAtt === 'boolean' ? { needAtt } : {})
+    ...(typeof needAtt === 'boolean' ? { needAtt } : {}),
+    ...(typeof linked === 'boolean' ? { linked } : {})
   } as unknown as T;
   return out.from === undefined ? dropLinkOnly(out) : out;
 }
@@ -908,6 +897,8 @@ export function migrate(data: unknown): Character {
   c.pills = sanitizePills(data.pills).map((k) => (converted.some((id) => k === resPill(id)) ? '' : k));
   // Effects switched on: links to something there, once each. A Concentration spell's effect follows c.conc instead.
   c.effectsOn = strings(c.effectsOn).filter((l, i, all) => all.indexOf(l) === i && sourceOf(c, l) && !(parseLink(l)!.kind === 'spell' && (sourceOf(c, l) as Spell).c));
+  // An action grant that spends a resource that is gone no longer spends anything.
+  c.grants = c.grants.map((g) => (g.kind === 'action' && g.res !== undefined && !c.res.some((r) => r.id === g.res) ? (({ res: _, ...x }) => x)(g) : g));
   const fixed = fixLinks(c);
   // A grant exists only through its source: one whose link fixLinks cleared goes.
   return normalize({ ...fixed, grants: fixed.grants.filter((g) => g.from) });
@@ -938,8 +929,6 @@ export function mergedSenses(c: Character): { key: string; name: string; range: 
 }
 export const mergedDefenses = (c: Character, kind: DefenseKind): { key: string; name: string; ids: string[]; sources: string[] }[] =>
   merged(c, c.defenses.filter((d) => d.kind === kind)).map(({ key, first, all }) => ({ key, name: first.name, ids: all.map((x) => x.id), sources: sourcesOf(c, all) }));
-// Removes one defense (until removeRef handles every kind).
-export const removeDefense = (c: Character, id: string): Character => ({ ...c, defenses: c.defenses.filter((d) => d.id !== id) });
 
 const PROF_CATS: ProfCat[] = ['armor', 'weapon', 'tool', 'language'];
 // Armor, weapon, tool and language proficiencies: the hand ones (with id), then the granted ones (with their source),
@@ -989,11 +978,158 @@ export function itemAcGrants(c: Character, itemId: string, v: number, needAtt: b
   return old ? c.grants.map((x) => (x === old ? g : x)) : [...c.grants, g];
 }
 
-// The one way to remove an item: its attunement slot empties with it, and its grants go.
-export function removeItem(c: Character, id: string): Character {
-  const link = linkOf('item', id);
-  return { ...c, inv: c.inv.filter((i) => i.id !== id), attuneIds: c.attuneIds.map((x) => (x === id ? '' : x)), grants: c.grants.filter((g) => g.from !== link) };
+// ---------- adding grants and removing sources (plan 3) ----------
+
+export type RefKind = 'feature' | 'item' | 'spell' | 'sense' | 'defense' | 'res' | 'grant' | 'attack';
+export interface Ref { kind: RefKind; id: string }
+// One grant to add from a source. link: the id of an entry the character already has (findUnlinked), linked instead of
+// added. spell: the spell entry to create for a spell grant (from the catalog), else a bare one is made.
+export interface GrantInput { spec: Omit<GrantSpec, 'opt'>; link?: string; counted?: boolean; spell?: Omit<Spell, 'id'> }
+
+type Entry = Linked & { id: string; name: string };
+const LIST_KIND: [(typeof LINKED_LISTS)[number], RefKind][] = [
+  ['senses', 'sense'], ['spells', 'spell'], ['feats', 'feature'], ['attacks', 'attack'], ['grants', 'grant'], ['defenses', 'defense'], ['res', 'res']
+];
+const SOURCE_OF_REF: Partial<Record<RefKind, SourceKind>> = { feature: 'feature', item: 'item', spell: 'spell' };
+const refLink = (r: Ref) => (SOURCE_OF_REF[r.kind] ? linkOf(SOURCE_OF_REF[r.kind]!, r.id) : null);
+
+// An entry with no source and this name (trimmed, any case, ’ = '), which a grant can link instead of adding a second.
+export function findUnlinked(c: Character, kind: 'resource' | 'spell' | 'action', name: string): string | null {
+  const list: Entry[] = kind === 'resource' ? c.res : kind === 'spell' ? c.spells : c.attacks;
+  return list.find((x) => !x.from && normName(x.name) === normName(name))?.id ?? null;
 }
+
+// Adds a source's grants: senses, defenses, resources and spells become entries of their lists, everything else a
+// Grant; each carries `from`. The spec's lvl becomes minLvl (never lvl, a spell's level). A resource or action that
+// names another spec of the batch gets the id that spec produced.
+export function addGrants(c: Character, from: string, inputs: GrantInput[]): Character {
+  const srcKind = srcKindOfLink(c, from) ?? undefined;
+  const base = { from, ...(srcKind ? { srcKind } : {}) };
+  const common = (s: GrantInput['spec']) => ({ ...(s.when ? { when: s.when } : {}), ...(s.needEq ? { needEq: true } : {}), ...(s.needAtt ? { needAtt: true } : {}), ...(s.lvl ? { minLvl: s.lvl } : {}) });
+  // Ids first, so a resource's casts and an action's res can name entries made later in the batch.
+  const ids = new Map<GrantInput, string>(inputs.map((x) => [x, x.link ?? newId()]));
+  const spellInputs = inputs.filter((x) => x.spec.kind === 'spell');
+  // casts: a spell spec of the batch by its spec id, then by its catalog spell id, then a spell the character has.
+  const castsOf = (v: string | undefined): [string | undefined, GrantInput | undefined] => {
+    if (!v) return [undefined, undefined];
+    const hit = spellInputs.find((x) => x.spec.id === v) ?? spellInputs.find((x) => x.spec.spell === v);
+    if (hit) return [ids.get(hit), hit];
+    return [c.spells.some((sp) => sp.id === v) ? v : undefined, undefined];
+  };
+  let out: Character = { ...c };
+  const linkTo = <K extends 'res' | 'spells' | 'attacks'>(k: K, id: string) =>
+    ({ ...out, [k]: (out[k] as Entry[]).map((x) => (x.id === id ? { ...x, ...base, linked: true } : x)) });
+  for (const input of inputs) {
+    const s = input.spec, id = ids.get(input)!;
+    if (s.kind === 'sense') {
+      out.senses = [...out.senses, { id, name: s.name.replace(/\s*\d+\s*ft\.?$/i, '').trim() || s.name, range: num(c, s.range) + ' ft', ...base, ...common(s) }];
+    } else if (s.kind === 'defense') {
+      out.defenses = [...out.defenses, { id, kind: s.def!, name: s.target ?? s.name, ...base, ...common(s) }];
+    } else if (s.kind === 'resource') {
+      if (input.link) { out = linkTo('res', id); continue; }
+      const [casts, spellIn] = castsOf(s.casts);
+      const mx: Pick<Counter, 'max' | 'maxV'> = s.max === undefined ? {} : /^\d+$/.test(s.max) && Number(s.max) >= 1 ? { max: Number(s.max) } : { maxV: s.max };
+      const lvl = s.lvl ?? spellIn?.spec.lvl;
+      const r: Resource = {
+        id, name: s.name, count: 0, ...mx, recharge: s.recharge ?? 'none',
+        ...(s.regain && s.regainOn ? { regain: s.regain, regainOn: s.regainOn } : {}), ...(casts ? { casts } : {}), ...(s.note ? { note: s.note } : {}),
+        ...base, ...common(s), ...(lvl ? { minLvl: lvl } : {})
+      };
+      out.res = [...out.res, { ...r, count: maxOf(c, r) ?? 0 }];
+    } else if (s.kind === 'spell') {
+      if (input.link) { out = linkTo('spells', id); continue; }
+      const sp = input.spell ?? { name: s.name, lvl: 0, time: '', range: '' };
+      const castAb = ABILITIES.find(([k]) => k === s.castAb)?.[0];
+      // A spell with neither flag would load as prepared (migrate), so a granted one is always prepared or unprepared.
+      out.spells = [...out.spells, { ...sp, id, ...(s.always ? { always: true } : { prep: false }), ...(castAb ? { castAb } : {}), ...base, ...common(s) }];
+    } else if (s.kind === 'action' && input.link) {
+      out = linkTo('attacks', id);
+    } else {
+      const { lvl, res, ...rest } = s;
+      const resId = res === undefined ? undefined : ids.get(inputs.find((x) => x.spec.id === res && x.spec.kind === 'resource')!) ?? res;
+      out.grants = [...out.grants, { ...rest, id, ...base, ...(lvl ? { minLvl: lvl } : {}), ...(resId ? { res: resId } : {}), ...(input.counted ? { counted: true } : {}) } as Grant];
+    }
+  }
+  return out;
+}
+
+// The ref and everything whose `from` chain leads to it, once each (a visited set stops loops). An entry a grant only
+// linked (`linked`) is not in the chain, and neither is anything that leads to the source through it.
+export function removalChain(c: Character, ref: Ref): Ref[] {
+  const out: Ref[] = [ref];
+  const seen = new Set([ref.kind + ':' + ref.id]);
+  for (let i = 0; i < out.length; i++) {
+    const link = refLink(out[i]);
+    if (!link) continue;
+    for (const [list, kind] of LIST_KIND) {
+      for (const x of c[list] as Entry[]) {
+        if (x.from !== link || x.linked || seen.has(kind + ':' + x.id)) continue;
+        seen.add(kind + ':' + x.id);
+        out.push({ kind, id: x.id });
+      }
+    }
+  }
+  return out;
+}
+
+// The one removal path for features, items, spells, resources, senses, defenses, grants and attacks (roadmap). Removes
+// the chain; entries a grant only linked lose the link (from, linked and the srcKind it set) and keep everything else.
+export function removeRef(c: Character, ref: Ref): Character {
+  const chain = removalChain(c, ref);
+  const gone = (kind: RefKind) => chain.filter((r) => r.kind === kind).map((r) => r.id);
+  const links = chain.map(refLink).filter((l): l is string => !!l);
+  const spells = gone('spell'), res = gone('res'), items = gone('item');
+  const unlinkIt = <T extends Entry>(x: T): T => {
+    if (!x.linked || !links.includes(x.from!)) return x;
+    const { from: _f, linked: _l, srcKind: _k, ...rest } = x;
+    return dropLinkOnly(rest as T);
+  };
+  const out = { ...c };
+  for (const [list, kind] of LIST_KIND) {
+    const ids = gone(kind);
+    (out as Record<string, unknown>)[list] = (c[list] as Entry[]).filter((x) => !ids.includes(x.id)).map(unlinkIt);
+  }
+  out.inv = c.inv.filter((i) => !items.includes(i.id));
+  out.attuneIds = c.attuneIds.map((x) => (items.includes(x) ? '' : x));
+  out.acOn = c.acOn.filter((id) => !spells.includes(id));
+  out.effectsOn = c.effectsOn.filter((l) => !links.includes(l));
+  out.res = out.res.map((r) => (r.casts !== undefined && spells.includes(r.casts) ? (({ casts: _, ...x }) => x)(r) : r));
+  out.grants = out.grants.map((g) => (g.kind === 'action' && g.res !== undefined && res.includes(g.res) ? (({ res: _, ...x }) => x)(g) : g));
+  out.pills = c.pills.map((k) => (res.some((id) => k === resPill(id)) ? '' : k));
+  return { ...out, ...(c.conc && spells.includes(c.conc.id) ? setConc(null) : {}) };
+}
+
+// What a removal confirm shows: the names of everything else that goes, and what stays and needs the player: typed
+// numbers that already include a counted grant (the app can't tell which part of a typed value it was), and entries
+// that were only linked.
+export function removalSummary(c: Character, ref: Ref): { goes: string[]; keep: string[] } {
+  const chain = removalChain(c, ref);
+  const byRef = (r: Ref): Entry | Item | undefined => (r.kind === 'item' ? c.inv : (c[LIST_KIND.find(([, k]) => k === r.kind)![0]] as Entry[])).find((x) => x.id === r.id);
+  const goes = chain.slice(1).map((r) => byRef(r)?.name ?? '').filter(Boolean);
+  const keep: string[] = [];
+  const hand = '; lower it by hand';
+  for (const r of chain.filter((x) => x.kind === 'grant')) {
+    const g = c.grants.find((x) => x.id === r.id);
+    if (!g?.counted) continue;
+    const src = sourceOf(c, g.from)?.name ?? g.name, v = num(c, g.val);
+    if (g.kind === 'abil' && g.ab) keep.push(`${g.ab.toUpperCase()} ${effScore(c, g.ab as Ability)} still includes ${fmt(v)} from ${src}${hand}`);
+    else if (g.kind === 'speed') keep.push(`Speed ${walkSpeed(c)} ft still includes ${fmt(v)} ft from ${src}${hand}`);
+    else if (g.kind === 'init') keep.push(`Initiative ${fmt(initiative(c))} still includes ${fmt(v)} from ${src}${hand}`);
+    else if (g.kind === 'hpLvl') keep.push(`Max HP ${maxHpOf(c)} still includes ${fmt(v * c.level)} from ${src}${hand}`);
+    else if (g.kind === 'ac' && g.acMode === 'bonus') keep.push(`AC ${armorClass(c).total} still includes ${fmt(v)} from ${src} (in the custom AC bonuses)${hand}`);
+  }
+  const links = chain.map(refLink).filter((l): l is string => !!l);
+  for (const [list] of LIST_KIND) {
+    for (const x of c[list] as Entry[]) if (x.linked && links.includes(x.from!)) keep.push(`${x.name} stays (it was on the sheet before ${sourceOf(c, x.from)?.name})`);
+  }
+  return { goes, keep };
+}
+
+export const removeSpell = (c: Character, id: string) => removeRef(c, { kind: 'spell', id });
+// The one way to remove an item: its attunement slot empties with it, and its grants go.
+export const removeItem = (c: Character, id: string) => removeRef(c, { kind: 'item', id });
+export const removeFeature = (c: Character, id: string) => removeRef(c, { kind: 'feature', id });
+export const removeResource = (c: Character, id: string) => removeRef(c, { kind: 'res', id });
 
 // Top bar pills. [key, picker name, short label], in picker order.
 export type PillStat = 'hp' | 'ac' | 'dc' | 'speed' | 'pp' | 'init' | 'atk' | 'hd' | 'insp';

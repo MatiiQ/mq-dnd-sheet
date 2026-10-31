@@ -82,3 +82,9 @@ describe('spell grants in the slice', () => {
     expect(grants('spell/shillelagh')).toEqual([{ id: 'g1', kind: 'atkAbil', name: 'Shillelagh', ab: 'cast', weapons: 'club,quarterstaff', amode: 'melee', die: '1:1d8,5:1d10,11:1d12,17:2d6', when: 'active' }]);
   });
 });
+
+describe('Resourceful', () => {
+  it('gives Heroic Inspiration on each Long Rest (PHB p.194)', () => {
+    expect(grants('trait/human/resourceful')).toEqual([{ id: 'g1', kind: 'resource', name: 'Heroic Inspiration', max: '1', recharge: 'long' }]);
+  });
+});

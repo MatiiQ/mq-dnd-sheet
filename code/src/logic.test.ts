@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import {
-  ABILITIES, SKILLS, castFree, freeCastsOf, spellAttackFor, spellSaveDcFor, toggleEffect, dawn, restRolls, maxFields, maxOf, normalize, resourceGroups, itemAcGrants, mergedDefenses, mergedSenses, removeDefense, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, splitTraining, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, NEW_FIELDS, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, removeItem, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
+  ABILITIES, SKILLS, addGrants, findUnlinked, removalChain, removalSummary, removeFeature, removeResource, castFree, freeCastsOf, spellAttackFor, spellSaveDcFor, toggleEffect, dawn, restRolls, maxFields, maxOf, normalize, resourceGroups, itemAcGrants, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, splitTraining, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, NEW_FIELDS, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, removeItem, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
   setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, undoHp
 } from './logic';
-import { activeGrants } from './links';
+import { grantErrors, type GrantSpec } from './catalog/schema';
+import { activeGrants, isActive } from './links';
 import { applyPatch } from './storage';
 import { oldIlyra, oldSeren } from './test-fixtures';
 import type { Character, Grant, Item, Spell } from './types';
@@ -664,7 +665,7 @@ describe('defenses', () => {
       { key: 'fire', name: 'Fire', ids: ['c'], sources: [] }]);
     const off = { ...c, inv: [{ ...cloak, eq: false }] };
     expect(mergedDefenses(off, 'res')[0]).toMatchObject({ ids: ['a'], sources: ['Species · Fey Ancestry'] });
-    expect(removeDefense(c, 'c').defenses.map((d) => d.id)).toEqual(['a', 'b']);
+    expect(removeRef(c, { kind: 'defense', id: 'c' }).defenses.map((d) => d.id)).toEqual(['a', 'b']);
   });
 });
 
@@ -1222,5 +1223,146 @@ describe('free casts as resources and spell overrides', () => {
     expect(spellAttackFor(c, light)).toBe(4);
     expect(spellSaveDcFor(c, c.spells[0])).toBe(17);
     expect(spellSaveDcFor(make({ castAb: 'none' }), make().spells[0])).toBeNull();
+  });
+});
+
+describe('adding grants', () => {
+  const custom = (c: Character, id = 'fx'): Character => ({ ...c, feats: [...c.feats, { id, g: 'other', name: 'Custom Gift', desc: '' }] });
+  const spec = (p: Partial<GrantSpec> & Pick<GrantSpec, 'kind'>): Omit<GrantSpec, 'opt'> => ({ id: 'g-' + p.kind, name: 'G ' + p.kind, ...p } as Omit<GrantSpec, 'opt'>);
+  const LISTS = ['senses', 'defenses', 'res', 'spells', 'grants'] as const;
+  it('puts each grant in its list with the source set, and removing the source takes them back', () => {
+    const c = custom(make());
+    const n = addGrants(c, 'feature:fx', [
+      { spec: spec({ kind: 'sense', name: 'Tremorsense 30 ft', range: '30' }) },
+      { spec: spec({ kind: 'defense', def: 'res', target: 'Cold' }) },
+      { spec: spec({ kind: 'resource', name: 'Gift', max: '2', recharge: 'long' }) },
+      { spec: spec({ kind: 'spell', name: 'Bless', spell: 'spell/bless' }), spell: { name: 'Bless', lvl: 1, time: 'Action', range: '30 ft' } },
+      { spec: spec({ kind: 'abil', ab: 'wis', val: '1', cap: 20 }) },
+      { spec: spec({ kind: 'action', econ: 'bonus', res: 'g-resource' }) }
+    ]);
+    expect(n.senses.at(-1)).toMatchObject({ name: 'Tremorsense', range: '30 ft', from: 'feature:fx', srcKind: 'other' });
+    expect(n.defenses.at(-1)).toMatchObject({ kind: 'res', name: 'Cold', from: 'feature:fx' });
+    const gift = n.res.at(-1)!;
+    expect(gift).toMatchObject({ name: 'Gift', max: 2, count: 2, recharge: 'long', from: 'feature:fx' });
+    expect(n.spells.at(-1)).toMatchObject({ name: 'Bless', lvl: 1, from: 'feature:fx', prep: false });
+    expect(n.grants.map((g) => [g.kind, g.from])).toEqual([['abil', 'feature:fx'], ['action', 'feature:fx']]);
+    expect(n.grants[1].res).toBe(gift.id);
+    expect(effScore(n, 'wis')).toBe(15);
+    const back = removeFeature(n, 'fx');
+    for (const k of LISTS) expect(back[k]).toEqual(c[k]);
+  });
+  it('a sense grant needs a range', () => {
+    expect(grantErrors({ id: 'g', kind: 'sense', name: 'Blindsight' }, 'feature')).toHaveLength(1);
+  });
+  it('links an entry the character already has instead of adding a second (Resourceful)', () => {
+    const c = custom(make({ res: [{ id: 'hi', name: 'Heroic Inspiration', count: 1, max: 1, recharge: 'long' }] }), 'rs');
+    expect(findUnlinked(c, 'resource', 'heroic inspiration')).toBe('hi');
+    const linked = addGrants(c, 'feature:rs', [{ spec: spec({ kind: 'resource', name: 'Heroic Inspiration', max: '1', recharge: 'long' }), link: 'hi' }]);
+    expect(linked.res).toEqual([{ id: 'hi', name: 'Heroic Inspiration', count: 1, max: 1, recharge: 'long', from: 'feature:rs', srcKind: 'other', linked: true }]);
+    expect(addGrants(c, 'feature:rs', [{ spec: spec({ kind: 'resource', name: 'Heroic Inspiration', max: '1', recharge: 'long' }) }]).res).toHaveLength(2);
+    const sum = removalSummary(linked, { kind: 'feature', id: 'rs' });
+    expect(sum.keep).toEqual(['Heroic Inspiration stays (it was on the sheet before Custom Gift)']);
+    const back = removeFeature(linked, 'rs');
+    expect(back.res).toEqual([{ id: 'hi', name: 'Heroic Inspiration', count: 1, max: 1, recharge: 'long' }]);
+    const made = addGrants(c, 'feature:rs', [{ spec: spec({ kind: 'resource', name: 'Heroic Inspiration', max: '1', recharge: 'long' }) }]);
+    expect(removeFeature(made, 'rs').res).toEqual(c.res);
+  });
+  it('a linked spell keeps its resources and its Concentration when the source goes', () => {
+    const c = custom(make({ conc: { id: 'sp4', name: 'Hunter’s Mark' }, res: [{ id: 'mine', name: 'Mine', count: 1, from: 'spell:sp4' }] }), 'fe');
+    const n = addGrants(c, 'feature:fe', [{ spec: spec({ kind: 'spell', name: 'Hunter’s Mark', spell: 'spell/hunters-mark', always: true }), link: 'sp4' }]);
+    expect(n.spells.find((x) => x.id === 'sp4')).toMatchObject({ from: 'feature:fe', linked: true });
+    const r = removeFeature(n, 'fe');
+    expect(r.spells.find((x) => x.id === 'sp4')!.from).toBeUndefined();
+    expect(r.res.map((x) => x.id)).toEqual(['mine']);
+    expect(r.conc).toEqual({ id: 'sp4', name: 'Hunter’s Mark' });
+  });
+  it('a spell granted from a level gates the spell and its free cast, not the spell level', () => {
+    const c = custom(make({ level: 2, spells: [], res: [] }), 'el');
+    const n = addGrants(c, 'feature:el', [
+      { spec: spec({ kind: 'spell', id: 'ls', name: 'Longstrider', spell: 'spell/longstrider', lvl: 3, always: true }), spell: { name: 'Longstrider', lvl: 1, time: 'Action', range: 'Touch' } },
+      { spec: spec({ kind: 'resource', name: 'Longstrider', max: '1', recharge: 'long', casts: 'ls' }) }]);
+    expect(n.spells[0]).toMatchObject({ lvl: 1, minLvl: 3, always: true });
+    expect(n.res[0]).toMatchObject({ minLvl: 3, casts: n.spells[0].id });
+    expect([isActive(n, n.spells[0]), isActive(n, n.res[0])]).toEqual([false, false]);
+  });
+  it('a granted spell without always is unprepared, and stays so on load', () => {
+    const n = addGrants(custom(make()), 'feature:fx', [{ spec: spec({ kind: 'spell', name: 'Bless', spell: 'spell/bless' }), spell: { name: 'Bless', lvl: 1, time: 'Action', range: '30 ft' } }]);
+    expect(migrate(n).spells.at(-1)!.prep).toBe(false);
+  });
+  it('a maximum of 0 is a formula; a whole number is a number', () => {
+    const add = (max: string) => addGrants(custom(make({ res: [] })), 'feature:fx', [{ spec: spec({ kind: 'resource', name: 'R', max, recharge: 'long' }) }]).res[0];
+    expect(add('0')).toMatchObject({ maxV: '0', count: 0 });
+    expect(add('0').max).toBeUndefined();
+    expect(add('3')).toMatchObject({ max: 3, count: 3 });
+  });
+  it('resolves a free cast to the spell of the batch, a linked spell or an existing one', () => {
+    const c = custom(make({ res: [] }), 'fe');
+    const hmSpec = { spec: spec({ kind: 'spell', id: 'hm', name: 'Hunter’s Mark', spell: 'spell/hunters-mark', always: true }), spell: { name: 'Hunter’s Mark', lvl: 1, time: 'Bonus Action', range: '90 ft' } };
+    const fav = { spec: spec({ kind: 'resource', id: 'fav', name: 'Favored Enemy', max: '1:2,5:3', recharge: 'long', casts: 'spell/hunters-mark' }) };
+    const a = addGrants(c, 'feature:fe', [hmSpec, fav]);
+    expect(a.res[0].casts).toBe(a.spells.at(-1)!.id);
+    const b = addGrants(c, 'feature:fe', [{ ...hmSpec, link: 'sp4' }, fav]);
+    expect(b.res[0].casts).toBe('sp4');
+    const d = addGrants(c, 'feature:fe', [{ spec: spec({ kind: 'resource', name: 'X', max: '1', recharge: 'long', casts: 'spell/nothing' }) }]);
+    expect(d.res[0].casts).toBeUndefined();
+    const e = addGrants(c, 'feature:fe', [{ spec: spec({ kind: 'resource', name: 'X', max: '1', recharge: 'long', casts: 'sp5' }) }]);
+    expect(e.res[0].casts).toBe('sp5');
+  });
+  it('a second copy of a spell is still possible', () => {
+    const c = custom(make());
+    expect(findUnlinked(c, 'spell', 'guidance')).toBe('sp2');
+    const n = addGrants(c, 'feature:fx', [{ spec: spec({ kind: 'spell', name: 'Guidance', spell: 'spell/guidance' }), spell: { name: 'Guidance', lvl: 0, time: 'Action', range: 'Touch' } }]);
+    expect(n.spells.filter((x) => x.name === 'Guidance')).toHaveLength(2);
+  });
+});
+
+describe('removal cascade', () => {
+  const guide = (): Character => {
+    const s = make({ conc: { id: 'sp2', name: 'Guidance' } });
+    return {
+      ...s,
+      feats: [...s.feats.map((f) => (f.id === 'f9' ? { ...f, from: 'feature:fg' } : f)), { id: 'fg', g: 'background', name: 'Guide', desc: '' }],
+      spells: s.spells.map((x) => (x.id === 'sp2' || x.id === 'sp8' ? { ...x, from: 'feature:f9' } : x))
+    };
+  };
+  it('removes everything whose chain leads to the source, and ends Concentration on it', () => {
+    const c = guide();
+    const r = removeFeature(c, 'fg');
+    expect(r.feats.some((f) => f.id === 'fg' || f.id === 'f9')).toBe(false);
+    expect(r.spells.some((x) => x.id === 'sp2' || x.id === 'sp8')).toBe(false);
+    expect(r.res.some((x) => x.id === 'fc8')).toBe(false);
+    expect(r.conc).toBeNull();
+    expect(removalSummary(c, { kind: 'feature', id: 'fg' }).goes).toEqual(['Magic Initiate (Druid)', 'Guidance', 'Goodberry', 'Goodberry']);
+  });
+  it('removing a spell keeps a feature’s resource that casts it, without casts', () => {
+    const c = make({ res: [{ id: 'favored', name: 'Favored Enemy', count: 2, max: 3, recharge: 'long', from: 'feature:f2', casts: 'sp4' }] });
+    expect(removeSpell(c, 'sp4').res).toEqual([{ id: 'favored', name: 'Favored Enemy', count: 2, max: 3, recharge: 'long', from: 'feature:f2' }]);
+  });
+  it('removing a resource clears an action grant that spends it, and empties its pills', () => {
+    const c = make({ grants: [{ id: 'a', kind: 'action', name: 'Wild Shape', econ: 'bonus', res: 'favored', from: 'feature:f2' }] });
+    const r = removeResource(c, 'favored');
+    expect(r.grants[0].res).toBeUndefined();
+    expect(r.pills).toEqual(['hp', 'ac', '']);
+    expect(migrate({ ...c, res: [] }).grants[0].res).toBeUndefined();
+  });
+  it('never hangs on a loop', () => {
+    const c = make({ feats: [{ id: 'A', g: 'other', name: 'A', desc: '', from: 'feature:B' }, { id: 'B', g: 'other', name: 'B', desc: '', from: 'feature:A' },
+      { id: 'S', g: 'other', name: 'S', desc: '', from: 'feature:S' }] });
+    expect(removalChain(c, { kind: 'feature', id: 'A' })).toEqual([{ kind: 'feature', id: 'A' }, { kind: 'feature', id: 'B' }]);
+    expect(removalChain(c, { kind: 'feature', id: 'S' })).toEqual([{ kind: 'feature', id: 'S' }]);
+    expect(removeFeature(c, 'A').feats.map((f) => f.id)).toEqual(['S']);
+  });
+  it('lists the numbers a counted grant stays in', () => {
+    const c = make({ grants: [{ id: 'g', kind: 'abil', name: 'DEX +2', ab: 'dex', val: '2', cap: 20, counted: true, from: 'feature:f10' },
+      { id: 'h', kind: 'ac', name: 'Defense', acMode: 'bonus', val: '1', counted: true, from: 'feature:f10' }] });
+    const keep = removalSummary(c, { kind: 'feature', id: 'f10' }).keep;
+    expect(keep[0]).toBe('DEX 18 still includes +2 from Ability Score Improvement; lower it by hand');
+    expect(keep[1]).toMatch(/^AC 16 still includes \+1 from Ability Score Improvement/);
+  });
+  it('removing an item empties its slot and removes its grants', () => {
+    const s = make({ grants: [{ id: 'g', kind: 'ac', name: '+1 AC', acMode: 'bonus', val: '1', from: 'item:i9', needEq: true }] });
+    const r = removeItem(s, 'i9');
+    expect(r.attuneIds).toEqual(['', '', '']);
+    expect(r.grants).toEqual([]);
   });
 });

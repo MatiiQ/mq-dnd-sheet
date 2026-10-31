@@ -1517,6 +1517,11 @@
       }
     ]
   },
+  "trait/human/resourceful": {
+    "grants": [
+      { "id": "g1", "kind": "resource", "name": "Heroic Inspiration", "max": "1", "recharge": "long" }
+    ]
+  },
   "trait/human/skillful": {
     "grants": [
       {

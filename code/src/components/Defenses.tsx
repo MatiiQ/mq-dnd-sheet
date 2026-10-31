@@ -1,5 +1,5 @@
 import { useState, type CSSProperties } from 'react';
-import { ABILITIES, CONDITION_OPTIONS, DAMAGE_TYPES, mergedDefenses, newId, normName, removeDefense } from '../logic';
+import { ABILITIES, CONDITION_OPTIONS, DAMAGE_TYPES, mergedDefenses, newId, normName, removeRef } from '../logic';
 import { useSheet } from '../sheet';
 import type { Character, DefenseKind } from '../types';
 import { RemoveButton, XIcon, useArmed } from './ui';
@@ -46,7 +46,7 @@ function DefenseGroup({ kind, title, noun, color, addLabel, options, placeholder
   // Removing a row removes its hand entries; a row that only grants hold removes those (its sources are listed first).
   const remove = (ids: string[]) => update((p) => {
     const own = p.defenses.filter((d) => ids.includes(d.id) && !d.from).map((d) => d.id);
-    return (own.length ? own : ids).reduce<Character>((x, id) => removeDefense(x, id), p);
+    return (own.length ? own : ids).reduce<Character>((x, id) => removeRef(x, { kind: 'defense', id }), p);
   });
   const addText = () => { const v = text.trim(); if (v) add(v); setText(''); };
   const opts = (vals: string[]) => vals.map((d) => <option key={d} value={d}>{d}</option>);
