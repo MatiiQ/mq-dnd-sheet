@@ -104,6 +104,18 @@ describe('SRD items', () => {
     const armor = list.filter((e) => e.cat === 'armor' || e.cat === 'shield').map((e) => [e.name, e.armor, e.acBase]);
     expect(armor.sort()).toEqual(ARMORS.map((a) => [...a]).sort());
   });
+  it('read item charges and how they come back (plan 7, Task 8)', () => {
+    const it = (id: string) => (items as ItemEntry[]).find((e) => e.id === id)!;
+    const ch = (id: string) => [it(id).charges, it(id).recharge, it(id).regain];
+    expect(ch('item/luck-blade')).toEqual(['1d3', 'none', undefined]);
+    expect(ch('item/nine-lives-stealer')).toEqual(['1d8+1', 'none', undefined]);
+    expect(ch('item/ring-of-three-wishes')).toEqual(['3', 'none', undefined]);
+    expect(ch('item/cube-of-force')).toEqual(['10', 'dawn', '1d6']);
+    expect(ch('item/rod-of-resurrection')).toEqual(['5', 'dawn', '1']);
+    for (const id of ['item/figurine-of-wondrous-power', 'item/gem-of-brightness', 'item/scarab-of-protection', 'item/talisman-of-pure-good', 'item/talisman-of-ultimate-evil'])
+      expect([id, it(id).recharge]).toEqual([id, 'none']);
+    expect((items as ItemEntry[]).filter((e) => e.charges !== undefined && e.recharge === undefined).map((e) => e.id)).toEqual([]);
+  });
   it('read Bag of Holding’s capacity from its SRD text', () => {
     expect(by('Bag of Holding')).toMatchObject({ xdim: true, cap: 500, capVol: '64 cubic feet', wt: 5 });
   });

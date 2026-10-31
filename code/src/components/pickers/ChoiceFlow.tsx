@@ -13,6 +13,9 @@ import { LinkOrAdd } from '../GrantEditor';
 // The answers of one entry in the flow, keyed by its path: '' for the entry being added, then '>' + the id of each
 // entry nested below it (Elf → '>trait/elf/elven-lineage>trait/elf/wood-elf').
 interface NodeAnswers { picks: Record<string, string[]>; counted: Record<string, boolean>; links: Record<string, 'link' | 'new'> }
+// Where the flow stood when it handed its answers on: given back as `initial`, it starts there again (Back from the item
+// questions). total: its step count, 0 when it had nothing to ask.
+export interface FlowState { answers: Record<string, NodeAnswers>; at: number; total?: number }
 interface FlowNode { key: string; parent: string | null; entry: Entry; picks: Record<string, string[]>; preset: Record<string, string[]>; adding: Entry[]; title: string }
 interface ChoiceStep { node: FlowNode; choice: ChoiceSpec }
 interface CountItem { node: FlowNode; spec: Omit<GrantSpec, 'opt'>; on: boolean }
@@ -32,13 +35,14 @@ function walk(cat: Catalog, c: Character, answers: Record<string, NodeAnswers>, 
 }
 
 // Asks a catalog entry's choices, then the "Already counted" switches and the link-or-add questions of what it will
-// add, and hands the answers to onDone (addFromCatalog's AddChoices). An entry with nothing to ask goes straight through.
-export function ChoiceFlow({ entry, cat, preset, onDone, onCancel }: {
-  entry: Entry; cat: Catalog; preset?: Record<string, string[]>; onDone: (ans: AddChoices) => void; onCancel: () => void;
+// add, and hands the answers to onDone (addFromCatalog's AddChoices) with where it stood. An entry with nothing to ask
+// goes straight through.
+export function ChoiceFlow({ entry, cat, preset, initial, onDone, onCancel }: {
+  entry: Entry; cat: Catalog; preset?: Record<string, string[]>; initial?: FlowState; onDone: (ans: AddChoices, state: FlowState) => void; onCancel: () => void;
 }) {
   const { c } = useSheet();
-  const [answers, setAnswers] = useState<Record<string, NodeAnswers>>({});
-  const [at, setAt] = useState(0);
+  const [answers, setAnswers] = useState<Record<string, NodeAnswers>>(initial?.answers ?? {});
+  const [at, setAt] = useState(initial?.at ?? 0);
   const [query, setQuery] = useState('');
 
   const nodes: FlowNode[] = [];
@@ -80,7 +84,7 @@ export function ChoiceFlow({ entry, cat, preset, onDone, onCancel }: {
   };
 
   // Nothing to ask: add at once.
-  useEffect(() => { if (total === 0) onDone(build()); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (total === 0) onDone(build(), { answers, at: 0, total: 0 }); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   if (total === 0) return null;
 
   const setNode = (key: string, f: (n: NodeAnswers) => NodeAnswers) => setAnswers((a) => ({ ...a, [key]: f(a[key] ?? EMPTY) }));
@@ -185,7 +189,7 @@ export function ChoiceFlow({ entry, cat, preset, onDone, onCancel }: {
       <div className="row wrap gap-8">
         {idx > 0 && <button type="button" className="btn" onClick={() => { setAt(idx - 1); setQuery(''); }}>Back</button>}
         <button type="button" className="btn btn-primary" aria-disabled={!ready}
-          onClick={() => { if (!ready) return; if (last) onDone(build()); else { setAt(idx + 1); setQuery(''); } }}>{last ? 'Add' : 'Next'}</button>
+          onClick={() => { if (!ready) return; if (last) onDone(build(), { answers, at: idx, total }); else { setAt(idx + 1); setQuery(''); } }}>{last ? 'Add' : 'Next'}</button>
         <button type="button" className="btn" onClick={onCancel}>Cancel</button>
         <span className="small">Step {idx + 1} of {total}</span>
       </div>

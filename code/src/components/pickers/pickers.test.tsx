@@ -7,6 +7,7 @@ import { blankCharacter, sampleCharacter } from '../../defaults';
 import { Sheet } from '../../sheet';
 import type { Character } from '../../types';
 import { ChoiceFlow } from './ChoiceFlow';
+import { ItemQuestions } from './ItemQuestions';
 import { PickerResult } from './PickerResult';
 
 const cat = mergeCatalog(srdEntries, null);
@@ -32,6 +33,25 @@ describe('ChoiceFlow renders its first step', () => {
     expect(flow(c, 'feature/ranger/favored-enemy')).toContain('Link my ‘Favored Enemy’');
   });
   it('renders nothing for an entry with nothing to ask', () => expect(flow(blankCharacter(), 'spell/fireball')).toBe(''));
+});
+
+describe('ChoiceFlow takes its answers back', () => {
+  it('starts at the step it left, with the picks kept (Back from the item questions)', () => {
+    const answers = { '': { picks: { list: ['wizard'] }, counted: {}, links: {} } };
+    const html = render(blankCharacter(), <ChoiceFlow entry={cat.byId.get('feat/magic-initiate')!} cat={cat} initial={{ answers, at: 0 }} onDone={() => {}} onCancel={() => {}} />);
+    expect(html).toMatch(/aria-pressed="true"[^>]*><span class="col"><span>Wizard/);
+  });
+});
+
+describe('ItemQuestions', () => {
+  const q = (id: string) => render(blankCharacter(), <ItemQuestions entry={cat.byId.get(id)!} cat={cat} onDone={() => {}} onBack={() => {}} onCancel={() => {}} />);
+  it('asks a rolled starting charge count with a number input bounded by the roll', () => {
+    const html = q('item/luck-blade');
+    expect(html).toContain('Starting charges (roll 1d3)');
+    expect(html).toMatch(/<input[^>]*type="number"[^>]*min="1"[^>]*max="3"/);
+    expect(html).toContain('Step 1 of 1');
+    expect(html).toMatch(/aria-disabled="true"[^>]*>Add</);
+  });
 });
 
 describe('PickerResult', () => {
