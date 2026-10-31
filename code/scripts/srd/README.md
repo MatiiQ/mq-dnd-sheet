@@ -141,26 +141,8 @@ rerolls and minimum rolls (Supreme Healing), damage that adds half a level (Divi
   Wounds, Healing Word, Mass Cure Wounds, Mass Healing Word, and Conjure Celestial (its healing light).
 - Hunter's Mark's overlay grant: an `xdmg` of 1d6 Force on the marked target while the spell is on.
 
-Data gaps left for a later data pass (the Actions tab shows what the data has; checked against the built
-`src/data/srd/spells.json` and `items.json`, 2026-10-31):
-
-- Heal and Mass Heal are `fx 'other'`: their healing is a fixed amount ("70 Hit Points"), which the healing regex
-  doesn't read, so they aren't under Spells · healing. Fix: `fx 'healing'` in the overlay, plus a way to show a fixed
-  amount (a number field, or the dice text as it is).
-- Beacon of Hope has `save: 'wis'` and `fx 'healing'`: the builder read "Advantage on Wisdom saving throws" as a save,
-  so it lands under Spells · save with a DC. Fix: drop `save` and set `fx 'other'` in the overlay; optionally make the
-  builder's save check skip "Advantage on … saving throws".
-- Conjure Celestial has `save: 'dex'` (its Searing Light) and `fx 'healing'` with `dice '4d12'`, so it lands under
-  Spells · save and its row mixes "DC n DEX" with "4d12 + WIS (+n)"; its 6d12 Radiant damage isn't in the data. Fix:
-  decide its group in the overlay.
-- Find Steed, Power Word Heal and Wish are `fx 'healing'` with no dice, so their healing rows show no number. Power
-  Word Heal and Wish restore all Hit Points, which no dice describe; Find Steed isn't a healing spell (fix: `fx 'other'`).
-- "Weapon, +1, +2, or +3" is a plain `cat 'weapon'` entry with no `base`, no weapon fields (die, damage type,
-  properties) and no `magic` bonus (the catalog has no `magic` field; it only comes from the custom item form). Added
-  from the catalog, it shows under Weapon attacks with damage that is only the ability modifier. Fix: the picker asks
-  for the base weapon and the bonus when it is added (picker work, not a data change).
-
-After overlay changes: `npm run srd`, and a test per fix in `src/catalog/slice.test.ts` or `src/catalog/data.test.ts`.
+Data gaps found after plan 5 and by the 2026-10-31 data audit (spells, items, PHB pack backgrounds and feats) are
+listed, with their fixes, in `docs/superpowers/plans/2026-10-31-07-catalog-data-fixes.md`.
 
 ## What check-phb does not catch
 
