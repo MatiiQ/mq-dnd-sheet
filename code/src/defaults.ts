@@ -93,7 +93,7 @@ export function sampleCharacter(): Character {
       { id: 'g-hm', kind: 'xdmg', name: 'Hunter’s Mark', dice: '1d6', dtype: 'Force', on: 'the marked target', when: 'active', from: 'spell:sp4', srcKind: 'spell' }
     ],
     // The Longbow in both hands; Weapon Mastery: Longbow (Slow) and Shortsword (Vex).
-    effectsOn: [], hands: ['i2', 'i2'], mastery: ['longbow', 'shortsword'],
+    effectsOn: [], hands: ['i2', 'i2'], mastery: ['longbow', 'shortsword'], sections: [],
     profs: [
       { id: 'p1', cat: 'armor', name: 'Light armor' }, { id: 'p2', cat: 'armor', name: 'Medium armor' }, { id: 'p3', cat: 'armor', name: 'Shields' },
       { id: 'p4', cat: 'weapon', name: 'Simple weapons' }, { id: 'p5', cat: 'weapon', name: 'Martial weapons' },
@@ -243,7 +243,7 @@ export function druidSample(): Character {
       { id: 'g15', kind: 'atkAbil', name: 'Shillelagh', ab: 'cast', weapons: 'club,quarterstaff', amode: 'melee', die: '1:1d8,5:1d10,11:1d12,17:2d6', when: 'active', from: 'spell:ds3', srcKind: 'spell' }
     ],
     // The Quarterstaff in one hand (the Shield takes the other); Shillelagh off until cast.
-    effectsOn: [], hands: ['i3'], mastery: [],
+    effectsOn: [], hands: ['i3'], mastery: [], sections: [],
     profs: [
       { id: 'p1', cat: 'armor', name: 'Light armor' }, { id: 'p2', cat: 'armor', name: 'Shields' }, { id: 'p3', cat: 'weapon', name: 'Simple weapons' },
       { id: 'p4', cat: 'tool', name: 'Herbalism Kit' }, { id: 'p5', cat: 'language', name: 'Common' }, { id: 'p6', cat: 'language', name: 'Elvish' }, { id: 'p7', cat: 'language', name: 'Dwarvish' }
@@ -262,6 +262,6 @@ export function blankCharacter(): Character {
     slotMax: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], slotUsed: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     defenses: [], senses: [], res: [], attacks: [], riders: [],
     coins: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 }, attuneIds: ['', '', ''], inv: [], spells: [], feats: [], prepMax: 0,
-    grants: [], effectsOn: [], profs: [], hands: [], mastery: []
+    grants: [], effectsOn: [], profs: [], hands: [], mastery: [], sections: []
   };
 }

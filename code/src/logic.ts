@@ -678,7 +678,7 @@ const slots = (v: unknown[]) => Array.from({ length: 10 }, (_, i) => (typeof v[i
 // Records with fixed keys: a missing or damaged key falls back to the blank character's value.
 const FIXED_RECORDS = ['ch', 'abil', 'speeds', 'coins', 'notes'] as const;
 // Lists of entries: each needs a name and holds only plain values.
-const ENTRY_LISTS = ['senses', 'res', 'attacks', 'riders', 'inv', 'spells', 'feats', 'acMods', 'grants', 'profs', 'defenses'] as const;
+const ENTRY_LISTS = ['senses', 'res', 'attacks', 'riders', 'inv', 'spells', 'feats', 'acMods', 'grants', 'profs', 'defenses', 'sections'] as const;
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 export const isEntry = (x: unknown): x is Record<string, unknown> =>
   isObj(x) && typeof x.name === 'string' && Object.values(x).every((v) => v === null || typeof v !== 'object');
@@ -731,6 +731,7 @@ const cleanCid = <T extends { cid?: string }>(x: T): T => { const { cid, ...rest
 type FieldCheck = (v: unknown) => boolean;
 const isStr: FieldCheck = (v) => typeof v === 'string';
 const isBool: FieldCheck = (v) => typeof v === 'boolean';
+const nonEmpty: FieldCheck = (v) => typeof v === 'string' && v !== '';
 const among = (...xs: unknown[]): FieldCheck => (v) => xs.includes(v);
 const SPELL_FIELDS: Record<string, FieldCheck> = {
   desc: isStr, school: isStr, classes: isStr, ritual: isBool, atk: among('melee', 'ranged'), save: among(...ABILITIES.map(([k]) => k)),
@@ -740,12 +741,12 @@ const ATTACK_FIELDS: Record<string, FieldCheck> = { econ: among('action', 'bonus
 const ITEM_FIELDS: Record<string, FieldCheck> = {
   cat: among(...ITEM_CATS), cost: isStr, wcat: among('simple', 'martial'), wrange: among('melee', 'ranged'), dmg: isStr, dtype: isStr, props: isStr,
   thrown: isStr, vers: isStr, ammo: isStr, mastery: isStr, magic: finite, strReq: finite, stealthDis: isBool, cap: finite, capVol: isStr, xdim: isBool,
-  rarity: isStr, attune: isBool, base: (v) => typeof v === 'string' && v.startsWith('item/')
+  rarity: isStr, attune: isBool, base: (v) => typeof v === 'string' && v.startsWith('item/'), sec: nonEmpty
 };
 const cleanFields = <T extends object>(x: T, fields: Record<string, FieldCheck>): T =>
   Object.fromEntries(Object.entries(x).filter(([k, v]) => !Object.hasOwn(fields, k) || fields[k](v))) as T;
 
-export const NEW_FIELDS: readonly (keyof Character)[] = ['spellSort', 'size', 'carryUp', 'attuneIds', 'grants', 'effectsOn', 'profs', 'defenses', 'hands', 'mastery'];
+export const NEW_FIELDS: readonly (keyof Character)[] = ['spellSort', 'size', 'carryUp', 'attuneIds', 'grants', 'effectsOn', 'profs', 'defenses', 'hands', 'mastery', 'sections'];
 // Resources the Inventory tab echoed before `inv` existed.
 const OLD_INVENTORY_RESOURCES = ['arrows', 'potions'];
 
@@ -790,6 +791,10 @@ export function migrate(data: unknown): Character {
   // Grants: a link that doesn't parse goes first, so grantErrors knows the source kind; then the grant must be valid.
   c.grants = c.grants.filter((g) => parseLink(g.from) && !grantErrors(g, parseLink(g.from)!.kind).length).map(cleanLinked);
   c.inv = c.inv.map((i) => cleanFields(cleanCid(i), ITEM_FIELDS));
+  // Item sections (plan 6): a named section once per id (the first stays); then an item's section that is gone clears,
+  // so the item shows in the default list.
+  c.sections = c.sections.filter((x, i, all) => typeof x.name === 'string' && x.name.trim() !== '' && all.findIndex((y) => y.id === x.id) === i);
+  c.inv = c.inv.map((i) => (i.sec === undefined || c.sections.some((x) => x.id === i.sec) ? i : (({ sec: _, ...x }) => x)(i)));
   c.spells = c.spells.map((x) => cleanFields(x, SPELL_FIELDS));
   // Saves from before defenses were entries kept string lists in `def` (no longer a field, so read from the raw save).
   if (data.defenses === undefined) {

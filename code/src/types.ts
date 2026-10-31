@@ -64,7 +64,11 @@ export interface Item extends Partial<Counter> {
   cat?: ItemEntry['cat']; cost?: string; wcat?: 'simple' | 'martial'; wrange?: 'melee' | 'ranged'; dmg?: string; dtype?: string; props?: string;
   thrown?: string; vers?: string; ammo?: string; mastery?: string; magic?: number;
   strReq?: number; stealthDis?: boolean; cap?: number; capVol?: string; xdim?: boolean; rarity?: string; attune?: boolean; base?: string;
+  // sec: the id of the section the player put it in (its kind); none, or one that is gone, = the default list.
+  sec?: string;
 }
+// A section of the item list the player named (Weapons, Armour…), in display order.
+export interface Section { id: string; name: string }
 export interface AcMod { id: string; name: string; val: number }
 // castAb: this spell's own spellcasting ability (Light Bearer casts with CHA), else the character's.
 export interface Spell extends Linked {
@@ -108,6 +112,8 @@ export interface Character {
   /** Attunement slots: 3 item ids, '' for an empty slot. */
   coins: Record<Coin, number>; attuneIds: string[]; notes: Record<NoteKey, string>;
   inv: Item[]; spells: Spell[]; feats: Feature[];
+  /** Item sections, in display order (plan 6). Items name theirs in `sec`. */
+  sections: Section[];
   grants: Grant[]; profs: Prof[];
   /** Effects switched on: 'feature:<id>', 'item:<id>' or a non-Concentration 'spell:<id>' (a Concentration spell's is on through conc). */
   effectsOn: string[];
