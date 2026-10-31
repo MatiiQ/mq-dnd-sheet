@@ -15,7 +15,7 @@ export const otherWeapons = (c: Character): Item[] =>
 // Weapon Mastery: the number of weapon kinds whose mastery properties the character can use, from the active
 // prof 'mastery' grants without a target (Fighter 3, 4 from level 4, PHB p.91; Ranger 2 …).
 export const masterySlots = (c: Character) =>
-  activeGrants(c, 'prof').filter((g) => g.cat === 'mastery' && !g.target).reduce((t, g) => t + num(c, g.val), 0);
+  activeGrants(c, 'prof').filter((g) => g.cat === 'mastery' && !g.target).reduce((t, g) => t + num(c, g.val, g), 0);
 // A weapon kind (a weaponKind slug) counts when it is among the first masterySlots picks, or an active mastery grant
 // names it (grant targets are weapon names, so they compare as slugs). Picks past the slot count stay stored.
 export function hasMastery(c: Character, kind: string): boolean {
@@ -99,7 +99,7 @@ function grantFits(c: Character, g: Grant, it: Item, use: Use): boolean {
   return true;
 }
 const grantParts = (c: Character, kind: 'atkBonus' | 'dmgBonus', it: Item, use: Use): AcPart[] =>
-  activeGrants(c, kind).filter((g) => grantFits(c, g, it, use)).map((g) => ({ label: g.name, value: num(c, g.val) }));
+  activeGrants(c, kind).filter((g) => grantFits(c, g, it, use)).map((g) => ({ label: g.name, value: num(c, g.val, g) }));
 const sum = (parts: AcPart[]) => parts.reduce((t, p) => t + p.value, 0);
 
 const USE_NOTE: Record<Use, string | undefined> = { melee: undefined, thrown: 'Thrown', ranged: undefined, 'two-handed': 'Two hands' };
@@ -167,7 +167,7 @@ export function unarmedStrike(c: Character): WeaponAttack & { dc: number } {
     if (typeof d === 'string' && average(d) > Math.max(1, average(die))) { die = d; dtype = g.dtype || 'Bludgeoning'; }
   }
   const fits = (g: Grant) => !!g.weapon && g.weapon.split(',').map((x) => x.trim()).includes('unarmed-strike') && !g.wrange && !g.prop && !g.oneHand && g.amode !== 'ranged';
-  const bonus = (kind: 'atkBonus' | 'dmgBonus') => activeGrants(c, kind).filter(fits).map((g) => ({ label: g.name, value: num(c, g.val) }));
+  const bonus = (kind: 'atkBonus' | 'dmgBonus') => activeGrants(c, kind).filter(fits).map((g) => ({ label: g.name, value: num(c, g.val, g) }));
   const hitParts = [{ label: abilityName(ab), value: mod }, { label: 'Proficiency Bonus', value: pb }, ...bonus('atkBonus')].filter((p) => p.value !== 0);
   const dmgParts = [...(die ? [] : [{ label: 'Unarmed Strike', value: 1 }]), { label: abilityName(ab), value: mod }, ...bonus('dmgBonus')].filter((p) => p.value !== 0);
   const total = sum(dmgParts);
@@ -179,7 +179,7 @@ export function unarmedStrike(c: Character): WeaponAttack & { dc: number } {
 
 // Attacks per Attack action: the highest active Extra Attack grant ("attack twice", PHB p.120), else 1. Extra Attack
 // from several classes doesn't stack (PHB p.44), so the highest wins.
-export const attacksPerAction = (c: Character) => Math.max(1, ...activeGrants(c, 'attacks').map((g) => num(c, g.val)));
+export const attacksPerAction = (c: Character) => Math.max(1, ...activeGrants(c, 'attacks').map((g) => num(c, g.val, g)));
 
 // The Light property's extra attack (PHB p.213): only with two Light weapons in hand (two rows, or one row with 2 or
 // more held twice: "a different Light weapon" means another weapon, not another kind). It is a Bonus Action and adds no
@@ -248,7 +248,7 @@ function cantripBonus(c: Character, sp: Spell): number {
     if (!g.cantrip) return false;
     const cls = (sourceOf(c, g.from) as Feature | null)?.cid?.split('/')[1];
     return g.from.startsWith('feature:') && !!cls && classes.includes(cls);
-  }).reduce((t, g) => t + num(c, g.val), 0);
+  }).reduce((t, g) => t + num(c, g.val, g), 0);
 }
 
 // Spells castable now — cantrips always (as in the Spells tab), others when usable (prepared or always prepared) — that
@@ -304,7 +304,7 @@ function spellRow(c: Character, sp: Spell, r: RowFields): Omit<SpellAction, 'nam
 // ---------- features and extra damage ----------
 
 // Dice or numbers from a grant, at the level (valueAt: num reads dice as 0), with a real minus.
-const valueText = (c: Character, v: string) => String(valueAt(v, valueCtx(c))).replace(/-/g, '−');
+const valueText = (c: Character, v: string, g?: Grant) => String(valueAt(v, valueCtx(c, g))).replace(/-/g, '−');
 
 export interface FeatureAction { grantId: string; name: string; econ: Econ; dice?: string; resId?: string; source?: string; note?: string }
 // Active action grants (Second Wind, Wild Shape, Channel Divinity). `dice` is not always dice: Rage's damage bonus or a
@@ -312,7 +312,7 @@ export interface FeatureAction { grantId: string; name: string; econ: Econ; dice
 export const featureActions = (c: Character): FeatureAction[] => activeGrants(c, 'action').map((g) => {
   const source = sourceLabel(c, g);
   return {
-    grantId: g.id, name: g.name, econ: g.econ ?? 'other', ...(g.dice ? { dice: valueText(c, g.dice) } : {}), ...(g.res ? { resId: g.res } : {}),
+    grantId: g.id, name: g.name, econ: g.econ ?? 'other', ...(g.dice ? { dice: valueText(c, g.dice, g) } : {}), ...(g.res ? { resId: g.res } : {}),
     ...(source ? { source } : {}), ...(g.note ? { note: g.note } : {})
   };
 });
@@ -324,7 +324,7 @@ export function extraDamage(c: Character): ExtraDamage[] {
   const granted = activeGrants(c, 'xdmg').map((g): ExtraDamage => {
     const source = sourceLabel(c, g);
     return {
-      key: 'grant:' + g.id, name: g.name, dice: valueText(c, g.dice ?? ''), ...(g.dtype ? { dtype: g.dtype } : {}),
+      key: 'grant:' + g.id, name: g.name, dice: valueText(c, g.dice ?? '', g), ...(g.dtype ? { dtype: g.dtype } : {}),
       when: [g.on, g.perTurn ? 'once per turn' : ''].filter(Boolean).join(', '), ...(source ? { source } : {})
     };
   });

@@ -142,6 +142,16 @@ describe('SRD items', () => {
     expect(it('defender').baseOf!.split(',')).toHaveLength(28);
     expect((items as ItemEntry[]).filter((e) => e.magicPick).map((e) => e.id).sort()).toEqual(['item/armor-1-2-or-3', 'item/shield-1-2-or-3', 'item/wand-of-the-war-mage-1-2-or-3', 'item/weapon-1-2-or-3']);
   });
+  it('give the items that raise spell attack or save DC their grants (plan 7, Task 9a)', () => {
+    const g = (id: string) => (items as ItemEntry[]).find((e) => e.id === 'item/' + id)!.grants ?? [];
+    const of = (id: string, kind: string) => g(id).filter((x) => x.kind === kind).map((x) => [(x as GrantSpec).val, (x as GrantSpec).needEq, (x as GrantSpec).needAtt]);
+    expect(of('wand-of-the-war-mage-1-2-or-3', 'spellAtk')).toEqual([['magic', true, true]]);
+    expect([of('robe-of-the-archmagi', 'spellAtk'), of('robe-of-the-archmagi', 'spellDc')]).toEqual([[['2', true, true]], [['2', true, true]]]);
+    for (const id of ['staff-of-power', 'staff-of-the-magi', 'staff-of-the-woodlands', 'talisman-of-pure-good', 'talisman-of-ultimate-evil'])
+      expect([id, of(id, 'spellAtk')]).toEqual([id, [['2', true, true]]]);
+    expect(g('staff-of-power').map((x) => x.kind)).toEqual(['ac', 'saveBonus', 'spellAtk']);
+    expect(g('robe-of-the-archmagi').map((x) => x.kind).slice(0, 2)).toEqual(['ac', 'defense']);
+  });
   it('read Bag of Holding’s capacity from its SRD text', () => {
     expect(by('Bag of Holding')).toMatchObject({ xdim: true, cap: 500, capVol: '64 cubic feet', wt: 5 });
   });

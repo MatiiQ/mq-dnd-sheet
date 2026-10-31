@@ -79,7 +79,7 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
             ? <button type="button" className="hp-max link-btn" aria-expanded={maxOpen} aria-label={'Max HP ' + max + '. Show breakdown.'} onClick={() => setMaxOpen(!maxOpen)}>/ {max}</button>
             : <span className="hp-max">/ {max}</span>}
           {maxOpen && perLevel.length > 0 && (
-            <span className="small">Base {c.maxHp}{perLevel.map((g) => ' · ' + g.name + ' ' + fmt(num(c, g.val) * c.level) + ' (' + fmt(num(c, g.val)) + ' × level ' + c.level + (sourceLabel(c, g) ? ', ' + sourceLabel(c, g) : '') + ')')}</span>
+            <span className="small">Base {c.maxHp}{perLevel.map((g) => ' · ' + g.name + ' ' + fmt(num(c, g.val, g) * c.level) + ' (' + fmt(num(c, g.val, g)) + ' × level ' + c.level + (sourceLabel(c, g) ? ', ' + sourceLabel(c, g) : '') + ')')}</span>
           )}
           {!edit && c.origOn && delta !== 0 && <span className="hp-delta" style={{ color: deltaColor }}>max {fmt(delta)} (original {origShown})</span>}
         </div>

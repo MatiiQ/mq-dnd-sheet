@@ -37,3 +37,13 @@ describe('diceRange', () => {
     expect(diceRange('1:1d6,5:1d8')).toBeNull();
   });
 });
+
+describe('the magic term (plan 7, Task 9a)', () => {
+  const ctx: ValueCtx = { level: 5, pb: 3, mod: () => 1 };
+  it('reads the item’s magic, 0 when it has none', () => {
+    expect(isValue('magic')).toBe(true);
+    expect(valueAt('magic', { ...ctx, magic: 2 })).toBe(2);
+    expect(valueAt('magic', ctx)).toBe(0);
+    expect(valueAt('magic+1', { ...ctx, magic: 2 })).toBe(3);
+  });
+});

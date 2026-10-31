@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import {
   ABILITIES, SKILLS, grantChips, addGrants, findUnlinked, removalChain, removalSummary, removeFeature, removeResource, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, toggleEffect, dawn, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, splitTraining, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, NEW_FIELDS, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, removeItem, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
-  setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, undoHp
+  num, setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, undoHp
 } from './logic';
 import { grantErrors, type GrantSpec } from './catalog/schema';
 import { addFromCatalog, type ItemAnswers } from './catalog/copy';
@@ -1613,5 +1613,66 @@ describe('a magic armor or Shield bonus chosen when added (plan 7, Task 9)', () 
     const plate = add(base, 'item/armor-1-2-or-3', { base: 'item/plate-armor', bonus: 1 });
     expect(armorClass(plate).total).toBe(19);
     expect(armorClass(add(plate, 'item/shield-1-2-or-3', { bonus: 3 })).total).toBe(24);
+  });
+});
+
+describe('a grant value that reads its item’s magic (plan 7, Task 9a)', () => {
+  const wand: Item = { id: 'w1', name: 'Wand +2', qty: 1, eq: true, magic: 2 };
+  const plainWand: Item = { id: 'w2', name: 'Wand', qty: 1, eq: true };
+  const save = (from: string): Grant => ({ id: 'g' + from, kind: 'saveBonus', name: 'Magic save', ab: 'dex', val: 'magic', from });
+  const c = { ...blankCharacter(), inv: [wand, plainWand], feats: [{ id: 'f1', g: 'feat' as const, name: 'Feat', desc: '' }] };
+  it('is the item’s magic, 0 without one or from a feature', () => {
+    const base = saveMod(c, 'dex');
+    expect(saveMod({ ...c, grants: [save('item:w1')] }, 'dex') - base).toBe(2);
+    expect(saveMod({ ...c, grants: [save('item:w2')] }, 'dex') - base).toBe(0);
+    expect(saveMod({ ...c, grants: [save('feature:f1')] }, 'dex') - base).toBe(0);
+    expect(num({ ...c, grants: [save('item:w1')] }, 'magic', save('item:w1'))).toBe(2);
+  });
+  it('shows the item’s value on its chip', () => {
+    const chips = grantChips({ ...c, grants: [save('item:w1')] }, 'item:w1');
+    expect(chips.map((x) => x.label).join(' ')).toContain('+2');
+  });
+  it('is never a counter’s maximum', () => {
+    expect(maxFields('formula', 'magic')).toBeNull();
+    expect(maxFields('formula', 'pb')).toEqual({ maxV: 'pb' });
+    expect(migrate({ res: [{ id: 'r1', name: 'Zap', count: 0, maxV: 'magic', recharge: 'long' }] }).res[0].maxV).toBeUndefined();
+  });
+});
+
+describe('spell attack and save DC bonus grants (plan 7, Task 9a)', () => {
+  // Wand of the War Mage: a bonus to spell attack rolls by its rarity; Robe of the Archmagi: spell save DC and spell
+  // attack bonus each increase by 2 (SRD 5.2.1 magic items).
+  const wand: Item = { id: 'w1', name: 'Wand of the War Mage +2', qty: 1, eq: true, magic: 2 };
+  const robe: Item = { id: 'r1', name: 'Robe of the Archmagi', qty: 1, eq: true };
+  const atk: Grant = { id: 'ga', kind: 'spellAtk', name: 'Spell attack', val: 'magic', needEq: true, needAtt: true, from: 'item:w1' };
+  const rAtk: Grant = { id: 'gr1', kind: 'spellAtk', name: 'Spell attack +2', val: '2', needEq: true, needAtt: true, from: 'item:r1' };
+  const rDc: Grant = { id: 'gr2', kind: 'spellDc', name: 'Spell save DC +2', val: '2', needEq: true, needAtt: true, from: 'item:r1' };
+  const base = { ...blankCharacter(), castAb: 'int' as const, inv: [wand, robe] };
+  const bolt: Spell = { id: 's1', name: 'Fire Bolt', lvl: 0, time: 'Action', range: '120 ft' };
+  it('adds an equipped, attuned wand’s magic to the spell attack only', () => {
+    const c = { ...base, grants: [atk], attuneIds: ['w1'] };
+    expect(spellAttackFor(c, bolt)! - spellAttackFor(base, bolt)!).toBe(2);
+    expect(spellAttack(c)! - spellAttack(base)!).toBe(2);
+    expect(spellSaveDcFor(c, bolt)).toBe(spellSaveDcFor(base, bolt));
+    expect(spellAttackFor({ ...c, attuneIds: [] }, bolt)).toBe(spellAttackFor(base, bolt));
+    expect(spellAttackParts(c)).toContainEqual({ label: 'Wand of the War Mage +2', value: 2 });
+    expect(spellDcParts(c)!.some((p) => p.label === 'Wand of the War Mage +2')).toBe(false);
+    expect(spellAttackParts(c)!.reduce((t, p) => t + p.value, 0)).toBe(spellAttack(c));
+  });
+  it('raises the spell attack by a catalog Wand of the War Mage +2 once equipped and attuned', () => {
+    const cat = mergeCatalog(srdEntries, null);
+    const c0 = addFromCatalog(base, cat, cat.byId.get('item/wand-of-the-war-mage-1-2-or-3')!, { picks: {}, counted: {}, links: {}, item: { bonus: 2 } });
+    const w = c0.inv.at(-1)!;
+    expect(spellAttack(c0)).toBe(spellAttack(base));
+    const on = { ...c0, inv: c0.inv.map((x) => (x.id === w.id ? { ...x, eq: true } : x)), attuneIds: [w.id] };
+    expect(spellAttack(on)! - spellAttack(base)!).toBe(2);
+  });
+  it('adds an attuned Robe’s +2 to both, each in its own breakdown', () => {
+    const c = { ...base, grants: [rAtk, rDc], attuneIds: ['r1'] };
+    expect(spellSaveDC(c)! - spellSaveDC(base)!).toBe(2);
+    expect(spellSaveDcFor(c, bolt)! - spellSaveDcFor(base, bolt)!).toBe(2);
+    expect(spellAttack(c)! - spellAttack(base)!).toBe(2);
+    expect(spellDcParts(c)!.filter((p) => p.label === 'Robe of the Archmagi')).toEqual([{ label: 'Robe of the Archmagi', value: 2 }]);
+    expect(spellDcParts(c)!.reduce((t, p) => t + p.value, 0)).toBe(spellSaveDC(c));
   });
 });

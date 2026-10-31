@@ -4592,6 +4592,22 @@
         "target": "vs spells and magical effects",
         "needEq": true,
         "needAtt": true
+      },
+      {
+        "id": "g3",
+        "kind": "spellAtk",
+        "name": "+2 spell attack",
+        "val": "2",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g4",
+        "kind": "spellDc",
+        "name": "+2 spell save DC",
+        "val": "2",
+        "needEq": true,
+        "needAtt": true
       }
     ]
   },
@@ -5251,6 +5267,14 @@
         "val": "2",
         "needEq": true,
         "needAtt": true
+      },
+      {
+        "id": "g3",
+        "kind": "spellAtk",
+        "name": "+2 spell attack",
+        "val": "2",
+        "needEq": true,
+        "needAtt": true
       }
     ]
   },
@@ -5317,7 +5341,17 @@
     "regain": "4d6+2",
     "regainOn": "dawn",
     "magic": 2,
-    "base": "item/quarterstaff"
+    "base": "item/quarterstaff",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spellAtk",
+        "name": "+2 spell attack",
+        "val": "2",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   {
     "id": "item/staff-of-the-python",
@@ -5353,7 +5387,17 @@
     "regain": "1d6",
     "regainOn": "dawn",
     "magic": 2,
-    "base": "item/quarterstaff"
+    "base": "item/quarterstaff",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spellAtk",
+        "name": "+2 spell attack",
+        "val": "2",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   {
     "wcat": "simple",
@@ -5532,7 +5576,17 @@
     "rarity": "Legendary",
     "attune": true,
     "charges": "7",
-    "recharge": "none"
+    "recharge": "none",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spellAtk",
+        "name": "+2 spell attack",
+        "val": "2",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   {
     "id": "item/talisman-of-the-sphere",
@@ -5556,7 +5610,17 @@
     "rarity": "Legendary",
     "attune": true,
     "charges": "6",
-    "recharge": "none"
+    "recharge": "none",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spellAtk",
+        "name": "+2 spell attack",
+        "val": "2",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   {
     "id": "item/tent",
@@ -5918,7 +5982,17 @@
     "page": 251,
     "rarity": "Uncommon (+1), Rare (+2), or Very Rare (+3)",
     "attune": true,
-    "magicPick": true
+    "magicPick": true,
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spellAtk",
+        "name": "Spell attack bonus",
+        "val": "magic",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   {
     "id": "item/wand-of-web",

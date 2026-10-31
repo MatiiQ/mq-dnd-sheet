@@ -22,7 +22,8 @@ export const GRANT_KINDS: [GrantKind, string][] = [
   ['speed', 'Speed'], ['ac', 'Armor Class'], ['init', 'Initiative bonus'], ['hpLvl', 'HP per level'], ['size', 'Size'],
   ['carryUp', 'Carry as one size larger'], ['action', 'Action'], ['xdmg', 'Extra damage on a hit'], ['attacks', 'Attacks per Attack action'],
   ['unarmed', 'Unarmed Strike'], ['atkBonus', 'Attack bonus'], ['dmgBonus', 'Damage bonus'], ['lightExtra', 'Light weapon extra attack'],
-  ['atkAbil', 'Attack ability'], ['casting', 'Spellcasting (subclass)'], ['crit', 'Critical hit range']
+  ['atkAbil', 'Attack ability'], ['casting', 'Spellcasting (subclass)'], ['crit', 'Critical hit range'],
+  ['spellAtk', 'Spell attack bonus'], ['spellDc', 'Spell save DC bonus']
 ];
 const WEAPON_FIELDS = [v('val', 'Bonus'), sel('wrange', 'Weapon', RANGE), sel('amode', 'Attack', RANGE), t('prop', 'Weapon property'), t('weapon', 'Weapon name'), b('oneHand', 'One-handed only')];
 export const GRANT_FIELDS: Record<GrantKind, FieldDef[]> = {
@@ -52,7 +53,9 @@ export const GRANT_FIELDS: Record<GrantKind, FieldDef[]> = {
   lightExtra: [b('addMod', 'Adds the ability modifier')],
   atkAbil: [sel('ab', 'Ability', [['cast', 'Spellcasting ability'], ...ABIL]), t('weapons', 'Weapons (e.g. club,quarterstaff)'), sel('amode', 'Attack', RANGE), v('die', 'Damage die')],
   casting: [sel('ab', 'Ability', ABIL), t('list', 'Spell list'), v('cantrips', 'Cantrips'), v('prepared', 'Prepared'), v('s1', 'Level 1 slots'), v('s2', 'Level 2 slots'), v('s3', 'Level 3 slots'), v('s4', 'Level 4 slots'), v('s5', 'Level 5 slots')],
-  crit: [v('val', 'Critical on')]
+  crit: [v('val', 'Critical on')],
+  spellAtk: [v('val', 'Bonus')],
+  spellDc: [v('val', 'Bonus')]
 };
 const COUNTABLE: GrantKind[] = ['abil', 'speed', 'init', 'hpLvl', 'ac'];
 const LINKABLE: Partial<Record<GrantKind, 'resource' | 'spell' | 'action'>> = { resource: 'resource', spell: 'spell', action: 'action' };

@@ -56,11 +56,15 @@ export const clamp = (n: number, min: number, max: number) => Math.max(min, Math
 export const fmt = (m: number) => (m >= 0 ? '+' + m : '−' + Math.abs(m));
 export const mod = (score: number) => Math.floor((score - 10) / 2);
 export const profBonus = (level: number) => 2 + Math.floor((level - 1) / 4);
-// Context for grant values: level, Proficiency Bonus and ability modifiers.
-export const valueCtx = (c: Character): ValueCtx => ({ level: c.level, pb: profBonus(c.level), mod: (a) => abilityMod(c, a) });
+// Context for grant values: level, Proficiency Bonus and ability modifiers, and with a grant, the magic (+N) of the item
+// it comes from (Wand of the War Mage's spell attack; 0 from no item or an item without magic, plan 7).
+export const valueCtx = (c: Character, g?: { from?: string }): ValueCtx => {
+  const p = parseLink(g?.from), magic = p?.kind === 'item' ? c.inv.find((i) => i.id === p.id)?.magic : undefined;
+  return { level: c.level, pb: profBonus(c.level), mod: (a) => abilityMod(c, a), ...(magic ? { magic } : {}) };
+};
 const numIn = (ctx: ValueCtx, v: string | undefined) => { const n = v === undefined ? 0 : valueAt(v, ctx); return typeof n === 'number' ? n : 0; };
-// A grant value as a number now; dice or no value count as 0.
-export const num = (c: Character, v: string | undefined) => numIn(valueCtx(c), v);
+// A grant value as a number now; dice or no value count as 0. Pass the grant whenever v is its value (`magic`).
+export const num = (c: Character, v: string | undefined, g?: { from?: string }) => numIn(valueCtx(c, g), v);
 // Ability grant values are constants: read with modifiers of 0, so a score never depends on itself.
 const constCtx = (c: Character): ValueCtx => ({ level: c.level, pb: profBonus(c.level), mod: () => 0 });
 
@@ -103,7 +107,7 @@ export function skillLevel(c: Character, key: string): { level: number; hand: nu
 }
 // Check bonus grants for a skill, or for every check of its ability (Magician: WIS modifier on Arcana and Nature).
 const checkBonus = (c: Character, targets: string[]) =>
-  activeGrants(c, 'checkBonus').filter((g) => targets.includes(g.target ?? '')).reduce((t, g) => t + num(c, g.val), 0);
+  activeGrants(c, 'checkBonus').filter((g) => targets.includes(g.target ?? '')).reduce((t, g) => t + num(c, g.val, g), 0);
 // Skill check: ability modifier + PB × level. Jack of All Trades adds half PB, rounded down, to a check with a skill
 // you aren't proficient in (PHB p.60).
 export function skillMod(c: Character, key: string, ab: Ability): number {
@@ -121,28 +125,32 @@ export function saveProficient(c: Character, k: Ability): { on: boolean; by?: st
 }
 // Plus save bonus grants for this ability or for all saves (Aura of Protection).
 export const saveMod = (c: Character, k: Ability) => abilityMod(c, k) + (saveProficient(c, k).on ? profBonus(c.level) : 0) +
-  activeGrants(c, 'saveBonus').filter((g) => g.ab === k || g.ab === 'all').reduce((t, g) => t + num(c, g.val), 0);
-// Spell save DC = 8 + spellcasting ability modifier + PB; spell attack = modifier + PB (PHB p.41). null without a spellcasting ability.
-export const spellSaveDC = (c: Character) => (c.castAb === 'none' ? null : 8 + abilityMod(c, c.castAb) + profBonus(c.level));
-export const spellAttack = (c: Character) => (c.castAb === 'none' ? null : abilityMod(c, c.castAb) + profBonus(c.level));
+  activeGrants(c, 'saveBonus').filter((g) => g.ab === k || g.ab === 'all').reduce((t, g) => t + num(c, g.val, g), 0);
+// Spell save DC = 8 + spellcasting ability modifier + PB; spell attack = modifier + PB (PHB p.41). null without a spellcasting
+// ability. Active spellDc and spellAtk grants add to their own number only (Wand of the War Mage: a bonus to spell attack
+// rolls; Robe of the Archmagi: spell save DC and spell attack bonus each +2, SRD 5.2.1 magic items).
+const castGrantParts = (c: Character, kind: 'spellAtk' | 'spellDc'): AcPart[] =>
+  activeGrants(c, kind).map((g) => ({ label: sourceOf(c, g.from)?.name ?? g.name, value: num(c, g.val, g) })).filter((p) => p.value !== 0);
+const castBase = (c: Character, ab: Ability): AcPart[] => [{ label: CAST_NAMES[ab as CastAbility] + ' modifier', value: abilityMod(c, ab) }, { label: 'Proficiency Bonus', value: profBonus(c.level) }];
+const total = (parts: AcPart[]) => parts.reduce((t, p) => t + p.value, 0);
 // The same for one spell, which may cast with its own ability (Light Bearer: Light with CHA).
 const castAbOf = (c: Character, sp: Spell): Ability | null => sp.castAb ?? (c.castAb === 'none' ? null : c.castAb);
-export const spellSaveDcFor = (c: Character, sp: Spell) => { const ab = castAbOf(c, sp); return ab ? 8 + abilityMod(c, ab) + profBonus(c.level) : null; };
-export const spellAttackFor = (c: Character, sp: Spell) => { const ab = castAbOf(c, sp); return ab ? abilityMod(c, ab) + profBonus(c.level) : null; };
-// The same two numbers as parts, for the breakdown under each badge (PHB p.41). Their sums equal the values above.
+export const spellSaveDcFor = (c: Character, sp: Spell) => { const ab = castAbOf(c, sp); return ab ? 8 + total([...castBase(c, ab), ...castGrantParts(c, 'spellDc')]) : null; };
+export const spellAttackFor = (c: Character, sp: Spell) => { const ab = castAbOf(c, sp); return ab ? total([...castBase(c, ab), ...castGrantParts(c, 'spellAtk')]) : null; };
+// The same two numbers as parts, for the breakdown under each badge (PHB p.41): a shared base (modifier, PB), then each
+// number's own grants, one part per grant labelled by its source. Their sums equal the values below.
 export function spellAttackParts(c: Character): AcPart[] | null {
-  if (c.castAb === 'none') return null;
-  return [{ label: CAST_NAMES[c.castAb] + ' modifier', value: abilityMod(c, c.castAb) }, { label: 'Proficiency Bonus', value: profBonus(c.level) }];
+  return c.castAb === 'none' ? null : [...castBase(c, c.castAb), ...castGrantParts(c, 'spellAtk')];
 }
-export const spellDcParts = (c: Character): AcPart[] | null => {
-  const parts = spellAttackParts(c);
-  return parts && [{ label: 'Base', value: 8 }, ...parts];
-};
+export const spellDcParts = (c: Character): AcPart[] | null =>
+  c.castAb === 'none' ? null : [{ label: 'Base', value: 8 }, ...castBase(c, c.castAb), ...castGrantParts(c, 'spellDc')];
+export const spellSaveDC = (c: Character) => { const p = spellDcParts(c); return p && total(p); };
+export const spellAttack = (c: Character) => { const p = spellAttackParts(c); return p && total(p); };
 // Initiative is a Dexterity check (PHB p.23), so Dexterity check bonus grants add; initMisc holds extra bonuses from
 // features or items. No half PB: Jack of All Trades needs a skill check you aren't proficient in (PHB p.60), and
 // Initiative uses no skill (the 2014 rule applied it to Initiative; the 2024 one doesn't).
 export const initiative = (c: Character) => abilityMod(c, 'dex') + c.initMisc + checkBonus(c, ['dex']) +
-  activeGrants(c, 'init').reduce((t, g) => t + num(c, g.val), 0);
+  activeGrants(c, 'init').reduce((t, g) => t + num(c, g.val, g), 0);
 
 // Armor table: name, category, base AC; a Shield adds 2. One suit of armor and one Shield at a time (PHB p.219).
 export const ARMORS: [string, ArmorKind, number][] = [
@@ -224,7 +232,7 @@ export function armorClass(c: Character): { total: number; parts: AcPart[] } {
     ...(shield ? [{ label: shield.name, value: (shield.acBase || 0) + (shield.acBonus || 0), note: 'shield' }] : []),
     // AC bonus grants (Ring of Protection, Defense): they follow equip, attunement and armor conditions through
     // activeGrants. acBonus counts only on armor and Shields, inside their own part above.
-    ...activeGrants(c, 'ac').filter((g) => g.acMode === 'bonus').map((g) => ({ label: g.name, value: num(c, g.val), ...(sourceLabel(c, g) ? { note: sourceLabel(c, g) } : {}) })),
+    ...activeGrants(c, 'ac').filter((g) => g.acMode === 'bonus').map((g) => ({ label: g.name, value: num(c, g.val, g), ...(sourceLabel(c, g) ? { note: sourceLabel(c, g) } : {}) })),
     ...spells.filter((sp) => sp.acFx === 'bonus').map(spellPart),
     ...c.acMods.map((m) => ({ label: m.name, value: m.val, note: 'custom' }))
   ].filter((p) => p.value !== 0);
@@ -392,14 +400,14 @@ export function parseWeight(s: string): number | undefined {
 export const zeroSpeedBy = (c: Character) => CONDITIONS.filter((n) => c.conds[n] && ZERO_SPEED.includes(n));
 export const speedOf = (c: Character, base: number) => (zeroSpeedBy(c).length ? 0 : Math.max(0, base - 5 * c.exh));
 // Walking Speed before Exhaustion and conditions: the typed base plus walking speed grants (Wood Elf +5 ft).
-export const walkSpeed = (c: Character) => c.speedBase + activeGrants(c, 'speed').filter((g) => g.mode === 'walk').reduce((t, g) => t + num(c, g.val), 0);
+export const walkSpeed = (c: Character) => c.speedBase + activeGrants(c, 'speed').filter((g) => g.mode === 'walk').reduce((t, g) => t + num(c, g.val, g), 0);
 // Another speed: the typed one or the best grant, whichever is higher ('walk' means equal to the walking Speed).
 export function modeSpeed(c: Character, k: SpeedKind): { base: number; hover: boolean; by?: string } {
   const typed = c.speeds[k] || 0;
   let base = typed, by: string | undefined;
   const mine = activeGrants(c, 'speed').filter((g) => g.mode === k);
   for (const g of mine) {
-    const v = g.val === 'walk' ? walkSpeed(c) : num(c, g.val);
+    const v = g.val === 'walk' ? walkSpeed(c) : num(c, g.val, g);
     if (v > base) { base = v; by = sourceLabel(c, g) ?? g.name; }
   }
   const hover = mine.some((g) => g.hover);
@@ -408,7 +416,7 @@ export function modeSpeed(c: Character, k: SpeedKind): { base: number; hover: bo
 export const speedNow = (c: Character) => speedOf(c, walkSpeed(c));
 // The HP maximum every reader uses: the typed maxHp plus HP-per-level grants × level (Tough, PHB p.202). maxHp and
 // origHp stay typed (base) values, so a Long Rest restoring origHp never counts a grant twice.
-export const maxHpOf = (c: Character) => c.maxHp + activeGrants(c, 'hpLvl').reduce((t, g) => t + num(c, g.val) * c.level, 0);
+export const maxHpOf = (c: Character) => c.maxHp + activeGrants(c, 'hpLvl').reduce((t, g) => t + num(c, g.val, g) * c.level, 0);
 // Current HP against max, temp HP ignored: green from 65%, yellow from 30%, red below.
 export const hpColor = (c: Character) =>
   (c.hp * 100 >= maxHpOf(c) * 65 ? 'var(--hp-high)' : c.hp * 100 >= maxHpOf(c) * 30 ? 'var(--hp-mid)' : 'var(--hp-low)');
@@ -564,7 +572,8 @@ export function maxFields(kind: 'none' | 'number' | 'formula', text: string): Pi
   const t = text.trim();
   if (kind === 'none') return {};
   if (kind === 'number') return /^\d+$/.test(t) && Number(t) >= 1 ? { max: Number(t) } : null;
-  return isValue(t) && !/d/.test(t) ? { maxV: t } : null;
+  // `magic` is a grant-only term: a counter's maximum never reads it.
+  return isValue(t) && !/d/.test(t) && !/magic/.test(t) ? { maxV: t } : null;
 }
 
 // The single clamp, run by update() and migrate() after every change: resource counts at most their maximum, HP at
@@ -741,7 +750,7 @@ function cleanCounter({ count, max, maxV, recharge, regain, regainOn }: Partial<
   const rc = recharge === undefined ? undefined : RECHARGES.includes(recharge as Recharge) ? (recharge as Recharge) : 'none';
   const pair = typeof regain === 'string' && isValue(regain) && ((regainOn === 'short' && rc === 'long') || (regainOn === 'dawn' && rc === 'dawn'));
   return {
-    count: count as number, ...(finite(max) && max >= 1 ? { max } : {}), ...(typeof maxV === 'string' && isValue(maxV) && !/d/.test(maxV) ? { maxV } : {}),
+    count: count as number, ...(finite(max) && max >= 1 ? { max } : {}), ...(typeof maxV === 'string' && isValue(maxV) && !/d|magic/.test(maxV) ? { maxV } : {}),
     ...(rc ? { recharge: rc } : {}), ...(pair ? { regain, regainOn: regainOn as Counter['regainOn'] } : {})
   };
 }
@@ -754,7 +763,7 @@ function cleanResource(r: Resource): Resource {
   return cleanLinked({
     ...rest, count: finite(count) ? count : 0,
     ...(finite(max) && max >= 1 ? { max } : {}),
-    ...(typeof maxV === 'string' && isValue(maxV) && !/d/.test(maxV) ? { maxV } : {}),
+    ...(typeof maxV === 'string' && isValue(maxV) && !/d|magic/.test(maxV) ? { maxV } : {}),
     recharge: rc, ...(pair ? { regain, regainOn } : {}),
     ...(typeof typeName === 'string' ? { typeName } : {}), ...(typeof note === 'string' ? { note } : {}), ...(typeof casts === 'string' ? { casts } : {})
   } as Resource);
@@ -1224,7 +1233,7 @@ export function removalSummary(c: Character, ref: Ref): { goes: string[]; keep: 
   for (const r of chain.filter((x) => x.kind === 'grant')) {
     const g = c.grants.find((x) => x.id === r.id);
     if (!g?.counted) continue;
-    const src = sourceOf(c, g.from)?.name ?? g.name, v = num(c, g.val);
+    const src = sourceOf(c, g.from)?.name ?? g.name, v = num(c, g.val, g);
     if (g.kind === 'abil' && g.ab) keep.push(`${g.ab.toUpperCase()} ${effScore(c, g.ab as Ability)} still includes ${fmt(v)} from ${src}${hand}`);
     else if (g.kind === 'speed') keep.push(`Speed ${walkSpeed(c)} ft still includes ${fmt(v)} ft from ${src}${hand}`);
     else if (g.kind === 'init') keep.push(`Initiative ${fmt(initiative(c))} still includes ${fmt(v)} from ${src}${hand}`);
@@ -1244,7 +1253,7 @@ const DEF_NAMES: Record<DefenseKind, string> = { res: 'Resistance', vul: 'Vulner
 const RECHARGE_LABEL: Record<Recharge, string> = { none: '', short: 'Short Rest', long: 'Long Rest', dawn: 'Dawn' };
 const cap1 = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 function grantLabel(c: Character, g: Grant): string {
-  const v = num(c, g.val);
+  const v = num(c, g.val, g);
   switch (g.kind) {
     case 'abil': return fmt(v) + ' ' + (g.ab ?? '').toUpperCase();
     case 'prof': return g.target ? SKILLS.find(([k]) => k === g.target)?.[1] ?? ABILITIES.find(([k]) => k === g.target)?.[1] ?? g.target : g.name;
@@ -1252,6 +1261,9 @@ function grantLabel(c: Character, g: Grant): string {
     case 'ac': return g.acMode === 'bonus' ? fmt(v) + ' AC' : g.name;
     case 'init': return 'Initiative ' + fmt(v);
     case 'hpLvl': return fmt(v) + ' HP per level';
+    case 'saveBonus': return fmt(v) + ' ' + (g.ab === 'all' ? 'all' : (g.ab ?? '').toUpperCase()) + ' saves';
+    case 'spellAtk': return fmt(v) + ' spell attack';
+    case 'spellDc': return fmt(v) + ' spell save DC';
     default: return g.name;
   }
 }
@@ -1262,7 +1274,7 @@ function grantTarget(g: Grant): PillTarget {
   if (g.kind === 'prof') return { tab: 'features' };
   if (VITAL_GRANTS.includes(g.kind)) return { sec: 'sec-vitals' };
   if (g.kind === 'hpLvl') return { sec: 'sec-hp' };
-  if (g.kind === 'casting' || g.kind === 'spell') return { tab: 'spells' };
+  if (g.kind === 'casting' || g.kind === 'spell' || g.kind === 'spellAtk' || g.kind === 'spellDc') return { tab: 'spells' };
   return { tab: 'actions' };
 }
 // Everything whose `from` is this link, linked entries included: senses, defenses, spells, features, attacks, grants,

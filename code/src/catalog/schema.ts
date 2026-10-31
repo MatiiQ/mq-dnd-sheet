@@ -66,7 +66,7 @@ export type Spec = GrantSpec | ChoiceSpec;
 export interface ChoiceSpec { kind: 'choice'; id: string; name: string; pick: number; repeat?: boolean; options?: GrantSpec[]; pool?: string }
 export type GrantKind = 'sense' | 'resource' | 'defense' | 'abil' | 'abilSet' | 'prof' | 'saveBonus' | 'checkBonus' | 'spell' | 'speed' | 'ac'
   | 'init' | 'hpLvl' | 'size' | 'carryUp' | 'action' | 'xdmg' | 'attacks' | 'unarmed' | 'atkBonus' | 'dmgBonus' | 'lightExtra' | 'atkAbil'
-  | 'casting' | 'crit';
+  | 'casting' | 'crit' | 'spellAtk' | 'spellDc';
 // Every grant is flat, so a character can store it as a plain entry. Fields that take a Value also accept '$<choiceId>'.
 export interface GrantSpec {
   id: string; kind: GrantKind; name: string;
@@ -171,7 +171,10 @@ const GRANTS: Record<GrantKind, Record<string, [Check, boolean]>> = {
   casting: { ab: [ability, true], list: [str, true], cantrips: [value, false], prepared: [value, false],
     s1: [value, false], s2: [value, false], s3: [value, false], s4: [value, false], s5: [value, false] },
   // Critical Hit on a d20 roll of val or higher with weapons and Unarmed Strikes.
-  crit: { val: [value, true] }
+  crit: { val: [value, true] },
+  // A bonus to spell attack rolls, or to the spell save DC (Wand of the War Mage, Robe of the Archmagi).
+  spellAtk: { val: [value, true] },
+  spellDc: { val: [value, true] }
 };
 const COMMON: Record<string, [Check, boolean]> = { id: [str, true], kind: [str, true], name: [str, true], when: [WHEN, false], lvl: [whole(1, 20), false], needEq: [bool, false], needAtt: [bool, false] };
 

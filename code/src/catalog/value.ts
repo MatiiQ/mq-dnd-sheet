@@ -2,10 +2,11 @@
 // ('wis>=1'), dice ('1d6+1'), or a level table ('2:2,6:3,17:4', '1:1d8,5:1d10'). Stored as flat strings.
 import type { Ability } from '../types';
 
-export interface ValueCtx { level: number; pb: number; mod: (a: Ability) => number }
+// magic: the +N of the item a grant comes from (Wand of the War Mage), 0 when none; a grant-only term.
+export interface ValueCtx { level: number; pb: number; mod: (a: Ability) => number; magic?: number }
 
 const INT = '\\d+', DIE = '\\d*d\\d+';
-const TERM = `(?:${DIE}|${INT}|pb|lvl|str|dex|con|int|wis|cha)`;
+const TERM = `(?:${DIE}|${INT}|pb|lvl|magic|str|dex|con|int|wis|cha)`;
 const EXPR = new RegExp(`^-?${TERM}(?:[+-]${TERM})*(?:>=${INT})?$`);
 const STEP = new RegExp(`^(${INT}):(${DIE}|${INT})$`);
 const isDie = (s: string) => /d/.test(s);
@@ -40,7 +41,7 @@ export function valueAt(v: string, ctx: ValueCtx): number | string {
   for (const [, sign, term] of body.matchAll(/([+-]?)([^+-]+)/g)) {
     const neg = sign === '-';
     if (isDie(term)) { dice.push((neg ? '-' : dice.length ? '+' : '') + term); continue; }
-    const n = term === 'pb' ? ctx.pb : term === 'lvl' ? ctx.level : /^\d+$/.test(term) ? Number(term) : ctx.mod(term as Ability);
+    const n = term === 'pb' ? ctx.pb : term === 'lvl' ? ctx.level : term === 'magic' ? ctx.magic ?? 0 : /^\d+$/.test(term) ? Number(term) : ctx.mod(term as Ability);
     sum += neg ? -n : n;
   }
   if (dice.length) return dice.join('') + (sum > 0 ? `+${sum}` : sum < 0 ? `${sum}` : '');
