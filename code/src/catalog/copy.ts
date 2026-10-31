@@ -5,6 +5,7 @@ import { ABILITIES, addGrants, detectArmor, effScore, hasProf, maxFields, maxOf,
 import type { AcEffect, Ability, ArmorKind, Character, Feature, FeatureGroup, Item, Linked, Recharge, Size, Spell, SrcKind } from '../types';
 import type { Catalog } from './merge';
 import { slug, type ChoiceSpec, type Entry, type FeatEntry, type FeatureEntry, type GrantSpec, type ItemEntry, type ProfEntry, type SpellEntry, type SpellPart, type TraitEntry } from './schema';
+import { withBase } from './base';
 import { diceRange } from './value';
 
 // Drops undefined values and empty strings, so a copied entry holds only what the catalog has.
@@ -42,15 +43,19 @@ export function spellFromEntry(e: SpellEntry): Omit<Spell, 'id'> {
 }
 
 const ITEM_COPY = ['cost', 'wt', 'wcat', 'wrange', 'dmg', 'dtype', 'props', 'thrown', 'vers', 'ammo', 'mastery', 'armor', 'acBase', 'acBonus',
-  'strReq', 'stealthDis', 'cap', 'capVol', 'xdim', 'rarity', 'attune'] as const;
+  'strReq', 'stealthDis', 'cap', 'capVol', 'xdim', 'rarity', 'attune', 'magic'] as const;
 // A catalog item as a character's item: one, not equipped. Charges: a whole number fills count and max; a formula
 // ('pb') is maxV with count 0 (addFromCatalog fills it to the maximum). `base` is copied only as an item id, never
 // the generic 'armor'/'weapon'. Grants are not copied here (addFromCatalog adds them, linked to the new item).
 // Rolled starting charges ('1d3', '1d8+1') are the add flow's answer (`item.charges`): without one the item gets no
-// counter at all (a preview, a test).
-export function itemFromEntry(e: ItemEntry, item?: ItemAnswers): Omit<Item, 'id'> {
-  const out: Record<string, unknown> = { name: e.name, qty: 1, eq: false, cat: e.cat, desc: e.desc, cid: e.id };
+// counter at all (a preview, a test). `base`: the base item the player chose (its fields are already in `e`, withBase),
+// read for the name. A chosen bonus is the item's magic, or its acBonus for armor and a Shield.
+export function itemFromEntry(e: ItemEntry, item?: ItemAnswers, base?: ItemEntry): Omit<Item, 'id'> {
+  const { name, rarity } = answeredName(e, base, item?.bonus);
+  const out: Record<string, unknown> = { name, qty: 1, eq: false, cat: e.cat, desc: e.desc, cid: e.id };
   for (const k of ITEM_COPY) out[k] = e[k];
+  out.rarity = rarity;
+  if (e.magicPick && item?.bonus) out[e.armor ? 'acBonus' : 'magic'] = item.bonus;
   if (e.base?.startsWith('item/')) out.base = e.base;
   const rolled = e.charges !== undefined && diceRange(e.charges) !== null;
   if (e.charges !== undefined && (!rolled || item?.charges !== undefined)) {
@@ -62,14 +67,34 @@ export function itemFromEntry(e: ItemEntry, item?: ItemAnswers): Omit<Item, 'id'
   return compact(out) as Omit<Item, 'id'>;
 }
 
-// The add flow's answers about an item, next to the picks (plan 7): its starting charges when they are rolled.
+// The add flow's answers about an item, next to the picks (plan 7): the base item id the player chose, the +1/+2/+3
+// bonus, and the starting charges when they are rolled.
 export interface ItemAnswers { base?: string; bonus?: 1 | 2 | 3; charges?: number }
+
+// The added item's name and rarity, after the answers. A +1/+2/+3 item is '<name> +N' without its ", +1, +2, or +3",
+// the chosen base's name standing in for the generic word ('Longsword +2'); a named item keeps its name with the base
+// in brackets ('Holy Avenger (Longsword)'). A rarity per bonus ("Uncommon (+1), Rare (+2)…") narrows to the bonus's.
+export function answeredName(e: ItemEntry, base?: ItemEntry, bonus?: number): { name: string; rarity?: string } {
+  const rarity = bonus && e.rarity ? new RegExp(`([A-Z][a-z]+(?: [A-Z][a-z]+)?) \\(\\+${bonus}\\)`).exec(e.rarity)?.[1] ?? e.rarity : e.rarity;
+  if (e.magicPick && bonus) return { name: `${base ? base.name : e.name.replace(/, \+1, \+2, or \+3$/, '')} +${bonus}`, rarity };
+  return { name: base ? `${e.name} (${base.name})` : e.name, rarity };
+}
+const BASE_LABEL: Record<string, string> = { weapon: 'Which weapon?', armor: 'Which armor?' };
+// The mundane items an entry's base may be: its baseOf list, else every weapon ('weapon') or armor ('armor', no Shield).
+function baseOptions(cat: Catalog, e: ItemEntry): ItemEntry[] {
+  const kind = e.base as ItemEntry['cat'];
+  const all = cat.list.filter((x): x is ItemEntry => x.kind === 'item' && x.cat === kind);
+  if (!e.baseOf) return all.sort((a, b) => a.name.localeCompare(b.name));
+  return e.baseOf.split(',').map((id) => all.find((x) => x.id === id)).filter((x): x is ItemEntry => !!x);
+}
 // One question the add flow asks about an item, in the order base, bonus, charges. `min`/`max` bound a number answer.
 export interface ItemQuestion { key: 'base' | 'bonus' | 'charges'; label: string; options?: { value: string; label: string }[]; min?: number; max?: number }
 // The questions an entry needs answered when it is added: the item questions screen and checkAnswers both read them.
-export function itemQuestions(_cat: Catalog, e: Entry): ItemQuestion[] {
+export function itemQuestions(cat: Catalog, e: Entry): ItemQuestion[] {
   if (e.kind !== 'item') return [];
   const out: ItemQuestion[] = [];
+  if (e.base && BASE_LABEL[e.base]) out.push({ key: 'base', label: BASE_LABEL[e.base], options: baseOptions(cat, e).map((b) => ({ value: b.id, label: b.name })) });
+  if (e.magicPick) out.push({ key: 'bonus', label: '+1, +2 or +3', options: ['1', '2', '3'].map((v) => ({ value: v, label: '+' + v })) });
   const range = e.charges === undefined ? null : diceRange(e.charges);
   if (range) out.push({ key: 'charges', label: `Starting charges (roll ${e.charges!.replace(/\+/g, ' + ')})`, min: range[0], max: range[1] });
   return out;
@@ -77,6 +102,8 @@ export function itemQuestions(_cat: Catalog, e: Entry): ItemQuestion[] {
 // Throws when an item question is unanswered or out of range.
 function checkItemAnswers(cat: Catalog, e: Entry, a: ItemAnswers | undefined): void {
   for (const q of itemQuestions(cat, e)) {
+    if (q.key === 'base' && !q.options!.some((o) => o.value === a?.base)) throw new Error(`${e.name}: ${q.label.toLowerCase().replace('?', '')} — choose one it allows`);
+    if (q.key === 'bonus' && ![1, 2, 3].includes(a?.bonus as number)) throw new Error(`${e.name}: choose its bonus, +1, +2 or +3`);
     if (q.key === 'charges') {
       const n = a?.charges;
       if (n === undefined || !Number.isInteger(n) || n < q.min! || n > q.max!) throw new Error(`${e.name}: give its starting charges (${q.min}–${q.max})`);
@@ -138,7 +165,8 @@ export function itemFromForm(d: ItemDraft): Omit<Item, 'id' | 'eq'> {
     vers: has('versatile') ? text(d.versDie) : undefined,
     // Range and ammunition type each kept when the other is empty ('150/600;', ';arrow').
     ammo: has('ammunition') && (range || slug(d.ammoType)) ? `${range ?? ''};${slug(d.ammoType)}` : undefined,
-    mastery: w ? text(d.mastery) : undefined, magic: w ? nonZero(d.magic) : undefined,
+    // magic: a weapon's input; on any other kind it has no input and passes through from the draft (a wand's +2).
+    mastery: w ? text(d.mastery) : undefined, magic: nonZero(d.magic),
     armor: a ? d.armor : undefined, acBase: a ? number(d.acBase) : undefined, acBonus: a ? nonZero(d.acBonus) : undefined,
     strReq: a ? nonZero(d.strReq) : undefined, stealthDis: (a && d.stealthDis) || undefined,
     xdim: (box && d.xdim) || undefined, cap: box ? number(d.cap) : undefined, capVol: box ? text(d.capVol) : undefined,
@@ -624,7 +652,9 @@ function addEntry(c: Character, cat: Catalog, e: Entry, ans: AddChoices): Charac
   }
   if (e.kind === 'item') {
     const id = newId();
-    const it: Item = { id, ...itemFromEntry(e, ans.item) };
+    // A base the player chose (checked by checkAnswers): its fields copied in, then named after it.
+    const b = ans.item?.base && BASE_LABEL[e.base ?? ''] ? cat.byId.get(ans.item.base) as ItemEntry : undefined;
+    const it: Item = { id, ...(b ? itemFromEntry(withBase(e, b), ans.item, b) : itemFromEntry(e, ans.item)) };
     if (it.maxV !== undefined) it.count = maxOf(c, it) ?? 0;
     return addWithSpells({ ...c, inv: [...c.inv, it] }, cat, linkOf('item', id), inputsOf(cat, e, ans, r.specs));
   }

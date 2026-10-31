@@ -5,6 +5,9 @@ import {
   setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, undoHp
 } from './logic';
 import { grantErrors, type GrantSpec } from './catalog/schema';
+import { addFromCatalog, type ItemAnswers } from './catalog/copy';
+import { mergeCatalog } from './catalog/merge';
+import srdEntries from './data/srd/index';
 import { activeGrants, isActive } from './links';
 import { inventoryGroups } from './inventory';
 import { applyPatch } from './storage';
@@ -1593,5 +1596,22 @@ describe('items inside a container never count as equipped (plan 6)', () => {
     const c = make({ inv: [bag, it_({ id: 'wand', name: 'Wand', in: 'bag' })], res: [{ id: 'r', name: 'Wand charges', count: 3, max: 7, recharge: 'dawn', from: 'item:wand', srcKind: 'item', needEq: true }] });
     expect(isActive(c, c.res[0])).toBe(false);
     expect(normalize(c).res[0].count).toBe(3);
+  });
+});
+
+describe('a magic armor or Shield bonus chosen when added (plan 7, Task 9)', () => {
+  // Armor +N: "a bonus to Armor Class determined by its rarity" on top of the armor's base AC; Shield +N the same on
+  // top of the Shield's +2 (PHB p.219 Shield; SRD 5.2.1 Armor and Shield +1, +2, or +3).
+  const cat = mergeCatalog(srdEntries, null);
+  const add = (c: Character, id: string, item: ItemAnswers) => {
+    const n = addFromCatalog(c, cat, cat.byId.get(id)!, { picks: {}, counted: {}, links: {}, item });
+    const it = n.inv.at(-1)!;
+    return { ...n, inv: n.inv.map((x) => (x.id === it.id ? { ...x, eq: true } : x)) };
+  };
+  it('counts Armor +1 with its chosen Plate Armor, and Shield +3 on top of the Shield’s 2', () => {
+    const base = { ...blankCharacter(), inv: [] };
+    const plate = add(base, 'item/armor-1-2-or-3', { base: 'item/plate-armor', bonus: 1 });
+    expect(armorClass(plate).total).toBe(19);
+    expect(armorClass(add(plate, 'item/shield-1-2-or-3', { bonus: 3 })).total).toBe(24);
   });
 });

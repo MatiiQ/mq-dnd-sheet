@@ -9,7 +9,7 @@ import { mergeCatalog } from './merge';
 import type { Entry, FeatureEntry, ItemEntry, SpellEntry } from './schema';
 import {
   addFromCatalog, draftFromItem, featureCandidates, grantSpellName, withDetectedArmor, BLANK_ITEM, BLANK_SPELL, catForKind, countedDefault, draftFromSpell, spellFromForm, type SpellDraft, choicesOf, classIdOf, matchId, nestedEntries, subclassIdOf, type AddChoices, freeText, itemFromEntry, itemFromForm, missingPicks, needed, optionGroups, poolOptions, prereqMet, resolveChoices,
-  spellFromEntry, spellSummary, validPicks, itemQuestions, type ItemDraft
+  spellFromEntry, spellSummary, validPicks, itemQuestions, answeredName, type ItemAnswers, type ItemDraft
 } from './copy';
 
 const cat = mergeCatalog(srdEntries, null);
@@ -88,11 +88,50 @@ describe('rolled starting charges (plan 7, Task 8)', () => {
   });
   it('refuses a missing or out-of-range roll before anything changes', () => {
     const blank = blankCharacter(), blade = item('item/nine-lives-stealer');
-    expect(() => addFromCatalog(blank, cat, blade, A())).toThrow(/charges/i);
-    expect(() => addFromCatalog(blank, cat, blade, A({}, undefined, { item: { charges: 1 } }))).toThrow(/charges/i);
-    expect(() => addFromCatalog(blank, cat, blade, A({}, undefined, { item: { charges: 10 } }))).toThrow(/charges/i);
-    expect(() => addFromCatalog(blank, cat, blade, A({}, undefined, { item: { charges: 2.5 } }))).toThrow(/charges/i);
-    expect(addFromCatalog(blank, cat, blade, A({}, undefined, { item: { charges: 9 } })).inv.at(-1)).toMatchObject({ name: 'Nine Lives Stealer', count: 9, max: 9 });
+    expect(() => addFromCatalog(blank, cat, blade, A({}, undefined, { item: { base: 'item/longsword' } }))).toThrow(/charges/i);
+    expect(() => addFromCatalog(blank, cat, blade, A({}, undefined, { item: { base: 'item/longsword', charges: 1 } }))).toThrow(/charges/i);
+    expect(() => addFromCatalog(blank, cat, blade, A({}, undefined, { item: { base: 'item/longsword', charges: 10 } }))).toThrow(/charges/i);
+    expect(() => addFromCatalog(blank, cat, blade, A({}, undefined, { item: { base: 'item/longsword', charges: 2.5 } }))).toThrow(/charges/i);
+    expect(addFromCatalog(blank, cat, blade, A({}, undefined, { item: { base: 'item/longsword', charges: 9 } })).inv.at(-1)).toMatchObject({ name: 'Nine Lives Stealer (Longsword)', count: 9, max: 9 });
+  });
+});
+
+describe('a magic weapon or armor of the player’s choice (plan 7, Task 9)', () => {
+  const blank = blankCharacter();
+  const ask = (id: string) => itemQuestions(cat, item(id));
+  const added = (id: string, a: ItemAnswers) => addFromCatalog(blank, cat, item(id), A({}, undefined, { item: a })).inv.at(-1)!;
+  it('asks for the base, narrowed by baseOf, then the bonus, then rolled charges', () => {
+    expect(ask('item/holy-avenger').map((q) => q.key)).toEqual(['base']);
+    expect(ask('item/holy-avenger')[0]).toMatchObject({ label: 'Which weapon?' });
+    expect(ask('item/holy-avenger')[0].options!.map((o) => o.value)).toContain('item/longsword');
+    expect(ask('item/holy-avenger')[0].options!.every((o) => (cat.byId.get(o.value) as ItemEntry).cat === 'weapon')).toBe(true);
+    expect(ask('item/hammer-of-thunderbolts')[0].options!.map((o) => o.label)).toEqual(['Maul', 'Warhammer']);
+    expect(ask('item/armor-1-2-or-3').map((q) => [q.key, q.label])).toEqual([['base', 'Which armor?'], ['bonus', '+1, +2 or +3']]);
+    expect(ask('item/armor-1-2-or-3')[0].options!.map((o) => o.value)).not.toContain('item/shield');
+    expect(ask('item/shield-1-2-or-3').map((q) => q.key)).toEqual(['bonus']);
+    expect(ask('item/luck-blade').map((q) => q.key)).toEqual(['base', 'charges']);
+  });
+  it('copies the chosen base’s fields, sets base and names the item after the answers', () => {
+    const avenger = added('item/holy-avenger', { base: 'item/longsword' });
+    expect(avenger).toMatchObject({ name: 'Holy Avenger (Longsword)', rarity: 'Legendary', base: 'item/longsword', dmg: '1d8', vers: '1d10', mastery: 'sap', magic: 3 });
+    expect(added('item/weapon-1-2-or-3', { base: 'item/longsword', bonus: 2 })).toMatchObject({ name: 'Longsword +2', rarity: 'Rare', magic: 2, dmg: '1d8' });
+    expect(added('item/armor-1-2-or-3', { base: 'item/plate-armor', bonus: 1 })).toMatchObject({ name: 'Plate Armor +1', rarity: 'Rare', armor: 'heavy', acBase: 18, acBonus: 1 });
+    expect(added('item/shield-1-2-or-3', { bonus: 3 })).toMatchObject({ name: 'Shield +3', rarity: 'Very Rare', armor: 'shield', acBonus: 3 });
+    expect(added('item/wand-of-the-war-mage-1-2-or-3', { bonus: 2 })).toMatchObject({ name: 'Wand of the War Mage +2', rarity: 'Rare', magic: 2 });
+    const mithral = added('item/mithral-armor', { base: 'item/half-plate-armor' });
+    expect(mithral).toMatchObject({ name: 'Mithral Armor (Half Plate Armor)', armor: 'medium' });
+    expect([mithral.strReq, mithral.stealthDis]).toEqual([undefined, undefined]);
+    expect(itemFromEntry(item('item/rope')).name).toBe('Rope');
+    expect(answeredName(item('item/weapon-1-2-or-3'), item('item/longsword'), 2)).toEqual({ name: 'Longsword +2', rarity: 'Rare' });
+  });
+  it('refuses a missing, foreign or magic base and a bonus outside 1–3 before anything changes', () => {
+    expect(() => addFromCatalog(blank, cat, item('item/holy-avenger'), A())).toThrow(/weapon/i);
+    expect(() => added('item/hammer-of-thunderbolts', { base: 'item/longsword' })).toThrow(/weapon/i);
+    expect(() => added('item/holy-avenger', { base: 'item/sun-blade' })).toThrow(/weapon/i);
+    expect(() => added('item/holy-avenger', { base: 'item/plate-armor' })).toThrow(/weapon/i);
+    expect(() => added('item/armor-1-2-or-3', { base: 'item/shield', bonus: 1 })).toThrow(/armor/i);
+    expect(() => added('item/shield-1-2-or-3', {})).toThrow(/\+1/);
+    expect(() => added('item/shield-1-2-or-3', { bonus: 4 as 1 })).toThrow(/\+1/);
   });
 });
 
@@ -757,6 +796,12 @@ describe('grantSpellName', () => {
 // ---- Task 7: the custom item form ----
 describe('draftFromItem', () => {
   const round = (x: Omit<Item, 'id'>) => itemFromForm(draftFromItem({ id: 'i1', ...x }));
+  it('keeps a non-weapon’s magic through an edit (Wand of the War Mage +2)', () => {
+    const wand: Item = { ...addFromCatalog(blankCharacter(), cat, item('item/wand-of-the-war-mage-1-2-or-3'), A({}, undefined, { item: { bonus: 2 } })).inv.at(-1)!, id: 'w1' };
+    expect(wand.magic).toBe(2);
+    expect(saveEntry<Item>([wand], itemFromForm(draftFromItem(wand)), 'w1')[0].magic).toBe(2);
+    expect(saveEntry<Item>([wand], itemFromForm({ ...draftFromItem(wand), name: 'My Wand' }), 'w1')[0]).toMatchObject({ name: 'My Wand', magic: 2 });
+  });
   it('round-trips catalog items and keeps their catalog-only fields', () => {
     for (const id of ['item/longsword', 'item/longbow', 'item/dagger', 'item/shield', 'item/bag-of-holding', 'item/wand-of-magic-missiles', 'item/dagger-of-venom']) {
       const x = itemFromEntry(item(id));

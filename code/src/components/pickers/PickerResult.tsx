@@ -17,7 +17,6 @@ export function PickerResult({ entry, taken, onAdd, note, marked, disabled }: {
   const [open, setOpen] = useState(false);
   const sub = subline(entry);
   // A magic armor or weapon of the player's choice comes without its base fields (catalog `base`).
-  const baseHint = entry.kind === 'item' && (entry.base === 'armor' || entry.base === 'weapon');
   return (
     <div className="well entry picker-result">
       <div className="entry-row">
@@ -27,7 +26,6 @@ export function PickerResult({ entry, taken, onAdd, note, marked, disabled }: {
             {sub && <span className="muted">{sub}</span>}
             {note && <span className={marked ? 'small picker-warn' : 'small'}>{note}</span>}
             {taken && <span className="small picker-taken">Already on the sheet</span>}
-            {baseHint && <span className="small">Set its armor or weapon in Edit after adding</span>}
           </span>
         </button>
         <button type="button" className="btn btn-sm" aria-disabled={disabled} aria-label={'Add ' + entry.name} onClick={() => { if (!disabled) onAdd(); }}>Add</button>

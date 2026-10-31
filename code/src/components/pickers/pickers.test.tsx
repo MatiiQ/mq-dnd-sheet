@@ -5,6 +5,7 @@ import srdEntries from '../../data/srd/index';
 import { mergeCatalog } from '../../catalog/merge';
 import { blankCharacter, sampleCharacter } from '../../defaults';
 import { Sheet } from '../../sheet';
+import type { Entry } from '../../catalog/schema';
 import type { Character } from '../../types';
 import { ChoiceFlow } from './ChoiceFlow';
 import { ItemQuestions } from './ItemQuestions';
@@ -44,22 +45,29 @@ describe('ChoiceFlow takes its answers back', () => {
 });
 
 describe('ItemQuestions', () => {
-  const q = (id: string) => render(blankCharacter(), <ItemQuestions entry={cat.byId.get(id)!} cat={cat} onDone={() => {}} onBack={() => {}} onCancel={() => {}} />);
+  const q = (id: string, p: object = {}) => render(blankCharacter(), <ItemQuestions entry={{ ...cat.byId.get(id)!, ...p } as Entry} cat={cat} onDone={() => {}} onBack={() => {}} onCancel={() => {}} />);
   it('asks a rolled starting charge count with a number input bounded by the roll', () => {
-    const html = q('item/luck-blade');
+    expect(q('item/luck-blade')).toContain('Step 1 of 2');
+    const html = q('item/luck-blade', { base: undefined, baseOf: undefined });
     expect(html).toContain('Starting charges (roll 1d3)');
     expect(html).toMatch(/<input[^>]*type="number"[^>]*min="1"[^>]*max="3"/);
     expect(html).toContain('Step 1 of 1');
     expect(html).toMatch(/aria-disabled="true"[^>]*>Add</);
   });
+  it('asks Weapon +N’s weapon first, then its bonus', () => {
+    const html = q('item/weapon-1-2-or-3');
+    expect(html).toContain('Which weapon?');
+    expect(html).toContain('Longsword');
+    expect(html).toContain('Step 1 of 2');
+    expect(html).toMatch(/aria-disabled="true"[^>]*>Next</);
+    expect(q('item/shield-1-2-or-3')).toMatch(/\+1, \+2 or \+3[\s\S]*>\+3</);
+  });
 });
 
 describe('PickerResult', () => {
-  it('shows the base hint only for armor or a weapon of the player’s choice', () => {
+  it('no longer sends a base of the player’s choice to Edit: the add flow asks for it (plan 7)', () => {
     const r = (id: string) => render(blankCharacter(), <PickerResult entry={cat.byId.get(id)!} taken={false} onAdd={() => {}} />);
-    expect(r('item/armor-1-2-or-3')).toContain('Set its armor or weapon in Edit');
-    expect(r('item/ring-of-protection')).not.toContain('Set its armor');
-    expect(r('item/dagger-of-venom')).not.toContain('Set its armor');
+    expect(r('item/armor-1-2-or-3')).not.toContain('Set its armor');
   });
 });
 

@@ -27,6 +27,17 @@ describe('weapon mastery', () => {
     expect(hasMastery(ilyra({ mastery: ['dagger', 'longbow'] }), 'dagger')).toBe(true);
     expect(hasMastery(ilyra({ mastery: [] }), 'longbow')).toBe(false);
   });
+  it('attacks with a catalog magic weapon’s chosen base, its +N and the base’s mastery (plan 7)', () => {
+    const c0 = addFromCatalog(ilyra({ mastery: ['longsword'] }), cat, cat.byId.get('item/holy-avenger')!, { picks: {}, counted: {}, links: {}, item: { base: 'item/longsword' } });
+    const av = c0.inv.at(-1)!;
+    expect(weaponKind(av)).toBe('longsword');
+    const [melee] = weaponAttacks(c0, av);
+    const plain = weaponAttacks(c0, catItem('item/longsword'))[0];
+    expect(melee.hit - plain.hit).toBe(3);
+    expect(melee.hitParts).toContainEqual({ label: 'Magic', value: 3 });
+    expect(melee.dmg).toMatch(/^1d8/);
+    expect(melee.mastery).toBe('sap');
+  });
   it('gives mastery of a weapon named by a grant', () => {
     const g: Grant = { id: 'gx', kind: 'prof', name: 'Hand Crossbow mastery', cat: 'mastery', target: 'Hand Crossbow', from: 'feature:f3' };
     expect(hasMastery(ilyra({ mastery: [], grants: [...sampleCharacter().grants, g] }), 'hand-crossbow')).toBe(true);
