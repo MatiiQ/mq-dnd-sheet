@@ -1,5 +1,5 @@
 import type { ProfCat } from './catalog/names';
-import type { GrantSpec } from './catalog/schema';
+import type { GrantSpec, ItemEntry } from './catalog/schema';
 
 export type Ability = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
 export type CastAbility = 'none' | 'int' | 'wis' | 'cha';
@@ -49,7 +49,17 @@ export interface Rider { id: string; name: string; dice: string }
 // armor/acBase: a suit of armor or a Shield and its table base. acBonus: a magic or other bonus, counted while equipped.
 // wt: weight in lb per unit. cid (here and on spells and features): the catalog id the entry was copied from.
 // An item with charges has count (charges left) and the other Counter fields.
-export interface Item extends Partial<Counter> { id: string; name: string; qty: number; eq: boolean; armor?: ArmorKind; acBase?: number; acBonus?: number; wt?: number; desc?: string; cid?: string }
+// Catalog fields (all optional, all plain values, so a custom item can carry them too): cat and cost; a weapon's
+// category, range kind, damage, properties (comma list, alphabetical), thrown range '20/60', versatile die, ammunition
+// '150/600;arrow', mastery and magic (+N to attack and damage rolls); armor's Strength requirement and Stealth
+// disadvantage; a container's capacity in lb, its volume text and xdim (extradimensional); rarity and attunement.
+// base: the catalog's base item id ('item/dagger') of a magic weapon or armor.
+export interface Item extends Partial<Counter> {
+  id: string; name: string; qty: number; eq: boolean; armor?: ArmorKind; acBase?: number; acBonus?: number; wt?: number; desc?: string; cid?: string;
+  cat?: ItemEntry['cat']; cost?: string; wcat?: 'simple' | 'martial'; wrange?: 'melee' | 'ranged'; dmg?: string; dtype?: string; props?: string;
+  thrown?: string; vers?: string; ammo?: string; mastery?: string; magic?: number;
+  strReq?: number; stealthDis?: boolean; cap?: number; capVol?: string; xdim?: boolean; rarity?: string; attune?: boolean; base?: string;
+}
 export interface AcMod { id: string; name: string; val: number }
 // castAb: this spell's own spellcasting ability (Light Bearer casts with CHA), else the character's.
 export interface Spell extends Linked {
@@ -57,6 +67,9 @@ export interface Spell extends Linked {
   dur?: string; comp?: string; dice?: string;
   c?: boolean; always?: boolean; prep?: boolean;
   acFx?: AcEffect; acVal?: number; castAb?: Ability; cid?: string;
+  // Catalog fields: dice stays the free-text summary shown in the row; dmg/dtype are the damage dice and type.
+  desc?: string; school?: string; classes?: string; ritual?: boolean; atk?: 'melee' | 'ranged'; save?: Ability;
+  fx?: 'damage' | 'healing' | 'other'; dmg?: string; dtype?: string; scale?: string; higher?: string;
 }
 export interface Feature extends Linked { id: string; g: FeatureGroup; name: string; desc: string; cid?: string }
 export interface Concentration { id: string; name: string }

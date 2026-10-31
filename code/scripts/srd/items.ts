@@ -168,3 +168,20 @@ export function parseMagicItems(text: string): ItemEntry[] {
     return e;
   });
 }
+
+const WEAPON_FIELDS = ['wcat', 'wrange', 'dmg', 'dtype', 'props', 'thrown', 'vers', 'ammo', 'mastery'] as const;
+const ARMOR_FIELDS = ['armor', 'acBase', 'strReq', 'stealthDis'] as const;
+// A magic item whose `base` (set in the overlay) is an item id gets that item's weapon or armor fields, and its weight
+// when it has none; its own fields win. A base id that names no weapon or armor fails the build.
+export function copyBase(entries: ItemEntry[]): ItemEntry[] {
+  const byId = new Map(entries.map((e) => [e.id, e]));
+  return entries.map((e) => {
+    if (!e.base?.startsWith('item/')) return e;
+    const b = byId.get(e.base);
+    if (!b || (b.cat !== 'weapon' && !b.armor)) throw new Error(`${e.id}: base ${e.base} is no weapon or armor`);
+    const from: Partial<ItemEntry> = {};
+    for (const k of b.cat === 'weapon' ? WEAPON_FIELDS : ARMOR_FIELDS) if (b[k] !== undefined) (from as Record<string, unknown>)[k] = b[k];
+    if (e.wt === undefined && b.wt !== undefined) from.wt = b.wt;
+    return { ...from, ...e };
+  });
+}

@@ -1,6 +1,6 @@
 // D&D 2024 rules used by the sheet. Pure functions: each takes a character and returns the next one.
 import { blankCharacter, sampleCharacter } from './defaults';
-import { grantErrors, type GrantSpec } from './catalog/schema';
+import { grantErrors, ITEM_CATS, type GrantSpec } from './catalog/schema';
 import { isValue, valueAt, type ValueCtx } from './catalog/value';
 import { PROF_NAMES, type ProfCat } from './catalog/names';
 import { activeGrants, dropLinkOnly, fixLinks, hasActiveEffect, inactiveReason, isActive, LINKED_LISTS, srcKindOfLink, type SourceKind, linkOf, parseLink, sourceLabel, sourceOf, SRC_KINDS } from './links';
@@ -705,6 +705,22 @@ function cleanResource(r: Resource): Resource {
   } as Resource);
 }
 const cleanCid = <T extends { cid?: string }>(x: T): T => { const { cid, ...rest } = x; return (typeof cid === 'string' ? { ...rest, cid } : rest) as T; };
+// Catalog fields of spells and items on load (all optional): a value of the wrong type or outside its list goes, never the entry.
+type FieldCheck = (v: unknown) => boolean;
+const isStr: FieldCheck = (v) => typeof v === 'string';
+const isBool: FieldCheck = (v) => typeof v === 'boolean';
+const among = (...xs: unknown[]): FieldCheck => (v) => xs.includes(v);
+const SPELL_FIELDS: Record<string, FieldCheck> = {
+  desc: isStr, school: isStr, classes: isStr, ritual: isBool, atk: among('melee', 'ranged'), save: among(...ABILITIES.map(([k]) => k)),
+  fx: among('damage', 'healing', 'other'), dmg: isStr, dtype: isStr, scale: isStr, higher: isStr
+};
+const ITEM_FIELDS: Record<string, FieldCheck> = {
+  cat: among(...ITEM_CATS), cost: isStr, wcat: among('simple', 'martial'), wrange: among('melee', 'ranged'), dmg: isStr, dtype: isStr, props: isStr,
+  thrown: isStr, vers: isStr, ammo: isStr, mastery: isStr, magic: finite, strReq: finite, stealthDis: isBool, cap: finite, capVol: isStr, xdim: isBool,
+  rarity: isStr, attune: isBool, base: (v) => typeof v === 'string' && v.startsWith('item/')
+};
+const cleanFields = <T extends object>(x: T, fields: Record<string, FieldCheck>): T =>
+  Object.fromEntries(Object.entries(x).filter(([k, v]) => !Object.hasOwn(fields, k) || fields[k](v))) as T;
 
 export const NEW_FIELDS: readonly (keyof Character)[] = ['spellSort', 'size', 'carryUp', 'attuneIds', 'grants', 'effectsOn', 'profs', 'defenses'];
 // Resources the Inventory tab echoed before `inv` existed.
@@ -742,7 +758,8 @@ export function migrate(data: unknown): Character {
   if (data.profs === undefined) ({ feats: c.feats, profs: c.profs } = splitTraining(c.feats));
   // Grants: a link that doesn't parse goes first, so grantErrors knows the source kind; then the grant must be valid.
   c.grants = c.grants.filter((g) => parseLink(g.from) && !grantErrors(g, parseLink(g.from)!.kind).length).map(cleanLinked);
-  c.inv = c.inv.map(cleanCid);
+  c.inv = c.inv.map((i) => cleanFields(cleanCid(i), ITEM_FIELDS));
+  c.spells = c.spells.map((x) => cleanFields(x, SPELL_FIELDS));
   // Saves from before defenses were entries kept string lists in `def` (no longer a field, so read from the raw save).
   if (data.defenses === undefined) {
     const raw = isObj(data.def) ? data.def : {};

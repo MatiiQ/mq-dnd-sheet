@@ -89,6 +89,15 @@ describe('validateEntry', () => {
       grants: [{ id: 'g1', kind: 'ac', name: '+1 AC', acMode: 'bonus', val: '1', needEq: true, needAtt: true }] };
     expect(validateEntry(ring)).toEqual([]);
   });
+  it('accepts base only on a magic item, as an item id or armor/weapon', () => {
+    const venom = { id: 'item/dagger-of-venom', kind: 'item', name: 'Dagger of Venom', src: 'srd', desc: '…', cat: 'magic', rarity: 'Rare' };
+    expect(validateEntry({ ...venom, base: 'item/dagger' })).toEqual([]);
+    expect(validateEntry({ ...venom, base: 'armor' })).toEqual([]);
+    expect(validateEntry({ ...venom, base: 'weapon' })).toEqual([]);
+    expect(validateEntry({ ...venom, base: 'dagger' })).not.toEqual([]);
+    expect(validateEntry({ ...venom, base: 'shield' })).not.toEqual([]);
+    expect(validateEntry({ id: 'item/dagger', kind: 'item', name: 'Dagger', src: 'srd', desc: '', cat: 'weapon', base: 'item/dagger' })).not.toEqual([]);
+  });
   it('rejects a walking speed equal to the walking speed', () => {
     expect(validateEntry({ ...darkvision, grants: [{ id: 'g1', kind: 'speed', name: 'x', mode: 'walk', val: 'walk' }] })).not.toEqual([]);
     expect(validateEntry({ ...darkvision, grants: [{ id: 'g1', kind: 'speed', name: 'x', mode: 'climb', val: 'walk' }] })).toEqual([]);

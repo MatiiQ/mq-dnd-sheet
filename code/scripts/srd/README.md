@@ -47,6 +47,31 @@ Magic item grants cover lasting effects of worn or held items (AC, saving throws
 proficiencies, score settings). Effects that are conditional (only against ranged attacks, only in Dim Light), Advantage
 on ability checks or Initiative, spells cast from an item and a magic weapon's own attack bonus stay as text.
 
+Magic weapons and armor (`base`, set in `overlay/items.json`, read off each item's SRD type line). The builder copies
+the base item's weapon fields (category, range kind, damage, properties, ranges, mastery) or armor fields (kind, base
+AC, Strength, Stealth), and its weight when the magic item has none; the magic item's own fields win.
+
+- A base item id where the type line names one item: Dagger of Venom (Dagger), Mace of Disruption, Mace of Smiting and
+  Mace of Terror (Mace), Javelin of Lightning (Javelin), Trident of Fish Command (Trident), Dwarven Thrower (Warhammer),
+  Quarterstaff of the Acrobat (Quarterstaff), Thunderous Greatclub (Greatclub), Scimitar of Speed (Scimitar), Sun Blade
+  (Longsword: SRD 5.2.1 names only the Longsword), Armor of Invulnerability (Plate Armor), Animated Shield (Shield).
+  Plate Armor of Etherealness names "Half Plate Armor or Plate Armor"; it gets Plate Armor, the armor of its name, and
+  the player switches it to Half Plate in Edit.
+- `armor` (the player chooses): Armor +1/+2/+3, Adamantine Armor, Armor of Resistance, Armor of Vulnerability, Mithral
+  Armor.
+- `weapon` (the player chooses): Weapon +1/+2/+3, Berserker Axe, Dancing Sword, Defender, Dragon Slayer, Energy Bow,
+  Flame Tongue, Frost Brand, Giant Slayer, Hammer of Thunderbolts, Holy Avenger, Luck Blade, Nine Lives Stealer,
+  Oathbow, Sword of Life Stealing, Sword of Sharpness, Sword of Wounding, Vicious Weapon, Vorpal Sword, Weapon of
+  Warning.
+- No `base`: items that already carry their armor fields in the overlay (Demon Armor, Dragon Scale Mail, Dwarven Plate,
+  Elven Chain, Glamoured Studded Leather and the Shields with `armor: 'shield'`), ammunition (Ammunition +1/+2/+3,
+  Ammunition of Slaying: not a weapon the sheet attacks with), and items only used like a weapon (staffs).
+
+Armor of Resistance: `pdftotext` puts the Lever Down column of the Apparatus of the Crab Levers table (the page
+before) after Armor of Resistance's damage type table, so the parsed description ran on into it. The overlay sets its
+`desc` to the text up to the end of the table. The Apparatus of the Crab keeps its Lever Up column; its Lever Down
+column is garbled in the extracted text and is not recovered.
+
 ## Choices
 
 A choice offers `options` (grants) or a `pool` (`<kind>:<filter>`) the app generates. Pools used so far:

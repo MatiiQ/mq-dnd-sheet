@@ -23,6 +23,9 @@ export interface ItemEntry extends EntryBase {
   armor?: ArmorKind; acBase?: number; acBonus?: number; strReq?: number; stealthDis?: boolean;
   cap?: number; capVol?: string; xdim?: boolean;
   rarity?: string; attune?: boolean; charges?: string; recharge?: Recharge4; regain?: string; regainOn?: 'short' | 'dawn';
+  // A magic weapon or armor's base item: an item id ('item/dagger', whose weapon or armor fields the SRD builder copies
+  // in) or 'armor' / 'weapon' when the player chooses the base ("any Medium or Heavy armor").
+  base?: string;
   grants?: Spec[];
 }
 export interface FeatEntry extends EntryBase { kind: 'feat'; cat: 'origin' | 'general' | 'style' | 'boon'; prereq?: string; repeat?: boolean; grants: Spec[] }
@@ -80,6 +83,7 @@ export const ABILITY_KEYS: Ability[] = ['str', 'dex', 'con', 'int', 'wis', 'cha'
 export const ARMOR_KINDS: ArmorKind[] = ['light', 'medium', 'heavy', 'shield'];
 export const AC_EFFECTS: AcEffect[] = ['bonus', 'base', 'floor'];
 export const SIZE_KEYS: Size[] = ['tiny', 'small', 'medium', 'large', 'huge', 'gargantuan'];
+export const ITEM_CATS: ItemEntry['cat'][] = ['weapon', 'armor', 'shield', 'gear', 'tool', 'pack', 'ammo', 'focus', 'magic'];
 
 // PHB names that SRD releases publish under another name, mapped to the SRD name. Both builders apply it. Built from
 // scripts/srd/names-diff.ts (SRD 5.2.1 against reference/): only spells named after a person differ.
@@ -160,12 +164,13 @@ const SPELL: Record<string, [Check, boolean]> = {
   dice: [str, false], dtype: [str, false], scale: [str, false], higher: [str, false], acFx: [oneOf(...AC_EFFECTS), false], acVal: [num, false]
 };
 const ITEM: Record<string, [Check, boolean]> = {
-  cat: [oneOf('weapon', 'armor', 'shield', 'gear', 'tool', 'pack', 'ammo', 'focus', 'magic'), true], cost: [str, false], wt: [num, false],
+  cat: [oneOf(...ITEM_CATS), true], cost: [str, false], wt: [num, false],
   wcat: [oneOf('simple', 'martial'), false], wrange: [RANGE_KIND, false], dmg: [str, false], dtype: [str, false], props: [str, false], thrown: [str, false],
   vers: [str, false], ammo: [str, false], mastery: [str, false],
   armor: [oneOf(...ARMOR_KINDS), false], acBase: [num, false], acBonus: [num, false], strReq: [num, false], stealthDis: [bool, false],
   cap: [num, false], capVol: [str, false], xdim: [bool, false],
-  rarity: [str, false], attune: [bool, false], charges: [value, false], recharge: [RECHARGE, false], regain: [value, false], regainOn: [oneOf('short', 'dawn'), false]
+  rarity: [str, false], attune: [bool, false], charges: [value, false], recharge: [RECHARGE, false], regain: [value, false], regainOn: [oneOf('short', 'dawn'), false],
+  base: [(v) => v === 'armor' || v === 'weapon' || (typeof v === 'string' && /^item\/[a-z0-9-]+$/.test(v)), false]
 };
 const PREREQ_TERM = /^(lvl>=\d+|(str|dex|con|int|wis|cha)(\|(str|dex|con|int|wis|cha))*>=\d+|feature=[a-z0-9-]+(\|[a-z0-9-]+)*|armor=(light|medium|heavy|shield))$/;
 const slotRows: Check = (v) => Array.isArray(v) && (v.length === 0 || (v.length === 20 && v.every((r) => Array.isArray(r) && r.length === 9 && r.every(whole(0, 9)))));
@@ -256,6 +261,7 @@ export function validateEntry(x: unknown): string[] {
   if (e.kind === 'item') {
     checkRegain(x, at, errs);
     if (e.acBonus !== undefined && !e.armor) errs.push(`${at}: acBonus is for armor and Shields; use an ac grant`);
+    if (e.base !== undefined && e.cat !== 'magic') errs.push(`${at}: base is for magic items`);
   }
   if (e.kind === 'feature' && e.again !== undefined) {
     const lv = e.again.split(',').map(Number);
