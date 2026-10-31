@@ -1,13 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import {
-  applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, NEW_FIELDS, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, removeItem, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
+  ABILITIES, SKILLS, effScore, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, NEW_FIELDS, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, removeItem, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
   setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, toggleFreeCast, undoHp
 } from './logic';
+import { oldIlyra, oldSeren } from './test-fixtures';
 import type { Character, Item, Spell } from './types';
 
 const make = (p: Partial<Character> = {}): Character => ({ ...sampleCharacter(), ...p });
-const sp = (p: Partial<Spell> = {}): Spell => ({ id: 's1', name: 'Bless', lvl: 1, time: 'Action', range: '30 ft', source: 'Cleric', ...p });
+const sp = (p: Partial<Spell> = {}): Spell => ({ id: 's1', name: 'Bless', lvl: 1, time: 'Action', range: '30 ft', srcName: 'Cleric', ...p });
 const hm = { id: 'sp4', name: 'Hunter’s Mark' };
 const ac = (p: Partial<Character>) => armorClass(make({ inv: [], spells: [], acMods: [], acOn: [], acUnarm: 'none', conc: null, ...p }));
 const it_ = (p: Partial<Item>): Item => ({ id: 'a', name: 'X', qty: 1, eq: true, ...p });
@@ -339,6 +340,22 @@ describe('loading saves and backups', () => {
   it('turns the old Heroic Inspiration flag into a count with no maximum (house rule)', () => {
     const vals = [true, false, 3, 2.7, -4, 'x', null, undefined];
     expect(vals.map((insp) => migrate({ ...sampleCharacter(), insp }).insp)).toEqual([1, 0, 3, 2, 0, 0, 0, 0]);
+  });
+  it('renames a spell\'s old source text to srcName, keeping one already set', () => {
+    const c = migrate({ ...sampleCharacter(), spells: [{ id: 'a', name: 'Bless', lvl: 1, time: 'Action', range: '30 ft', source: 'Ranger' },
+      { id: 'b', name: 'Aid', lvl: 2, time: 'Action', range: '30 ft', source: 'Old', srcName: 'Cleric' },
+      { id: 'c', name: 'Light', lvl: 0, time: 'Action', range: 'Touch', source: '' }] });
+    expect(c.spells[0]).toMatchObject({ srcName: 'Ranger' });
+    expect(c.spells[1]).toMatchObject({ srcName: 'Cleric' });
+    expect(c.spells.map((x) => 'source' in x)).toEqual([false, false, false]);
+    expect(c.spells[2].srcName).toBeUndefined();
+    expect(migrate(oldIlyra()).spells.find((x) => x.id === 'sp4')?.srcName).toBe('Ranger · Favored Enemy');
+  });
+  it('keeps a spell\'s own casting ability and catalog id only when well formed', () => {
+    const c = migrate({ ...sampleCharacter(), spells: [{ id: 'a', name: 'Light', lvl: 0, time: 'Action', range: 'Touch', castAb: 'cha', cid: 'spell/light' },
+      { id: 'b', name: 'Light', lvl: 0, time: 'Action', range: 'Touch', castAb: 'luck', cid: 3 }] });
+    expect(c.spells[0]).toMatchObject({ castAb: 'cha', cid: 'spell/light' });
+    expect([c.spells[1].castAb, c.spells[1].cid]).toEqual([undefined, undefined]);
   });
   it('turns the old refill flag into a recharge', () => {
     const c = migrate({ res: [{ id: 'a', name: 'Ki', count: 1, refill: true }, { id: 'b', name: 'Rage', count: 1, refill: true, recharge: 'short' }, { id: 'c', name: 'Gold', count: 1 }] });
@@ -709,5 +726,25 @@ describe('attunement and resources moving to Inventory', () => {
     expect(removeItem(s, cloak).attuneIds).toEqual(['', '', '']);
     expect(removeItem(s, cloak).inv.some((i) => i.id === cloak)).toBe(false);
     expect(migrate({ ...s, inv: s.inv.map((i) => (i.id === cloak ? { ...i, eq: false } : i)) }).attuneIds[0]).toBe(cloak);
+  });
+});
+
+// Numbers the samples showed before plan 3 (frozen). Every later change must keep them; the rebuilt samples too.
+describe('sample numbers', () => {
+  const numbers = (c: Character) => ({
+    eff: ABILITIES.map(([k]) => effScore(c, k)), save: ABILITIES.map(([k]) => saveMod(c, k)),
+    skills: Object.fromEntries(SKILLS.map(([k, , ab]) => [k, skillMod(c, k, ab)])),
+    speed: speedNow(c), ac: armorClass(c).total, init: initiative(c), maxHp: c.maxHp, pp: passiveScore(c, 'perception'),
+    res: Object.fromEntries(c.res.map((r) => [r.id, r.max ?? null]))
+  });
+  const ILYRA = { eff: [12, 18, 14, 10, 14, 8], save: [4, 7, 2, 0, 2, -1], skills: { athletics: 1, acrobatics: 4, sleight: 4, stealth: 7, arcana: 0, history: 0, investigation: 0, nature: 3, religion: 0, animal: 5, insight: 5, medicine: 2, perception: 5, survival: 8, deception: -1, intimidation: -1, performance: -1, persuasion: -1 }, speed: 35, ac: 16, init: 4, maxHp: 44, pp: 15, res: { favored: 3 } };
+  const SEREN = { eff: [8, 13, 16, 13, 20, 10], save: [-1, 1, 3, 5, 9, 0], skills: { athletics: -1, acrobatics: 1, sleight: 1, stealth: 1, arcana: 5, history: 5, investigation: 1, nature: 1, religion: 1, animal: 5, insight: 5, medicine: 9, perception: 9, survival: 5, deception: 0, intimidation: 0, performance: 0, persuasion: 0 }, speed: 25, ac: 14, init: 1, maxHp: 99, pp: 19, res: { wild: 3, bolt: 5, omen: 5, resurge: 1, hands: 1, reveal: 1 } };
+  it('Ilyra, and an old save of her', () => {
+    expect(numbers(sampleCharacter())).toEqual(ILYRA);
+    expect(numbers(migrate(oldIlyra()))).toEqual(ILYRA);
+  });
+  it('Seren, and an old save of her', () => {
+    expect(numbers(druidSample())).toEqual(SEREN);
+    expect(numbers(migrate(oldSeren()))).toEqual(SEREN);
   });
 });

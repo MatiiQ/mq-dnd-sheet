@@ -9,7 +9,7 @@ export function FeaturesTab() {
   const { c, update } = useSheet();
   const f = useEntryForm('feat', BLANK, 'feature', 'Add a feature or trait');
   const titles: [FeatureGroup, string][] = [
-    ['class', 'Class · ' + (c.ch.cls || 'Class') + ' ' + c.level], ['sub', 'Subclass · ' + (c.ch.sub || '')], ['feat', 'Feats'],
+    ['class', 'Class · ' + (c.ch.cls || 'Class') + ' ' + c.level], ['sub', 'Subclass · ' + (c.ch.sub || '')], ['background', 'Background'], ['feat', 'Feats'],
     ['species', 'Species · ' + (c.ch.species || '')], ['training', 'Training & proficiencies'], ['other', 'Other']
   ];
   const save = () => {
@@ -23,7 +23,7 @@ export function FeaturesTab() {
       <div className="grid" style={{ '--min': '180px' } as CSSProperties}>
         <label className="field">Section
           <select className="input" value={f.draft.g} onChange={(e) => f.set({ g: e.target.value as FeatureGroup })}>
-            <option value="class">Class</option><option value="sub">Subclass</option><option value="feat">Feats</option>
+            <option value="class">Class</option><option value="sub">Subclass</option><option value="background">Background</option><option value="feat">Feats</option>
             <option value="species">Species</option><option value="training">Training &amp; Proficiencies</option><option value="other">Other</option>
           </select>
         </label>

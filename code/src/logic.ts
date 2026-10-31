@@ -1,6 +1,7 @@
 // D&D 2024 rules used by the sheet. Pure functions: each takes a character and returns the next one.
 import { blankCharacter, sampleCharacter } from './defaults';
-import type { AcEffect, Ability, ArmorKind, CastAbility, Character, Concentration, HpSnapshot, Item, Resource, Size, Spell, SpellSort, SrcKind, Tab, Unarmored } from './types';
+import { dropLinkOnly, fixLinks, SRC_KINDS } from './links';
+import type { AcEffect, Ability, ArmorKind, CastAbility, Character, Concentration, HpSnapshot, Item, Linked, Resource, Size, Spell, SpellSort, Tab, Unarmored, When } from './types';
 
 export const ABILITIES: [Ability, string][] = [
   ['str', 'Strength'], ['dex', 'Dexterity'], ['con', 'Constitution'],
@@ -20,11 +21,7 @@ export const COMBAT_ACTIONS = ['Attack', 'Dash', 'Disengage', 'Dodge', 'Help', '
 
 export const TABS: [Tab, string][] = [['actions', 'Actions'], ['spells', 'Spells'], ['inventory', 'Inventory'], ['features', 'Features & Traits'], ['notes', 'Notes']];
 
-// Kinds of source an entry can name (roadmap, "Source kinds"), with their labels.
-export const SRC_KINDS: [SrcKind, string][] = [
-  ['species', 'Species'], ['background', 'Background'], ['class', 'Class'], ['subclass', 'Subclass'],
-  ['feat', 'Feat'], ['item', 'Item'], ['spell', 'Spell'], ['other', 'Other']
-];
+export { SRC_KINDS };
 
 export const CAST_NAMES: Record<CastAbility, string> = { none: 'None', int: 'Intelligence', wis: 'Wisdom', cha: 'Charisma' };
 
@@ -469,6 +466,25 @@ export const isEntry = (x: unknown): x is Record<string, unknown> =>
   isObj(x) && typeof x.name === 'string' && Object.values(x).every((v) => v === null || typeof v !== 'object');
 // Top-level fields added after the first release. A save without one gets the blank character's value, never
 // the sample's (roadmap, "Saves keep working"). Each later field adds its key here.
+const WHENS: When[] = ['armor', 'noHeavy', 'noArmor', 'noShield', 'noArmorNoShield', 'active'];
+// The link fields of an entry, checked on load: an unknown source kind reads as Other, any other bad value goes, and
+// the fields that need a link go from an entry without one. Never touches `lvl` (a spell's level).
+function cleanLinked<T extends Linked>(x: T): T {
+  const { from, srcKind, srcName, when, minLvl, needEq, needAtt, ...rest } = x as Linked & Record<string, unknown>;
+  const out = {
+    ...rest,
+    ...(typeof from === 'string' ? { from } : {}),
+    ...(srcKind == null ? {} : { srcKind: SRC_KINDS.some(([k]) => k === srcKind) ? srcKind : 'other' }),
+    ...(typeof srcName === 'string' ? { srcName } : {}),
+    ...(WHENS.includes(when as When) ? { when } : {}),
+    ...(Number.isInteger(minLvl) && minLvl! >= 1 && minLvl! <= 20 ? { minLvl } : {}),
+    ...(typeof needEq === 'boolean' ? { needEq } : {}),
+    ...(typeof needAtt === 'boolean' ? { needAtt } : {})
+  } as unknown as T;
+  return out.from === undefined ? dropLinkOnly(out) : out;
+}
+const cleanCid = <T extends { cid?: string }>(x: T): T => { const { cid, ...rest } = x; return (typeof cid === 'string' ? { ...rest, cid } : rest) as T; };
+
 export const NEW_FIELDS: readonly (keyof Character)[] = ['spellSort', 'size', 'carryUp', 'attuneIds'];
 // Resources the Inventory tab echoed before `inv` existed.
 const OLD_INVENTORY_RESOURCES = ['arrows', 'potions'];
@@ -491,13 +507,16 @@ export function migrate(data: unknown): Character {
     d[k] = (d[k] as unknown[]).filter(isEntry).map((x) => (typeof x.id === 'string' ? x : { ...x, id: newId() }));
   }
   const c = d as unknown as Character;
-  // Sense sources: an unknown kind reads as Other; text that isn't a string goes.
-  c.senses = c.senses.map(({ desc, srcKind, srcName, ...se }) => ({
-    ...se,
-    ...(typeof desc === 'string' ? { desc } : {}),
-    ...(srcKind == null ? {} : { srcKind: SRC_KINDS.some(([k]) => k === srcKind) ? srcKind : 'other' }),
-    ...(typeof srcName === 'string' ? { srcName } : {})
-  }));
+  c.senses = c.senses.map(({ desc, ...se }) => cleanLinked({ ...se, ...(typeof desc === 'string' ? { desc } : {}) }));
+  // Spells named their source in a `source` text before links; it becomes srcName unless one is set.
+  c.spells = c.spells.map((x) => {
+    const { source, castAb, ...sp } = x as Spell & { source?: unknown };
+    const named = typeof source === 'string' && source.trim() && sp.srcName === undefined ? { srcName: source } : {};
+    return cleanCid(cleanLinked({ ...sp, ...named, ...(ABILITIES.some(([k]) => k === castAb) ? { castAb } : {}) }));
+  });
+  c.feats = c.feats.map((x) => cleanCid(cleanLinked(x)));
+  c.attacks = c.attacks.map(cleanLinked);
+  c.inv = c.inv.map(cleanCid);
   c.def = { res: strings(c.def.res), vul: strings(c.def.vul), imm: strings(c.def.imm), adv: strings(c.def.adv) };
   // Resistance and Vulnerability apply to damage types only; Immunity to damage types and conditions (PHB p.28).
   // Older saves could list a condition under Resistances, meaning Advantage on saves against it, and had a free-text
@@ -603,7 +622,7 @@ export function migrate(data: unknown): Character {
   // From the raw save, not the sample-merged copy: old saves get today's bar (HP and AC), not the sample's picks.
   // Pills don't show items, so a pill of a resource that became an item empties.
   c.pills = sanitizePills(data.pills).map((k) => (converted.some((id) => k === resPill(id)) ? '' : k));
-  return c;
+  return fixLinks(c);
 }
 
 // Names match after trimming, ignoring case and treating ’ and ' as the same character.

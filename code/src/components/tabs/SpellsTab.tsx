@@ -3,18 +3,19 @@ import {
   AC_SPELLS, CAST_NAMES, SPELL_SORTS, acAfterEdit, castSpell, concAfterEdit, detectAcSpell, fmt, preparedCount, removeSpell, setConc, setSlotUsed,
   slotsLeft, sortSpells, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, toggleFreeCast, type AcPart
 } from '../../logic';
+import { sourceLabel } from '../../links';
 import { patchEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { AcEffect, Spell } from '../../types';
 import { AddButton, ChevronDown, DieBadge, EntryForm, EntryRow, NumInput, Step, TextField, UsePips } from '../ui';
 
 const ORDINAL = ['Cantrip', '1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th'];
-const BLANK = { name: '', lvl: '1', time: 'Action', range: '', dice: '', conc: false, source: '', dur: '', comp: '', always: false, acFx: '' as AcEffect | '', acVal: 0 };
+const BLANK = { name: '', lvl: '1', time: 'Action', range: '', dice: '', conc: false, srcName: '', dur: '', comp: '', always: false, acFx: '' as AcEffect | '', acVal: 0 };
 const AC_EFFECTS: [AcEffect | '', string][] = [['', 'None'], ['bonus', 'Bonus'], ['base', 'Base (+ DEX)'], ['floor', 'Floor']];
 type Draft = typeof BLANK;
 
 const toDraft = (e: Spell): Draft => ({
   name: e.name, lvl: String(e.lvl || 0), time: e.time || 'Action', range: e.range || '', dice: e.dice || '',
-  conc: !!e.c, source: e.source || '', dur: e.dur || '', comp: e.comp || '', always: !!e.always,
+  conc: !!e.c, srcName: e.srcName || '', dur: e.dur || '', comp: e.comp || '', always: !!e.always,
   acFx: e.acFx || '', acVal: e.acVal ?? 0
 });
 
@@ -37,7 +38,7 @@ export function SpellsTab() {
     const found = !id && !d.acFx ? detectAcSpell(name) : null;
     const built = {
       name, lvl: parseInt(d.lvl, 10) || 0, time: d.time, range: d.range.trim(), dice: d.dice.trim(), c: d.conc,
-      source: d.source.trim() || 'Custom', dur: d.dur.trim(), comp: d.comp.trim(), always: d.always,
+      srcName: d.srcName.trim() || 'Custom', dur: d.dur.trim(), comp: d.comp.trim(), always: d.always,
       // Both keys always present: undefined clears the effect when editing.
       acFx: d.acFx || found?.acFx, acVal: d.acFx ? d.acVal : found?.acVal
     };
@@ -62,7 +63,7 @@ export function SpellsTab() {
           </select>
         </label>
         <TextField label="Range" value={f.draft.range} placeholder="e.g. 60 ft" onChange={(v) => f.set({ range: v })} />
-        <TextField label="Source" value={f.draft.source} placeholder="e.g. Ranger, Feat" onChange={(v) => f.set({ source: v })} />
+        <TextField label="Source" value={f.draft.srcName} placeholder="e.g. Ranger, Feat" onChange={(v) => f.set({ srcName: v })} />
         <TextField label="Dice / effect" value={f.draft.dice} placeholder="e.g. DEX save · 3d6 Fire" onChange={(v) => f.set({ dice: v })} />
         <TextField label="Duration" value={f.draft.dur} placeholder="e.g. 1 hour, Instantaneous" onChange={(v) => f.set({ dur: v })} />
         <TextField label="Components" value={f.draft.comp} placeholder="e.g. V, S, M (a pinch of salt)" onChange={(v) => f.set({ comp: v })} />
@@ -333,7 +334,7 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
   const noSlots = lvl > 0 && !sp.free && !first && usable;
   return (
     <EntryRow name={sp.name} before={before} head={head} side={side}
-      body={sp.source ? <span className="muted">Source: {sp.source}</span> : undefined}
+      body={sourceLabel(c, sp) ? <span className="muted">Source: {sourceLabel(c, sp)}</span> : undefined}
       onEdit={onEdit} onRemove={() => update((p) => removeSpell(p, sp.id))}>
       {(picking && upcasts.length > 0 || noSlots) && <>
         {picking && upcasts.length > 0 && (

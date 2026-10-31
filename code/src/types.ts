@@ -2,7 +2,9 @@ export type Ability = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
 export type CastAbility = 'none' | 'int' | 'wis' | 'cha';
 export type Recharge = 'none' | 'short' | 'long';
 export type Tab = 'actions' | 'spells' | 'inventory' | 'features' | 'notes';
-export type FeatureGroup = 'class' | 'sub' | 'feat' | 'species' | 'training' | 'other';
+export type FeatureGroup = 'class' | 'sub' | 'feat' | 'species' | 'background' | 'training' | 'other';
+// When a grant or a granted entry counts: with armor, without Heavy armor, without armor and/or a Shield, or while its source's effect is on.
+export type When = 'armor' | 'noHeavy' | 'noArmor' | 'noShield' | 'noArmorNoShield' | 'active';
 // adv: Advantage on saving throws ("vs Charmed", "Dexterity saves" or free text).
 export type DefenseKind = 'res' | 'vul' | 'imm' | 'adv';
 export type SpeedKind = 'climb' | 'swim' | 'fly' | 'burrow';
@@ -16,23 +18,28 @@ export type Size = 'tiny' | 'small' | 'medium' | 'large' | 'huge' | 'gargantuan'
 export type SrcKind = 'species' | 'background' | 'class' | 'subclass' | 'feat' | 'item' | 'spell' | 'other';
 
 export interface Details { name: string; species: string; cls: string; sub: string; bg: string; align: string }
-// srcKind + srcName: where the sense comes from ("Species · Wood Elf"). No srcKind means no source given.
-export interface Sense { id: string; name: string; range: string; desc?: string; srcKind?: SrcKind; srcName?: string }
+// What an entry came from and when it counts. from: 'feature:<id>' | 'item:<id>' | 'spell:<id>' in this character.
+// srcKind + srcName: a source named by hand ("Species · Wood Elf"), kept when a link goes. No srcKind means no kind given.
+// minLvl: counts from this character level (never `lvl`, which is the spell level on Spell). needEq / needAtt: the
+// source item must be equipped / attuned.
+export interface Linked { from?: string; srcKind?: SrcKind; srcName?: string; when?: When; minLvl?: number; needEq?: boolean; needAtt?: boolean }
+export interface Sense extends Linked { id: string; name: string; range: string; desc?: string }
 // inv: legacy "Also list in Inventory" flag, kept only on resources with a max or a recharge (plan 3 moves them onto items).
 export interface Resource { id: string; name: string; note?: string; count: number; max?: number; recharge?: Recharge; refill?: boolean; inv?: boolean }
-export interface Attack { id: string; name: string; hit: string; dmg: string; info: string; mastery: string }
+export interface Attack extends Linked { id: string; name: string; hit: string; dmg: string; info: string; mastery: string }
 export interface Rider { id: string; name: string; dice: string }
 // armor/acBase: a suit of armor or a Shield and its table base. acBonus: a magic or other bonus, counted while equipped.
-// wt: weight in lb per unit.
-export interface Item { id: string; name: string; qty: number; eq: boolean; armor?: ArmorKind; acBase?: number; acBonus?: number; wt?: number; desc?: string }
+// wt: weight in lb per unit. cid (here and on spells and features): the catalog id the entry was copied from.
+export interface Item { id: string; name: string; qty: number; eq: boolean; armor?: ArmorKind; acBase?: number; acBonus?: number; wt?: number; desc?: string; cid?: string }
 export interface AcMod { id: string; name: string; val: number }
-export interface Spell {
-  id: string; name: string; lvl: number; time: string; range: string; source: string;
+// castAb: this spell's own spellcasting ability (Light Bearer casts with CHA), else the character's.
+export interface Spell extends Linked {
+  id: string; name: string; lvl: number; time: string; range: string;
   dur?: string; comp?: string; dice?: string;
   c?: boolean; always?: boolean; prep?: boolean; free?: boolean;
-  acFx?: AcEffect; acVal?: number;
+  acFx?: AcEffect; acVal?: number; castAb?: Ability; cid?: string;
 }
-export interface Feature { id: string; g: FeatureGroup; name: string; desc: string }
+export interface Feature extends Linked { id: string; g: FeatureGroup; name: string; desc: string; cid?: string }
 export interface Concentration { id: string; name: string }
 // hdUsed is set only by a Hit Die heal, so undoing it refunds the die.
 export interface HpSnapshot { hp: number; temp: number; ds: number; df: number; conds: Record<string, boolean>; conc: Concentration | null; hdUsed?: number }
