@@ -1,5 +1,6 @@
 import { useState, type CSSProperties, type ReactNode } from 'react';
 import { PROF_NAMES, type ProfCat } from '../../catalog/names';
+import { entriesOf, useCatalog } from '../../catalog/useCatalog';
 import { hasActiveEffect, linkOf, sourceLabel } from '../../links';
 import { addGrants, grantChips, newId, normName, profList, removalSummary, removeFeature, toggleEffect, type GrantInput } from '../../logic';
 import { removeEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
@@ -105,12 +106,17 @@ export function FeaturesTab() {
   );
 }
 
-// Proficiencies by category: hand ones can be removed, granted ones name their source. Names from the catalog are
-// offered while typing; any other text is kept as typed.
+// Proficiencies by category: hand ones can be removed, granted ones name their source. Names from the catalog (the
+// PHB pack included, loaded the first time the name field is used; the SRD names until then) are offered while
+// typing; any other text is kept as typed.
 function Proficiencies() {
   const { c, update } = useSheet();
   const [cat, setCat] = useState<ProfCat>('tool');
   const [name, setName] = useState('');
+  const [wanted, setWanted] = useState(false);
+  const state = useCatalog(wanted);
+  const names = state.status === 'ready' ? entriesOf(state.cat, 'prof').filter((p) => p.cat === cat).map((p) => p.name)
+    : PROF_NAMES.filter((p) => p.cat === cat).map((p) => p.name);
   const list = profList(c);
   const add = () => {
     const n = name.trim();
@@ -141,8 +147,8 @@ function Proficiencies() {
           {PROF_CATS.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
         </select>
         <input type="text" className="input" style={{ flex: '2 1 160px' }} list={'prof-names-' + cat} aria-label="Proficiency name" placeholder="e.g. Thieves’ Tools"
-          value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') add(); }} />
-        <datalist id={'prof-names-' + cat}>{PROF_NAMES.filter((p) => p.cat === cat).map((p) => <option key={p.id} value={p.name} />)}</datalist>
+          value={name} onFocus={() => setWanted(true)} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') add(); }} />
+        <datalist id={'prof-names-' + cat}>{[...new Set(names)].map((n) => <option key={n} value={n} />)}</datalist>
         <button type="button" className="btn" onClick={add}>Add</button>
       </div>
     </div>

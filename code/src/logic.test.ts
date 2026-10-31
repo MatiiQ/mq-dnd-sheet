@@ -1449,3 +1449,26 @@ describe('class and subclass ids (plan 4)', () => {
     expect(druidSample().ch).toMatchObject({ clsId: 'class/druid', subId: '' });
   });
 });
+
+describe('rebuilt samples (plan 4)', () => {
+  const ilyra = sampleCharacter(), seren = druidSample();
+  it('give the SRD weapons and armor their catalog fields', () => {
+    const inv = (c: Character, name: string) => c.inv.find((i) => i.name === name)!;
+    expect(inv(ilyra, 'Longbow')).toMatchObject({ cat: 'weapon', wcat: 'martial', wrange: 'ranged', dmg: '1d8', dtype: 'Piercing', props: 'ammunition,heavy,two-handed', ammo: '150/600;arrow', mastery: 'slow', cid: 'item/longbow' });
+    expect(inv(ilyra, 'Shortsword')).toMatchObject({ wcat: 'martial', dmg: '1d6', props: 'finesse,light', mastery: 'vex' });
+    expect(inv(ilyra, 'Studded Leather Armor')).toMatchObject({ cat: 'armor', armor: 'light', acBase: 12 });
+    expect(inv(seren, 'Quarterstaff')).toMatchObject({ wcat: 'simple', dmg: '1d6', vers: '1d8', mastery: 'topple' });
+    expect(inv(seren, 'Sickle')).toMatchObject({ wcat: 'simple', dmg: '1d4', mastery: 'nick' });
+    expect(inv(seren, 'Leather Armor')).toMatchObject({ cat: 'armor', armor: 'light', acBase: 11 });
+    expect(inv(seren, 'Shield')).toMatchObject({ cat: 'shield', armor: 'shield', acBase: 2 });
+  });
+  it('give the SRD spells their structured fields, never an SRD description', () => {
+    const fireBolt = seren.spells.find((x) => x.name === 'Fire Bolt')!;
+    expect(fireBolt).toMatchObject({ cid: 'spell/fire-bolt', school: 'Evocation', atk: 'ranged', fx: 'damage', dmg: '1d10', dtype: 'Fire', scale: 'cantrip' });
+    expect(ilyra.spells.find((x) => x.name === 'Cure Wounds')).toMatchObject({ fx: 'healing', dmg: '2d8', scale: '2d8/slot' });
+    for (const c of [ilyra, seren]) for (const sp of c.spells.filter((x) => x.cid)) expect([sp.name, typeof sp.school]).toEqual([sp.name, 'string']);
+    for (const c of [ilyra, seren]) for (const sp of c.spells) expect(sp.higher).toBeUndefined();
+    expect(ilyra.spells.find((x) => x.name === 'Hail of Thorns')!.cid).toBeUndefined();
+    expect(seren.spells.find((x) => x.name === 'Thorn Whip')!.cid).toBeUndefined();
+  });
+});
