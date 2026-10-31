@@ -100,7 +100,8 @@ export function itemFromForm(d: ItemDraft): Omit<Item, 'id' | 'eq'> {
     props: props.length ? props.join(',') : undefined,
     thrown: has('thrown') ? text(d.thrownRange) : undefined,
     vers: has('versatile') ? text(d.versDie) : undefined,
-    ammo: has('ammunition') && range ? `${range};${slug(d.ammoType)}` : undefined,
+    // Range and ammunition type each kept when the other is empty ('150/600;', ';arrow').
+    ammo: has('ammunition') && (range || slug(d.ammoType)) ? `${range ?? ''};${slug(d.ammoType)}` : undefined,
     mastery: w ? text(d.mastery) : undefined, magic: w ? nonZero(d.magic) : undefined,
     armor: a ? d.armor : undefined, acBase: a ? number(d.acBase) : undefined, acBonus: a ? nonZero(d.acBonus) : undefined,
     strReq: a ? nonZero(d.strReq) : undefined, stealthDis: (a && d.stealthDis) || undefined,
@@ -352,6 +353,9 @@ export function resolveChoices(cat: Catalog, e: Entry, picks: Record<string, str
       if (!isRef(v)) continue;
       const ref = v.slice(1), at = multi(ref) ? i : 0, pick = vp(ref)[at];
       out[k] = k === 'casts' ? spellSpecId(ref, at) ?? pick : pick;
+      // A free cast of a picked spell is named after the spell ("Magic Missile (free cast)"), not the spec's label
+      // ("Level 1 spell (free cast)"), so two of them tell apart in Resources.
+      if (k === 'casts' && g.kind === 'resource' && pick) out.name = (pick.startsWith('spell/') ? cat.byId.get(pick)?.name ?? titleOfId(pick) : pick) + ' (free cast)';
     }
     return out as Resolved;
   };

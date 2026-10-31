@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  ABILITIES, AC_SPELLS, CAST_NAMES, DAMAGE_TYPES, newId, removeResource, SPELL_SORTS, acAfterEdit, castSpell, concAfterEdit, detectAcSpell, effectsAfterEdit, fmt, preparedCount, removeSpell, setConc, setSlotUsed,
+  ABILITIES, AC_SPELLS, CAST_NAMES, DAMAGE_TYPES, newId, ownFreeCasts, setOwnFreeCast, SPELL_SORTS, acAfterEdit, castSpell, concAfterEdit, detectAcSpell, effectsAfterEdit, fmt, preparedCount, removeSpell, setConc, setSlotUsed,
   slotsLeft, sortSpells, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, castFree, freeCastsOf, spellAttackFor, spellSaveDcFor, toggleEffect, type AcPart
 } from '../../logic';
 import { hasActiveEffect, inactiveReason, linkOf, sourceLabel } from '../../links';
@@ -18,15 +18,8 @@ const SAVES: [SpellDraft['save'], string][] = [['', 'None'], ...ABILITIES.map(([
 const ATTACKS: [SpellDraft['atk'], string][] = [['', 'None'], ['melee', 'Melee spell attack'], ['ranged', 'Ranged spell attack']];
 const EFFECTS: [SpellDraft['fx'], string][] = [['', '—'], ['damage', 'Damage'], ['healing', 'Healing'], ['other', 'Other']];
 
-const toDraft = (c: Character, sp: Spell): SpellDraft => ({ ...draftFromSpell(sp), freeCast: freeCastsOf(c, sp.id).length > 0 });
-// "Give it a free cast": one cast a Long Rest, from the spell (removed with it). Turning it off removes its free casts.
-function withFreeCast(p: Character, id: string, name: string, on: boolean): Character {
-  const has = freeCastsOf(p, id);
-  if (on && !has.length) {
-    return { ...p, res: [...p.res, { id: newId(), name: name + ' (free cast)', count: 1, max: 1, recharge: 'long', casts: id, from: linkOf('spell', id), srcKind: 'spell' }] };
-  }
-  return !on && has.length ? has.reduce((x, r) => removeResource(x, r.id), p) : p;
-}
+// "Give it a free cast" shows only the spell's own free cast, never one a feat grants for it.
+const toDraft = (c: Character, sp: Spell): SpellDraft => ({ ...draftFromSpell(sp), freeCast: ownFreeCasts(c, sp.id).length > 0 });
 
 export function SpellsTab() {
   const { c, update, edit } = useSheet();
@@ -59,7 +52,7 @@ export function SpellsTab() {
         ...p, spells: saveEntry<Spell>(p.spells, built, id, { prep: true, id: sid }),
         ...(id ? { ...concAfterEdit(p, { ...built, id }), ...acAfterEdit(p, { ...built, id }), ...effectsAfterEdit(p, { ...built, id }) } : {})
       };
-      return withFreeCast(next, sid, name, d.freeCast);
+      return setOwnFreeCast(next, sid, d.freeCast, p.spells.find((x) => x.id === id)?.name);
     });
     f.close();
   };

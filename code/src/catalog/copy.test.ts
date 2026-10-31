@@ -100,6 +100,13 @@ describe('itemFromForm', () => {
       props: ['ammunition', 'two-handed', 'heavy'], ammoRange: '150/600', ammoType: 'Arrow', mastery: 'slow' });
     expect(itemFromForm(d)).toEqual(without(itemFromEntry(item('item/longbow')), 'cid', 'cost', 'eq'));
   });
+  it('keeps the ammunition type without a range, and the range without a type', () => {
+    const bow = draft({ kind: 'weapon', cat: 'weapon', name: 'Longbow', dmg: '1d8', props: ['ammunition'], ammoRange: '', ammoType: 'Arrow' });
+    expect(itemFromForm(bow).ammo).toBe(';arrow');
+    expect(draftFromItem({ id: 'b', eq: false, ...itemFromForm(bow) })).toMatchObject({ ammoRange: '', ammoType: 'arrow' });
+    expect(itemFromForm({ ...bow, ammoRange: '150/600', ammoType: '' }).ammo).toBe('150/600;');
+    expect(itemFromForm({ ...bow, ammoType: '' }).ammo).toBeUndefined();
+  });
   it('a custom Dagger writes its thrown range', () => {
     const d = draft({ kind: 'weapon', cat: 'weapon', name: 'Dagger', wt: '1', wcat: 'simple', wrange: 'melee', dmg: '1d4', dtype: 'Piercing',
       props: ['finesse', 'light', 'thrown'], thrownRange: '20/60', mastery: 'nick' });
@@ -255,7 +262,8 @@ describe('resolveChoices', () => {
       expect.objectContaining({ id: 'g1-1', spell: 'spell/produce-flame', castAb: 'wis' }),
       expect.objectContaining({ id: 'g2', spell: 'spell/goodberry', castAb: 'wis', always: true })
     ]);
-    expect(r.specs.find((s) => s.kind === 'resource')).toMatchObject({ id: 'g3', casts: 'g2' });
+    // Named after the picked spell, not the spec's label ("Level 1 spell (free cast)").
+    expect(r.specs.find((s) => s.kind === 'resource')).toMatchObject({ id: 'g3', casts: 'g2', name: 'Goodberry (free cast)' });
     expect(JSON.stringify(r.specs)).not.toContain('$');
   });
   it('lists the missing choices', () => {
@@ -380,7 +388,7 @@ describe('addFromCatalog', () => {
       A({ list: ['wizard'], cantrips: ['spell/light', 'spell/fire-bolt'], spell1: ['spell/magic-missile'], ab: ['int'] }));
     expect(c2.feats.map((x) => x.name)).toEqual(['Magic Initiate (Druid)', 'Magic Initiate (Wizard)']);
     expect(c2.spells).toHaveLength(6);
-    expect(c2.res).toHaveLength(2);
+    expect(c2.res.map((r) => r.name)).toEqual(['Goodberry (free cast)', 'Magic Missile (free cast)']);
   });
 
   it('adds a background with its origin feat preset, and removing it removes both', () => {

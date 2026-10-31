@@ -297,6 +297,20 @@ export function castFree(c: Character, sp: Spell, resId: string): Partial<Charac
 }
 // The resources that cast this spell: its own free casts and a feature's (Favored Enemy's Hunter's Mark).
 export const freeCastsOf = (c: Character, spellId: string) => c.res.filter((r) => r.casts === spellId);
+// The free cast a spell gives itself ("Give it a free cast" in the spell form): a resource from the spell. A free cast
+// a feat or feature grants for the spell (Magic Initiate's) is not one, and the form never changes it.
+export const ownFreeCasts = (c: Character, spellId: string) => freeCastsOf(c, spellId).filter((r) => r.from === linkOf('spell', spellId));
+// Switches the spell's own free cast (one cast a Long Rest, removed with the spell) on or off. oldName: the spell's
+// name before an edit; a free cast named after it ('<old name> (free cast)', as this function names them) follows a
+// rename. Any other name (one typed in Resources, an old save's) stays.
+export function setOwnFreeCast(c: Character, spellId: string, on: boolean, oldName?: string): Character {
+  const sp = c.spells.find((x) => x.id === spellId);
+  if (!sp) return c;
+  const has = ownFreeCasts(c, spellId), name = sp.name + ' (free cast)', old = oldName === undefined ? null : oldName + ' (free cast)';
+  if (!on) return has.reduce((x, r) => removeResource(x, r.id), c);
+  if (has.length) return { ...c, res: c.res.map((r) => (has.includes(r) && r.name === old ? { ...r, name } : r)) };
+  return { ...c, res: [...c.res, { id: newId(), name, count: 1, max: 1, recharge: 'long', casts: spellId, from: linkOf('spell', spellId), srcKind: 'spell' }] };
+}
 
 // Switches a non-Concentration spell's AC effect on or off, without casting it.
 export const toggleAcSpell = (c: Character, id: string): Partial<Character> =>

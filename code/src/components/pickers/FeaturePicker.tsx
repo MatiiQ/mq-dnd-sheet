@@ -19,15 +19,17 @@ export function FeaturePicker({ onClose, onCustom }: { onClose: () => void; onCu
   const pf = usePickerFlow();
   return (
     <PickerFrame title="Add a feature or trait" state={state} msg={pf.msg} onClose={onClose}>
-      {(cat) => pf.flow ? (
-        <ChoiceFlow entry={pf.flow.entry} cat={cat} onCancel={pf.cancel} onDone={(ans) => {
+      {(cat) => <>
+        {pf.flow && <ChoiceFlow entry={pf.flow.entry} cat={cat} onCancel={pf.cancel} onDone={(ans) => {
           const r = pf.finish(cat, ans);
           if (!r) return;
           const added = r.next.feats.find((x) => !r.before.feats.some((b) => b.id === x.id));
           onClose();
           if (added) scrollToEntry('feat-' + added.id);
-        }} />
-      ) : <FeatureList cat={cat} onAdd={(e) => pf.start(e)} onCustom={onCustom} />}
+        }} />}
+        {/* Kept mounted while a flow is open, so Cancel returns to the same type, category and choices. */}
+        <div hidden={!!pf.flow}><FeatureList cat={cat} onAdd={(e) => pf.start(e)} onCustom={onCustom} /></div>
+      </>}
     </PickerFrame>
   );
 }
