@@ -2,7 +2,7 @@
 // the pickers and forms call them, then save through update().
 import { linkOf, srcKindOfLink } from '../links';
 import { ABILITIES, addGrants, effScore, hasProf, maxFields, maxOf, newId, normName, parseWeight, SKILLS, skillLevel, type GrantInput } from '../logic';
-import type { Ability, ArmorKind, Character, Feature, FeatureGroup, Item, Linked, Recharge, Size, Spell } from '../types';
+import type { AcEffect, Ability, ArmorKind, Character, Feature, FeatureGroup, Item, Linked, Recharge, Size, Spell, SrcKind } from '../types';
 import type { Catalog } from './merge';
 import { slug, type ChoiceSpec, type Entry, type GrantSpec, type ItemEntry, type ProfEntry, type SpellEntry } from './schema';
 
@@ -210,8 +210,9 @@ function filtered<T extends Entry>(list: T[], filter: string, known: string[]): 
   return out;
 }
 
-const hasSpell = (c: Character, e: Entry) => c.spells.some((x) => (x.cid ? x.cid === e.id : normName(x.name) === normName(e.name)));
-const hasFeature = (c: Character, e: Entry) => c.feats.some((f) => (f.cid ? f.cid === e.id : normName(f.name) === normName(e.name)));
+// The character already has it: a spell or feature with its catalog id, or, without one, the same name.
+export const hasSpell = (c: Character, e: Entry) => c.spells.some((x) => (x.cid ? x.cid === e.id : normName(x.name) === normName(e.name)));
+export const hasFeature = (c: Character, e: Entry) => c.feats.some((f) => (f.cid ? f.cid === e.id : normName(f.name) === normName(e.name)));
 
 // The options a pool offers this character. `adding`: the entry whose choice this is and those above it in the flow,
 // which count as on the sheet for feat prerequisites (a Fighting Style feature offering style feats).
@@ -457,6 +458,14 @@ function spellFor(cat: Catalog, e: Entry, spec: Resolved): Omit<Spell, 'id'> | u
   return { name: v, lvl: lvl ? Number(lvl) : 0, time: '', range: '' };
 }
 
+// The name of the spell a resolved `spell` spec creates: the catalog spell's ("Guidance"), the typed text, or the
+// spec's own when the catalog lacks it. ChoiceFlow asks findUnlinked with it, never with the spec's label ("Cantrips").
+export function grantSpellName(cat: Catalog, spec: Pick<GrantSpec, 'spell' | 'name'>): string {
+  const v = spec.spell;
+  if (!v || v.startsWith('$')) return spec.name;
+  return v.startsWith('spell/') ? cat.byId.get(v)?.name ?? spec.name : v;
+}
+
 // A catalog spell's own grants (Shillelagh's atkAbil), from the character's spell `id`. Grants that spell already has
 // (same kind and name) are skipped, so linking a spell added from the picker never doubles them.
 function addSpellGrants(c: Character, cat: Catalog, cid: string | undefined, id: string): Character {
@@ -575,4 +584,53 @@ function addEntry(c: Character, cat: Catalog, e: Entry, ans: AddChoices): Charac
   out = addWithSpells(out, cat, linkOf('feature', id), inputsOf(cat, e, ans, r.specs));
   for (const n of nestedEntries(cat, e, ans.picks)) out = addEntry(out, cat, n.entry, { ...answersFor(ans, n), from: linkOf('feature', id) });
   return out;
+}
+
+// ---- The custom spell form ----
+
+// The spell form as typed. Linked fields (from, srcKind, srcName) ride along for the SourcePicker; the save handler
+// writes them. Catalog-only fields (cid, school, classes, scale, ritual) have no input; the draft carries them so an
+// edit keeps them. freeCast: "Give it a free cast" (a resource the save handler adds or removes).
+export interface SpellDraft {
+  name: string; lvl: string; time: string; range: string; dice: string; conc: boolean; dur: string; comp: string; always: boolean;
+  acFx: AcEffect | ''; acVal: number;
+  desc: string; atk: '' | 'melee' | 'ranged'; save: '' | Ability; fx: '' | 'damage' | 'healing' | 'other'; dmg: string; dtype: string; higher: string;
+  freeCast: boolean;
+  from?: string; srcKind?: SrcKind; srcName?: string;
+  cid?: string; school?: string; classes?: string; scale?: string; ritual?: boolean;
+}
+export const BLANK_SPELL: SpellDraft = {
+  name: '', lvl: '1', time: 'Action', range: '', dice: '', conc: false, dur: '', comp: '', always: false, acFx: '', acVal: 0,
+  desc: '', atk: '', save: '', fx: '', dmg: '', dtype: '', higher: '', freeCast: false
+};
+
+// The spell form's draft as a spell. Every key the form owns is present, undefined when empty (an edit merges it
+// over the old spell); always is true or undefined; `dice` is the typed summary, never computed. Never writes prep
+// (toggled on the row; the save handler passes { prep: true } on add) or the linked fields.
+export function spellFromForm(d: SpellDraft): Omit<Spell, 'id'> {
+  return {
+    name: d.name.trim(), lvl: parseInt(d.lvl, 10) || 0, time: d.time, range: d.range.trim(), dice: text(d.dice), c: d.conc,
+    dur: text(d.dur), comp: text(d.comp), always: d.always || undefined,
+    acFx: d.acFx || undefined, acVal: d.acFx ? d.acVal : undefined,
+    desc: text(d.desc), atk: d.atk || undefined, save: d.save || undefined, fx: d.fx || undefined, dmg: text(d.dmg), dtype: text(d.dtype),
+    higher: text(d.higher), cid: d.cid, school: d.school, classes: d.classes, scale: d.scale, ritual: d.ritual
+  };
+}
+export function draftFromSpell(sp: Spell): SpellDraft {
+  return {
+    name: sp.name, lvl: String(sp.lvl || 0), time: sp.time || 'Action', range: sp.range || '', dice: sp.dice || '', conc: !!sp.c,
+    dur: sp.dur || '', comp: sp.comp || '', always: !!sp.always, acFx: sp.acFx || '', acVal: sp.acVal ?? 0,
+    desc: sp.desc || '', atk: sp.atk || '', save: sp.save || '', fx: sp.fx || '', dmg: sp.dmg || '', dtype: sp.dtype || '', higher: sp.higher || '',
+    freeCast: false, from: sp.from, srcKind: sp.srcKind, srcName: sp.srcName,
+    cid: sp.cid, school: sp.school, classes: sp.classes, scale: sp.scale, ritual: sp.ritual
+  };
+}
+
+// "Already counted in my numbers" applies to these grants: score, speed, initiative, HP per level and AC bonuses.
+export const isCountable = (s: Pick<GrantSpec, 'kind' | 'acMode'>) =>
+  ['abil', 'speed', 'init', 'hpLvl'].includes(s.kind) || (s.kind === 'ac' && s.acMode === 'bonus');
+// Its starting value: off, except an AC bonus of a feature-like entry when the sheet has custom AC bonuses (an older
+// sheet often holds it there). An item's grant always starts off: the player is getting the item now.
+export function countedDefault(c: Character, e: Entry, spec: Omit<GrantSpec, 'opt'>): boolean {
+  return spec.kind === 'ac' && spec.acMode === 'bonus' && e.kind !== 'item' && c.acMods.length > 0;
 }

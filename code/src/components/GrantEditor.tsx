@@ -160,17 +160,22 @@ export function GrantEditor({ fromKind, onAdd, onCancel }: { fromKind: SourceKin
       {countable && kind === 'ac' && c.acMods.length > 0 && (
         <span className="small">Custom AC bonuses already on the sheet: {c.acMods.map((m) => m.name).join(', ')}. If this bonus is one of them, keep “Already counted” on.</span>
       )}
-      {found && (
-        <div role="radiogroup" aria-label="Link or add" className="row wrap gap-8">
-          <label className="check"><input type="radio" checked={linkNow === 'link'} onChange={() => setChoice('link')} />Link my ‘{name.trim()}’</label>
-          <label className="check"><input type="radio" checked={linkNow === 'new'} onChange={() => setChoice('new')} />Add a new one</label>
-        </div>
-      )}
+      {found && <LinkOrAdd name={name.trim()} value={linkNow} onChange={setChoice} />}
       {errs.length > 0 && name.trim() && <span className="small" style={{ color: 'var(--danger)' }}>{errs.join(' · ')}</span>}
       <div className="row gap-8">
         <button type="button" className="btn" aria-disabled={blocked} onClick={add}>Add grant</button>
         <button type="button" className="btn" onClick={onCancel}>Cancel</button>
       </div>
+    </div>
+  );
+}
+
+// The character already has an entry with this name and no source: link it to the grant, or add a second one.
+export function LinkOrAdd({ name, value, onChange }: { name: string; value: 'link' | 'new' | null; onChange: (v: 'link' | 'new') => void }) {
+  return (
+    <div role="radiogroup" aria-label={'Link or add ' + name} className="row wrap gap-8">
+      <label className="check"><input type="radio" checked={value === 'link'} onChange={() => onChange('link')} />Link my ‘{name}’</label>
+      <label className="check"><input type="radio" checked={value === 'new'} onChange={() => onChange('new')} />Add a new one</label>
     </div>
   );
 }

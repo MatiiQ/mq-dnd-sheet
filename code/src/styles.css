@@ -443,3 +443,20 @@ button.link-btn { background: none; border: none; padding: 0; cursor: pointer; t
   border: 1px solid var(--line-2); background: transparent; color: var(--text-2); display: inline-flex; align-items: center; gap: 4px;
 }
 .grant-chip.inactive { border-style: dashed; }
+
+/* ---------- catalog pickers ---------- */
+.picker { gap: 10px; }
+.picker-results { max-height: 60vh; overflow-y: auto; }
+.picker-name { font-weight: 600; }
+.picker-name.unmet { color: var(--muted); }
+.picker-warn { color: var(--danger); }
+.picker-taken { color: var(--accent); }
+.entry-desc { white-space: pre-line; font-size: 14px; color: var(--text-2); line-height: 1.45; }
+.textarea { min-height: 88px; padding: 10px 12px; resize: vertical; line-height: 1.4; }
+.pick-title { font-family: var(--serif); font-size: 17px; font-weight: 700; color: var(--text); margin: 0; }
+.pick-opt {
+  min-height: 44px; padding: 6px 14px; border-radius: 22px; border: 1px solid var(--line-2); background: var(--raised);
+  color: var(--text); font-size: 14px; font-weight: 600; cursor: pointer; text-align: left;
+}
+.pick-opt[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.pick-opt[aria-pressed="true"] .small { color: inherit; }

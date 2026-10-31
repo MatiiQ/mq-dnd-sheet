@@ -4,7 +4,8 @@ import type { Patch } from './storage';
 import type { Character } from './types';
 
 // Only one add/edit form is open at a time across the sheet.
-export type FormKind = 'attack' | 'rider' | 'res' | 'spell' | 'item' | 'feat' | 'sense' | 'acmod';
+// pick-*: the catalog pickers, which count as a form (opening one closes any other).
+export type FormKind = 'attack' | 'rider' | 'res' | 'spell' | 'item' | 'feat' | 'sense' | 'acmod' | 'pick-spell' | 'pick-item' | 'pick-feat';
 export type FormState = { kind: FormKind; id: string | null } | null;
 
 export interface SheetCtx {

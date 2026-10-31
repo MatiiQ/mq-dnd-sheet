@@ -1,30 +1,40 @@
 import { useState } from 'react';
 import {
-  AC_SPELLS, CAST_NAMES, SPELL_SORTS, acAfterEdit, castSpell, concAfterEdit, detectAcSpell, effectsAfterEdit, fmt, preparedCount, removeSpell, setConc, setSlotUsed,
+  ABILITIES, AC_SPELLS, CAST_NAMES, DAMAGE_TYPES, newId, removeResource, SPELL_SORTS, acAfterEdit, castSpell, concAfterEdit, detectAcSpell, effectsAfterEdit, fmt, preparedCount, removeSpell, setConc, setSlotUsed,
   slotsLeft, sortSpells, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, castFree, freeCastsOf, spellAttackFor, spellSaveDcFor, toggleEffect, type AcPart
 } from '../../logic';
 import { hasActiveEffect, inactiveReason, linkOf, sourceLabel } from '../../links';
+import { BLANK_SPELL, draftFromSpell, spellFromForm, type SpellDraft } from '../../catalog/copy';
 import { patchEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
-import type { AcEffect, Spell, SrcKind } from '../../types';
+import type { AcEffect, Character, Spell } from '../../types';
+import { SpellPicker } from '../pickers/SpellPicker';
 import { SourcePicker } from '../SourcePicker';
 import { AddButton, ChevronDown, DieBadge, EntryForm, EntryRow, NumInput, Step, TextField, UsePips } from '../ui';
 
 const ORDINAL = ['Cantrip', '1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th'];
-const BLANK = { name: '', lvl: '1', time: 'Action', range: '', dice: '', conc: false, from: undefined as string | undefined, srcKind: undefined as SrcKind | undefined, srcName: undefined as string | undefined, dur: '', comp: '', always: false, acFx: '' as AcEffect | '', acVal: 0 };
 const AC_EFFECTS: [AcEffect | '', string][] = [['', 'None'], ['bonus', 'Bonus'], ['base', 'Base (+ DEX)'], ['floor', 'Floor']];
-type Draft = typeof BLANK;
+const TIMES = ['Action', 'Bonus Action', 'Reaction', '1 Minute', '10 Minutes', '1 Hour'];
+const SAVES: [SpellDraft['save'], string][] = [['', 'None'], ...ABILITIES.map(([k, n]): [SpellDraft['save'], string] => [k, n])];
+const ATTACKS: [SpellDraft['atk'], string][] = [['', 'None'], ['melee', 'Melee spell attack'], ['ranged', 'Ranged spell attack']];
+const EFFECTS: [SpellDraft['fx'], string][] = [['', '—'], ['damage', 'Damage'], ['healing', 'Healing'], ['other', 'Other']];
 
-const toDraft = (e: Spell): Draft => ({
-  name: e.name, lvl: String(e.lvl || 0), time: e.time || 'Action', range: e.range || '', dice: e.dice || '',
-  conc: !!e.c, from: e.from, srcKind: e.srcKind, srcName: e.srcName, dur: e.dur || '', comp: e.comp || '', always: !!e.always,
-  acFx: e.acFx || '', acVal: e.acVal ?? 0
-});
+const toDraft = (c: Character, sp: Spell): SpellDraft => ({ ...draftFromSpell(sp), freeCast: freeCastsOf(c, sp.id).length > 0 });
+// "Give it a free cast": one cast a Long Rest, from the spell (removed with it). Turning it off removes its free casts.
+function withFreeCast(p: Character, id: string, name: string, on: boolean): Character {
+  const has = freeCastsOf(p, id);
+  if (on && !has.length) {
+    return { ...p, res: [...p.res, { id: newId(), name: name + ' (free cast)', count: 1, max: 1, recharge: 'long', casts: id, from: linkOf('spell', id), srcKind: 'spell' }] };
+  }
+  return !on && has.length ? has.reduce((x, r) => removeResource(x, r.id), p) : p;
+}
 
 export function SpellsTab() {
   const { c, update, edit } = useSheet();
   const [castPick, setCastPick] = useState<string | null>(null);
   const [statOpen, setStatOpen] = useState<'dc' | 'atk' | null>(null);
-  const f = useEntryForm('spell', BLANK, 'spell', 'Add a spell');
+  const { form: openForm, setForm } = useSheet();
+  const f = useEntryForm('spell', BLANK_SPELL, 'spell', 'Add a custom spell');
+  const picking = openForm?.kind === 'pick-spell';
   const usePrep = c.usePrep;
   const dc = spellSaveDC(c), atk = spellAttack(c);
   const prepCount = preparedCount(c);
@@ -37,16 +47,20 @@ export function SpellsTab() {
     const id = f.editingId;
     // A new spell named Shield, Mage Armor... fills in its AC effect. Editing never re-detects, so None sticks.
     const found = !id && !d.acFx ? detectAcSpell(name) : null;
+    const form = spellFromForm(d);
     const built = {
-      name, lvl: parseInt(d.lvl, 10) || 0, time: d.time, range: d.range.trim(), dice: d.dice.trim(), c: d.conc,
-      from: d.from, srcKind: d.srcKind, srcName: d.srcName?.trim() || undefined, dur: d.dur.trim(), comp: d.comp.trim(), always: d.always,
+      ...form, from: d.from, srcKind: d.srcKind, srcName: d.srcName?.trim() || undefined,
       // Both keys always present: undefined clears the effect when editing.
-      acFx: d.acFx || found?.acFx, acVal: d.acFx ? d.acVal : found?.acVal
+      acFx: form.acFx ?? found?.acFx, acVal: form.acFx ? form.acVal : found?.acVal
     };
-    update((p) => ({
-      spells: saveEntry<Spell>(p.spells, built, id, { prep: true }),
-      ...(id ? { ...concAfterEdit(p, { ...built, id }), ...acAfterEdit(p, { ...built, id }), ...effectsAfterEdit(p, { ...built, id }) } : {})
-    }));
+    const sid = id ?? newId();
+    update((p) => {
+      const next = {
+        ...p, spells: saveEntry<Spell>(p.spells, built, id, { prep: true, id: sid }),
+        ...(id ? { ...concAfterEdit(p, { ...built, id }), ...acAfterEdit(p, { ...built, id }), ...effectsAfterEdit(p, { ...built, id }) } : {})
+      };
+      return withFreeCast(next, sid, name, d.freeCast);
+    });
     f.close();
   };
   const form = f.isOpen && (
@@ -60,7 +74,7 @@ export function SpellsTab() {
         </label>
         <label className="field">Casting time
           <select className="input" value={f.draft.time} onChange={(e) => f.set({ time: e.target.value })}>
-            {['Action', 'Bonus Action', 'Reaction', '1 Minute', '10 Minutes', '1 Hour'].map((t) => <option key={t} value={t}>{t}</option>)}
+            {(TIMES.includes(f.draft.time) ? TIMES : [f.draft.time, ...TIMES]).map((t) => <option key={t} value={t}>{t}</option>)}
           </select>
         </label>
         <TextField label="Range" value={f.draft.range} placeholder="e.g. 60 ft" onChange={(v) => f.set({ range: v })} />
@@ -84,7 +98,33 @@ export function SpellsTab() {
             <NumInput className="input" value={f.draft.acVal} min={0} max={30} onCommit={(acVal) => f.set({ acVal })} />
           </label>
         )}
+        <label className="field">Attack
+          <select className="input" value={f.draft.atk} onChange={(e) => f.set({ atk: e.target.value as SpellDraft['atk'] })}>
+            {ATTACKS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+          </select>
+        </label>
+        <label className="field">Saving throw
+          <select className="input" value={f.draft.save} onChange={(e) => f.set({ save: e.target.value as SpellDraft['save'] })}>
+            {SAVES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+          </select>
+        </label>
+        <label className="field">Effect
+          <select className="input" value={f.draft.fx} onChange={(e) => f.set({ fx: e.target.value as SpellDraft['fx'] })}>
+            {EFFECTS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+          </select>
+        </label>
+        <TextField label="Damage or healing dice" value={f.draft.dmg} placeholder="e.g. 8d6" onChange={(v) => f.set({ dmg: v })} />
+        <label className="field">Damage type
+          <select className="input" value={f.draft.dtype} onChange={(e) => f.set({ dtype: e.target.value })}>
+            {['', ...DAMAGE_TYPES, ...(f.draft.dtype && !DAMAGE_TYPES.includes(f.draft.dtype) ? [f.draft.dtype] : [])].map((t) => <option key={t} value={t}>{t || '—'}</option>)}
+          </select>
+        </label>
+        <label className="check"><input type="checkbox" checked={f.draft.freeCast} onChange={(e) => f.set({ freeCast: e.target.checked })} />Give it a free cast (once per Long Rest)</label>
       </div>
+      <label className="field">Description
+        <textarea className="input textarea" rows={4} value={f.draft.desc} onChange={(e) => f.set({ desc: e.target.value })} />
+      </label>
+      <TextField label="At higher levels" value={f.draft.higher} placeholder="e.g. +1d6 for each slot level above 3" onChange={(v) => f.set({ higher: v })} />
     </EntryForm>
   );
 
@@ -180,7 +220,12 @@ export function SpellsTab() {
 
       <div className="row wrap between" style={{ gap: '8px 14px' }}>
         {/* Hidden only by the add form: while a spell below is edited it stays, so the list doesn't shift up. */}
-        {!f.isOpen || f.editingId ? <AddButton always onClick={f.openAdd}>+ Add spell</AddButton> : <span />}
+        {(!f.isOpen || f.editingId) && !picking ? (
+          <div className="row wrap gap-8">
+            <AddButton always onClick={() => setForm({ kind: 'pick-spell', id: null })}>+ Add spell</AddButton>
+            <AddButton always onClick={f.openAdd}>Custom spell</AddButton>
+          </div>
+        ) : <span />}
         <div role="group" aria-label="Sort spells" className="row wrap gap-4">
           {SPELL_SORTS.map(([k, label]) => (
             <button key={k} type="button" aria-pressed={c.spellSort === k} className="filter-btn" onClick={() => update({ spellSort: k })}>{label}</button>
@@ -188,6 +233,7 @@ export function SpellsTab() {
         </div>
       </div>
       {f.isOpen && !f.editingId && form}
+      {picking && <SpellPicker onClose={() => setForm(null)} />}
 
       {groups.map(({ l, list }) => {
         const max = l ? c.slotMax[l] : 0, left = slotsLeft(c, l);
@@ -205,7 +251,7 @@ export function SpellsTab() {
             </div>
             {list.map((sp) => (f.editingId === sp.id ? <div key={sp.id}>{form}</div> : (
               <SpellRow key={sp.id} sp={sp} picking={castPick === sp.id} setPicking={(on) => setCastPick(on ? sp.id : null)}
-                onEdit={() => f.openEdit(sp.id, toDraft(sp))} />
+                onEdit={() => f.openEdit(sp.id, toDraft(c, sp))} />
             )))}
           </div>
         );
@@ -350,8 +396,11 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
 
   const noSlots = lvl > 0 && !frees.some((r) => r.count > 0) && !first && usable;
   return (
-    <EntryRow name={sp.name} before={before} head={head} side={side}
-      body={sourceLabel(c, sp) ? <span className="muted">Source: {sourceLabel(c, sp)}</span> : undefined}
+    <EntryRow id={'spell-' + sp.id} name={sp.name} before={before} head={head} side={side}
+      body={sp.desc || sourceLabel(c, sp) ? <>
+        {sp.desc && <span className="entry-desc">{sp.desc}</span>}
+        {sourceLabel(c, sp) && <span className="muted">Source: {sourceLabel(c, sp)}</span>}
+      </> : undefined}
       onEdit={onEdit} onRemove={() => update((p) => removeSpell(p, sp.id))}>
       {(picking && upcasts.length > 0 || noSlots) && <>
         {picking && upcasts.length > 0 && (

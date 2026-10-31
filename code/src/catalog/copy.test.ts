@@ -8,7 +8,7 @@ import type { Character, Item, Spell } from '../types';
 import { mergeCatalog } from './merge';
 import type { Entry, FeatureEntry, ItemEntry, SpellEntry } from './schema';
 import {
-  addFromCatalog, BLANK_ITEM, catForKind, choicesOf, classIdOf, matchId, nestedEntries, subclassIdOf, type AddChoices, freeText, itemFromEntry, itemFromForm, missingPicks, needed, optionGroups, poolOptions, prereqMet, resolveChoices,
+  addFromCatalog, grantSpellName, BLANK_ITEM, BLANK_SPELL, catForKind, countedDefault, draftFromSpell, spellFromForm, type SpellDraft, choicesOf, classIdOf, matchId, nestedEntries, subclassIdOf, type AddChoices, freeText, itemFromEntry, itemFromForm, missingPicks, needed, optionGroups, poolOptions, prereqMet, resolveChoices,
   spellFromEntry, spellSummary, validPicks, type ItemDraft
 } from './copy';
 
@@ -618,5 +618,57 @@ describe('matching names to catalog ids', () => {
   it('names a spell’s class source through the class id', () => {
     const c = addFromCatalog(withCh({ cls: '', clsId: 'class/wizard' }), cat, E('spell/fireball'), A());
     expect(c.spells[0]).toMatchObject({ srcKind: 'class', srcName: 'Wizard' });
+  });
+});
+
+// ---- Task 6: the custom spell form ----
+describe('spellFromForm', () => {
+  const sd = (p: Partial<SpellDraft>): SpellDraft => ({ ...BLANK_SPELL, ...p });
+  const fb = spell('spell/fire-bolt');
+  it('a typed Fire Bolt equals the catalog one, minus the catalog-only fields', () => {
+    const d = sd({ name: 'Fire Bolt', lvl: '0', time: 'Action', range: '120 feet', dur: 'Instantaneous', comp: 'V, S', desc: fb.desc, atk: 'ranged',
+      fx: 'damage', dmg: '1d10', dtype: 'Fire', dice: '1d10 Fire · ranged attack' });
+    expect(spellFromForm(d)).toEqual(without(spellFromEntry(fb), 'cid', 'school', 'classes', 'scale', 'ritual', 'prep'));
+    expect('prep' in spellFromForm(d)).toBe(false);
+    expect(spellFromForm(sd({ name: 'X', always: false })).always).toBeUndefined();
+  });
+  it('round-trips catalog spells through the draft', () => {
+    for (const id of ['spell/fire-bolt', 'spell/fireball', 'spell/shield-of-faith']) {
+      const x = spellFromEntry(spell(id));
+      expect([id, spellFromForm(draftFromSpell({ id: 's1', ...x }))]).toEqual([id, without(x, 'prep')]);
+    }
+    const fireball = { id: 's1', ...spellFromEntry(spell('spell/fireball')) };
+    const renamed = spellFromForm({ ...draftFromSpell(fireball), name: 'Big Fireball' });
+    expect(renamed).toMatchObject({ name: 'Big Fireball', cid: 'spell/fireball', school: 'Evocation', classes: fireball.classes, scale: fireball.scale, ritual: false });
+  });
+  it('edits clear what the form cleared and keep what it doesn’t own', () => {
+    const fireball: Spell = { id: 's1', ...spellFromEntry(spell('spell/fireball')), prep: false };
+    const cleared = saveEntry<Spell>([fireball], spellFromForm({ ...draftFromSpell(fireball), desc: '', save: '', dmg: '' }), 's1')[0];
+    expect([cleared.desc, cleared.save, cleared.dmg]).toEqual([undefined, undefined, undefined]);
+    expect(cleared.prep).toBe(false);
+    const always: Spell = { id: 's2', name: 'Bless', lvl: 1, time: 'Action', range: '30 ft', always: true };
+    expect(saveEntry<Spell>([always], spellFromForm({ ...draftFromSpell(always), always: false }), 's2')[0].always).toBeUndefined();
+    const hand: Spell = { id: 's3', name: 'Spike Growth', lvl: 2, time: 'Action', range: '150 ft', dice: '2d4 Piercing per 5 ft' };
+    expect(saveEntry<Spell>([hand], spellFromForm(draftFromSpell(hand)), 's3')[0].dice).toBe('2d4 Piercing per 5 ft');
+  });
+});
+
+describe('countedDefault', () => {
+  const c = { ...blankCharacter(), acMods: [{ id: 'm1', name: 'Ring', val: 1 }] };
+  const ring = E('item/ring-of-protection');
+  const feat: Entry = { id: 'feat/test-ward', kind: 'feat', name: 'Ward', src: 'srd', desc: 'Invented.', cat: 'general', grants: [] };
+  it('starts on only for an AC bonus of a feature-like entry when custom AC bonuses exist', () => {
+    expect(countedDefault(c, ring, { id: 'g1', kind: 'ac', name: '+1 AC', acMode: 'bonus', val: '1' })).toBe(false);
+    expect(countedDefault(c, feat, { id: 'g1', kind: 'ac', name: '+1 AC', acMode: 'bonus', val: '1' })).toBe(true);
+    expect(countedDefault(c, feat, { id: 'g2', kind: 'abil', name: 'DEX +1', ab: 'dex', val: '1', cap: 20 })).toBe(false);
+    expect(countedDefault(blankCharacter(), feat, { id: 'g1', kind: 'ac', name: '+1 AC', acMode: 'bonus', val: '1' })).toBe(false);
+  });
+});
+
+describe('grantSpellName', () => {
+  it('names a granted spell after the catalog spell or the typed text, never the spec label', () => {
+    expect(grantSpellName(cat, { name: 'Cantrips', spell: 'spell/guidance' })).toBe('Guidance');
+    expect(grantSpellName(cat, { name: 'Cantrips', spell: 'Moonbeam Arrow' })).toBe('Moonbeam Arrow');
+    expect(grantSpellName(cat, { name: 'Cantrips', spell: 'spell/not-loaded' })).toBe('Cantrips');
   });
 });

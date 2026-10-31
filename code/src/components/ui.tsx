@@ -62,14 +62,15 @@ export function EntryActions({ name, canEdit, onEdit, onRemove, confirm }: { nam
 // Tapping the head shows the body plus Edit / Remove, so entries change without Edit mode. In Edit mode the
 // buttons stay in the row, as before, and never repeat in the body. `before` and `side` sit outside the tap target;
 // `children` always show under the row (Edit-mode controls, warnings).
-export function EntryRow({ name, before, head, side, body, onEdit, onRemove, removeConfirm, className = '', children }: {
+// id: the element id, so a newly added entry can be scrolled into view.
+export function EntryRow({ name, before, head, side, body, onEdit, onRemove, removeConfirm, className = '', children, id }: {
   name: string; before?: ReactNode; head: ReactNode; side?: ReactNode; body?: ReactNode;
-  onEdit?: () => void; onRemove: () => void; removeConfirm?: ReactNode; className?: string; children?: ReactNode;
+  onEdit?: () => void; onRemove: () => void; removeConfirm?: ReactNode; className?: string; children?: ReactNode; id?: string;
 }) {
   const { edit } = useSheet();
   const [open, setOpen] = useState(false);
   return (
-    <div className={'well entry ' + className}>
+    <div id={id} className={'well entry ' + className}>
       <div className="entry-row">
         {before}
         <button type="button" className="entry-head" aria-expanded={open} onClick={() => setOpen(!open)}>{head}</button>
