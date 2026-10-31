@@ -540,7 +540,11 @@ export function maxFields(kind: 'none' | 'number' | 'formula', text: string): Pi
 // most max HP. Uses lost while a maximum is lower are not given back when it rises (spec). Returns c when nothing moves.
 export function normalize(c0: Character): Character {
   // Weapons in hand first (plan 5): a quantity or equip change may take one out of hand, through setHands.
-  const c = setHands(c0, c0.hands);
+  const h = setHands(c0, c0.hands);
+  // Weapon Mastery picks: strings, once each. The player may change them at any time; the rule says on a Long Rest
+  // (PHB p.91, Weapon Mastery), which the app doesn't enforce.
+  const mastery = uniqueStrings(h.mastery);
+  const c = mastery.length === h.mastery.length ? h : { ...h, mastery };
   let changed = c !== c0;
   const res = c.res.map((r) => {
     const m = maxOf(c, r);
@@ -668,6 +672,7 @@ export function shortRest(c: Character, rolls?: Record<string, number>): Charact
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 const sameType = (def: unknown, v: unknown) => (Array.isArray(def) ? Array.isArray(v) : isObj(def) ? isObj(v) : typeof v === typeof def);
 const strings = (v: unknown[]) => v.filter((x): x is string => typeof x === 'string');
+const uniqueStrings = (v: unknown[]) => strings(v).filter((x, i, all) => all.indexOf(x) === i);
 // Spell slot counts for levels 0–9; anything missing or damaged counts as 0.
 const slots = (v: unknown[]) => Array.from({ length: 10 }, (_, i) => (typeof v[i] === 'number' ? (v[i] as number) : 0));
 // Records with fixed keys: a missing or damaged key falls back to the blank character's value.
@@ -739,7 +744,7 @@ const ITEM_FIELDS: Record<string, FieldCheck> = {
 const cleanFields = <T extends object>(x: T, fields: Record<string, FieldCheck>): T =>
   Object.fromEntries(Object.entries(x).filter(([k, v]) => !Object.hasOwn(fields, k) || fields[k](v))) as T;
 
-export const NEW_FIELDS: readonly (keyof Character)[] = ['spellSort', 'size', 'carryUp', 'attuneIds', 'grants', 'effectsOn', 'profs', 'defenses', 'hands'];
+export const NEW_FIELDS: readonly (keyof Character)[] = ['spellSort', 'size', 'carryUp', 'attuneIds', 'grants', 'effectsOn', 'profs', 'defenses', 'hands', 'mastery'];
 // Resources the Inventory tab echoed before `inv` existed.
 const OLD_INVENTORY_RESOURCES = ['arrows', 'potions'];
 
@@ -776,6 +781,7 @@ export function migrate(data: unknown): Character {
   if (data.hands === undefined) c.attacks = c.attacks.filter((a) => normName(a.name) !== 'unarmed strike');
   // Weapons in hand: strings here; normalize() (below, through setHands) keeps only a valid list.
   c.hands = strings(c.hands);
+  c.mastery = uniqueStrings(c.mastery);
   c.profs = c.profs.filter((p) => PROF_CATS.includes(p.cat));
   // Saves from before proficiencies were data: their Training features become proficiencies, once.
   if (data.profs === undefined) ({ feats: c.feats, profs: c.profs } = splitTraining(c.feats));

@@ -95,7 +95,7 @@ export function sampleCharacter(): Character {
       { id: 'g10', kind: 'prof', name: 'Insight', cat: 'skill', target: 'insight', from: 'feature:f13', srcKind: 'species' },
       { id: 'g11', kind: 'speed', name: 'Speed +5 ft', mode: 'walk', val: '5', counted: true, from: 'feature:f15', srcKind: 'species' }
     ],
-    effectsOn: [], hands: [],
+    effectsOn: [], hands: [], mastery: [],
     profs: [
       { id: 'p1', cat: 'armor', name: 'Light armor' }, { id: 'p2', cat: 'armor', name: 'Medium armor' }, { id: 'p3', cat: 'armor', name: 'Shields' },
       { id: 'p4', cat: 'weapon', name: 'Simple weapons' }, { id: 'p5', cat: 'weapon', name: 'Martial weapons' },
@@ -247,7 +247,7 @@ export function druidSample(): Character {
       // Shillelagh, as in the catalog: the spellcasting ability and a bigger die for a club or quarterstaff while on (PHB p.316).
       { id: 'g15', kind: 'atkAbil', name: 'Shillelagh', ab: 'cast', weapons: 'club,quarterstaff', amode: 'melee', die: '1:1d8,5:1d10,11:1d12,17:2d6', when: 'active', from: 'spell:ds3', srcKind: 'spell' }
     ],
-    effectsOn: [], hands: [],
+    effectsOn: [], hands: [], mastery: [],
     profs: [
       { id: 'p1', cat: 'armor', name: 'Light armor' }, { id: 'p2', cat: 'armor', name: 'Shields' }, { id: 'p3', cat: 'weapon', name: 'Simple weapons' },
       { id: 'p4', cat: 'tool', name: 'Herbalism Kit' }, { id: 'p5', cat: 'language', name: 'Common' }, { id: 'p6', cat: 'language', name: 'Elvish' }, { id: 'p7', cat: 'language', name: 'Dwarvish' }
@@ -266,6 +266,6 @@ export function blankCharacter(): Character {
     slotMax: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], slotUsed: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     defenses: [], senses: [], res: [], attacks: [], riders: [],
     coins: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 }, attuneIds: ['', '', ''], inv: [], spells: [], feats: [], prepMax: 0,
-    grants: [], effectsOn: [], profs: [], hands: []
+    grants: [], effectsOn: [], profs: [], hands: [], mastery: []
   };
 }

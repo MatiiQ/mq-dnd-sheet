@@ -107,4 +107,6 @@ export interface Character {
   effectsOn: string[];
   /** Weapons in hand: item ids, oldest first, one entry per hand (a Two-Handed weapon or a Versatile one in two hands twice). Changed only through setHands (hands.ts). */
   hands: string[];
+  /** Weapon kinds (weaponKind slugs) chosen for Weapon Mastery, oldest first; picks past the slot count don't count. */
+  mastery: string[];
 }
