@@ -17,6 +17,7 @@ describe('ActionsTab', () => {
     const order = ['Weapon attacks', 'Attack</strong> · 2 attacks', 'Longbow', 'Unarmed Strike', 'Spells · damage', 'Spells · save', 'Spells · healing', 'Extra damage on a hit', 'Actions in combat', 'Opportunity Attack'];
     order.map(at).reduce((a, b) => { expect(b).toBeGreaterThan(a); return b; });
     expect(html).toContain('Mastery: Longbow (Slow), Shortsword (Vex)');
+    expect(html).toContain('Ammunition, Heavy, Two-Handed');
   });
   it('disables two hands on Seren’s Quarterstaff while her Shield is on', () => {
     const html = render({ ...druidSample(), hands: ['i3'] });

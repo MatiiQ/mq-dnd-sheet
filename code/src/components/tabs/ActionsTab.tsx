@@ -17,7 +17,7 @@ const FILTERS: [Filter, string][] = [['all', 'All'], ['action', 'Action'], ['bon
 const ORDINAL = ['Cantrip', '1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th'];
 const USE_LABEL: Record<WeaponAttack['use'], string> = { melee: '', thrown: 'thrown', ranged: '', 'two-handed': 'two hands' };
 const title = (s: string) => s.split(/[-\s]/).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-const propsText = (p: string) => p.split(',').filter(Boolean).map(title).join(', ');
+const propsText = (p: string) => p.split(',').filter(Boolean).map((x) => x.replace(/(^|-)([a-z])/g, (m) => m.toUpperCase())).join(', ');
 const NO_SHIELD = 'Take off the Shield first';
 
 const ATTACK_BLANK = { name: '', hit: '', dmg: '', info: '', mastery: '', econ: 'action' as Econ, group: 'other' as 'weapon' | 'other' };
