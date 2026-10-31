@@ -1,10 +1,12 @@
 import { useState, type CSSProperties, type ReactNode } from 'react';
 import { PROF_NAMES, type ProfCat } from '../../catalog/names';
+import { entriesOf, useCatalog } from '../../catalog/useCatalog';
 import { hasActiveEffect, linkOf, sourceLabel } from '../../links';
 import { addGrants, grantChips, newId, normName, profList, removalSummary, removeFeature, toggleEffect, type GrantInput } from '../../logic';
 import { removeEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { Character, Feature, FeatureGroup, SrcKind } from '../../types';
 import { GrantList, SourceChips } from '../Chips';
+import { FeaturePicker } from '../pickers/FeaturePicker';
 import { SourcePicker } from '../SourcePicker';
 import { AddButton, EntryForm, EntryRow, RemoveButton, TextField } from '../ui';
 
@@ -20,8 +22,9 @@ function removalNote(c: Character, id: string): ReactNode {
 }
 
 export function FeaturesTab() {
-  const { c, update } = useSheet();
-  const f = useEntryForm('feat', BLANK, 'feature', 'Add a feature or trait');
+  const { c, update, form: openForm, setForm } = useSheet();
+  const f = useEntryForm('feat', BLANK, 'feature', 'Add a custom feature or trait');
+  const picking = openForm?.kind === 'pick-feat';
   const titles: [FeatureGroup, string][] = [
     ['class', 'Class · ' + (c.ch.cls || 'Class') + ' ' + c.level], ['sub', 'Subclass · ' + (c.ch.sub || '')], ['background', 'Background'], ['feat', 'Feats'],
     ['species', 'Species · ' + (c.ch.species || '')], ['training', 'Training & proficiencies'], ['other', 'Other']
@@ -72,14 +75,18 @@ export function FeaturesTab() {
                 const link = linkOf('feature', x.id), src = sourceLabel(c, x);
                 const effect = hasActiveEffect(c, link), on = c.effectsOn.includes(link);
                 return (
-                  <EntryRow key={x.id} name={x.name}
-                    head={<><strong>{x.name}</strong>{x.desc && <span className="muted">{x.desc}</span>}</>}
+                  <EntryRow key={x.id} id={'feat-' + x.id} name={x.name}
+                    // A catalog description runs to paragraphs: the row shows its start, the open row all of it.
+                    head={<><strong>{x.name}</strong>{x.desc && <span className="muted entry-clamp">{x.desc}</span>}</>}
                     side={effect ? (
                       <button type="button" aria-pressed={on} aria-label={(on ? 'Switch off ' : 'Switch on ') + x.name} className="btn btn-sm"
                         style={{ border: '1px solid var(--accent)', background: on ? 'var(--accent)' : 'transparent', color: on ? 'var(--on-accent)' : 'var(--accent)' }}
                         onClick={() => update((p) => toggleEffect(p, link))}>{on ? 'On' : 'Off'}</button>
                     ) : undefined}
-                    body={src ? <span className="muted">Source: {src}</span> : undefined}
+                    body={x.desc || src ? <>
+                      {x.desc && <span className="entry-desc">{x.desc}</span>}
+                      {src && <span className="muted">Source: {src}</span>}
+                    </> : undefined}
                     onEdit={() => f.openEdit(x.id, { g: x.g || 'other', name: x.name, desc: x.desc || '', from: x.from, srcKind: x.srcKind, srcName: x.srcName, pending: [] })}
                     onRemove={() => update((p) => removeFeature(p, x.id))}
                     removeConfirm={removalNote(c, x.id)}>
@@ -91,18 +98,29 @@ export function FeaturesTab() {
           );
         })}
       </div>
-      {!f.isOpen && <AddButton onClick={f.openAdd}>+ Add feature or trait</AddButton>}
+      {!f.isOpen && !picking && (
+        <div className="row wrap gap-8">
+          <AddButton onClick={() => setForm({ kind: 'pick-feat', id: null })}>+ Add feature or trait</AddButton>
+          <AddButton onClick={f.openAdd}>Custom</AddButton>
+        </div>
+      )}
+      {picking && <FeaturePicker onClose={() => setForm(null)} onCustom={f.openAdd} />}
       {f.isOpen && !f.editingId && form}
     </div>
   );
 }
 
-// Proficiencies by category: hand ones can be removed, granted ones name their source. Names from the catalog are
-// offered while typing; any other text is kept as typed.
+// Proficiencies by category: hand ones can be removed, granted ones name their source. Names from the catalog (the
+// PHB pack included, loaded the first time the name field is used; the SRD names until then) are offered while
+// typing; any other text is kept as typed.
 function Proficiencies() {
   const { c, update } = useSheet();
   const [cat, setCat] = useState<ProfCat>('tool');
   const [name, setName] = useState('');
+  const [wanted, setWanted] = useState(false);
+  const state = useCatalog(wanted);
+  const names = state.status === 'ready' ? entriesOf(state.cat, 'prof').filter((p) => p.cat === cat).map((p) => p.name)
+    : PROF_NAMES.filter((p) => p.cat === cat).map((p) => p.name);
   const list = profList(c);
   const add = () => {
     const n = name.trim();
@@ -133,8 +151,8 @@ function Proficiencies() {
           {PROF_CATS.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
         </select>
         <input type="text" className="input" style={{ flex: '2 1 160px' }} list={'prof-names-' + cat} aria-label="Proficiency name" placeholder="e.g. Thieves’ Tools"
-          value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') add(); }} />
-        <datalist id={'prof-names-' + cat}>{PROF_NAMES.filter((p) => p.cat === cat).map((p) => <option key={p.id} value={p.name} />)}</datalist>
+          value={name} onFocus={() => setWanted(true)} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') add(); }} />
+        <datalist id={'prof-names-' + cat}>{[...new Set(names)].map((n) => <option key={n} value={n} />)}</datalist>
         <button type="button" className="btn" onClick={add}>Add</button>
       </div>
     </div>

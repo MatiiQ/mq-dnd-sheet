@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import {
-  ABILITIES, SKILLS, grantChips, addGrants, findUnlinked, removalChain, removalSummary, removeFeature, removeResource, castFree, freeCastsOf, spellAttackFor, spellSaveDcFor, toggleEffect, dawn, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, splitTraining, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, NEW_FIELDS, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, removeItem, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
+  ABILITIES, SKILLS, grantChips, addGrants, findUnlinked, removalChain, removalSummary, removeFeature, removeResource, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, toggleEffect, dawn, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, splitTraining, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, NEW_FIELDS, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, removeItem, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
   setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, undoHp
 } from './logic';
 import { grantErrors, type GrantSpec } from './catalog/schema';
@@ -1142,6 +1142,33 @@ describe('rests, Dawn and item charges', () => {
 });
 
 describe('free casts as resources and spell overrides', () => {
+  describe('the spell form’s own free cast', () => {
+    // Magic Missile with a free cast a feat granted for it (Magic Initiate's), and Shield with an old save's free cast.
+    const base = (): Character => ({
+      ...blankCharacter(),
+      feats: [{ id: 'f1', g: 'feat', name: 'Magic Initiate (Wizard)', desc: '' }],
+      spells: [{ id: 's1', name: 'Magic Missile', lvl: 1, time: 'Action', range: '120 feet', from: 'feature:f1', always: true },
+        { id: 's2', name: 'Shield', lvl: 1, time: 'Reaction', range: 'Self', prep: true }],
+      res: [{ id: 'r1', name: 'Magic Missile (free cast)', count: 1, max: 1, recharge: 'long', casts: 's1', from: 'feature:f1', srcKind: 'feat' },
+        { id: 'r2', name: 'Shield', note: 'Free cast', count: 1, max: 1, recharge: 'long', casts: 's2', from: 'spell:s2', srcKind: 'spell' }]
+    });
+    it('is never a free cast a feat granted, so turning it off leaves that one', () => {
+      const c = base();
+      expect(ownFreeCasts(c, 's1')).toEqual([]);
+      expect(setOwnFreeCast(c, 's1', false).res.map((r) => r.id)).toEqual(['r1', 'r2']);
+      const on = setOwnFreeCast(c, 's1', true, 'Magic Missile');
+      expect(on.res.map((r) => [r.name, r.from])).toEqual([['Magic Missile (free cast)', 'feature:f1'], ['Shield', 'spell:s2'], ['Magic Missile (free cast)', 'spell:s1']]);
+      expect(setOwnFreeCast(on, 's1', false).res.map((r) => r.id)).toEqual(['r1', 'r2']);
+    });
+    it('follows a rename when it carries the name the form gave it, and keeps any other name', () => {
+      const on = setOwnFreeCast(base(), 's1', true);
+      const renamed = { ...on, spells: on.spells.map((x) => (x.id === 's1' ? { ...x, name: 'Arcane Darts' } : x)) };
+      expect(ownFreeCasts(setOwnFreeCast(renamed, 's1', true, 'Magic Missile'), 's1').map((r) => r.name)).toEqual(['Arcane Darts (free cast)']);
+      const shield = { ...base(), spells: base().spells.map((x) => (x.id === 's2' ? { ...x, name: 'Shield Spell' } : x)) };
+      expect(ownFreeCasts(setOwnFreeCast(shield, 's2', true, 'Shield'), 's2').map((r) => r.name)).toEqual(['Shield']);
+      expect(setOwnFreeCast(base(), 's2', true, 'Shield').res).toHaveLength(2);
+    });
+  });
   it('turns an old save\'s free casts into resources that cast the spell, once', () => {
     const c = migrate(oldSeren());
     const fc = freeCastsOf(c, 'ds12');
@@ -1423,5 +1450,52 @@ describe('rebuilt samples', () => {
   it('the blank character holds none of their entries', () => {
     const b = blankCharacter();
     expect([b.grants, b.defenses, b.profs, b.effectsOn]).toEqual([[], [], [], []]);
+  });
+});
+
+describe('addGrants with a catalog spell (plan 4)', () => {
+  const sp: Omit<Spell, 'id'> = { name: 'Goodberry', lvl: 1, time: 'Action', range: 'Self', prep: true, cid: 'spell/goodberry' };
+  const c = { ...blankCharacter(), feats: [{ id: 'f1', g: 'feat' as const, name: 'Magic Initiate (Druid)', desc: '' }] };
+  it('an always-prepared spell keeps no prep flag', () => {
+    const out = addGrants(c, 'feature:f1', [{ spec: { id: 'g2', kind: 'spell', name: 'Level 1 spell', spell: 'spell/goodberry', always: true }, spell: sp }]);
+    expect(out.spells[0].always).toBe(true);
+    expect('prep' in out.spells[0]).toBe(false);
+  });
+  it('a granted spell without always is unprepared', () => {
+    const out = addGrants(c, 'feature:f1', [{ spec: { id: 'g1', kind: 'spell', name: 'Cantrips', spell: 'spell/goodberry' }, spell: sp }]);
+    expect(out.spells[0].prep).toBe(false);
+  });
+});
+
+describe('class and subclass ids (plan 4)', () => {
+  it('an old save without them loads with empty ids', () => {
+    const c = migrate(oldIlyra());
+    expect([c.ch.clsId, c.ch.subId]).toEqual(['', '']);
+    expect(blankCharacter().ch).toMatchObject({ clsId: '', subId: '' });
+    expect(sampleCharacter().ch).toMatchObject({ clsId: 'class/ranger', subId: 'subclass/ranger/hunter' });
+    expect(druidSample().ch).toMatchObject({ clsId: 'class/druid', subId: '' });
+  });
+});
+
+describe('rebuilt samples (plan 4)', () => {
+  const ilyra = sampleCharacter(), seren = druidSample();
+  it('give the SRD weapons and armor their catalog fields', () => {
+    const inv = (c: Character, name: string) => c.inv.find((i) => i.name === name)!;
+    expect(inv(ilyra, 'Longbow')).toMatchObject({ cat: 'weapon', wcat: 'martial', wrange: 'ranged', dmg: '1d8', dtype: 'Piercing', props: 'ammunition,heavy,two-handed', ammo: '150/600;arrow', mastery: 'slow', cid: 'item/longbow' });
+    expect(inv(ilyra, 'Shortsword')).toMatchObject({ wcat: 'martial', dmg: '1d6', props: 'finesse,light', mastery: 'vex' });
+    expect(inv(ilyra, 'Studded Leather Armor')).toMatchObject({ cat: 'armor', armor: 'light', acBase: 12 });
+    expect(inv(seren, 'Quarterstaff')).toMatchObject({ wcat: 'simple', dmg: '1d6', vers: '1d8', mastery: 'topple' });
+    expect(inv(seren, 'Sickle')).toMatchObject({ wcat: 'simple', dmg: '1d4', mastery: 'nick' });
+    expect(inv(seren, 'Leather Armor')).toMatchObject({ cat: 'armor', armor: 'light', acBase: 11 });
+    expect(inv(seren, 'Shield')).toMatchObject({ cat: 'shield', armor: 'shield', acBase: 2 });
+  });
+  it('give the SRD spells their structured fields, never an SRD description', () => {
+    const fireBolt = seren.spells.find((x) => x.name === 'Fire Bolt')!;
+    expect(fireBolt).toMatchObject({ cid: 'spell/fire-bolt', school: 'Evocation', atk: 'ranged', fx: 'damage', dmg: '1d10', dtype: 'Fire', scale: 'cantrip' });
+    expect(ilyra.spells.find((x) => x.name === 'Cure Wounds')).toMatchObject({ fx: 'healing', dmg: '2d8', scale: '2d8/slot' });
+    for (const c of [ilyra, seren]) for (const sp of c.spells.filter((x) => x.cid)) expect([sp.name, typeof sp.school]).toEqual([sp.name, 'string']);
+    for (const c of [ilyra, seren]) for (const sp of c.spells) expect(sp.higher).toBeUndefined();
+    expect(ilyra.spells.find((x) => x.name === 'Hail of Thorns')!.cid).toBeUndefined();
+    expect(seren.spells.find((x) => x.name === 'Thorn Whip')!.cid).toBeUndefined();
   });
 });

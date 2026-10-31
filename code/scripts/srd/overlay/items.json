@@ -1,4 +1,7 @@
 {
+  "item/adamantine-armor": {
+    "base": "armor"
+  },
   "item/amulet-of-health": {
     "grants": [
       {
@@ -11,6 +14,12 @@
         "needAtt": true
       }
     ]
+  },
+  "item/animated-shield": {
+    "base": "item/shield"
+  },
+  "item/armor-1-2-or-3": {
+    "base": "armor"
   },
   "item/armor-of-invulnerability": {
     "grants": [
@@ -41,7 +50,8 @@
         "needEq": true,
         "needAtt": true
       }
-    ]
+    ],
+    "base": "item/plate-armor"
   },
   "item/armor-of-resistance": {
     "grants": [
@@ -143,7 +153,9 @@
           }
         ]
       }
-    ]
+    ],
+    "base": "armor",
+    "desc": "You have Resistance to one type of damage while you wear this armor. The GM chooses the type or determines it randomly by rolling on the following table. 1d10 Damage Type 1d10 Damage Type 1 Acid 6 Necrotic 2 Cold 7 Poison 3 Fire 8 Psychic 4 Force 9 Radiant 5 Lightning 10 Thunder"
   },
   "item/armor-of-vulnerability": {
     "grants": [
@@ -182,7 +194,8 @@
           }
         ]
       }
-    ]
+    ],
+    "base": "armor"
   },
   "item/arrow-catching-shield": {
     "armor": "shield",
@@ -303,7 +316,8 @@
         "val": "1",
         "needAtt": true
       }
-    ]
+    ],
+    "base": "weapon"
   },
   "item/boots-of-the-winterlands": {
     "grants": [
@@ -432,6 +446,15 @@
       }
     ]
   },
+  "item/dagger-of-venom": {
+    "base": "item/dagger"
+  },
+  "item/dancing-sword": {
+    "base": "weapon"
+  },
+  "item/defender": {
+    "base": "weapon"
+  },
   "item/demon-armor": {
     "armor": "heavy",
     "acBase": 18,
@@ -544,15 +567,27 @@
       }
     ]
   },
+  "item/dragon-slayer": {
+    "base": "weapon"
+  },
   "item/dwarven-plate": {
     "armor": "heavy",
     "acBase": 18,
     "acBonus": 2
   },
+  "item/dwarven-thrower": {
+    "base": "item/warhammer"
+  },
   "item/elven-chain": {
     "armor": "medium",
     "acBase": 13,
     "acBonus": 1
+  },
+  "item/energy-bow": {
+    "base": "weapon"
+  },
+  "item/flame-tongue": {
+    "base": "weapon"
   },
   "item/frost-brand": {
     "grants": [
@@ -565,7 +600,8 @@
         "needEq": true,
         "needAtt": true
       }
-    ]
+    ],
+    "base": "weapon"
   },
   "item/gauntlets-of-ogre-power": {
     "grants": [
@@ -579,6 +615,9 @@
         "needAtt": true
       }
     ]
+  },
+  "item/giant-slayer": {
+    "base": "weapon"
   },
   "item/glamoured-studded-leather": {
     "armor": "light",
@@ -618,6 +657,9 @@
       }
     ]
   },
+  "item/hammer-of-thunderbolts": {
+    "base": "weapon"
+  },
   "item/handy-haversack": {
     "xdim": true,
     "cap": 900,
@@ -647,7 +689,11 @@
         "needEq": true,
         "needAtt": true
       }
-    ]
+    ],
+    "base": "weapon"
+  },
+  "item/javelin-of-lightning": {
+    "base": "item/javelin"
   },
   "item/luck-blade": {
     "grants": [
@@ -659,7 +705,17 @@
         "val": "1",
         "needAtt": true
       }
-    ]
+    ],
+    "base": "weapon"
+  },
+  "item/mace-of-disruption": {
+    "base": "item/mace"
+  },
+  "item/mace-of-smiting": {
+    "base": "item/mace"
+  },
+  "item/mace-of-terror": {
+    "base": "item/mace"
   },
   "item/mantle-of-spell-resistance": {
     "grants": [
@@ -674,6 +730,9 @@
       }
     ]
   },
+  "item/mithral-armor": {
+    "base": "armor"
+  },
   "item/necklace-of-adaptation": {
     "grants": [
       {
@@ -686,6 +745,12 @@
         "needAtt": true
       }
     ]
+  },
+  "item/nine-lives-stealer": {
+    "base": "weapon"
+  },
+  "item/oathbow": {
+    "base": "weapon"
   },
   "item/periapt-of-health": {
     "grants": [
@@ -740,9 +805,15 @@
       }
     ]
   },
+  "item/plate-armor-of-etherealness": {
+    "base": "item/plate-armor"
+  },
   "item/portable-hole": {
     "xdim": true,
     "capVol": "a cylinder 6 feet across and 10 feet deep"
+  },
+  "item/quarterstaff-of-the-acrobat": {
+    "base": "item/quarterstaff"
   },
   "item/ring-of-protection": {
     "grants": [
@@ -951,6 +1022,9 @@
       }
     ]
   },
+  "item/scimitar-of-speed": {
+    "base": "item/scimitar"
+  },
   "item/sentinel-shield": {
     "armor": "shield",
     "acBase": 2
@@ -1063,5 +1137,35 @@
         "needAtt": true
       }
     ]
+  },
+  "item/sun-blade": {
+    "base": "item/longsword"
+  },
+  "item/sword-of-life-stealing": {
+    "base": "weapon"
+  },
+  "item/sword-of-sharpness": {
+    "base": "weapon"
+  },
+  "item/sword-of-wounding": {
+    "base": "weapon"
+  },
+  "item/thunderous-greatclub": {
+    "base": "item/greatclub"
+  },
+  "item/trident-of-fish-command": {
+    "base": "item/trident"
+  },
+  "item/vicious-weapon": {
+    "base": "weapon"
+  },
+  "item/vorpal-sword": {
+    "base": "weapon"
+  },
+  "item/weapon-1-2-or-3": {
+    "base": "weapon"
+  },
+  "item/weapon-of-warning": {
+    "base": "weapon"
   }
 }

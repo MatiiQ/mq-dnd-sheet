@@ -62,14 +62,15 @@ export function EntryActions({ name, canEdit, onEdit, onRemove, confirm }: { nam
 // Tapping the head shows the body plus Edit / Remove, so entries change without Edit mode. In Edit mode the
 // buttons stay in the row, as before, and never repeat in the body. `before` and `side` sit outside the tap target;
 // `children` always show under the row (Edit-mode controls, warnings).
-export function EntryRow({ name, before, head, side, body, onEdit, onRemove, removeConfirm, className = '', children }: {
+// id: the element id, so a newly added entry can be scrolled into view.
+export function EntryRow({ name, before, head, side, body, onEdit, onRemove, removeConfirm, className = '', children, id }: {
   name: string; before?: ReactNode; head: ReactNode; side?: ReactNode; body?: ReactNode;
-  onEdit?: () => void; onRemove: () => void; removeConfirm?: ReactNode; className?: string; children?: ReactNode;
+  onEdit?: () => void; onRemove: () => void; removeConfirm?: ReactNode; className?: string; children?: ReactNode; id?: string;
 }) {
   const { edit } = useSheet();
   const [open, setOpen] = useState(false);
   return (
-    <div className={'well entry ' + className}>
+    <div id={id} className={'well entry ' + className}>
       <div className="entry-row">
         {before}
         <button type="button" className="entry-head" aria-expanded={open} onClick={() => setOpen(!open)}>{head}</button>
@@ -205,10 +206,11 @@ export function AddButton({ onClick, children, style, always }: { onClick: () =>
   return <button type="button" className="btn btn-add" style={style} onClick={onClick}>{children}</button>;
 }
 
-export function TextField({ label, value, onChange, placeholder, style }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; style?: CSSProperties }) {
+// list: the id of a <datalist> of suggestions.
+export function TextField({ label, value, onChange, placeholder, style, list }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; style?: CSSProperties; list?: string }) {
   return (
     <label className="field" style={style}>{label}
-      <input type="text" className="input" value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />
+      <input type="text" className="input" value={value} placeholder={placeholder} list={list} onChange={(e) => onChange(e.target.value)} />
     </label>
   );
 }

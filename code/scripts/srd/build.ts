@@ -3,7 +3,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { catalogId, type Entry, type ItemEntry, type ProfEntry } from '../../src/catalog/schema.ts';
 import { applyOverlay, type Overlay } from '../lib/overlay.ts';
 import { writeEntries } from '../lib/write.ts';
-import { parseArmor, parseGear, parseMagicItems, parseTools, parseWeapons } from './items.ts';
+import { copyBase, parseArmor, parseGear, parseMagicItems, parseTools, parseWeapons } from './items.ts';
 import { parseClass } from './classes.ts';
 import { parseBackgrounds, parseFeats, parseSpecies } from './origins.ts';
 import { parseLanguages, parseRules } from './rules.ts';
@@ -17,8 +17,9 @@ const overlay = (name: string): Overlay => {
   const p = new URL(`code/scripts/srd/overlay/${name}.json`, root);
   return existsSync(p) ? JSON.parse(readFileSync(p, 'utf8')) : {};
 };
-const out = (name: string, entries: Entry[]) => {
-  writeEntries(new URL(`code/src/data/srd/${name}.json`, root).pathname, applyOverlay(entries, overlay(name)));
+// post: a step after the overlay (items copy their base item's fields, which the overlay names).
+const out = (name: string, entries: Entry[], post = (es: Entry[]) => es) => {
+  writeEntries(new URL(`code/src/data/srd/${name}.json`, root).pathname, post(applyOverlay(entries, overlay(name))));
   console.log(`${name}: ${entries.length} entries`);
 };
 
@@ -31,7 +32,7 @@ const items: ItemEntry[] = [
   ...parseTools(section(srdText, 'Alchemist’s Supplies (50 GP)', 'Adventuring Gear')),
   ...parseMagicItems(section(srdText, 'Adamantine Armor', 'Monsters', 'Magic Items A–Z'))
 ];
-out('items', items);
+out('items', items, (es) => copyBase(es as ItemEntry[]));
 const [species, traits] = parseSpecies(section(srdText, 'Dragonborn', 'Feats', 'Species Descriptions'), layout);
 out('origins', [
   ...parseFeats(section(srdText, 'Origin Feats', 'Equipment', 'Feat Descriptions')),

@@ -1,6 +1,6 @@
 // D&D 2024 rules used by the sheet. Pure functions: each takes a character and returns the next one.
 import { blankCharacter, sampleCharacter } from './defaults';
-import { grantErrors, type GrantSpec } from './catalog/schema';
+import { grantErrors, ITEM_CATS, type GrantSpec } from './catalog/schema';
 import { isValue, valueAt, type ValueCtx } from './catalog/value';
 import { PROF_NAMES, type ProfCat } from './catalog/names';
 import { activeGrants, dropLinkOnly, fixLinks, hasActiveEffect, inactiveReason, isActive, LINKED_LISTS, srcKindOfLink, type SourceKind, linkOf, parseLink, sourceLabel, sourceOf, SRC_KINDS } from './links';
@@ -297,6 +297,20 @@ export function castFree(c: Character, sp: Spell, resId: string): Partial<Charac
 }
 // The resources that cast this spell: its own free casts and a feature's (Favored Enemy's Hunter's Mark).
 export const freeCastsOf = (c: Character, spellId: string) => c.res.filter((r) => r.casts === spellId);
+// The free cast a spell gives itself ("Give it a free cast" in the spell form): a resource from the spell. A free cast
+// a feat or feature grants for the spell (Magic Initiate's) is not one, and the form never changes it.
+export const ownFreeCasts = (c: Character, spellId: string) => freeCastsOf(c, spellId).filter((r) => r.from === linkOf('spell', spellId));
+// Switches the spell's own free cast (one cast a Long Rest, removed with the spell) on or off. oldName: the spell's
+// name before an edit; a free cast named after it ('<old name> (free cast)', as this function names them) follows a
+// rename. Any other name (one typed in Resources, an old save's) stays.
+export function setOwnFreeCast(c: Character, spellId: string, on: boolean, oldName?: string): Character {
+  const sp = c.spells.find((x) => x.id === spellId);
+  if (!sp) return c;
+  const has = ownFreeCasts(c, spellId), name = sp.name + ' (free cast)', old = oldName === undefined ? null : oldName + ' (free cast)';
+  if (!on) return has.reduce((x, r) => removeResource(x, r.id), c);
+  if (has.length) return { ...c, res: c.res.map((r) => (has.includes(r) && r.name === old ? { ...r, name } : r)) };
+  return { ...c, res: [...c.res, { id: newId(), name, count: 1, max: 1, recharge: 'long', casts: spellId, from: linkOf('spell', spellId), srcKind: 'spell' }] };
+}
 
 // Switches a non-Concentration spell's AC effect on or off, without casting it.
 export const toggleAcSpell = (c: Character, id: string): Partial<Character> =>
@@ -705,6 +719,22 @@ function cleanResource(r: Resource): Resource {
   } as Resource);
 }
 const cleanCid = <T extends { cid?: string }>(x: T): T => { const { cid, ...rest } = x; return (typeof cid === 'string' ? { ...rest, cid } : rest) as T; };
+// Catalog fields of spells and items on load (all optional): a value of the wrong type or outside its list goes, never the entry.
+type FieldCheck = (v: unknown) => boolean;
+const isStr: FieldCheck = (v) => typeof v === 'string';
+const isBool: FieldCheck = (v) => typeof v === 'boolean';
+const among = (...xs: unknown[]): FieldCheck => (v) => xs.includes(v);
+const SPELL_FIELDS: Record<string, FieldCheck> = {
+  desc: isStr, school: isStr, classes: isStr, ritual: isBool, atk: among('melee', 'ranged'), save: among(...ABILITIES.map(([k]) => k)),
+  fx: among('damage', 'healing', 'other'), dmg: isStr, dtype: isStr, scale: isStr, higher: isStr
+};
+const ITEM_FIELDS: Record<string, FieldCheck> = {
+  cat: among(...ITEM_CATS), cost: isStr, wcat: among('simple', 'martial'), wrange: among('melee', 'ranged'), dmg: isStr, dtype: isStr, props: isStr,
+  thrown: isStr, vers: isStr, ammo: isStr, mastery: isStr, magic: finite, strReq: finite, stealthDis: isBool, cap: finite, capVol: isStr, xdim: isBool,
+  rarity: isStr, attune: isBool, base: (v) => typeof v === 'string' && v.startsWith('item/')
+};
+const cleanFields = <T extends object>(x: T, fields: Record<string, FieldCheck>): T =>
+  Object.fromEntries(Object.entries(x).filter(([k, v]) => !Object.hasOwn(fields, k) || fields[k](v))) as T;
 
 export const NEW_FIELDS: readonly (keyof Character)[] = ['spellSort', 'size', 'carryUp', 'attuneIds', 'grants', 'effectsOn', 'profs', 'defenses'];
 // Resources the Inventory tab echoed before `inv` existed.
@@ -742,7 +772,8 @@ export function migrate(data: unknown): Character {
   if (data.profs === undefined) ({ feats: c.feats, profs: c.profs } = splitTraining(c.feats));
   // Grants: a link that doesn't parse goes first, so grantErrors knows the source kind; then the grant must be valid.
   c.grants = c.grants.filter((g) => parseLink(g.from) && !grantErrors(g, parseLink(g.from)!.kind).length).map(cleanLinked);
-  c.inv = c.inv.map(cleanCid);
+  c.inv = c.inv.map((i) => cleanFields(cleanCid(i), ITEM_FIELDS));
+  c.spells = c.spells.map((x) => cleanFields(x, SPELL_FIELDS));
   // Saves from before defenses were entries kept string lists in `def` (no longer a field, so read from the raw save).
   if (data.defenses === undefined) {
     const raw = isObj(data.def) ? data.def : {};
@@ -1034,9 +1065,11 @@ export function addGrants(c: Character, from: string, inputs: GrantInput[]): Cha
       out.res = [...out.res, { ...r, count: maxOf(c, r) ?? 0 }];
     } else if (s.kind === 'spell') {
       if (input.link) { out = linkTo('spells', id); continue; }
-      const sp = input.spell ?? { name: s.name, lvl: 0, time: '', range: '' };
+      const { prep: _prep, ...sp } = input.spell ?? { name: s.name, lvl: 0, time: '', range: '' };
       const castAb = ABILITIES.find(([k]) => k === s.castAb)?.[0];
       // A spell with neither flag would load as prepared (migrate), so a granted one is always prepared or unprepared.
+      // The grant's flags win over the catalog spell's prep: an always-prepared spell has no prep to linger after
+      // "Always prepared" is unticked.
       out.spells = [...out.spells, { ...sp, id, ...(s.always ? { always: true } : { prep: false }), ...(castAb ? { castAb } : {}), ...base, ...common(s) }];
     } else if (s.kind === 'action' && input.link) {
       out = linkTo('attacks', id);

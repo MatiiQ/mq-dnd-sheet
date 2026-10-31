@@ -40,6 +40,25 @@ describe('SRD items', () => {
   it('read Bag of Holding’s capacity from its SRD text', () => {
     expect(by('Bag of Holding')).toMatchObject({ xdim: true, cap: 500, capVol: '64 cubic feet', wt: 5 });
   });
+  it('give magic weapons and armor built on a named base item that base’s fields', () => {
+    const ids = new Map(list.map((e) => [e.id, e]));
+    const based = list.filter((e) => e.base?.startsWith('item/'));
+    expect(based.length).toBeGreaterThan(10);
+    for (const e of based) {
+      const b = ids.get(e.base!)!;
+      expect([e.id, b.dmg ?? b.armor]).toEqual([e.id, e.dmg ?? e.armor]);
+    }
+    expect(by('Armor, +1, +2, or +3')!.base).toBe('armor');
+    expect(by('Weapon, +1, +2, or +3')!.base).toBe('weapon');
+    expect(by('Ring of Protection')!.base).toBeUndefined();
+    expect(by('Cloak of Protection')!.base).toBeUndefined();
+  });
+  it('end Armor of Resistance’s description at its damage type table', () => {
+    const d = by('Armor of Resistance')!.desc;
+    expect(d.trimEnd()).toMatch(/10 Thunder$/);
+    for (const junk of ['Legs retract', 'window shutter', 'rear hatch']) expect(d).not.toContain(junk);
+    expect(by('Apparatus of the Crab')).toBeDefined();
+  });
   it('give non-armor magic items their AC as a grant, never acBonus', () => {
     for (const e of list.filter((x) => x.acBonus !== undefined)) expect([e.name, e.armor]).toEqual([e.name, expect.any(String)]);
     expect(by('Ring of Protection')!.grants).toContainEqual(expect.objectContaining({ kind: 'ac', val: '1', needEq: true, needAtt: true }));
@@ -89,6 +108,15 @@ describe('SRD classes', () => {
   it('hold the 12 classes, one subclass each', () => {
     expect(list.map((c) => c.name)).toEqual(['Barbarian', 'Bard', 'Cleric', 'Druid', 'Fighter', 'Monk', 'Paladin', 'Ranger', 'Rogue', 'Sorcerer', 'Warlock', 'Wizard']);
     expect((classes as Entry[]).filter((e) => e.kind === 'subclass')).toHaveLength(12);
+  });
+  it('name every Fighting Style choice after its pool', () => {
+    const styles = (classes as Entry[]).filter((e) => /^feature\/[a-z]+\/fighting-style$/.test(e.id));
+    expect(styles.length).toBeGreaterThanOrEqual(3);
+    for (const f of styles) expect([f.id, specs(f).filter((s) => s.kind === 'choice').map((s) => s.name)]).toEqual([f.id, ['Fighting Style feat']]);
+  });
+  it('give each Signature Spell one free cast', () => {
+    const g2 = flat((classes as Entry[]).find((e) => e.id === 'feature/wizard/signature-spells')!).find((g) => g.kind === 'resource');
+    expect(g2!.max).toBe('1');
   });
   it('offer skills by the app’s keys and mark only the Warlock as Pact Magic', () => {
     const keys = SKILLS.map(([k]) => k);

@@ -18,7 +18,8 @@
     "desc": "This suit of armor is reinforced with adamantine, one of the hardest substances in existence. While you’re wearing it, any Critical Hit against you becomes a normal hit.",
     "cat": "magic",
     "page": 209,
-    "rarity": "Uncommon"
+    "rarity": "Uncommon",
+    "base": "armor"
   },
   {
     "id": "item/alchemists-fire",
@@ -107,6 +108,9 @@
     "attune": true
   },
   {
+    "armor": "shield",
+    "acBase": 2,
+    "wt": 6,
     "id": "item/animated-shield",
     "kind": "item",
     "name": "Animated Shield",
@@ -115,7 +119,8 @@
     "cat": "magic",
     "page": 209,
     "rarity": "Very Rare",
-    "attune": true
+    "attune": true,
+    "base": "item/shield"
   },
   {
     "id": "item/antitoxin",
@@ -154,9 +159,15 @@
     "desc": "You have a bonus to Armor Class while wearing this armor. The bonus is determined by its rarity.",
     "cat": "magic",
     "page": 210,
-    "rarity": "Rare (+1), Very Rare (+2), or Legendary (+3)"
+    "rarity": "Rare (+1), Very Rare (+2), or Legendary (+3)",
+    "base": "armor"
   },
   {
+    "armor": "heavy",
+    "acBase": 18,
+    "strReq": 15,
+    "stealthDis": true,
+    "wt": 65,
     "id": "item/armor-of-invulnerability",
     "kind": "item",
     "name": "Armor of Invulnerability",
@@ -194,14 +205,15 @@
         "needEq": true,
         "needAtt": true
       }
-    ]
+    ],
+    "base": "item/plate-armor"
   },
   {
     "id": "item/armor-of-resistance",
     "kind": "item",
     "name": "Armor of Resistance",
     "src": "srd",
-    "desc": "You have Resistance to one type of damage while you wear this armor. The GM chooses the type or determines it randomly by rolling on the following table. 1d10 Damage Type 1d10 Damage Type 1 Acid 6 Necrotic 2 Cold 7 Poison 3 Fire 8 Psychic 4 Force 9 Radiant 5 Lightning 10 Thunder Down wim. Legs retract, reducing the apparatus’s Speed and Swim Speed to 0 and making it unable to benefit from bonuses to speed. Forward window shutter closes. Side window shutters close (two per side). The claws retract.\nack: age.\nEach extended claw makes the following melee attack: +8 to hit, reach 5 ft. Hit: The target has the Grappled condition (escape DC 15).\ns The apparatus walks or swims backward provided its legs are extended.\nus The apparatus turns 90 degrees clockwise provided its legs are extended. The light turns off. The apparatus rises up to 20 feet if it’s in liquid. The rear hatch closes and seals.",
+    "desc": "You have Resistance to one type of damage while you wear this armor. The GM chooses the type or determines it randomly by rolling on the following table. 1d10 Damage Type 1d10 Damage Type 1 Acid 6 Necrotic 2 Cold 7 Poison 3 Fire 8 Psychic 4 Force 9 Radiant 5 Lightning 10 Thunder",
     "cat": "magic",
     "page": 210,
     "rarity": "Rare",
@@ -305,7 +317,8 @@
           }
         ]
       }
-    ]
+    ],
+    "base": "armor"
   },
   {
     "id": "item/armor-of-vulnerability",
@@ -353,7 +366,8 @@
           }
         ]
       }
-    ]
+    ],
+    "base": "armor"
   },
   {
     "id": "item/arrow-catching-shield",
@@ -680,7 +694,8 @@
         "val": "1",
         "needAtt": true
       }
-    ]
+    ],
+    "base": "weapon"
   },
   {
     "id": "item/blanket",
@@ -1456,6 +1471,14 @@
     "props": "finesse,light,thrown"
   },
   {
+    "wcat": "simple",
+    "wrange": "melee",
+    "dmg": "1d4",
+    "dtype": "Piercing",
+    "props": "finesse,light,thrown",
+    "thrown": "20/60",
+    "mastery": "nick",
+    "wt": 1,
     "id": "item/dagger-of-venom",
     "kind": "item",
     "name": "Dagger of Venom",
@@ -1463,7 +1486,8 @@
     "desc": "You gain a +1 bonus to attack rolls and damage rolls made with this magic weapon. You can take a Bonus Action to magically coat the blade with poison. The poison remains for 1 minute or until an attack using this weapon hits a creature. That creature must succeed on a DC 15 Constitution saving throw or take 2d10 Poison damage and have the Poisoned condition for 1 minute. The weapon can’t be used this way again until the next dawn.",
     "cat": "magic",
     "page": 216,
-    "rarity": "Rare"
+    "rarity": "Rare",
+    "base": "item/dagger"
   },
   {
     "id": "item/dancing-sword",
@@ -1474,7 +1498,8 @@
     "cat": "magic",
     "page": 217,
     "rarity": "Very Rare",
-    "attune": true
+    "attune": true,
+    "base": "weapon"
   },
   {
     "id": "item/dart",
@@ -1523,7 +1548,8 @@
     "cat": "magic",
     "page": 218,
     "rarity": "Legendary",
-    "attune": true
+    "attune": true,
+    "base": "weapon"
   },
   {
     "id": "item/demon-armor",
@@ -1710,7 +1736,8 @@
     "desc": "You gain a +1 bonus to attack rolls and damage rolls made with this magic weapon. The weapon deals an extra 3d6 damage of the weapon’s type if the target is a Dragon.",
     "cat": "magic",
     "page": 219,
-    "rarity": "Rare"
+    "rarity": "Rare",
+    "base": "weapon"
   },
   {
     "id": "item/druidic-focus",
@@ -1776,6 +1803,14 @@
     "acBonus": 2
   },
   {
+    "wcat": "martial",
+    "wrange": "melee",
+    "dmg": "1d8",
+    "dtype": "Bludgeoning",
+    "props": "versatile",
+    "vers": "1d10",
+    "mastery": "push",
+    "wt": 5,
     "id": "item/dwarven-thrower",
     "kind": "item",
     "name": "Dwarven Thrower",
@@ -1784,7 +1819,8 @@
     "cat": "magic",
     "page": 219,
     "rarity": "Very Rare",
-    "attune": true
+    "attune": true,
+    "base": "item/warhammer"
   },
   {
     "id": "item/efficient-quiver",
@@ -1848,7 +1884,8 @@
     "cat": "magic",
     "page": 220,
     "rarity": "Very Rare",
-    "attune": true
+    "attune": true,
+    "base": "weapon"
   },
   {
     "id": "item/entertainers-pack",
@@ -1981,7 +2018,8 @@
     "cat": "magic",
     "page": 223,
     "rarity": "Rare",
-    "attune": true
+    "attune": true,
+    "base": "weapon"
   },
   {
     "id": "item/flask",
@@ -2036,7 +2074,8 @@
         "needEq": true,
         "needAtt": true
       }
-    ]
+    ],
+    "base": "weapon"
   },
   {
     "id": "item/gaming-set",
@@ -2103,7 +2142,8 @@
     "desc": "You gain a +1 bonus to attack rolls and damage rolls made with this magic weapon. When you hit a Giant with this weapon, the Giant takes an extra 2d6 damage of the weapon’s type and must succeed on a DC 15 Strength saving throw or have the Prone condition.",
     "cat": "magic",
     "page": 223,
-    "rarity": "Rare"
+    "rarity": "Rare",
+    "base": "weapon"
   },
   {
     "id": "item/glaive",
@@ -2328,7 +2368,8 @@
     "charges": "5",
     "recharge": "dawn",
     "regain": "1d4+1",
-    "regainOn": "dawn"
+    "regainOn": "dawn",
+    "base": "weapon"
   },
   {
     "id": "item/hand-crossbow",
@@ -2540,7 +2581,8 @@
         "needEq": true,
         "needAtt": true
       }
-    ]
+    ],
+    "base": "weapon"
   },
   {
     "id": "item/holy-symbol",
@@ -2736,6 +2778,14 @@
     "props": "thrown"
   },
   {
+    "wcat": "simple",
+    "wrange": "melee",
+    "dmg": "1d6",
+    "dtype": "Piercing",
+    "props": "thrown",
+    "thrown": "30/120",
+    "mastery": "slow",
+    "wt": 2,
     "id": "item/javelin-of-lightning",
     "kind": "item",
     "name": "Javelin of Lightning",
@@ -2743,7 +2793,8 @@
     "desc": "Each time you make an attack roll with this magic weapon and hit, you can have it deal Lightning damage instead of Piercing damage.\nLightning Bolt. When you throw this weapon at a target no farther than 120 feet from you, you can forgo making a ranged attack roll and instead turn the weapon into a bolt of lightning. This bolt forms a 5-foot-wide Line between you and the target. The target and each other creature in the Line (excluding you) makes a DC 13 Dexterity saving throw, taking 4d6 Lightning damage on a failed save or half as much damage on a successful one. Immediately after dealing this damage, the weapon reappears in your hand. This property can’t be used again until the next dawn.",
     "cat": "magic",
     "page": 228,
-    "rarity": "Uncommon"
+    "rarity": "Uncommon",
+    "base": "item/javelin"
   },
   {
     "id": "item/jewelers-tools",
@@ -2936,7 +2987,8 @@
         "val": "1",
         "needAtt": true
       }
-    ]
+    ],
+    "base": "weapon"
   },
   {
     "id": "item/mace",
@@ -2954,6 +3006,12 @@
     "wt": 4
   },
   {
+    "wcat": "simple",
+    "wrange": "melee",
+    "dmg": "1d6",
+    "dtype": "Bludgeoning",
+    "mastery": "sap",
+    "wt": 4,
     "id": "item/mace-of-disruption",
     "kind": "item",
     "name": "Mace of Disruption",
@@ -2962,9 +3020,16 @@
     "cat": "magic",
     "page": 229,
     "rarity": "Rare",
-    "attune": true
+    "attune": true,
+    "base": "item/mace"
   },
   {
+    "wcat": "simple",
+    "wrange": "melee",
+    "dmg": "1d6",
+    "dtype": "Bludgeoning",
+    "mastery": "sap",
+    "wt": 4,
     "id": "item/mace-of-smiting",
     "kind": "item",
     "name": "Mace of Smiting",
@@ -2972,9 +3037,16 @@
     "desc": "You gain a +1 bonus to attack rolls and damage rolls made with this magic weapon. The bonus increases to +3 when you use the weapon to attack a Construct. When you roll a 20 on an attack roll made with this weapon, the target takes an extra 7 Bludgeoning damage, or 14 Bludgeoning damage if it’s a Construct. If a Construct has 25 Hit Points or fewer after taking this damage, it is destroyed.",
     "cat": "magic",
     "page": 229,
-    "rarity": "Rare"
+    "rarity": "Rare",
+    "base": "item/mace"
   },
   {
+    "wcat": "simple",
+    "wrange": "melee",
+    "dmg": "1d6",
+    "dtype": "Bludgeoning",
+    "mastery": "sap",
+    "wt": 4,
     "id": "item/mace-of-terror",
     "kind": "item",
     "name": "Mace of Terror",
@@ -2987,7 +3059,8 @@
     "charges": "3",
     "recharge": "dawn",
     "regain": "1d3",
-    "regainOn": "dawn"
+    "regainOn": "dawn",
+    "base": "item/mace"
   },
   {
     "id": "item/magnifying-glass",
@@ -3175,7 +3248,8 @@
     "desc": "Mithral is a light, flexible metal. Armor made of this substance can be worn under normal clothes. If the armor normally imposes Disadvantage on Dexterity (Stealth) checks or has a Strength requirement, the mithral version of the armor doesn’t.",
     "cat": "magic",
     "page": 231,
-    "rarity": "Uncommon"
+    "rarity": "Uncommon",
+    "base": "armor"
   },
   {
     "id": "item/morningstar",
@@ -3312,7 +3386,8 @@
     "cat": "magic",
     "page": 233,
     "rarity": "Very Rare",
-    "attune": true
+    "attune": true,
+    "base": "weapon"
   },
   {
     "id": "item/oathbow",
@@ -3323,7 +3398,8 @@
     "cat": "magic",
     "page": 233,
     "rarity": "Very Rare",
-    "attune": true
+    "attune": true,
+    "base": "weapon"
   },
   {
     "id": "item/oil",
@@ -3600,6 +3676,11 @@
     "stealthDis": true
   },
   {
+    "armor": "heavy",
+    "acBase": 18,
+    "strReq": 15,
+    "stealthDis": true,
+    "wt": 65,
     "id": "item/plate-armor-of-etherealness",
     "kind": "item",
     "name": "Plate Armor of Etherealness",
@@ -3608,7 +3689,8 @@
     "cat": "magic",
     "page": 234,
     "rarity": "Legendary",
-    "attune": true
+    "attune": true,
+    "base": "item/plate-armor"
   },
   {
     "id": "item/poisoners-kit",
@@ -3909,6 +3991,14 @@
     "props": "versatile"
   },
   {
+    "wcat": "simple",
+    "wrange": "melee",
+    "dmg": "1d6",
+    "dtype": "Bludgeoning",
+    "props": "versatile",
+    "vers": "1d8",
+    "mastery": "topple",
+    "wt": 4,
     "id": "item/quarterstaff-of-the-acrobat",
     "kind": "item",
     "name": "Quarterstaff of the Acrobat",
@@ -3917,7 +4007,8 @@
     "cat": "magic",
     "page": 237,
     "rarity": "Very Rare",
-    "attune": true
+    "attune": true,
+    "base": "item/quarterstaff"
   },
   {
     "id": "item/quiver",
@@ -4650,6 +4741,13 @@
     "props": "finesse,light"
   },
   {
+    "wcat": "martial",
+    "wrange": "melee",
+    "dmg": "1d6",
+    "dtype": "Slashing",
+    "props": "finesse,light",
+    "mastery": "nick",
+    "wt": 3,
     "id": "item/scimitar-of-speed",
     "kind": "item",
     "name": "Scimitar of Speed",
@@ -4658,7 +4756,8 @@
     "cat": "magic",
     "page": 243,
     "rarity": "Very Rare",
-    "attune": true
+    "attune": true,
+    "base": "item/scimitar"
   },
   {
     "id": "item/sending-stones",
@@ -5253,6 +5352,14 @@
     "cost": "45 GP"
   },
   {
+    "wcat": "martial",
+    "wrange": "melee",
+    "dmg": "1d8",
+    "dtype": "Slashing",
+    "props": "versatile",
+    "vers": "1d10",
+    "mastery": "sap",
+    "wt": 3,
     "id": "item/sun-blade",
     "kind": "item",
     "name": "Sun Blade",
@@ -5261,7 +5368,8 @@
     "cat": "magic",
     "page": 248,
     "rarity": "Rare",
-    "attune": true
+    "attune": true,
+    "base": "item/longsword"
   },
   {
     "id": "item/sword-of-life-stealing",
@@ -5272,7 +5380,8 @@
     "cat": "magic",
     "page": 248,
     "rarity": "Rare",
-    "attune": true
+    "attune": true,
+    "base": "weapon"
   },
   {
     "id": "item/sword-of-sharpness",
@@ -5283,7 +5392,8 @@
     "cat": "magic",
     "page": 248,
     "rarity": "Very Rare",
-    "attune": true
+    "attune": true,
+    "base": "weapon"
   },
   {
     "id": "item/sword-of-wounding",
@@ -5294,7 +5404,8 @@
     "cat": "magic",
     "page": 248,
     "rarity": "Rare",
-    "attune": true
+    "attune": true,
+    "base": "weapon"
   },
   {
     "id": "item/talisman-of-pure-good",
@@ -5354,6 +5465,13 @@
     "wt": 1
   },
   {
+    "wcat": "simple",
+    "wrange": "melee",
+    "dmg": "1d8",
+    "dtype": "Bludgeoning",
+    "props": "two-handed",
+    "mastery": "push",
+    "wt": 10,
     "id": "item/thunderous-greatclub",
     "kind": "item",
     "name": "Thunderous Greatclub",
@@ -5362,7 +5480,8 @@
     "cat": "magic",
     "page": 249,
     "rarity": "Very Rare",
-    "attune": true
+    "attune": true,
+    "base": "item/greatclub"
   },
   {
     "id": "item/tinderbox",
@@ -5457,6 +5576,15 @@
     "props": "thrown,versatile"
   },
   {
+    "wcat": "martial",
+    "wrange": "melee",
+    "dmg": "1d8",
+    "dtype": "Piercing",
+    "props": "thrown,versatile",
+    "thrown": "20/60",
+    "vers": "1d10",
+    "mastery": "topple",
+    "wt": 4,
     "id": "item/trident-of-fish-command",
     "kind": "item",
     "name": "Trident of Fish Command",
@@ -5469,7 +5597,8 @@
     "charges": "3",
     "recharge": "dawn",
     "regain": "1d3",
-    "regainOn": "dawn"
+    "regainOn": "dawn",
+    "base": "item/trident"
   },
   {
     "id": "item/universal-solvent",
@@ -5499,7 +5628,8 @@
     "desc": "This magic weapon deals an extra 2d6 damage to any creature it hits. This extra damage is of the same type as the weapon’s normal damage.",
     "cat": "magic",
     "page": 250,
-    "rarity": "Rare"
+    "rarity": "Rare",
+    "base": "weapon"
   },
   {
     "id": "item/vorpal-sword",
@@ -5510,7 +5640,8 @@
     "cat": "magic",
     "page": 250,
     "rarity": "Legendary",
-    "attune": true
+    "attune": true,
+    "base": "weapon"
   },
   {
     "id": "item/wand-of-binding",
@@ -5753,7 +5884,8 @@
     "desc": "You have a bonus to attack rolls and damage rolls made with this magic weapon. The bonus is determined by the weapon’s rarity.",
     "cat": "magic",
     "page": 253,
-    "rarity": "Uncommon (+1), Rare (+2), or Very Rare (+3)"
+    "rarity": "Uncommon (+1), Rare (+2), or Very Rare (+3)",
+    "base": "weapon"
   },
   {
     "id": "item/weapon-of-warning",
@@ -5764,7 +5896,8 @@
     "cat": "magic",
     "page": 253,
     "rarity": "Uncommon",
-    "attune": true
+    "attune": true,
+    "base": "weapon"
   },
   {
     "id": "item/weavers-tools",
