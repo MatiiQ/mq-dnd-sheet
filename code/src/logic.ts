@@ -736,6 +736,7 @@ const SPELL_FIELDS: Record<string, FieldCheck> = {
   desc: isStr, school: isStr, classes: isStr, ritual: isBool, atk: among('melee', 'ranged'), save: among(...ABILITIES.map(([k]) => k)),
   fx: among('damage', 'healing', 'other'), dmg: isStr, dtype: isStr, scale: isStr, higher: isStr, healMod: (v) => v === true
 };
+const ATTACK_FIELDS: Record<string, FieldCheck> = { econ: among('action', 'bonus', 'reaction', 'free', 'other'), group: among('weapon', 'other') };
 const ITEM_FIELDS: Record<string, FieldCheck> = {
   cat: among(...ITEM_CATS), cost: isStr, wcat: among('simple', 'martial'), wrange: among('melee', 'ranged'), dmg: isStr, dtype: isStr, props: isStr,
   thrown: isStr, vers: isStr, ammo: isStr, mastery: isStr, magic: finite, strReq: finite, stealthDis: isBool, cap: finite, capVol: isStr, xdim: isBool,
@@ -774,7 +775,8 @@ export function migrate(data: unknown): Character {
     return cleanCid(cleanLinked({ ...sp, ...named, ...(ABILITIES.some(([k]) => k === castAb) ? { castAb } : {}) }));
   });
   c.feats = c.feats.map((x) => cleanCid(cleanLinked(x)));
-  c.attacks = c.attacks.map(cleanLinked);
+  // Typed attacks are manual actions (plan 5): their numbers stay as typed; a bad timing or section goes.
+  c.attacks = c.attacks.map((a) => cleanFields(cleanLinked(a), ATTACK_FIELDS));
   // Every character now has a computed Unarmed Strike (plan 5), and saves copied from the old samples hold a typed one.
   // It goes once, only from a save from before `hands` existed; one typed later stays. Its "Grapple / Shove (DC n)"
   // text is covered by the computed row's Grapple and Shove DC.

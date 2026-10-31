@@ -47,7 +47,9 @@ export interface Counter { count: number; max?: number; maxV?: string; recharge?
 export interface Resource extends Linked, Counter { id: string; name: string; note?: string; typeName?: string; casts?: string }
 // When an action happens in a turn (plan 5's timing tags): an action, a Bonus Action, a Reaction, free, or other.
 export type Econ = 'action' | 'bonus' | 'reaction' | 'free' | 'other';
-export interface Attack extends Linked { id: string; name: string; hit: string; dmg: string; info: string; mastery: string }
+// A typed (manual) action: its numbers as typed, never recomputed. econ: its timing tag; group: the Actions section it
+// shows in ('weapon' = Weapon attacks, else Other).
+export interface Attack extends Linked { id: string; name: string; hit: string; dmg: string; info: string; mastery: string; econ?: Econ; group?: 'weapon' | 'other' }
 export interface Rider { id: string; name: string; dice: string }
 // armor/acBase: a suit of armor or a Shield and its table base. acBonus: a magic or other bonus, counted while equipped.
 // wt: weight in lb per unit. cid (here and on spells and features): the catalog id the entry was copied from.

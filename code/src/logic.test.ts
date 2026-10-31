@@ -1499,3 +1499,15 @@ describe('rebuilt samples (plan 4)', () => {
     expect(seren.spells.find((x) => x.name === 'Thorn Whip')!.cid).toBeUndefined();
   });
 });
+
+describe('manual actions (plan 5)', () => {
+  const raw = (attacks: unknown[]) => ({ ...JSON.parse(JSON.stringify(sampleCharacter())), attacks });
+  it('keeps typed attacks with their numbers, a valid timing and section', () => {
+    const bow = { id: 'b', name: 'Longbow', hit: '+9', dmg: '1d8 +4 Piercing', info: '150/600 ft', mastery: 'Slow' };
+    const out = migrate(raw([bow, { ...bow, id: 'x', econ: 'sometimes', group: 'x' }, { ...bow, id: 'y', econ: 'bonus', group: 'weapon' }]));
+    expect(out.attacks[0]).toEqual(bow);
+    expect(out.attacks[1]).toEqual({ ...bow, id: 'x' });
+    expect(out.attacks[2]).toEqual({ ...bow, id: 'y', econ: 'bonus', group: 'weapon' });
+    expect(migrate(JSON.parse(JSON.stringify(out))).attacks).toEqual(out.attacks);
+  });
+});
