@@ -1,6 +1,6 @@
 // The Actions tab, computed from the sheet (plan 5): weapon attacks, Unarmed Strike, spells, feature actions and extra
 // damage. Pure functions of the character; nothing here is stored.
-import { slug } from './catalog/schema';
+import { slug, type SpellPart } from './catalog/schema';
 import { valueAt } from './catalog/value';
 import { hasProp, isWeapon, twoHanded, versatile, weaponKind, weaponMatches, weaponsHeld } from './hands';
 import { activeGrants, isActive, linkOf, sourceLabel, sourceOf } from './links';
@@ -233,6 +233,8 @@ export function cantripDice(dice: string, level: number): string {
 export interface SpellAction {
   spellId: string; name: string; group: 'damage' | 'save' | 'healing'; econ: Econ; hit?: number; dc?: number; save?: Ability;
   dice: string; dtype?: string; dtypes?: string; upcast?: string; range: string; source?: string; effect?: boolean; note?: string;
+  // part: the index of the spell part this row shows (Ice Knife · Burst); absent on the spell's own row.
+  part?: number;
 }
 const ABBR = (a: Ability) => a.toUpperCase();
 // An On/Off effect of the spell: an atkAbil grant from it that counts while its effect is on (Shillelagh).
@@ -251,40 +253,51 @@ function cantripBonus(c: Character, sp: Spell): number {
 
 // Spells castable now — cantrips always (as in the Spells tab), others when usable (prepared or always prepared) — that
 // count now (isActive: a granted spell's level and item conditions), with an attack, a save, damage, healing, or an
-// On/Off effect (Shillelagh, shown with its switch and no dice). A save puts a spell under save even when it deals
-// damage (Fireball); otherwise an attack or damage puts it under damage, healing under healing. To-hit and DC follow
-// the spell's own casting ability (PHB p.41).
+// On/Off effect (Shillelagh, shown with its switch and no dice), then one row per part (plan 7). A save puts a row under
+// save even when it deals damage (Fireball); otherwise an attack or damage puts it under damage, healing under healing.
 export function spellActions(c: Character): SpellAction[] {
   const out: SpellAction[] = [];
   for (const sp of c.spells) {
     if (!(sp.lvl === 0 || spellUsable(c, sp)) || !isActive(c, sp)) continue;
     const effect = effectOf(c, sp);
-    if (!sp.atk && !sp.save && sp.fx !== 'damage' && sp.fx !== 'healing' && !effect) continue;
     const key = spellKey(sp);
-    const group: SpellAction['group'] = sp.save ? 'save' : sp.atk || sp.fx === 'damage' ? 'damage' : sp.fx === 'healing' ? 'healing' : 'damage';
-    let dice = sp.dmg ?? '';
-    if (dice && (sp.cid === 'spell/eldritch-blast' || (!sp.cid && normName(sp.name) === 'eldritch blast'))) {
-      // Eldritch Blast adds beams instead of dice (PHB p.267).
-      dice = `${cantripTier(c.level)} beams × ${dice}`;
-    } else if (dice && sp.scale === 'cantrip') {
-      dice = diceText(cantripDice(dice, c.level), cantripBonus(c, sp));
-    } else if (dice && ((sp.fx === 'healing' && sp.healMod) || (sp.fx === 'damage' && sp.dmgMod))) {
-      // Cure Wounds, Healing Word, Mass Cure Wounds: "+ your spellcasting ability modifier" (PHB pp.259, 284, 296);
-      // damage that says the same: Spiritual Weapon, Flame Blade (PHB pp.319, 275).
-      const ab = sp.castAb ?? (c.castAb === 'none' ? null : c.castAb);
-      if (ab) dice = `${dice} + ${ABBR(ab)} (${fmt(abilityMod(c, ab))})`;
-    }
     const [econ, econNote] = SPELL_ECON[key] ?? [econOf(sp.time), undefined];
     const note = econNote ?? SPELL_NOTES[key];
-    const hit = sp.atk ? spellAttackFor(c, sp) : null, dc = sp.save ? spellSaveDcFor(c, sp) : null, source = sourceLabel(c, sp);
-    out.push({
-      spellId: sp.id, name: sp.name, group, econ, dice, range: sp.range,
-      ...(hit !== null ? { hit } : {}), ...(dc !== null ? { dc } : {}), ...(sp.save ? { save: sp.save } : {}),
-      ...(sp.dtype ? { dtype: sp.dtype } : {}), ...(sp.dtypes ? { dtypes: sp.dtypes } : {}), ...(sp.higher ? { upcast: sp.higher } : {}), ...(source ? { source } : {}),
-      ...(effect ? { effect: true } : {}), ...(note ? { note } : {})
-    });
+    const source = sourceLabel(c, sp);
+    if (sp.atk || sp.save || sp.fx === 'damage' || sp.fx === 'healing' || effect) {
+      out.push({
+        ...spellRow(c, sp, { fx: sp.fx, dice: sp.dmg, dtype: sp.dtype, dtypes: sp.dtypes, save: sp.save, atk: sp.atk, dmgMod: sp.dmgMod, healMod: sp.healMod, scale: sp.scale }),
+        name: sp.name, econ, ...(sp.higher ? { upcast: sp.higher } : {}), ...(source ? { source } : {}), ...(effect ? { effect: true } : {}), ...(note ? { note } : {})
+      });
+    }
+    // Each part is its own row with numbers only: no upcast, source, or effect (the spell's own row has them).
+    (sp.parts ?? []).forEach((p, i) => out.push({ ...spellRow(c, sp, p), name: `${sp.name} · ${p.label}`, econ, part: i, ...(note ? { note } : {}) }));
   }
   return out;
+}
+type RowFields = Pick<SpellPart, 'dtype' | 'dtypes' | 'save' | 'atk' | 'dmgMod' | 'healMod' | 'scale'> & { fx?: Spell['fx']; dice?: string };
+// The numbers of one row of a spell: the spell's own fields or one part's. Its group: a save puts it under save, an
+// attack or damage under damage, healing under healing. To-hit and DC follow the spell's casting ability (PHB p.41).
+function spellRow(c: Character, sp: Spell, r: RowFields): Omit<SpellAction, 'name' | 'econ'> {
+  const group: SpellAction['group'] = r.save ? 'save' : r.atk || r.fx === 'damage' ? 'damage' : r.fx === 'healing' ? 'healing' : 'damage';
+  let dice = r.dice ?? '';
+  if (dice && (sp.cid === 'spell/eldritch-blast' || (!sp.cid && normName(sp.name) === 'eldritch blast'))) {
+    // Eldritch Blast adds beams instead of dice (PHB p.267).
+    dice = `${cantripTier(c.level)} beams × ${dice}`;
+  } else if (dice && r.scale === 'cantrip') {
+    dice = diceText(cantripDice(dice, c.level), cantripBonus(c, sp));
+  } else if (dice && ((r.fx === 'healing' && r.healMod) || (r.fx === 'damage' && r.dmgMod))) {
+    // Cure Wounds, Healing Word, Mass Cure Wounds: "+ your spellcasting ability modifier" (PHB pp.259, 284, 296);
+    // damage that says the same: Spiritual Weapon, Flame Blade (PHB pp.319, 275).
+    const ab = sp.castAb ?? (c.castAb === 'none' ? null : c.castAb);
+    if (ab) dice = `${dice} + ${ABBR(ab)} (${fmt(abilityMod(c, ab))})`;
+  }
+  const hit = r.atk ? spellAttackFor(c, sp) : null, dc = r.save ? spellSaveDcFor(c, sp) : null;
+  return {
+    spellId: sp.id, group, dice, range: sp.range,
+    ...(hit !== null ? { hit } : {}), ...(dc !== null ? { dc } : {}), ...(r.save ? { save: r.save } : {}),
+    ...(r.dtype ? { dtype: r.dtype } : {}), ...(r.dtypes ? { dtypes: r.dtypes } : {})
+  };
 }
 
 // ---------- features and extra damage ----------

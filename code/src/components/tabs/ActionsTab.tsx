@@ -234,15 +234,16 @@ export function ActionsTab() {
   const spellRow = (x: SpellAction) => {
     const sp = c.spells.find((s) => s.id === x.spellId)!;
     return shows(x.econ) && (
-      <ActRow key={x.spellId} econ={x.econ} name={x.name}
+      <ActRow key={`${x.spellId}:${x.part ?? 'main'}`} econ={x.econ} name={x.name}
         sub={[sp.lvl ? ORDINAL[sp.lvl] + ' level' : 'Cantrip', x.range, x.note].filter(Boolean).join(' · ')}
         side={<div className="row wrap gap-8 act-nums">
           {x.hit !== undefined && <><span className="sr-only">Spell attack</span><DieBadge value={fmt(x.hit)} /></>}
           {x.dc !== undefined && <span className="act-dc">DC {x.dc}{x.save ? ' ' + x.save.toUpperCase() : ''}</span>}
           {x.dice && <span className="act-dmg">{x.dice}{dtypeText(x) ? ' ' + dtypeText(x) : ''}</span>}
-          <CastButtons sp={sp} effect={!!x.effect} />
+          {x.part === undefined && <CastButtons sp={sp} effect={!!x.effect} />}
         </div>}
-        body={<>
+        // A part's row shows numbers only: one casting, from the spell's own row, spends one slot (plan 7).
+        body={x.part !== undefined ? undefined : <>
           {sp.desc && <span className="entry-desc">{sp.desc}</span>}
           {x.upcast && <span className="muted">At higher levels: {x.upcast}</span>}
           {(sp.comp || sp.dur) && <span className="muted">{[sp.comp, sp.dur].filter(Boolean).join(' · ')}</span>}

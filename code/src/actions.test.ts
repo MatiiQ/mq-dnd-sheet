@@ -272,6 +272,22 @@ describe('spell actions', () => {
     expect(extra(c)).toEqual([]);
     expect(extra({ ...c, conc: { id: sp.id, name: sp.name } })).toEqual([expect.objectContaining({ dice: '2d8', dtype: 'Acid/Cold/Fire/Lightning' })]);
   });
+  it('adds one row per spell part, named after the part, grouped and scaled by its own fields', () => {
+    const knife = catSpell('spell/ice-knife', { parts: [{ label: 'Burst', fx: 'damage', dice: '2d6', dtype: 'Cold', save: 'dex', scale: '1d6/slot' }] });
+    const c = ilyra({ spells: [knife] });
+    const rows = spellActions(c).filter((a) => a.spellId === 'ice-knife');
+    expect(rows.map((r) => [r.name, r.group, r.part, r.dice, r.dtype])).toEqual([['Ice Knife', 'damage', undefined, '1d10', 'Piercing'], ['Ice Knife · Burst', 'save', 0, '2d6', 'Cold']]);
+    expect(rows[1]).toMatchObject({ dc: rows[1].dc, save: 'dex', range: knife.range });
+    expect(rows[1].dc).toBeGreaterThan(0);
+    expect([rows[1].hit, rows[1].effect, rows[1].upcast]).toEqual([undefined, undefined, undefined]);
+    // A cantrip part scales by its own scale; a part's modifier is its own; no save or attack groups by fx.
+    const toll = catSpell('spell/sacred-flame', { parts: [{ label: 'Missing HP', fx: 'damage', dice: '1d12', dtype: 'Necrotic', save: 'wis', scale: 'cantrip' }] });
+    expect(spellActions(ilyra({ spells: [toll] })).find((a) => a.part === 0)!.dice).toBe('2d12');
+    const hand = catSpell('spell/spiritual-weapon', { parts: [{ label: 'Grasping Hand', fx: 'damage', dice: '4d6', dtype: 'Bludgeoning', dmgMod: true },
+      { label: 'Light', fx: 'healing', dice: '4d12', healMod: true }] });
+    const hr = spellActions(ilyra({ spells: [hand] })).filter((a) => a.part !== undefined);
+    expect(hr.map((r) => [r.group, r.dice])).toEqual([['damage', '4d6 + WIS (+2)'], ['healing', '4d12 + WIS (+2)']]);
+  });
   it('adds a cantrip damage bonus to the feature’s class cantrips only', () => {
     const bonus = (from: string) => grant({ id: 'gp', kind: 'dmgBonus', name: 'Potent Spellcasting', val: 'wis', cantrip: true, from });
     const c = { ...druidSample(), grants: [...druidSample().grants, bonus('feature:f7')] };

@@ -33,6 +33,13 @@ describe('ActionsTab', () => {
     const orb = { id: 'orb', name: 'Chromatic Orb', lvl: 1, time: 'Action', range: '90 feet', prep: true, atk: 'ranged' as const, fx: 'damage' as const, dmg: '3d8', dtypes: 'Acid,Cold,Fire' };
     expect(render({ ...sampleCharacter(), spells: [...sampleCharacter().spells, orb] })).toContain('3d8 Acid/Cold/Fire');
   });
+  it('gives a spell with parts one row per part and Cast buttons on its own row only', () => {
+    const knife = { id: 'knife', name: 'Ice Knife', lvl: 1, time: 'Action', range: '60 feet', prep: true, atk: 'ranged' as const, fx: 'damage' as const, dmg: '1d10',
+      dtype: 'Piercing', desc: 'Shard text.', parts: [{ label: 'Burst', fx: 'damage' as const, dice: '2d6', dtype: 'Cold', save: 'dex' as const }] };
+    const html = render({ ...sampleCharacter(), spells: [...sampleCharacter().spells, knife] });
+    expect(html).toContain('Ice Knife · Burst');
+    expect(html.match(/aria-label="Cast Ice Knife with/g)).toHaveLength(1);
+  });
   it('shows the Light extra attack with two Daggers in hand', () => {
     const c: Character = { ...sampleCharacter(), inv: [...sampleCharacter().inv, dagger({ id: 'dg', qty: 2 })], hands: ['dg', 'dg'] };
     expect(render(c)).toContain('Light extra attack · Dagger');

@@ -370,6 +370,15 @@ describe('loading saves and backups', () => {
     expect([c.spells[1].dmgMod, c.spells[1].dtypes]).toEqual([undefined, undefined]);
     expect([c.spells[2].dtype, c.spells[2].dtypes]).toEqual(['Fire', undefined]);
   });
+  it('keeps a spell’s good parts, drops the bad ones, and drops parts when none is left, never the spell', () => {
+    const sp = { id: 'a', name: 'Ice Knife', lvl: 1, time: 'Action', range: '60 ft', fx: 'damage', dmg: '1d10', atk: 'ranged' };
+    const burst = { label: 'Burst', fx: 'damage', dice: '2d6', dtype: 'Cold', save: 'dex', scale: '1d6/slot' };
+    const c = migrate({ ...sampleCharacter(), spells: [{ ...sp, parts: [burst, { label: 'Bad', fx: 'other', dice: '1d4' }, { ...burst }, 'x'] },
+      { ...sp, id: 'b', parts: [{ label: '', fx: 'damage', dice: '1d4' }] }, { ...sp, id: 'c', parts: 'Burst' }] });
+    expect(c.spells.map((s) => s.id)).toEqual(['a', 'b', 'c']);
+    expect(c.spells[0].parts).toEqual([burst]);
+    expect([c.spells[1].parts, c.spells[2].parts]).toEqual([undefined, undefined]);
+  });
   it('turns the old refill flag into a recharge', () => {
     const c = migrate({ res: [{ id: 'a', name: 'Ki', count: 1, refill: true }, { id: 'b', name: 'Rage', count: 1, refill: true, recharge: 'short' }, { id: 'c', name: 'Gold', count: 1 }] });
     expect(c.res.map((r) => r.recharge)).toEqual(['long', 'short', 'none']);

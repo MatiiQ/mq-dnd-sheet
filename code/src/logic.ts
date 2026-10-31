@@ -1,6 +1,6 @@
 // D&D 2024 rules used by the sheet. Pure functions: each takes a character and returns the next one.
 import { blankCharacter, sampleCharacter } from './defaults';
-import { DAMAGE_TYPES, grantErrors, isDtypes, ITEM_CATS, type GrantSpec } from './catalog/schema';
+import { DAMAGE_TYPES, grantErrors, isDtypes, ITEM_CATS, partErrors, type GrantSpec } from './catalog/schema';
 import { isValue, valueAt, type ValueCtx } from './catalog/value';
 import { PROF_NAMES, type ProfCat } from './catalog/names';
 import { setHands } from './hands';
@@ -779,6 +779,19 @@ const ITEM_FIELDS: Record<string, FieldCheck> = {
   rarity: isStr, attune: isBool, base: (v) => typeof v === 'string' && v.startsWith('item/'), sec: nonEmpty,
   in: nonEmpty, cp: wholeNonNeg, sp: wholeNonNeg, ep: wholeNonNeg, gp: wholeNonNeg, pp: wholeNonNeg
 };
+// A spell's parts on load: the good ones stay (partErrors, first of a repeated label), parts goes when none is left;
+// never the spell.
+function cleanParts(sp: Spell): Spell {
+  if (sp.parts === undefined) return sp;
+  const { parts, ...rest } = sp;
+  const seen = new Set<string>();
+  const good = (Array.isArray(parts) ? parts : []).filter((p) => {
+    if (partErrors(p).length || seen.has(p.label)) return false;
+    seen.add(p.label);
+    return true;
+  });
+  return good.length ? { ...rest, parts: good } : rest;
+}
 const cleanFields = <T extends object>(x: T, fields: Record<string, FieldCheck>): T =>
   Object.fromEntries(Object.entries(x).filter(([k, v]) => !Object.hasOwn(fields, k) || fields[k](v))) as T;
 
@@ -801,7 +814,9 @@ export function migrate(data: unknown): Character {
     d[k] = Object.fromEntries(Object.entries(base).map(([kk, bv]) => [kk, sameType(bv, v[kk]) ? v[kk] : bv]));
   }
   for (const k of ENTRY_LISTS) {
-    d[k] = (d[k] as unknown[]).filter(isEntry).map((x) => (typeof x.id === 'string' ? x : { ...x, id: newId() }));
+    // A spell's parts are the one list an entry may hold (plan 7); cleanParts checks them below.
+    const ok = (x: unknown) => isEntry(k === 'spells' && isObj(x) && 'parts' in x ? { ...x, parts: null } : x);
+    d[k] = (d[k] as unknown[]).filter(ok).map((x) => (typeof (x as Record<string, unknown>).id === 'string' ? x : { ...(x as object), id: newId() }));
   }
   const c = d as unknown as Character;
   c.senses = c.senses.map(({ desc, ...se }) => cleanLinked({ ...se, ...(typeof desc === 'string' ? { desc } : {}) }));
@@ -832,7 +847,7 @@ export function migrate(data: unknown): Character {
   c.sections = c.sections.filter((x, i, all) => typeof x.name === 'string' && x.name.trim() !== '' && all.findIndex((y) => y.id === x.id) === i);
   c.inv = c.inv.map((i) => (i.sec === undefined || c.sections.some((x) => x.id === i.sec) ? i : (({ sec: _, ...x }) => x)(i)));
   // A typed damage type wins over a chosen one's list (spellFromForm), so dtypes never stays next to it.
-  c.spells = c.spells.map((x) => cleanFields(x, SPELL_FIELDS)).map((x) => (x.dtype && x.dtypes !== undefined ? (({ dtypes: _d, ...r }) => r)(x) : x));
+  c.spells = c.spells.map((x) => cleanFields(x, SPELL_FIELDS)).map((x) => (x.dtype && x.dtypes !== undefined ? (({ dtypes: _d, ...r }) => r)(x) : x)).map(cleanParts);
   // Saves from before defenses were entries kept string lists in `def` (no longer a field, so read from the raw save).
   if (data.defenses === undefined) {
     const raw = isObj(data.def) ? data.def : {};

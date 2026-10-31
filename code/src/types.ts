@@ -1,5 +1,5 @@
 import type { ProfCat } from './catalog/names';
-import type { GrantSpec, ItemEntry } from './catalog/schema';
+import type { GrantSpec, ItemEntry, SpellPart } from './catalog/schema';
 
 export type Ability = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
 export type CastAbility = 'none' | 'int' | 'wis' | 'cha';
@@ -84,6 +84,8 @@ export interface Spell extends Linked {
   // healMod: the healing adds the spellcasting ability modifier (Cure Wounds), shown on its Actions row; dmgMod the same
   // for damage (Spiritual Weapon). dtypes: a damage type chosen from a list ('Acid,Cold,Fire'), never with dtype.
   healMod?: boolean; dmgMod?: boolean; dtypes?: string;
+  // parts: more damage or healing rows of the spell, catalog-only (plan 7); a list, cleaned on load by cleanParts.
+  parts?: SpellPart[];
 }
 export interface Feature extends Linked { id: string; g: FeatureGroup; name: string; desc: string; cid?: string }
 export interface Concentration { id: string; name: string }

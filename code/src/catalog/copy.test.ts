@@ -52,6 +52,13 @@ describe('spellSummary', () => {
     expect(spellSummary({ ...base, atk: undefined, save: undefined })).toBe('1d10 Fire');
     expect(spellSummary({ ...base, atk: 'melee', dtype: undefined })).toBe('1d10 · melee attack');
   });
+  it('adds each part after "; " as "<label>: <summary>"', () => {
+    const base = spell('spell/fire-bolt');
+    const knife = { ...base, dice: '1d10', dtype: 'Piercing', parts: [{ label: 'Burst', fx: 'damage' as const, dice: '2d6', dtype: 'Cold', save: 'dex' as const }] };
+    expect(spellSummary(knife)).toBe('1d10 Piercing · ranged attack; Burst: 2d6 Cold · DEX save');
+    const celestial = { ...base, atk: undefined, save: 'dex' as const, dice: '6d12', dtype: 'Radiant', parts: [{ label: 'Healing Light', fx: 'healing' as const, dice: '4d12', healMod: true }] };
+    expect(spellSummary(celestial)).toBe('6d12 Radiant · DEX save; Healing Light: 4d12 healing');
+  });
   it('names a chosen damage type as the list of types', () => {
     const base = spell('spell/fire-bolt');
     expect(spellSummary({ ...base, dice: '3d8', dtype: undefined, dtypes: 'Acid,Cold,Fire' })).toBe('3d8 Acid/Cold/Fire · ranged attack');
@@ -674,6 +681,15 @@ describe('spellFromForm', () => {
     expect([typed.dtype, typed.dtypes]).toEqual(['Fire', undefined]);
     expect(saveEntry<Spell>([x], typed, 's1')[0]).toMatchObject({ dtype: 'Fire', dmgMod: true });
     expect('dtypes' in saveEntry<Spell>([x], typed, 's1')[0] && saveEntry<Spell>([x], typed, 's1')[0].dtypes !== undefined).toBe(false);
+  });
+  it('copies parts and keeps them through an edit that changes fx or dice', () => {
+    const knife = { ...spell('spell/fire-bolt'), parts: [{ label: 'Burst', fx: 'damage' as const, dice: '2d6', dtype: 'Cold', save: 'dex' as const }] };
+    const x = { id: 's1', ...spellFromEntry(knife) };
+    expect(x.parts).toEqual(knife.parts);
+    expect(x.parts).not.toBe(knife.parts);
+    expect(spellFromForm(draftFromSpell(x))).toEqual(without(x, 'id', 'prep'));
+    const edited = saveEntry<Spell>([x], spellFromForm({ ...draftFromSpell(x), fx: 'healing', dmg: '1d4' }), 's1')[0];
+    expect(edited.parts).toEqual(knife.parts);
   });
   it('edits clear what the form cleared and keep what it doesn’t own', () => {
     const fireball: Spell = { id: 's1', ...spellFromEntry(spell('spell/fireball')), prep: false };

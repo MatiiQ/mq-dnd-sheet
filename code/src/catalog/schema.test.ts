@@ -81,6 +81,24 @@ describe('validateEntry', () => {
     expect(validateEntry({ ...orb, dtypes: 'Acid,Sonic' })).not.toEqual([]);        // damage types only
     expect(validateEntry({ ...orb, dtypes: 'Acid,Cold', dtype: 'Acid' })).not.toEqual([]); // never both
   });
+  it('takes parts on a spell: a non-empty list of well-formed parts with unique labels', () => {
+    const cure = (srdSpells as unknown as SpellEntry[]).find((e) => e.id === 'spell/cure-wounds')!;
+    const burst = { label: 'Burst', fx: 'damage', dice: '2d6', dtype: 'Cold', save: 'dex', scale: '1d6/slot' };
+    expect(validateEntry({ ...cure, parts: [burst] })).toEqual([]);
+    expect(validateEntry({ ...cure, parts: [burst, { label: 'Light', fx: 'healing', dice: '4d12', healMod: true }] })).toEqual([]);
+    expect(validateEntry({ ...cure, parts: [] })).not.toEqual([]);
+    expect(validateEntry({ ...cure, parts: [burst, burst] })).not.toEqual([]);                       // labels unique
+    expect(validateEntry({ ...cure, parts: [{ ...burst, label: '' }] })).not.toEqual([]);
+    expect(validateEntry({ ...cure, parts: [{ ...burst, fx: 'other' }] })).not.toEqual([]);
+    expect(validateEntry({ ...cure, parts: [{ ...burst, dice: undefined }] })).not.toEqual([]);
+    expect(validateEntry({ ...cure, parts: [{ ...burst, save: 'luck' }] })).not.toEqual([]);
+    expect(validateEntry({ ...cure, parts: [{ ...burst, atk: 'thrown' }] })).not.toEqual([]);
+    expect(validateEntry({ ...cure, parts: [{ ...burst, dtypes: 'Radiant,Necrotic' }] })).not.toEqual([]); // never both
+    expect(validateEntry({ ...cure, parts: [{ ...burst, extra: 1 }] })).not.toEqual([]);             // SpellPart keys only
+    expect(validateEntry({ ...cure, parts: [{ ...burst, dmgMod: false }] })).not.toEqual([]);
+    expect(validateEntry({ ...cure, parts: ['burst'] })).not.toEqual([]);
+    expect(validateEntry({ ...cure, desc: { x: 1 } })).not.toEqual([]);                           // other fields stay plain values
+  });
   it('takes a damage type on an Unarmed Strike grant (Demon Armor)', () => {
     expect(validateEntry({ ...feature, grants: [{ id: 'g1', kind: 'unarmed', name: 'Claws', die: '1d8', abs: 'str', dtype: 'Slashing' }] })).toEqual([]);
     const demon = (items as unknown as ItemEntry[]).find((e) => e.id === 'item/demon-armor')!;

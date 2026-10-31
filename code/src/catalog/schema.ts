@@ -17,7 +17,14 @@ export interface SpellEntry extends EntryBase {
   healMod?: boolean;   // the healing adds the spellcasting ability modifier (Cure Wounds); data only, no rules text
   dmgMod?: boolean;    // the damage adds the spellcasting ability modifier (Spiritual Weapon)
   dtypes?: string;     // a damage type chosen from a list ('Acid,Cold,Fire'); dtype is then left out
+  parts?: SpellPart[]; // more damage or healing rows (Ice Knife's burst); the spell's own fields stay the first row
   grants?: Spec[];   // effects while the spell is on (Shillelagh), read when it is added to a character
+}
+// One more damage or healing row of a spell, named '<spell> · <label>'. It inherits nothing from the spell: every field
+// its row needs is written on it. dmgMod/healMod are only ever true.
+export interface SpellPart {
+  label: string; fx: 'damage' | 'healing'; dice: string; dtype?: string; dtypes?: string; save?: Ability; atk?: 'melee' | 'ranged';
+  dmgMod?: boolean; healMod?: boolean; scale?: string;
 }
 export interface ItemEntry extends EntryBase {
   kind: 'item'; cat: 'weapon' | 'armor' | 'shield' | 'gear' | 'tool' | 'pack' | 'ammo' | 'focus' | 'magic';
@@ -168,8 +175,22 @@ const SPELL: Record<string, [Check, boolean]> = {
   lvl: [whole(0, 9), true], school: [str, true], classes: [str, true], time: [str, true], range: [str, true], comp: [str, true], dur: [str, true],
   conc: [bool, true], ritual: [bool, true], atk: [RANGE_KIND, false], save: [ability, false], fx: [oneOf('damage', 'healing', 'other'), true],
   dice: [str, false], dtype: [str, false], scale: [str, false], higher: [str, false], acFx: [oneOf(...AC_EFFECTS), false], acVal: [num, false],
-  healMod: [oneOf(true), false], dmgMod: [oneOf(true), false], dtypes: [(v) => isDtypes(v), false]
+  healMod: [oneOf(true), false], dmgMod: [oneOf(true), false], dtypes: [(v) => isDtypes(v), false], parts: [(v) => Array.isArray(v), false]
 };
+const PART: Record<string, [Check, boolean]> = {
+  label: [(v) => typeof v === 'string' && v.trim() !== '', true], fx: [oneOf('damage', 'healing'), true], dice: [str, true],
+  dtype: [str, false], dtypes: [(v) => isDtypes(v), false], save: [ability, false], atk: [RANGE_KIND, false],
+  dmgMod: [oneOf(true), false], healMod: [oneOf(true), false], scale: [str, false]
+};
+// What is wrong with one spell part, [] when nothing. Shared with migrate(), which keeps the good parts of a save.
+export function partErrors(p: unknown, where = 'part'): string[] {
+  if (!isObj(p)) return [`${where} is not an object`];
+  const errs: string[] = [];
+  for (const k of Object.keys(p)) if (!(k in PART)) errs.push(`${where}: unknown field ${k}`);
+  checkFields(p, PART, where, errs);
+  if (p.dtype !== undefined && p.dtypes !== undefined) errs.push(`${where}: dtype and dtypes together`);
+  return errs;
+}
 const ITEM: Record<string, [Check, boolean]> = {
   cat: [oneOf(...ITEM_CATS), true], cost: [str, false], wt: [num, false],
   wcat: [oneOf('simple', 'martial'), false], wrange: [RANGE_KIND, false], dmg: [str, false], dtype: [str, false], props: [str, false], thrown: [str, false],
@@ -269,7 +290,15 @@ export function validateEntry(x: unknown): string[] {
   if (e.id !== want) errs.push(`${at}: id should be ${want}`);
 
   if (e.kind === 'spell' || e.kind === 'item') {
-    for (const [k, v] of Object.entries(x)) if (k !== 'grants' && !primitive(v)) errs.push(`${at}: ${k} is not a plain value`);
+    for (const [k, v] of Object.entries(x)) if (k !== 'grants' && !(k === 'parts' && e.kind === 'spell') && !primitive(v)) errs.push(`${at}: ${k} is not a plain value`);
+  }
+  if (e.kind === 'spell' && e.parts !== undefined) {
+    if (!Array.isArray(e.parts) || !e.parts.length) errs.push(`${at}: parts is not a non-empty list`);
+    else {
+      e.parts.forEach((p, i) => errs.push(...partErrors(p, `${at}.parts[${i}]`)));
+      const labels = e.parts.map((p) => (isObj(p) ? p.label : undefined));
+      if (new Set(labels).size !== labels.length) errs.push(`${at}: part labels repeat`);
+    }
   }
   if (e.kind === 'spell' && e.dtypes !== undefined && e.dtype !== undefined) errs.push(`${at}: dtype and dtypes together`);
   if (e.kind === 'item') {
