@@ -76,13 +76,17 @@ export function FeaturesTab() {
                 const effect = hasActiveEffect(c, link), on = c.effectsOn.includes(link);
                 return (
                   <EntryRow key={x.id} id={'feat-' + x.id} name={x.name}
-                    head={<><strong>{x.name}</strong>{x.desc && <span className="muted">{x.desc}</span>}</>}
+                    // A catalog description runs to paragraphs: the row shows its start, the open row all of it.
+                    head={<><strong>{x.name}</strong>{x.desc && <span className="muted entry-clamp">{x.desc}</span>}</>}
                     side={effect ? (
                       <button type="button" aria-pressed={on} aria-label={(on ? 'Switch off ' : 'Switch on ') + x.name} className="btn btn-sm"
                         style={{ border: '1px solid var(--accent)', background: on ? 'var(--accent)' : 'transparent', color: on ? 'var(--on-accent)' : 'var(--accent)' }}
                         onClick={() => update((p) => toggleEffect(p, link))}>{on ? 'On' : 'Off'}</button>
                     ) : undefined}
-                    body={src ? <span className="muted">Source: {src}</span> : undefined}
+                    body={x.desc || src ? <>
+                      {x.desc && <span className="entry-desc">{x.desc}</span>}
+                      {src && <span className="muted">Source: {src}</span>}
+                    </> : undefined}
                     onEdit={() => f.openEdit(x.id, { g: x.g || 'other', name: x.name, desc: x.desc || '', from: x.from, srcKind: x.srcKind, srcName: x.srcName, pending: [] })}
                     onRemove={() => update((p) => removeFeature(p, x.id))}
                     removeConfirm={removalNote(c, x.id)}>

@@ -460,3 +460,5 @@ button.link-btn { background: none; border: none; padding: 0; cursor: pointer; t
 }
 .pick-opt[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 .pick-opt[aria-pressed="true"] .small { color: inherit; }
+/* The start of a long description in a closed row (two lines); the open row shows it whole. */
+.entry-clamp { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; white-space: pre-line; }

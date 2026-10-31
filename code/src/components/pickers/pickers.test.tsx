@@ -42,3 +42,13 @@ describe('PickerResult', () => {
     expect(r('item/dagger-of-venom')).not.toContain('Set its armor');
   });
 });
+
+describe('a catalog feature’s long description', () => {
+  it('shows clamped in the Features row and in full only when tapped open', async () => {
+    const { FeaturesTab } = await import('../tabs/FeaturesTab');
+    const desc = 'First paragraph of an invented feature.\nSecond paragraph that only the open row shows.';
+    const c: Character = { ...blankCharacter(), feats: [{ id: 'f1', g: 'feat', name: 'Invented Feat', desc }] };
+    const html = render(c, <FeaturesTab />);
+    expect(html).toMatch(/<span class="muted entry-clamp">First paragraph/);
+  });
+});
