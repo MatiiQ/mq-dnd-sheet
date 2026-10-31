@@ -96,6 +96,10 @@ export function isOn(c: Character, link: string): boolean {
   return sp?.c ? c.conc?.id === sp.id : c.effectsOn.includes(link);
 }
 
+// Worn or wielded: equipped and not inside a container (plan 6). The one test every rule reads; the row's equip toggle
+// still reads and writes `eq`.
+export const isEquipped = (it: Item): boolean => it.eq && !it.in;
+
 // Why an entry or grant doesn't count right now, or null when it counts. Level and armor conditions apply to every
 // entry; the item checks, "while its effect is on" and the source's own state need a link. The visited set stops loops.
 export function inactiveReason(c: Character, x: Linked, seen: Set<string> = new Set()): string | null {
@@ -103,11 +107,13 @@ export function inactiveReason(c: Character, x: Linked, seen: Set<string> = new 
   const p = parseLink(x.from);
   if (p?.kind === 'item') {
     const item = c.inv.find((i) => i.id === p.id);
-    if (x.needEq && !item?.eq) return 'not equipped';
+    // Nothing from an item inside a container counts, whatever its item checks (plan 6).
+    if (item?.in) return 'in ' + (c.inv.find((i) => i.id === item.in)?.name ?? 'a container');
+    if (x.needEq && !(item && isEquipped(item))) return 'not equipped';
     if (x.needAtt && !c.attuneIds.includes(p.id)) return 'not attuned';
   }
   if (x.when) {
-    const eq = c.inv.filter((i) => i.eq);
+    const eq = c.inv.filter(isEquipped);
     const armor = eq.some((i) => i.armor && i.armor !== 'shield'), shield = eq.some((i) => i.armor === 'shield');
     const why = {
       armor: armor ? null : 'needs armor',

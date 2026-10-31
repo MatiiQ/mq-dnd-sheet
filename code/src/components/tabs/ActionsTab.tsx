@@ -1,10 +1,10 @@
 import { useState, type ReactNode } from 'react';
 import {
-  attacksPerAction, extraDamage, extraText, featureActions, lightExtra, masterySlots, spellActions, unarmedStrike, weaponAttacks,
+  attacksPerAction, extraDamage, extraText, featureActions, lightExtra, masterySlots, otherWeapons, spellActions, unarmedStrike, weaponAttacks,
   type SpellAction, type WeaponAttack
 } from '../../actions';
 import { entriesOf, useCatalog } from '../../catalog/useCatalog';
-import { isWeapon, putAway, putInHand, twoHanded, versatile, weaponKind, weaponsHeld } from '../../hands';
+import { isWeapon, putAway, putInHand, shieldOn as shieldOf, twoHanded, versatile, weaponKind, weaponsHeld } from '../../hands';
 import { linkOf, sourceLabel } from '../../links';
 import { castFree, castSpell, COMBAT_ACTIONS, fmt, freeCastsOf, removeRef, slotsLeft, spellUsable, toggleEffect, type AcPart } from '../../logic';
 import { patchEntry, removeEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
@@ -77,7 +77,7 @@ export function ActionsTab() {
   const act = (next: (p: Character) => Character) => { setAway(null); update(next); };
 
   // ---- hands ----
-  const shieldOn = c.inv.some((i) => i.eq && i.armor === 'shield');
+  const shieldOn = shieldOf(c);
   const take = (it: Item, two = false) => {
     const r = putInHand(c, it.id, two);
     if (r.blocked) return;
@@ -132,7 +132,7 @@ export function ActionsTab() {
     const uses = weaponAttacks(c, it).filter((a) => (versatile(it) ? (a.use === 'two-handed') === two || a.use === 'thrown' : true));
     return uses.map((a, i) => weaponRow(it, a, i === 0));
   });
-  const others = c.inv.filter((i) => isWeapon(i) && !c.hands.includes(i.id)).sort((a, b) => Number(b.eq) - Number(a.eq));
+  const others = otherWeapons(c);
   const unarmed = unarmedStrike(c);
   const extra = lightExtra(c);
   const perAction = attacksPerAction(c);

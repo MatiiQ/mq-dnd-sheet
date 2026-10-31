@@ -159,3 +159,29 @@ describe('switching effects', () => {
     expect(effectsAfterEdit(on, { id: 's1', c: false })).toEqual({});
   });
 });
+
+describe('items inside a container (plan 6)', () => {
+  // Built without migrate(), so an equipped item inside the bag stays as a damaged save would have it.
+  const bag: Item = { id: 'bag', name: 'Bag of Holding', qty: 1, eq: false, xdim: true, cap: 500, wt: 5 };
+  const ring: Item = { id: 'ring', name: 'Ring of Protection', qty: 1, eq: true, attune: true, in: 'bag' };
+  const g = (p: Partial<Grant> = {}): Grant => ({ id: 'g', kind: 'ac', name: 'Ring', acMode: 'bonus', val: '1', from: 'item:ring', needEq: true, needAtt: true, ...p });
+
+  it('a grant from an item in a container does not count, with or without the item checks', () => {
+    const c = make({ inv: [bag, ring], attuneIds: ['ring', '', ''] });
+    expect(inactiveReason(c, g())).toBe('in Bag of Holding');
+    const custom = g();
+    delete custom.needEq; delete custom.needAtt;
+    expect(inactiveReason(c, custom)).toBe('in Bag of Holding');
+  });
+
+  it('reads "in a container" when the container is missing', () => {
+    expect(inactiveReason(make({ inv: [ring], attuneIds: ['ring', '', ''] }), g())).toBe('in a container');
+  });
+
+  it('armor in a container does not satisfy or break armor conditions', () => {
+    const c = make({ inv: [bag, { id: 'mail', name: 'Chain Mail', qty: 1, eq: true, armor: 'heavy', acBase: 16, in: 'bag' }] });
+    expect(inactiveReason(c, { when: 'armor' })).toBe('needs armor');
+    expect(inactiveReason(c, { when: 'noArmor' })).toBeNull();
+    expect(inactiveReason(c, { when: 'noHeavy' })).toBeNull();
+  });
+});

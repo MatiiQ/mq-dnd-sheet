@@ -4,7 +4,7 @@ import { grantErrors, ITEM_CATS, type GrantSpec } from './catalog/schema';
 import { isValue, valueAt, type ValueCtx } from './catalog/value';
 import { PROF_NAMES, type ProfCat } from './catalog/names';
 import { setHands } from './hands';
-import { activeGrants, dropLinkOnly, fixLinks, hasActiveEffect, inactiveReason, isActive, LINKED_LISTS, srcKindOfLink, type SourceKind, linkOf, parseLink, sourceLabel, sourceOf, SRC_KINDS } from './links';
+import { activeGrants, dropLinkOnly, fixLinks, hasActiveEffect, inactiveReason, isActive, isEquipped, LINKED_LISTS, srcKindOfLink, type SourceKind, linkOf, parseLink, sourceLabel, sourceOf, SRC_KINDS } from './links';
 import type { AcEffect, Ability, ArmorKind, CastAbility, Character, Coin, Concentration, Counter, DefenseKind, Feature, Grant, HpSnapshot, Item, Prof, Linked, Recharge, Resource, Size, Spell, SpeedKind, SpellSort, Tab, Unarmored, When } from './types';
 
 export const ABILITIES: [Ability, string][] = [
@@ -197,9 +197,9 @@ export function armorClass(c: Character): { total: number; parts: AcPart[] } {
     { label: it.name, value: (it.acBase || 0) + (it.acBonus || 0), note: it.armor + ' armor' },
     ...(it.armor === 'heavy' ? [] : [dexPart(it.armor === 'medium' ? 2 : Infinity)])
   ];
-  const shields = c.inv.filter((i) => i.eq && i.armor === 'shield');
+  const shields = c.inv.filter((i) => isEquipped(i) && i.armor === 'shield');
   const shield = shields.reduce<Item | null>((b, i) => (!b || (i.acBase || 0) + (i.acBonus || 0) > (b.acBase || 0) + (b.acBonus || 0) ? i : b), null);
-  const worn = c.inv.filter((i) => i.eq && i.armor && i.armor !== 'shield');
+  const worn = c.inv.filter((i) => isEquipped(i) && i.armor && i.armor !== 'shield');
   const spells = c.spells.filter((sp) => acSpellActive(c, sp));
   const spellPart = (sp: Spell): AcPart => ({ label: sp.name, value: sp.acVal || 0, note: 'spell', active: true });
   const unarmored: AcPart = { label: 'Unarmored', value: 10 };

@@ -2,7 +2,7 @@
 // setHands, which keeps the list valid and ends effects that need the weapon held. Imports types, links.ts and the
 // catalog's slug only, so logic.ts can use it without an import cycle.
 import { slug } from './catalog/schema';
-import { activeGrants, sourceOf } from './links';
+import { activeGrants, isEquipped, sourceOf } from './links';
 import type { Character, Item } from './types';
 
 const propsOf = (it: Item) => (it.props ?? '').split(',').map((p) => p.trim()).filter(Boolean);
@@ -28,7 +28,7 @@ export function weaponMatches(it: Item, list: string): boolean {
 }
 
 const itemOf = (c: Character, id: string) => c.inv.find((i) => i.id === id);
-const shieldOn = (c: Character) => c.inv.some((i) => i.eq && i.armor === 'shield');
+export const shieldOn = (c: Character) => c.inv.some((i) => isEquipped(i) && i.armor === 'shield');
 
 // Whole weapons in hand, oldest first. A Two-Handed id twice is one weapon; a Versatile id twice is its two-handed use
 // (two Versatile weapons of one row held one-handed are not modelled); any other entry is one weapon.
@@ -48,7 +48,7 @@ export function weaponsHeld(c: Character, hands: string[] = c.hands): { id: stri
 // quantity 2 or more; a row held as at most as many weapons as its quantity; two hands, one with an equipped Shield.
 // Anything over goes from the front, one whole weapon at a time (a Dagger × 2 row in both hands is two weapons).
 export function trimHands(c: Character, hands: string[]): string[] {
-  const ok = hands.filter((id) => { const it = itemOf(c, id); return !!it && it.eq && it.qty >= 1 && isWeapon(it); });
+  const ok = hands.filter((id) => { const it = itemOf(c, id); return !!it && isEquipped(it) && it.qty >= 1 && isWeapon(it); });
   const units: { id: string; n: number }[] = [];
   for (const id of ok) {
     const it = itemOf(c, id)!;

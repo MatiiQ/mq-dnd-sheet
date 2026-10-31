@@ -3,7 +3,7 @@ import { BLANK_ITEM, catForKind, draftFromItem, itemFromForm, withDetectedArmor,
 import { isValue } from '../../catalog/value';
 import { CARRY_MULT, DAMAGE_TYPES, SIZES, maxFields, maxOf, rechargeOf, carriedWeight, carryCapacity, carryUpOf, sizeOf, effScore, fmt, addGrants, grantChips, newId, removeItem, type GrantInput } from '../../logic';
 import { equipShield, setHands } from '../../hands';
-import { linkOf } from '../../links';
+import { isEquipped, linkOf } from '../../links';
 import { GrantList, SourceChips } from '../Chips';
 import { ItemPicker } from '../pickers/ItemPicker';
 import { patchEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
@@ -209,8 +209,9 @@ export function InventoryTab() {
         <div className="grid" style={{ '--min': '200px', gap: 8 } as CSSProperties}>
           {c.attuneIds.map((id, i) => {
             const item = c.inv.find((it) => it.id === id);
-            // Equipped items not in another slot, plus this slot's own item (which may have been unequipped since).
-            const choices = c.inv.filter((it) => it.id === id || (it.eq && !c.attuneIds.includes(it.id)));
+            // Equipped items not in another slot (an item inside a container never is), plus this slot's own item (which
+            // may have been unequipped or put in a container since).
+            const choices = c.inv.filter((it) => it.id === id || (isEquipped(it) && !c.attuneIds.includes(it.id)));
             return (
               <div key={i} className="col gap-4">
                 <select className={'input attune-slot' + (id ? ' filled' : '')} aria-label={'Attunement slot ' + (i + 1)} value={id}
@@ -218,7 +219,7 @@ export function InventoryTab() {
                   <option value="">Empty</option>
                   {choices.map((it) => <option key={it.id} value={it.id}>{it.name}</option>)}
                 </select>
-                {item && !item.eq && <span className="attune-note">not equipped</span>}
+                {item && !isEquipped(item) && <span className="attune-note">not equipped</span>}
               </div>
             );
           })}

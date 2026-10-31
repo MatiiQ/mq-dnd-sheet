@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
-import { equipShield, putAway, putInHand, setHands, weaponKind, weaponMatches, weaponsHeld } from './hands';
+import { equipShield, putAway, putInHand, setHands, trimHands, weaponKind, weaponMatches, weaponsHeld } from './hands';
 import { migrate, normalize, removeItem } from './logic';
 import { applyPatch } from './storage';
 import { dagger, longbow, longsword, quarterstaff, shield, shortsword } from './test-fixtures';
@@ -163,5 +163,18 @@ describe('the old typed Unarmed Strike', () => {
   });
   it('is not on the samples', () => {
     for (const c of [sampleCharacter(), druidSample()]) expect(c.attacks.some((a) => a.name === 'Unarmed Strike')).toBe(false);
+  });
+});
+
+describe('items inside a container (plan 6)', () => {
+  const bag: Item = { id: 'bag', name: 'Bag of Holding', qty: 1, eq: false, xdim: true, cap: 500 };
+  it('drops a weapon inside the bag even when it is marked equipped', () => {
+    const c = make([bag, shortsword({ id: 'sw', in: 'bag' })], ['sw']);
+    expect(trimHands(c, ['sw'])).toEqual([]);
+  });
+
+  it('a Shield inside the bag takes no hand', () => {
+    const c = make([bag, shield({ id: 'sh', in: 'bag' }), longbow({ id: 'bow' })], ['bow', 'bow']);
+    expect(trimHands(c, ['bow', 'bow'])).toEqual(['bow', 'bow']);
   });
 });

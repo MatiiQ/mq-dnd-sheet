@@ -4,8 +4,9 @@ import { mergeCatalog } from './catalog/merge';
 import type { Entry, ItemEntry, SpellEntry } from './catalog/schema';
 import { addFromCatalog, itemFromEntry, spellFromEntry, type AddChoices } from './catalog/copy';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
-import { attacksPerAction, cantripDice, econOf, extraDamage, extraText, featureActions, hasMastery, lightExtra, masterySlots, spellActions, unarmedStrike, weaponAbility, weaponAttacks, weaponProficient, type Use } from './actions';
+import { attacksPerAction, cantripDice, econOf, extraDamage, extraText, featureActions, hasMastery, lightExtra, masterySlots, otherWeapons, spellActions, unarmedStrike, weaponAbility, weaponAttacks, weaponProficient, type Use } from './actions';
 import { weaponKind } from './hands';
+import { takeOut } from './inventory';
 import { addGrants, migrate, normalize } from './logic';
 import { applyPatch } from './storage';
 import { dagger, dart, handaxe, handCrossbow, longbow, longsword, quarterstaff, rapier, shield, shortsword, spear } from './test-fixtures';
@@ -367,5 +368,14 @@ describe('samples', () => {
     expect(spells.find((a) => a.name === 'Healing Word')!.dice).toBe('2d4 + WIS (+5)');
     expect(c.attacks).toEqual([expect.objectContaining({ name: 'Starry Form · Archer', econ: 'bonus', group: 'other' })]);
     expect(c.riders.map((r) => r.id)).toEqual(['r2', 'r3']);
+  });
+});
+
+describe('other weapons (plan 6)', () => {
+  const bag: Item = { id: 'bag', name: 'Bag of Holding', qty: 1, eq: false, xdim: true, cap: 500 };
+  it('lists weapons not in hand, equipped first, and none inside a container', () => {
+    const c = { ...blankCharacter(), inv: [bag, dagger({ id: 'dg', eq: false }), shortsword({ id: 'sw', in: 'bag' }), longsword({ id: 'ls' }), longbow({ id: 'bow' })], hands: ['bow', 'bow'] };
+    expect(otherWeapons(c).map((i) => i.id)).toEqual(['ls', 'dg']);
+    expect(otherWeapons(takeOut(c, 'sw')).map((i) => i.id)).toEqual(['sw', 'ls', 'dg']);
   });
 });

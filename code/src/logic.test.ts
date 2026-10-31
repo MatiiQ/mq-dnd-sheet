@@ -1557,3 +1557,24 @@ describe('containers on load (plan 6)', () => {
     expect(c.coins.gp).toBe(7);
   });
 });
+
+describe('items inside a container never count as equipped (plan 6)', () => {
+  const bag: Item = { id: 'bag', name: 'Bag of Holding', qty: 1, eq: false, xdim: true, cap: 500, wt: 5 };
+  it('armorClass ignores armor, a Shield and a Ring of Protection inside the bag', () => {
+    const inside = [
+      bag,
+      it_({ id: 'mail', name: 'Chain Mail', armor: 'heavy', acBase: 16, in: 'bag' }),
+      it_({ id: 'sh', name: 'Shield', armor: 'shield', acBase: 2, in: 'bag' }),
+      it_({ id: 'ring', name: 'Ring of Protection', attune: true, in: 'bag' })
+    ];
+    const ring: Grant = { id: 'g', kind: 'ac', name: 'Ring of Protection', acMode: 'bonus', val: '1', from: 'item:ring', needEq: true, needAtt: true };
+    const c = ac({ abil: { ...sampleCharacter().abil, dex: 10 }, inv: inside, grants: [ring], attuneIds: ['ring', '', ''] });
+    expect(c.total).toBe(10);
+  });
+
+  it('a resource granted by an item inside is inactive and keeps its count', () => {
+    const c = make({ inv: [bag, it_({ id: 'wand', name: 'Wand', in: 'bag' })], res: [{ id: 'r', name: 'Wand charges', count: 3, max: 7, recharge: 'dawn', from: 'item:wand', srcKind: 'item', needEq: true }] });
+    expect(isActive(c, c.res[0])).toBe(false);
+    expect(normalize(c).res[0].count).toBe(3);
+  });
+});

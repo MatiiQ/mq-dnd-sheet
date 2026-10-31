@@ -2,10 +2,15 @@
 // damage. Pure functions of the character; nothing here is stored.
 import { slug } from './catalog/schema';
 import { valueAt } from './catalog/value';
-import { hasProp, twoHanded, versatile, weaponKind, weaponMatches, weaponsHeld } from './hands';
+import { hasProp, isWeapon, twoHanded, versatile, weaponKind, weaponMatches, weaponsHeld } from './hands';
 import { activeGrants, isActive, linkOf, sourceLabel, sourceOf } from './links';
 import { ABILITIES, abilityMod, fmt, normName, num, profBonus, profList, hasProf, spellAttackFor, spellSaveDcFor, spellUsable, valueCtx, type AcPart } from './logic';
 import type { Ability, Character, Econ, Feature, Grant, Item, Spell } from './types';
+
+// The "Other weapons" list: weapons not in hand, equipped first. A weapon inside a container is left out: the player
+// takes it out first to wield it (plan 6).
+export const otherWeapons = (c: Character): Item[] =>
+  c.inv.filter((i) => isWeapon(i) && !i.in && !c.hands.includes(i.id)).sort((a, b) => Number(b.eq) - Number(a.eq));
 
 // Weapon Mastery: the number of weapon kinds whose mastery properties the character can use, from the active
 // prof 'mastery' grants without a target (Fighter 3, 4 from level 4, PHB p.91; Ranger 2 …).
