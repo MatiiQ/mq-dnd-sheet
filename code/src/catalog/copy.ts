@@ -148,6 +148,10 @@ export interface PoolOption { value: string; label: string; entry?: Entry; taken
 
 // Tool groups: ProfEntry has no group field. The generic group names are never options.
 export const TOOL_GROUPS: Record<string, string[]> = {
+  // Artisan's Tools (PHB p.220-221).
+  artisan: ['alchemists-supplies', 'brewers-supplies', 'calligraphers-supplies', 'carpenters-tools', 'cartographers-tools', 'cobblers-tools',
+    'cooks-utensils', 'glassblowers-tools', 'jewelers-tools', 'leatherworkers-tools', 'masons-tools', 'painters-supplies', 'potters-tools',
+    'smiths-tools', 'tinkers-tools', 'weavers-tools', 'woodcarvers-tools'].map((t) => `prof/${t}`),
   'gaming-set': ['prof/dice', 'prof/dragonchess', 'prof/playing-cards', 'prof/three-dragon-ante'],
   'musical-instrument': ['prof/bagpipes', 'prof/drum', 'prof/dulcimer', 'prof/flute', 'prof/horn', 'prof/lute', 'prof/lyre', 'prof/pan-flute', 'prof/shawm', 'prof/viol']
 };

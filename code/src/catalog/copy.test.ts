@@ -193,6 +193,11 @@ describe('poolOptions', () => {
   });
   it('lists the tools of a group, never the generic ones', () => {
     expect(poolOptions(cat, blank, 'tool:gaming-set', {}).map((o) => o.value).sort()).toEqual(['Dice', 'Dragonchess', 'Playing Cards', 'Three-Dragon Ante']);
+    // The 17 Artisan's Tools (PHB p.220-221).
+    const artisan = poolOptions(cat, blank, 'tool:artisan', {}).map((o) => o.value);
+    expect(artisan).toHaveLength(17);
+    expect(artisan).toContain('Smith’s Tools');
+    expect(artisan).not.toContain('Thieves’ Tools');
     expect(poolOptions(cat, blank, 'tool:unknown-group', {})).toEqual([]);
     for (const pool of ['tool:any', 'prof:skill|tool']) {
       const vals = poolOptions(cat, blank, pool, {}).map((o) => o.value);
