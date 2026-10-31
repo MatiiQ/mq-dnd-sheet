@@ -5,7 +5,7 @@ import { isValue, valueAt, type ValueCtx } from './catalog/value';
 import { PROF_NAMES, type ProfCat } from './catalog/names';
 import { setHands } from './hands';
 import { activeGrants, dropLinkOnly, fixLinks, hasActiveEffect, inactiveReason, isActive, LINKED_LISTS, srcKindOfLink, type SourceKind, linkOf, parseLink, sourceLabel, sourceOf, SRC_KINDS } from './links';
-import type { AcEffect, Ability, ArmorKind, CastAbility, Character, Concentration, Counter, DefenseKind, Feature, Grant, HpSnapshot, Item, Prof, Linked, Recharge, Resource, Size, Spell, SpeedKind, SpellSort, Tab, Unarmored, When } from './types';
+import type { AcEffect, Ability, ArmorKind, CastAbility, Character, Coin, Concentration, Counter, DefenseKind, Feature, Grant, HpSnapshot, Item, Prof, Linked, Recharge, Resource, Size, Spell, SpeedKind, SpellSort, Tab, Unarmored, When } from './types';
 
 export const ABILITIES: [Ability, string][] = [
   ['str', 'Strength'], ['dex', 'Dexterity'], ['con', 'Constitution'],
@@ -347,10 +347,41 @@ export function carryCapacity(c: Character): { carry: number; push: number; size
   const carry = effScore(c, 'str') * CARRY_MULT[size];
   return { carry, push: carry * 2, size };
 }
-// Items count weight × quantity; fifty coins weigh a pound (PHB p.213).
+// Items count weight × quantity; fifty coins weigh a pound (PHB p.213). Items inside an extradimensional container and
+// its coins don't count: only the container's own weight does (plan 6).
 export function carriedWeight(c: Character): number {
   const coins = Object.values(c.coins).reduce((t, n) => t + n, 0);
-  return c.inv.reduce((t, i) => t + (i.wt || 0) * i.qty, 0) + coins / 50;
+  return c.inv.reduce((t, i) => t + (i.in ? 0 : (i.wt || 0) * i.qty), 0) + coins / 50;
+}
+
+// Containers (plan 6). Only an extradimensional container (Bag of Holding, Handy Haversack, Portable Hole) holds items
+// and coins; a plain one such as a Backpack is an ordinary item.
+export const isContainer = (it: Item) => !!it.xdim;
+export const COINS: Coin[] = ['cp', 'sp', 'ep', 'gp', 'pp'];
+const withoutKeys = <T extends object>(x: T, keys: string[]): T => Object.fromEntries(Object.entries(x).filter(([k]) => !keys.includes(k))) as T;
+// The container rules, run by migrate() and normalize() (the item form can switch a bag's kind at any time): an `in`
+// naming a missing item, a non-container or the item itself, or set on a container, clears (so contents are one level
+// deep); an item inside is not equipped; coins on an item that is not a container go to the purse. Returns c itself
+// when nothing changes.
+export function fixContainers(c: Character): Character {
+  let changed = false;
+  const coins = { ...c.coins };
+  const inv = c.inv.map((i0) => {
+    let it = i0;
+    if ('in' in it) {
+      const bag = it.in ? c.inv.find((x) => x.id === it.in) : undefined;
+      if (!bag || !isContainer(bag) || bag.id === it.id || isContainer(it)) it = withoutKeys(it, ['in']);
+    }
+    if (it.in && it.eq) it = { ...it, eq: false };
+    const held = isContainer(it) ? [] : COINS.filter((k) => k in it);
+    if (held.length) {
+      for (const k of held) coins[k] += typeof it[k] === 'number' ? it[k]! : 0;
+      it = withoutKeys(it, held);
+    }
+    if (it !== i0) changed = true;
+    return it;
+  });
+  return changed ? { ...c, inv, coins } : c;
 }
 // A typed weight in lb. A Polish keyboard types a decimal comma, so "0,5" is 0.5. Anything else is no weight.
 export function parseWeight(s: string): number | undefined {
@@ -539,8 +570,10 @@ export function maxFields(kind: 'none' | 'number' | 'formula', text: string): Pi
 // The single clamp, run by update() and migrate() after every change: resource counts at most their maximum, HP at
 // most max HP. Uses lost while a maximum is lower are not given back when it rises (spec). Returns c when nothing moves.
 export function normalize(c0: Character): Character {
-  // Weapons in hand first (plan 5): a quantity or equip change may take one out of hand, through setHands.
-  const h = setHands(c0, c0.hands);
+  // The container rules first (plan 6), then weapons in hand (plan 5): a quantity or equip change, or an item moved
+  // into a container, may take one out of hand, through setHands.
+  const f = fixContainers(c0);
+  const h = setHands(f, f.hands);
   // Weapon Mastery picks: strings, once each. The player may change them at any time; the rule says on a Long Rest
   // (PHB p.91, Weapon Mastery), which the app doesn't enforce.
   const mastery = uniqueStrings(h.mastery);
@@ -732,6 +765,7 @@ type FieldCheck = (v: unknown) => boolean;
 const isStr: FieldCheck = (v) => typeof v === 'string';
 const isBool: FieldCheck = (v) => typeof v === 'boolean';
 const nonEmpty: FieldCheck = (v) => typeof v === 'string' && v !== '';
+const wholeNonNeg: FieldCheck = (v) => Number.isInteger(v) && (v as number) >= 0;
 const among = (...xs: unknown[]): FieldCheck => (v) => xs.includes(v);
 const SPELL_FIELDS: Record<string, FieldCheck> = {
   desc: isStr, school: isStr, classes: isStr, ritual: isBool, atk: among('melee', 'ranged'), save: among(...ABILITIES.map(([k]) => k)),
@@ -741,7 +775,8 @@ const ATTACK_FIELDS: Record<string, FieldCheck> = { econ: among('action', 'bonus
 const ITEM_FIELDS: Record<string, FieldCheck> = {
   cat: among(...ITEM_CATS), cost: isStr, wcat: among('simple', 'martial'), wrange: among('melee', 'ranged'), dmg: isStr, dtype: isStr, props: isStr,
   thrown: isStr, vers: isStr, ammo: isStr, mastery: isStr, magic: finite, strReq: finite, stealthDis: isBool, cap: finite, capVol: isStr, xdim: isBool,
-  rarity: isStr, attune: isBool, base: (v) => typeof v === 'string' && v.startsWith('item/'), sec: nonEmpty
+  rarity: isStr, attune: isBool, base: (v) => typeof v === 'string' && v.startsWith('item/'), sec: nonEmpty,
+  in: nonEmpty, cp: wholeNonNeg, sp: wholeNonNeg, ep: wholeNonNeg, gp: wholeNonNeg, pp: wholeNonNeg
 };
 const cleanFields = <T extends object>(x: T, fields: Record<string, FieldCheck>): T =>
   Object.fromEntries(Object.entries(x).filter(([k, v]) => !Object.hasOwn(fields, k) || fields[k](v))) as T;
@@ -957,7 +992,9 @@ export function migrate(data: unknown): Character {
   }
   // An action grant that spends a resource that is gone no longer spends anything.
   c.grants = c.grants.map((g) => (g.kind === 'action' && g.res !== undefined && !c.res.some((r) => r.id === g.res) ? (({ res: _, ...x }) => x)(g) : g));
-  const fixed = fixLinks(c);
+  // Containers (plan 6) after the coin and `in` checks above, before the hands check (setHands in normalize). normalize()
+  // runs fixContainers too; the call here keeps the order plain.
+  const fixed = fixContainers(fixLinks(c));
   // A grant exists only through its source: one whose link fixLinks cleared goes.
   return normalize({ ...fixed, grants: fixed.grants.filter((g) => g.from) });
 }
@@ -1144,7 +1181,11 @@ export function removeRef(c0: Character, ref: Ref): Character {
     const ids = gone(kind);
     (out as Record<string, unknown>)[list] = (c[list] as Entry[]).filter((x) => !ids.includes(x.id)).map(unlinkIt);
   }
-  out.inv = c.inv.filter((i) => !items.includes(i.id));
+  // A removed container's contents come out (to their section, or the default list) and its coins go to the purse
+  // (plan 6). Only a root item can be removed (items are never in a removal chain), so only its contents need this.
+  out.inv = c.inv.filter((i) => !items.includes(i.id)).map((i) => (i.in && items.includes(i.in) ? withoutKeys(i, ['in']) : i));
+  const bagCoins = c.inv.filter((i) => items.includes(i.id));
+  if (bagCoins.some((i) => COINS.some((k) => i[k]))) out.coins = Object.fromEntries(COINS.map((k) => [k, c.coins[k] + bagCoins.reduce((t, i) => t + (i[k] || 0), 0)])) as Character['coins'];
   out.attuneIds = c.attuneIds.map((x) => (items.includes(x) ? '' : x));
   out.acOn = c.acOn.filter((id) => !spells.includes(id));
   out.effectsOn = c.effectsOn.filter((l) => !links.includes(l));

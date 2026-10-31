@@ -65,7 +65,9 @@ export interface Item extends Partial<Counter> {
   thrown?: string; vers?: string; ammo?: string; mastery?: string; magic?: number;
   strReq?: number; stealthDis?: boolean; cap?: number; capVol?: string; xdim?: boolean; rarity?: string; attune?: boolean; base?: string;
   // sec: the id of the section the player put it in (its kind); none, or one that is gone, = the default list.
-  sec?: string;
+  // in: the id of the extradimensional container it sits in (one level deep; it is then never equipped).
+  // cp…pp: the coins inside a container (only on a container; fixContainers moves others to the purse).
+  sec?: string; in?: string; cp?: number; sp?: number; ep?: number; gp?: number; pp?: number;
 }
 // A section of the item list the player named (Weapons, Armour…), in display order.
 export interface Section { id: string; name: string }

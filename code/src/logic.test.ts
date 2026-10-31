@@ -6,6 +6,7 @@ import {
 } from './logic';
 import { grantErrors, type GrantSpec } from './catalog/schema';
 import { activeGrants, isActive } from './links';
+import { inventoryGroups } from './inventory';
 import { applyPatch } from './storage';
 import { oldIlyra, oldSeren } from './test-fixtures';
 import type { Character, Grant, Item, Spell } from './types';
@@ -1509,5 +1510,50 @@ describe('manual actions (plan 5)', () => {
     expect(out.attacks[1]).toEqual({ ...bow, id: 'x' });
     expect(out.attacks[2]).toEqual({ ...bow, id: 'y', econ: 'bonus', group: 'weapon' });
     expect(migrate(JSON.parse(JSON.stringify(out))).attacks).toEqual(out.attacks);
+  });
+});
+
+describe('containers on load (plan 6)', () => {
+  const bagOf = (p: Partial<Item> = {}): Item => ({ id: 'bag', name: 'Bag of Holding', qty: 1, eq: false, wt: 5, xdim: true, cap: 500, cat: 'magic', ...p });
+  const save = (inv: unknown[], p: Partial<Character> = {}) =>
+    JSON.parse(JSON.stringify({ ...blankCharacter(), inv, ...p })) as Record<string, unknown>;
+  const inOf = (c: Character, id: string) => c.inv.find((i) => i.id === id)!.in;
+
+  it('clears an in that names a missing item, a non-container, itself, or is set on a container', () => {
+    const c = migrate(save([
+      bagOf(), bagOf({ id: 'bag2', in: 'bag' }),
+      { id: 'a', name: 'A', qty: 1, eq: false, in: 'gone' }, { id: 'b', name: 'B', qty: 1, eq: false, in: 'a' },
+      { id: 'self', name: 'S', qty: 1, eq: false, in: 'self' }, { id: 'ok', name: 'Ok', qty: 1, eq: false, wt: 3, in: 'bag' }
+    ]));
+    expect(c.inv.map((i) => i.id)).toEqual(['bag', 'bag2', 'a', 'b', 'self', 'ok']);
+    expect(['bag2', 'a', 'b', 'self'].map((id) => inOf(c, id))).toEqual([undefined, undefined, undefined, undefined]);
+    expect(inOf(c, 'ok')).toBe('bag');
+    expect(carriedWeight(c)).toBe(10);
+  });
+
+  it('unequips an item inside and drops it from hands', () => {
+    const sw: Item = { id: 'sw', name: 'Shortsword', qty: 1, eq: true, cat: 'weapon', wcat: 'martial', wrange: 'melee', dmg: '1d6', props: 'finesse,light', in: 'bag' };
+    const c = migrate(save([bagOf(), sw], { hands: ['sw'] }));
+    expect(c.inv[1]).toMatchObject({ eq: false, in: 'bag' });
+    expect(c.hands).toEqual([]);
+  });
+
+  it('keeps a bag with coins, and drops bad coin and in values from the item, keeping it', () => {
+    const c = migrate(save([
+      bagOf({ gp: 100, sp: 3 }), bagOf({ id: 'neg', gp: -3 }), bagOf({ id: 'half', gp: 2.5 }),
+      { id: 'n', name: 'N', qty: 1, eq: false, wt: 1, in: 5 }, { id: 't', name: 'T', qty: 1, eq: false, wt: 1, in: true }, { id: 'e', name: 'E', qty: 1, eq: false, wt: 1, in: '' }
+    ]));
+    expect(c.inv.map((i) => i.id)).toEqual(['bag', 'neg', 'half', 'n', 't', 'e']);
+    expect(c.inv[0]).toMatchObject({ gp: 100, sp: 3 });
+    expect('gp' in c.inv[1] || 'gp' in c.inv[2]).toBe(false);
+    expect(c.inv.slice(3).every((i) => !('in' in i))).toBe(true);
+    expect(carriedWeight(c)).toBe(15 + 3);
+    expect(inventoryGroups(c)[0].items.map((i) => i.id)).toEqual(['bag', 'neg', 'half', 'n', 't', 'e']);
+  });
+
+  it('moves coins on an item that is not a container to the purse', () => {
+    const c = migrate(save([{ id: 'r', name: 'Rope', qty: 1, eq: false, gp: 7 }]));
+    expect('gp' in c.inv[0]).toBe(false);
+    expect(c.coins.gp).toBe(7);
   });
 });

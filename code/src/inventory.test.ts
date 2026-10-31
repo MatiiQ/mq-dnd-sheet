@@ -1,8 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { blankCharacter } from './defaults';
-import { addSection, DEFAULT_SECTION, inventoryGroups, moveSection, removeSection, renameSection, setItemSection } from './inventory';
-import { migrate } from './logic';
-import type { Character, Item } from './types';
+import { draftFromItem, itemFromForm } from './catalog/copy';
+import {
+  addSection, containerLoad, DEFAULT_SECTION, inventoryGroups, moveInto, moveSection, removeContainer, removeContainerSummary, removeSection, renameSection,
+  setItemSection, takeOut
+} from './inventory';
+import { carriedWeight, fixContainers, migrate, normalize, removeItem } from './logic';
+import { saveEntry } from './sheet';
+import { applyPatch } from './storage';
+import { shortsword } from './test-fixtures';
+import type { Character, Grant, Item } from './types';
 
 const item = (p: Partial<Item>): Item => ({ id: 'x', name: 'X', qty: 1, eq: false, ...p });
 const make = (p: Partial<Character> = {}): Character => ({ ...blankCharacter(), ...p });
@@ -115,5 +122,119 @@ describe('sections', () => {
   it('renames a section, trimmed', () => {
     const { c, weapons } = twoSections();
     expect(names(renameSection(c, weapons, '  Arms '))).toEqual(['Arms', 'Armour']);
+  });
+});
+
+// Bag of Holding and Handy Haversack as in the SRD 5.2 catalog (item/bag-of-holding, item/handy-haversack).
+const bag = (p: Partial<Item> = {}): Item => item({ id: 'bag', name: 'Bag of Holding', wt: 5, xdim: true, cap: 500, capVol: '64 cubic feet', cat: 'magic', ...p });
+const sack = (p: Partial<Item> = {}): Item => item({ id: 'sack', name: 'Handy Haversack', wt: 5, xdim: true, cap: 900, cat: 'magic', ...p });
+const rock = (p: Partial<Item> = {}): Item => item({ id: 'rock', name: 'Rock', wt: 20, in: 'bag', ...p });
+const rope = (p: Partial<Item> = {}): Item => item({ id: 'rope', name: 'Rope', wt: 5, ...p });
+const find = (c: Character, id: string) => c.inv.find((i) => i.id === id)!;
+// Saves an item through the custom form as the edit form does, with its draft changed.
+const saveForm = (c: Character, id: string, d: Partial<ReturnType<typeof draftFromItem>>) =>
+  applyPatch(c, (p) => ({ inv: saveEntry<Item>(p.inv, itemFromForm({ ...draftFromItem(find(p, id)), ...d }), id) }));
+
+describe('containers', () => {
+  it('counts the bag but not its contents or coins toward the load', () => {
+    const c = make({ inv: [bag({ gp: 100 }), rock()] });
+    expect(carriedWeight(c)).toBe(5);
+    expect(containerLoad(c, 'bag')).toEqual({ items: 20, coins: 2, total: 22, cap: 500 });
+  });
+
+  it('lists items in a container in no section group', () => {
+    const c = make({ inv: [bag(), rock()] });
+    expect(inventoryGroups(c)).toEqual([{ sec: null, items: [bag()] }]);
+  });
+
+  it('moveInto unequips the item and takes it out of hand', () => {
+    const c = make({ inv: [bag(), shortsword({ id: 'sw' })], hands: ['sw'] });
+    const out = moveInto(c, 'sw', 'bag');
+    expect(find(out, 'sw')).toMatchObject({ in: 'bag', eq: false });
+    expect(out.hands).toEqual([]);
+  });
+
+  it('moveInto refuses containers, itself, non-containers and missing ids', () => {
+    const c = make({ inv: [bag(), sack(), shortsword({ id: 'sw' })] });
+    expect(moveInto(c, 'sack', 'bag')).toBe(c);
+    expect(moveInto(c, 'bag', 'bag')).toBe(c);
+    expect(moveInto(c, 'bag', 'sw')).toBe(c);
+    expect(moveInto(c, 'rope', 'sw')).toBe(c);
+    expect(moveInto(c, 'nope', 'bag')).toBe(c);
+    expect(moveInto(c, 'sw', 'nope')).toBe(c);
+  });
+
+  it('moves an item straight from one container to another', () => {
+    const c = make({ inv: [bag(), sack(), rock()] });
+    expect(find(moveInto(c, 'rock', 'sack'), 'rock').in).toBe('sack');
+  });
+
+  it('takeOut keeps the section; nothing to take out returns the same character', () => {
+    const c = make({ sections: [{ id: 's1', name: 'Gear' }], inv: [bag(), rock({ sec: 's1' }), rope()] });
+    const out = takeOut(c, 'rock');
+    expect(find(out, 'rock')).toEqual({ id: 'rock', name: 'Rock', qty: 1, eq: false, wt: 20, sec: 's1' });
+    expect(takeOut(c, 'rope')).toBe(c);
+    expect(takeOut(c, 'nope')).toBe(c);
+  });
+
+  it('setItemSection takes an item out of its container', () => {
+    const c = make({ sections: [{ id: 's1', name: 'Gear' }], inv: [bag(), rock()] });
+    const out = setItemSection(c, 'rock', 's1');
+    expect(find(out, 'rock').sec).toBe('s1');
+    expect(find(out, 'rock').in).toBeUndefined();
+  });
+
+  it('removeContainerSummary lists a content item\'s counted grant only when the contents go too', () => {
+    const belt: Grant = { id: 'g1', kind: 'abil', name: 'Belt', ab: 'str', val: '2', from: 'item:belt', counted: true };
+    const c = make({ inv: [bag(), item({ id: 'belt', name: 'Belt of Might', in: 'bag' })], grants: [belt] });
+    const remove = removeContainerSummary(c, 'bag', 'remove'), out = removeContainerSummary(c, 'bag', 'out');
+    expect(remove.keep.some((k) => k.includes('Belt of Might'))).toBe(true);
+    expect(remove.goes).toContain('Belt of Might');
+    expect(out).toEqual({ goes: [], keep: [] });
+  });
+
+  it('removing the bag takes its contents and coins out, unless the contents go too', () => {
+    const c = make({ coins: { cp: 0, sp: 0, ep: 0, gp: 10, pp: 0 }, inv: [bag({ gp: 100 }), rock()] });
+    const out = removeContainer(c, 'bag', 'out');
+    expect(out.inv).toEqual([{ id: 'rock', name: 'Rock', qty: 1, eq: false, wt: 20 }]);
+    expect(out.coins.gp).toBe(110);
+    const gone = removeContainer(c, 'bag', 'remove');
+    expect(gone.inv).toEqual([]);
+    expect(gone.coins).toEqual(c.coins);
+    // The Edit-mode path: plain item removal.
+    expect(removeItem(c, 'bag')).toEqual(out);
+  });
+
+  it('one bag row is one container whatever its quantity', () => {
+    const c = make({ inv: [bag({ qty: 2, gp: 50 }), rock()] });
+    expect(containerLoad(c, 'bag').cap).toBe(500);
+    expect(carriedWeight(c)).toBe(10);
+    const zero = normalize(make({ inv: [bag({ qty: 0, gp: 50 }), rock()] }));
+    expect(find(zero, 'rock').in).toBe('bag');
+    expect(find(zero, 'bag').gp).toBe(50);
+    expect(carriedWeight(zero)).toBe(0);
+  });
+
+  it('a bag switched to another kind in the edit form lets its contents and coins out', () => {
+    const c = make({ coins: { cp: 0, sp: 0, ep: 0, gp: 10, pp: 0 }, inv: [bag({ gp: 50 }), rope({ in: 'bag' })] });
+    for (const d of [{ kind: 'none' as const }, { kind: 'container' as const, xdim: false }]) {
+      const out = saveForm(c, 'bag', d);
+      expect(find(out, 'rope').in).toBeUndefined();
+      expect(inventoryGroups(out)[0].items.map((i) => i.id)).toEqual(['bag', 'rope']);
+      expect(carriedWeight(out)).toBe(5 + 5 + 10 / 50 + 50 / 50);
+      expect(['cp', 'sp', 'ep', 'gp', 'pp'].some((k) => k in find(out, 'bag'))).toBe(false);
+      expect(out.coins.gp).toBe(60);
+    }
+  });
+
+  it('an item inside that becomes an extradimensional container comes out', () => {
+    const c = make({ inv: [bag(), rope({ in: 'bag' })] });
+    expect(find(saveForm(c, 'rope', { kind: 'container', xdim: true }), 'rope').in).toBeUndefined();
+    expect(find(saveForm(c, 'rope', { kind: 'container', xdim: false }), 'rope').in).toBe('bag');
+  });
+
+  it('fixContainers returns the same character when nothing is wrong', () => {
+    const c = make({ inv: [bag({ gp: 5 }), rock()] });
+    expect(fixContainers(c)).toBe(c);
   });
 });
