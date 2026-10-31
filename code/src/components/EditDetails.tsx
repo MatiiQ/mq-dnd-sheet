@@ -1,9 +1,30 @@
+import { classIdOf, matchId } from '../catalog/copy';
+import type { Catalog } from '../catalog/merge';
+import { entriesOf, useCatalog } from '../catalog/useCatalog';
 import { CAST_NAMES, clamp, SIZES } from '../logic';
 import { useSheet } from '../sheet';
-import type { CastAbility, Details, Size } from '../types';
+import type { CastAbility, Character, Details, Size } from '../types';
 import { NumInput, TextField, TypeInNumber, useArmed } from './ui';
 
-const TEXT_FIELDS: [string, keyof Details][] = [['Name', 'name'], ['Species', 'species'], ['Class', 'cls'], ['Subclass', 'sub'], ['Alignment', 'align']];
+type TextKey = Exclude<keyof Details, 'clsId' | 'subId'>;
+const TEXT_FIELDS: [string, TextKey][] = [['Name', 'name'], ['Species', 'species'], ['Class', 'cls'], ['Subclass', 'sub'], ['Alignment', 'align']];
+const uniq = (xs: string[]) => [...new Set(xs)].sort((a, b) => a.localeCompare(b));
+// Catalog names offered while typing: classes, the subclasses of the character's class, species and their lineage options.
+function suggestions(cat: Catalog, c: Character): Partial<Record<TextKey, string[]>> {
+  const cls = classIdOf(cat, c).split('/')[1];
+  return {
+    cls: uniq(entriesOf(cat, 'class').map((e) => e.name)),
+    sub: uniq(entriesOf(cat, 'subclass').filter((e) => !cls || e.cls === cls).map((e) => e.name)),
+    species: uniq([...entriesOf(cat, 'species').map((e) => e.name), ...entriesOf(cat, 'trait').filter((t) => t.of && t.of.endsWith('-lineage')).map((t) => t.name)])
+  };
+}
+// A typed class or subclass stores the catalog id it matches ('' for none); a new class matches the subclass again
+// within it. Nothing else changes: this is not a levelling flow.
+function withIds(cat: Catalog | null, ch: Details): Details {
+  if (!cat) return { ...ch, clsId: '', subId: '' };
+  const clsId = matchId(cat, 'class', ch.cls);
+  return { ...ch, clsId, subId: matchId(cat, 'subclass', ch.sub, clsId) };
+}
 const NUM_FIELDS: [string, 'speedBase' | 'initMisc', number, number][] = [
   ['Base speed (ft)', 'speedBase', 0, 200], ['Initiative bonus (extra)', 'initMisc', -20, 20]
 ];
@@ -11,6 +32,9 @@ const NUM_FIELDS: [string, 'speedBase' | 'initMisc', number, number][] = [
 export function EditDetails({ onReset }: { onReset: () => void }) {
   const { c, update } = useSheet();
   const [resetArmed, tapReset] = useArmed();
+  const state = useCatalog(true);
+  const cat = state.status === 'ready' ? state.cat : null;
+  const lists = cat ? suggestions(cat, c) : {};
   return (
     <section aria-label="Edit character" className="block edit-details">
       <div className="row wrap between gap-8">
@@ -21,7 +45,14 @@ export function EditDetails({ onReset }: { onReset: () => void }) {
       </div>
       <div className="grid">
         {TEXT_FIELDS.map(([label, key]) => (
-          <TextField key={key} label={label} value={c.ch[key]} onChange={(v) => update((p) => ({ ch: { ...p.ch, [key]: v } }))} />
+          <TextField key={key} label={label} value={c.ch[key]} list={lists[key] ? 'details-' + key : undefined}
+            onChange={(v) => update((p) => {
+              const ch = { ...p.ch, [key]: v };
+              return { ch: key === 'cls' || key === 'sub' ? withIds(cat, ch) : ch };
+            })} />
+        ))}
+        {Object.entries(lists).map(([key, names]) => (
+          <datalist key={key} id={'details-' + key}>{names.map((n) => <option key={n} value={n} />)}</datalist>
         ))}
         {/* Level commits once, on blur or Enter: typing "12" never passes through level 1, because a level drop lowers
             level-table resource maxima and HP per level for good (normalize() clamps counts and HP). */}

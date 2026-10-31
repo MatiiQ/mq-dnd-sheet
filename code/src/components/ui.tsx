@@ -205,10 +205,11 @@ export function AddButton({ onClick, children, style, always }: { onClick: () =>
   return <button type="button" className="btn btn-add" style={style} onClick={onClick}>{children}</button>;
 }
 
-export function TextField({ label, value, onChange, placeholder, style }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; style?: CSSProperties }) {
+// list: the id of a <datalist> of suggestions.
+export function TextField({ label, value, onChange, placeholder, style, list }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; style?: CSSProperties; list?: string }) {
   return (
     <label className="field" style={style}>{label}
-      <input type="text" className="input" value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />
+      <input type="text" className="input" value={value} placeholder={placeholder} list={list} onChange={(e) => onChange(e.target.value)} />
     </label>
   );
 }

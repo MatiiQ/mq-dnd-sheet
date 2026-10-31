@@ -8,7 +8,7 @@ import type { Character, Item, Spell } from '../types';
 import { mergeCatalog } from './merge';
 import type { Entry, FeatureEntry, ItemEntry, SpellEntry } from './schema';
 import {
-  addFromCatalog, BLANK_ITEM, catForKind, choicesOf, nestedEntries, type AddChoices, freeText, itemFromEntry, itemFromForm, missingPicks, needed, optionGroups, poolOptions, prereqMet, resolveChoices,
+  addFromCatalog, BLANK_ITEM, catForKind, choicesOf, classIdOf, matchId, nestedEntries, subclassIdOf, type AddChoices, freeText, itemFromEntry, itemFromForm, missingPicks, needed, optionGroups, poolOptions, prereqMet, resolveChoices,
   spellFromEntry, spellSummary, validPicks, type ItemDraft
 } from './copy';
 
@@ -587,5 +587,36 @@ describe('addFromCatalog', () => {
     const c = addFromCatalog(blankCharacter(), merged, merged.byId.get('feat/fake-feat')!, A());
     expect(c.feats[0]).toMatchObject({ name: 'Fake Feat', g: 'feat', cid: 'feat/fake-feat', desc: 'Invented text.' });
     expect(c.grants).toEqual([expect.objectContaining({ kind: 'init', val: '1', from: 'feature:' + c.feats[0].id })]);
+  });
+});
+
+// ---- Task 5: class and subclass ids ----
+describe('matching names to catalog ids', () => {
+  const srdOnly = cat;
+  const withCh = (ch: Partial<Character['ch']>): Character => ({ ...blankCharacter(), ch: { ...blankCharacter().ch, ...ch } });
+  it('matches a class, species or subclass by name', () => {
+    expect(matchId(cat, 'class', ' ranger ')).toBe('class/ranger');
+    expect(matchId(cat, 'species', 'Wood Elf')).toBe('species/elf');
+    expect(matchId(cat, 'species', 'Elf')).toBe('species/elf');
+    expect(matchId(srdOnly, 'species', 'Aasimar')).toBe('');
+    expect(matchId(cat, 'subclass', 'Hunter', 'class/ranger')).toBe('subclass/ranger/hunter');
+    expect(matchId(cat, 'subclass', 'Hunter', 'class/druid')).toBe('');
+  });
+  it('finds the class and subclass of an old save by name', () => {
+    expect(classIdOf(cat, withCh({ cls: 'Ranger' }))).toBe('class/ranger');
+    expect(subclassIdOf(cat, withCh({ cls: 'Ranger', sub: 'Hunter' }))).toBe('subclass/ranger/hunter');
+    expect(classIdOf(cat, withCh({ cls: 'Ranger', clsId: 'class/nope' }))).toBe('class/ranger');
+    expect(classIdOf(cat, withCh({ cls: 'Whatever', clsId: 'class/druid' }))).toBe('class/druid');
+    expect(subclassIdOf(cat, withCh({ cls: 'Druid', clsId: 'class/druid', sub: 'Circle of the Stars', subId: 'subclass/druid/circle-of-the-stars' }))).toBe('');
+  });
+  it('fills the subclass name and id from a subclass choice, never over a typed one', () => {
+    const c = addFromCatalog(withCh({ cls: 'Ranger' }), cat, E('feature/ranger/ranger-subclass'), A({ sub: ['subclass/ranger/hunter'] }));
+    expect([c.ch.sub, c.ch.subId]).toEqual(['Hunter', 'subclass/ranger/hunter']);
+    const typed = addFromCatalog(withCh({ cls: 'Ranger', sub: 'Gloom Stalker', subId: '' }), cat, E('feature/ranger/ranger-subclass'), A({ sub: ['subclass/ranger/hunter'] }));
+    expect([typed.ch.sub, typed.ch.subId]).toEqual(['Gloom Stalker', '']);
+  });
+  it('names a spell’s class source through the class id', () => {
+    const c = addFromCatalog(withCh({ cls: '', clsId: 'class/wizard' }), cat, E('spell/fireball'), A());
+    expect(c.spells[0]).toMatchObject({ srcKind: 'class', srcName: 'Wizard' });
   });
 });

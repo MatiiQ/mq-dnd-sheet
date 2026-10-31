@@ -486,10 +486,37 @@ function addWithSpells(c: Character, cat: Catalog, from: string, inputs: GrantIn
   return out;
 }
 
-// The spell's source when the character's class (by name) has it on its list.
+// The spell's source when the character's class has it on its list.
 function classSource(cat: Catalog, c: Character, e: SpellEntry): Pick<Spell, 'srcKind' | 'srcName'> {
-  const cls = entriesOfKind(cat, 'class').find((x) => normName(x.name) === normName(c.ch.cls));
+  const cls = cat.byId.get(classIdOf(cat, c));
   return cls && e.classes.split(',').includes(cls.id.split('/')[1]) ? { srcKind: 'class', srcName: cls.name } : {};
+}
+
+// ---- Class, subclass and species ids ----
+
+// The id of the entry whose name matches the text (trimmed, any case), or ''. A subclass is looked for within `cls`
+// (a class id); a species also matches by the name of one of its lineage options ('Wood Elf' → species/elf).
+export function matchId(cat: Catalog, kind: 'class' | 'subclass' | 'species', text: string, cls?: string): string {
+  const n = normName(text);
+  if (!n) return '';
+  if (kind === 'subclass') {
+    const c = cls?.split('/')[1];
+    return entriesOfKind(cat, 'subclass').find((e) => e.cls === c && normName(e.name) === n)?.id ?? '';
+  }
+  const hit = entriesOfKind(cat, kind).find((e) => normName(e.name) === n)?.id;
+  if (hit || kind === 'class') return hit ?? '';
+  const option = entriesOfKind(cat, 'trait').find((t) => t.of && normName(t.name) === n);
+  return option && cat.byId.has('species/' + option.species) ? 'species/' + option.species : '';
+}
+// The character's class id: the stored one when the loaded catalog has it, else the typed name matched again.
+export function classIdOf(cat: Catalog, c: Character): string {
+  return c.ch.clsId && cat.byId.get(c.ch.clsId)?.kind === 'class' ? c.ch.clsId : matchId(cat, 'class', c.ch.cls);
+}
+// The character's subclass id: the stored one when the catalog has it under the class, else the typed name matched.
+export function subclassIdOf(cat: Catalog, c: Character): string {
+  const cls = classIdOf(cat, c);
+  const stored = c.ch.subId ? cat.byId.get(c.ch.subId) : undefined;
+  return stored?.kind === 'subclass' && stored.cls === cls.split('/')[1] ? stored.id : matchId(cat, 'subclass', c.ch.sub, cls);
 }
 
 // Adds a catalog entry with the player's answers: a spell or item with its grants, or a feature (feat, trait,
@@ -527,6 +554,10 @@ function addEntry(c: Character, cat: Catalog, e: Entry, ans: AddChoices): Charac
     if (e.equip) lines.push('Equipment: ' + e.equip);
     const featId = e.feat.split(':')[0];
     if (!cat.byId.has(featId)) lines.push(`Origin feat: ${titleOfId(featId)} (not in the loaded catalog)`);
+  }
+  if (e.kind === 'subclass' && !c.ch.sub.trim()) {
+    out.ch.sub = e.name;
+    out.ch.subId = e.id;
   }
   if (e.kind === 'species' && !c.ch.species.trim()) {
     out.ch.species = e.name;

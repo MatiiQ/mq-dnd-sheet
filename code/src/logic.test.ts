@@ -1439,3 +1439,13 @@ describe('addGrants with a catalog spell (plan 4)', () => {
     expect(out.spells[0].prep).toBe(false);
   });
 });
+
+describe('class and subclass ids (plan 4)', () => {
+  it('an old save without them loads with empty ids', () => {
+    const c = migrate(oldIlyra());
+    expect([c.ch.clsId, c.ch.subId]).toEqual(['', '']);
+    expect(blankCharacter().ch).toMatchObject({ clsId: '', subId: '' });
+    expect(sampleCharacter().ch).toMatchObject({ clsId: 'class/ranger', subId: 'subclass/ranger/hunter' });
+    expect(druidSample().ch).toMatchObject({ clsId: 'class/druid', subId: '' });
+  });
+});
