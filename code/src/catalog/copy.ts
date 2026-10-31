@@ -1,7 +1,8 @@
 // Copying catalog entries onto a character, and the custom forms that build the same fields by hand. Pure functions:
 // the pickers and forms call them, then save through update().
-import { ABILITIES, effScore, hasProf, maxFields, normName, parseWeight, SKILLS, skillLevel } from '../logic';
-import type { Ability, ArmorKind, Character, Item, Recharge, Spell } from '../types';
+import { linkOf, srcKindOfLink } from '../links';
+import { ABILITIES, addGrants, effScore, hasProf, maxFields, maxOf, newId, normName, parseWeight, SKILLS, skillLevel, type GrantInput } from '../logic';
+import type { Ability, ArmorKind, Character, Feature, FeatureGroup, Item, Linked, Recharge, Size, Spell } from '../types';
 import type { Catalog } from './merge';
 import { slug, type ChoiceSpec, type Entry, type GrantSpec, type ItemEntry, type ProfEntry, type SpellEntry } from './schema';
 
@@ -380,4 +381,167 @@ export function prereqMet(c: Character, prereq: string | undefined, adding: Entr
     } else missing.push(t);
   }
   return { ok: missing.length === 0, missing };
+}
+
+// ---- Adding from the catalog ----
+
+// One entry's answers. nested: the answers of each entry this one adds as its own feature (a background's origin feat,
+// a species' traits, a lineage option, a feat picked by a choice), keyed by that entry's id; choice ids are unique only
+// within one entry. counted/links: by resolved spec id. group: the feature group to use instead of groupOf's. from:
+// the source the new entry hangs from.
+export interface AddChoices { picks: Record<string, string[]>; counted: Record<string, boolean>; links: Record<string, string>; nested?: Record<string, AddChoices>; group?: FeatureGroup; from?: string }
+const NO_ANSWERS: AddChoices = { picks: {}, counted: {}, links: {} };
+
+// The feature group an entry is added under; null for kinds that are never features.
+export function groupOf(e: Entry): FeatureGroup | null {
+  switch (e.kind) {
+    case 'feat': return 'feat';
+    case 'trait': case 'species': return 'species';
+    case 'background': return 'background';
+    case 'subclass': return 'sub';
+    case 'feature': return e.sub ? 'sub' : 'class';
+    default: return null;
+  }
+}
+
+const titleOfId = (id: string) => titled(id.split('/').pop() ?? id);
+// What addFromCatalog adds as features below e: picked feats, traits and subclasses; a background's origin feat
+// ('feat/magic-initiate:cleric' presets the list); a species' traits (not its lineage options, which come by choice).
+export function nestedEntries(cat: Catalog, e: Entry, picks: Record<string, string[]>): { entry: Entry; preset?: Record<string, string[]> }[] {
+  const out: { entry: Entry; preset?: Record<string, string[]> }[] = [...resolveChoices(cat, e, picks).entries];
+  if (e.kind === 'background') {
+    const [id, list] = e.feat.split(':');
+    const feat = cat.byId.get(id);
+    if (feat) out.push(list === undefined ? { entry: feat } : { entry: feat, preset: { list: [list] } });
+  }
+  if (e.kind === 'species') {
+    const sp = e.id.split('/')[1];
+    out.push(...entriesOfKind(cat, 'trait').filter((t) => t.species === sp && !t.of).map((entry) => ({ entry })));
+  }
+  return out;
+}
+// The answers for a nested entry: its own answers merged over its preset picks.
+const answersFor = (ans: AddChoices, n: { entry: Entry; preset?: Record<string, string[]> }): AddChoices => {
+  const own = ans.nested?.[n.entry.id] ?? NO_ANSWERS;
+  return { ...own, picks: { ...n.preset, ...own.picks } };
+};
+
+// Throws when a choice of e, or of an entry nested under it, lacks its picks, so nothing is added half-way.
+function checkAnswers(cat: Catalog, c: Character, e: Entry, ans: AddChoices): void {
+  const missing = missingPicks(cat, c, e, ans.picks);
+  if (missing.length) {
+    const names = missing.map((id) => choicesOf(e).find((ch) => ch.id === id)?.name ?? id);
+    throw new Error(`${e.name}: choose ${names.join(', ')}`);
+  }
+  for (const n of nestedEntries(cat, e, ans.picks)) checkAnswers(cat, c, n.entry, answersFor(ans, n));
+}
+
+// "Magic Initiate (Cleric)": the entry's name, plus the label of its list choice's pick.
+export function featureName(cat: Catalog, c: Character, e: Entry, picks: Record<string, string[]>): string {
+  const ch = choicesOf(e).find((x) => x.pool?.startsWith('list:'));
+  const v = ch && picks[ch.id]?.[0];
+  const label = v && poolOptions(cat, c, ch.pool!, picks).find((o) => o.value === v)?.label;
+  return label ? `${e.name} (${label})` : e.name;
+}
+
+// The spell a resolved `spell` spec creates: the catalog spell, the typed name of a free-text pick (at the pool's level
+// when it names one), or undefined for a catalog id the loaded catalog lacks (addGrants then names it after the spec).
+function spellFor(cat: Catalog, e: Entry, spec: Resolved): Omit<Spell, 'id'> | undefined {
+  const v = spec.spell;
+  if (!v || v.startsWith('$')) return undefined;
+  if (v.startsWith('spell/')) { const se = cat.byId.get(v); return se?.kind === 'spell' ? spellFromEntry(se) : undefined; }
+  const src = 'grants' in e && e.grants ? e.grants.find((g) => g.kind === 'spell' && (g.id === spec.id || spec.id.startsWith(g.id + '-'))) : undefined;
+  const ref = src?.kind === 'spell' && src.spell?.startsWith('$') ? src.spell.slice(1) : undefined;
+  const pool = ref ? choicesOf(e).find((ch) => ch.id === ref)?.pool ?? '' : '';
+  const lvl = /(?:^|[:;])lvl=(\d)(?:;|$)/.exec(pool)?.[1];
+  return { name: v, lvl: lvl ? Number(lvl) : 0, time: '', range: '' };
+}
+
+// A catalog spell's own grants (Shillelagh's atkAbil), from the character's spell `id`. Grants that spell already has
+// (same kind and name) are skipped, so linking a spell added from the picker never doubles them.
+function addSpellGrants(c: Character, cat: Catalog, cid: string | undefined, id: string): Character {
+  const se = cid ? cat.byId.get(cid) : undefined;
+  if (!se || se.kind !== 'spell' || !se.grants?.length) return c;
+  const link = linkOf('spell', id);
+  const have = c.grants.filter((g) => g.from === link);
+  const specs = resolveChoices(cat, se, {}).specs.filter((s) => !have.some((g) => g.kind === s.kind && g.name === s.name));
+  return specs.length ? addGrants(c, link, specs.map((spec) => ({ spec }))) : c;
+}
+
+// The entry's resolved grants as addGrants inputs, with the player's counted and link answers and the spells they make.
+function inputsOf(cat: Catalog, e: Entry, ans: AddChoices, specs: Resolved[]): GrantInput[] {
+  return specs.map((spec) => {
+    const sp = spec.kind === 'spell' ? spellFor(cat, e, spec) : undefined;
+    return { spec, ...(ans.counted[spec.id] ? { counted: true } : {}), ...(ans.links[spec.id] ? { link: ans.links[spec.id] } : {}), ...(sp ? { spell: sp } : {}) };
+  });
+}
+
+// Adds grants from `from`, then the own grants of every catalog spell they created or linked.
+function addWithSpells(c: Character, cat: Catalog, from: string, inputs: GrantInput[]): Character {
+  if (!inputs.length) return c;
+  const before = new Set(c.spells.map((x) => x.id));
+  let out = addGrants(c, from, inputs);
+  for (const sp of out.spells.filter((x) => !before.has(x.id))) out = addSpellGrants(out, cat, sp.cid, sp.id);
+  for (const input of inputs) if (input.spec.kind === 'spell' && input.link) out = addSpellGrants(out, cat, input.spec.spell, input.link);
+  return out;
+}
+
+// The spell's source when the character's class (by name) has it on its list.
+function classSource(cat: Catalog, c: Character, e: SpellEntry): Pick<Spell, 'srcKind' | 'srcName'> {
+  const cls = entriesOfKind(cat, 'class').find((x) => normName(x.name) === normName(c.ch.cls));
+  return cls && e.classes.split(',').includes(cls.id.split('/')[1]) ? { srcKind: 'class', srcName: cls.name } : {};
+}
+
+// Adds a catalog entry with the player's answers: a spell or item with its grants, or a feature (feat, trait,
+// species, background, subclass, class feature) with its grants and every entry nested under it, each linked to
+// what it came from. Throws when a choice is unanswered, before changing anything.
+export function addFromCatalog(c: Character, cat: Catalog, e: Entry, ans: AddChoices): Character {
+  checkAnswers(cat, c, e, ans);
+  return addEntry(c, cat, e, ans);
+}
+
+function addEntry(c: Character, cat: Catalog, e: Entry, ans: AddChoices): Character {
+  const r = resolveChoices(cat, e, ans.picks);
+  const linkFields = (x: Character): Linked => {
+    if (!ans.from) return {};
+    const k = srcKindOfLink(x, ans.from);
+    return { from: ans.from, ...(k ? { srcKind: k } : {}) };
+  };
+  if (e.kind === 'spell') {
+    const id = newId();
+    const out: Character = { ...c, spells: [...c.spells, { id, ...spellFromEntry(e), ...classSource(cat, c, e), ...linkFields(c) }] };
+    return addWithSpells(out, cat, linkOf('spell', id), inputsOf(cat, e, ans, r.specs));
+  }
+  if (e.kind === 'item') {
+    const id = newId();
+    const it: Item = { id, ...itemFromEntry(e) };
+    if (it.maxV !== undefined) it.count = maxOf(c, it) ?? 0;
+    return addWithSpells({ ...c, inv: [...c.inv, it] }, cat, linkOf('item', id), inputsOf(cat, e, ans, r.specs));
+  }
+  const g = ans.group ?? groupOf(e);
+  if (!g) throw new Error(`${e.name}: a ${e.kind} entry can't be added`);
+  const id = newId();
+  let out: Character = { ...c, ch: { ...c.ch } };
+  const lines = [e.desc, ...r.notes];
+  if (e.kind === 'background') {
+    if (e.equip) lines.push('Equipment: ' + e.equip);
+    const featId = e.feat.split(':')[0];
+    if (!cat.byId.has(featId)) lines.push(`Origin feat: ${titleOfId(featId)} (not in the loaded catalog)`);
+  }
+  if (e.kind === 'species' && !c.ch.species.trim()) {
+    out.ch.species = e.name;
+    out.speedBase = e.speed;
+    const sizes = e.sizes.split(',') as Size[];
+    if (sizes.length === 1) out.size = sizes[0];
+    else lines.push(`Size: ${sizes.map((x) => capital(x)).join(' or ')} (set it in Edit details)`);
+  }
+  const lvl = e.kind === 'feature' || e.kind === 'trait' ? e.lvl : 0;
+  const feature: Feature = {
+    id, g, name: featureName(cat, c, e, ans.picks), desc: lines.filter((l) => l.trim()).join('\n'), cid: e.id,
+    ...linkFields(c), ...(lvl > c.level ? { minLvl: lvl } : {})
+  };
+  out.feats = [...out.feats, feature];
+  out = addWithSpells(out, cat, linkOf('feature', id), inputsOf(cat, e, ans, r.specs));
+  for (const n of nestedEntries(cat, e, ans.picks)) out = addEntry(out, cat, n.entry, { ...answersFor(ans, n), from: linkOf('feature', id) });
+  return out;
 }

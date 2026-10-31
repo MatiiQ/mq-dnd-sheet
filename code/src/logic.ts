@@ -1051,9 +1051,11 @@ export function addGrants(c: Character, from: string, inputs: GrantInput[]): Cha
       out.res = [...out.res, { ...r, count: maxOf(c, r) ?? 0 }];
     } else if (s.kind === 'spell') {
       if (input.link) { out = linkTo('spells', id); continue; }
-      const sp = input.spell ?? { name: s.name, lvl: 0, time: '', range: '' };
+      const { prep: _prep, ...sp } = input.spell ?? { name: s.name, lvl: 0, time: '', range: '' };
       const castAb = ABILITIES.find(([k]) => k === s.castAb)?.[0];
       // A spell with neither flag would load as prepared (migrate), so a granted one is always prepared or unprepared.
+      // The grant's flags win over the catalog spell's prep: an always-prepared spell has no prep to linger after
+      // "Always prepared" is unticked.
       out.spells = [...out.spells, { ...sp, id, ...(s.always ? { always: true } : { prep: false }), ...(castAb ? { castAb } : {}), ...base, ...common(s) }];
     } else if (s.kind === 'action' && input.link) {
       out = linkTo('attacks', id);

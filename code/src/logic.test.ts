@@ -1425,3 +1425,17 @@ describe('rebuilt samples', () => {
     expect([b.grants, b.defenses, b.profs, b.effectsOn]).toEqual([[], [], [], []]);
   });
 });
+
+describe('addGrants with a catalog spell (plan 4)', () => {
+  const sp: Omit<Spell, 'id'> = { name: 'Goodberry', lvl: 1, time: 'Action', range: 'Self', prep: true, cid: 'spell/goodberry' };
+  const c = { ...blankCharacter(), feats: [{ id: 'f1', g: 'feat' as const, name: 'Magic Initiate (Druid)', desc: '' }] };
+  it('an always-prepared spell keeps no prep flag', () => {
+    const out = addGrants(c, 'feature:f1', [{ spec: { id: 'g2', kind: 'spell', name: 'Level 1 spell', spell: 'spell/goodberry', always: true }, spell: sp }]);
+    expect(out.spells[0].always).toBe(true);
+    expect('prep' in out.spells[0]).toBe(false);
+  });
+  it('a granted spell without always is unprepared', () => {
+    const out = addGrants(c, 'feature:f1', [{ spec: { id: 'g1', kind: 'spell', name: 'Cantrips', spell: 'spell/goodberry' }, spell: sp }]);
+    expect(out.spells[0].prep).toBe(false);
+  });
+});

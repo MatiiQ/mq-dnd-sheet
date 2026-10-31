@@ -1,13 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import srdEntries from '../data/srd/index';
 import { blankCharacter, sampleCharacter } from '../defaults';
-import { migrate } from '../logic';
+import { armorClass, migrate, removeFeature, removeSpell } from '../logic';
+import { inactiveReason, isActive } from '../links';
 import { saveEntry } from '../sheet';
 import type { Character, Item, Spell } from '../types';
 import { mergeCatalog } from './merge';
 import type { Entry, FeatureEntry, ItemEntry, SpellEntry } from './schema';
 import {
-  BLANK_ITEM, catForKind, choicesOf, freeText, itemFromEntry, itemFromForm, missingPicks, needed, optionGroups, poolOptions, prereqMet, resolveChoices,
+  addFromCatalog, BLANK_ITEM, catForKind, choicesOf, nestedEntries, type AddChoices, freeText, itemFromEntry, itemFromForm, missingPicks, needed, optionGroups, poolOptions, prereqMet, resolveChoices,
   spellFromEntry, spellSummary, validPicks, type ItemDraft
 } from './copy';
 
@@ -348,5 +349,243 @@ describe('prereqMet', () => {
     expect(prereqMet(ilyra, 'armor=medium').ok).toBe(true);
     expect(prereqMet(ilyra, 'armor=heavy').ok).toBe(false);
     expect(prereqMet(ilyra, undefined)).toEqual({ ok: true, missing: [] });
+  });
+});
+
+// ---- Task 4: adding from the catalog ----
+const A = (picks: Record<string, string[]> = {}, nested?: Record<string, AddChoices>, more: Partial<AddChoices> = {}): AddChoices =>
+  ({ picks, counted: {}, links: {}, ...(nested ? { nested } : {}), ...more });
+const E = (id: string) => cat.byId.get(id)!;
+const miDruid = { list: ['druid'], cantrips: ['spell/guidance', 'spell/produce-flame'], spell1: ['spell/goodberry'], ab: ['wis'] };
+const fromOf = (c: Character, link: string) => ({
+  spells: c.spells.filter((x) => x.from === link), grants: c.grants.filter((g) => g.from === link), res: c.res.filter((r) => r.from === link),
+  feats: c.feats.filter((f) => f.from === link), senses: c.senses.filter((x) => x.from === link), defenses: c.defenses.filter((x) => x.from === link)
+});
+
+describe('addFromCatalog', () => {
+  it('adds Magic Initiate with its spells named after the catalog spells, twice without merging', () => {
+    const c1 = addFromCatalog(blankCharacter(), cat, E('feat/magic-initiate'), A(miDruid));
+    expect(c1.feats).toHaveLength(1);
+    const f = c1.feats[0];
+    expect(f).toMatchObject({ g: 'feat', name: 'Magic Initiate (Druid)', cid: 'feat/magic-initiate' });
+    const got = fromOf(c1, 'feature:' + f.id);
+    expect(got.spells.map((x) => x.name)).toEqual(['Guidance', 'Produce Flame', 'Goodberry']);
+    expect(got.spells.map((x) => [x.lvl, x.cid, x.castAb])).toEqual([[0, 'spell/guidance', 'wis'], [0, 'spell/produce-flame', 'wis'], [1, 'spell/goodberry', 'wis']]);
+    expect(got.spells[0].time).toBe('Action');
+    expect(got.spells[0].prep).toBe(false);
+    expect(got.spells[2].always).toBe(true);
+    expect(got.res).toHaveLength(1);
+    expect(got.res[0].casts).toBe(got.spells[2].id);
+    const c2 = addFromCatalog(c1, cat, E('feat/magic-initiate'),
+      A({ list: ['wizard'], cantrips: ['spell/light', 'spell/fire-bolt'], spell1: ['spell/magic-missile'], ab: ['int'] }));
+    expect(c2.feats.map((x) => x.name)).toEqual(['Magic Initiate (Druid)', 'Magic Initiate (Wizard)']);
+    expect(c2.spells).toHaveLength(6);
+    expect(c2.res).toHaveLength(2);
+  });
+
+  it('adds a background with its origin feat preset, and removing it removes both', () => {
+    const blank = blankCharacter();
+    expect(nestedEntries(cat, E('background/acolyte'), {})).toEqual([{ entry: E('feat/magic-initiate'), preset: { list: ['cleric'] } }]);
+    const mi = A({ cantrips: ['spell/guidance', 'spell/sacred-flame'], spell1: ['spell/bless'], ab: ['wis'] });
+    const c = addFromCatalog(blank, cat, E('background/acolyte'), A({ abil: ['o2', 'o2', 'o3'] }, { 'feat/magic-initiate': mi }));
+    const bg = c.feats.find((f) => f.g === 'background')!;
+    expect(bg).toMatchObject({ name: 'Acolyte', cid: 'background/acolyte' });
+    expect(bg.desc).toContain('Equipment: ');
+    expect(c.ch).toEqual(blank.ch);
+    const g = fromOf(c, 'feature:' + bg.id).grants;
+    expect(g.filter((x) => x.kind === 'abil').map((x) => x.ab)).toEqual(['wis', 'wis', 'cha']);
+    expect(g.filter((x) => x.kind === 'prof').map((x) => x.target)).toEqual(['insight', 'religion', 'Calligrapher’s Supplies']);
+    const feat = c.feats.find((f) => f.cid === 'feat/magic-initiate')!;
+    expect(feat).toMatchObject({ name: 'Magic Initiate (Cleric)', from: 'feature:' + bg.id, srcKind: 'background' });
+    expect(fromOf(c, 'feature:' + feat.id).spells.map((x) => x.name)).toEqual(['Guidance', 'Sacred Flame', 'Bless']);
+    expect(fromOf(c, 'feature:' + feat.id).res).toHaveLength(1);
+    expect(() => addFromCatalog(blank, cat, E('background/acolyte'), A({ abil: ['o2', 'o2', 'o3'] }))).toThrow();
+    expect(() => addFromCatalog(blank, cat, E('background/acolyte'), A({}, { 'feat/magic-initiate': mi }))).toThrow();
+    const gone = removeFeature(c, bg.id);
+    expect(gone.feats).toEqual([]);
+    expect(gone.spells).toEqual([]);
+    expect(gone.grants).toEqual([]);
+  });
+
+  it('adds a subclass picked by a choice as its own feature, without its features', () => {
+    const c = addFromCatalog(blankCharacter(), cat, E('feature/ranger/ranger-subclass'), A({ sub: ['subclass/ranger/hunter'] }));
+    const top = c.feats.find((f) => f.cid === 'feature/ranger/ranger-subclass')!;
+    expect(c.feats.find((f) => f.cid === 'subclass/ranger/hunter')).toMatchObject({ g: 'sub', name: 'Hunter', from: 'feature:' + top.id });
+    expect(c.feats).toHaveLength(2);
+  });
+
+  it('points Favored Enemy’s resource at its new Hunter’s Mark', () => {
+    const c = addFromCatalog(blankCharacter(), cat, E('feature/ranger/favored-enemy'), A());
+    const hm = c.spells.find((x) => x.cid === 'spell/hunters-mark')!;
+    expect(hm.name).toBe('Hunter’s Mark');
+    expect(c.res[0].casts).toBe(hm.id);
+  });
+
+  it('adds Ring of Protection with an AC grant that needs it equipped and attuned', () => {
+    const c = addFromCatalog(blankCharacter(), cat, E('item/ring-of-protection'), A());
+    const ring = c.inv[0];
+    expect(ring.acBonus).toBeUndefined();
+    expect(c.grants.find((g) => g.kind === 'ac')).toMatchObject({ from: 'item:' + ring.id, needEq: true, needAtt: true });
+    const base = armorClass(c).total;
+    const worn = { ...c, inv: [{ ...ring, eq: true }] };
+    expect(armorClass(worn).total).toBe(base);
+    expect(armorClass({ ...worn, attuneIds: [ring.id, '', ''] }).total).toBe(base + 1);
+  });
+
+  it('fills a formula charges maximum on adding', () => {
+    const rod: ItemEntry = { id: 'item/test-rod', kind: 'item', name: 'Test Rod', src: 'srd', desc: 'Invented.', cat: 'magic', charges: 'pb', recharge: 'long' };
+    const c = addFromCatalog({ ...blankCharacter(), level: 5 }, cat, rod, A());
+    expect(c.inv[0]).toMatchObject({ maxV: 'pb', count: 3 });
+  });
+
+  it('adds Shillelagh with its own grant, removed with it', () => {
+    const c = addFromCatalog(blankCharacter(), cat, E('spell/shillelagh'), A());
+    const sp = c.spells[0];
+    expect(c.grants).toEqual([expect.objectContaining({ kind: 'atkAbil', from: 'spell:' + sp.id })]);
+    expect(removeSpell(c, sp.id).grants).toEqual([]);
+  });
+
+  it('gives a spell granted by another entry its own grants, once, also when linked', () => {
+    const picks = { ...miDruid, cantrips: ['spell/shillelagh', 'spell/guidance'] };
+    const c = addFromCatalog(blankCharacter(), cat, E('feat/magic-initiate'), A(picks));
+    const sh = c.spells.find((x) => x.cid === 'spell/shillelagh')!;
+    expect(c.grants.filter((g) => g.kind === 'atkAbil')).toEqual([expect.objectContaining({ from: 'spell:' + sh.id })]);
+    // Linked to a hand-made Shillelagh with no grants: it gets one.
+    const hand: Character = { ...blankCharacter(), spells: [{ id: 'h1', name: 'Shillelagh', lvl: 0, time: 'Bonus Action', range: 'Self' }] };
+    const linked = addFromCatalog(hand, cat, E('feat/magic-initiate'), A(picks, undefined, { links: { 'g1-0': 'h1' } }));
+    expect(linked.spells.filter((x) => x.name === 'Shillelagh')).toHaveLength(1);
+    expect(linked.grants.filter((g) => g.kind === 'atkAbil')).toEqual([expect.objectContaining({ from: 'spell:h1' })]);
+    // Linked to one added from the picker, which already has it: still one.
+    const picked = addFromCatalog(blankCharacter(), cat, E('spell/shillelagh'), A());
+    const pid = picked.spells[0].id;
+    const twice = addFromCatalog(picked, cat, E('feat/magic-initiate'), A(picks, undefined, { links: { 'g1-0': pid } }));
+    expect(twice.grants.filter((g) => g.kind === 'atkAbil')).toHaveLength(1);
+    const feat = twice.feats[0];
+    const after = removeFeature(twice, feat.id);
+    expect(after.spells.map((x) => x.id)).toEqual([pid]);
+    expect(after.grants.filter((g) => g.kind === 'atkAbil')).toHaveLength(1);
+  });
+
+  it('adds a feature above the character’s level with minLvl, its grants inactive until then', () => {
+    const r5 = withSkills(['stealth', 'survival'], { level: 5 });
+    const c = addFromCatalog(r5, cat, E('feature/ranger/expertise'), A({ exp: ['stealth', 'survival'] }));
+    const f = c.feats[0];
+    expect(f.minLvl).toBe(9);
+    const exp = c.grants.filter((g) => g.cat === 'expertise');
+    expect(exp).toHaveLength(2);
+    for (const g of exp) expect(inactiveReason(c, g)).toBe('from level 9');
+    for (const g of exp) expect(isActive({ ...c, level: 9 }, g)).toBe(true);
+  });
+
+  it('keeps picks no grant uses and free-text notes', () => {
+    const c = addFromCatalog(blankCharacter(), cat, E('background/soldier'), A({ abil: ['o1', 'o1', 'o3'], tool: ['Dice'] }));
+    const bg = c.feats.find((f) => f.g === 'background')!;
+    expect(c.grants).toContainEqual(expect.objectContaining({ kind: 'prof', cat: 'tool', target: 'Dice', from: 'feature:' + bg.id }));
+    expect(c.feats.find((f) => f.cid === 'feat/savage-attacker')).toMatchObject({ from: 'feature:' + bg.id });
+    const m = addFromCatalog(blankCharacter(), cat, E('feature/sorcerer/metamagic'), A({ meta: ['Quickened Spell', 'Twinned Spell'] }));
+    expect(m.feats[0].desc.endsWith('Metamagic options: Quickened Spell, Twinned Spell')).toBe(true);
+  });
+
+  it('names a typed spell after the text, at the pool’s level', () => {
+    const e: FeatureEntry = { id: 'feature/test/moon', kind: 'feature', name: 'Moon', src: 'srd', desc: 'Invented.', cls: 'test', lvl: 1,
+      grants: [{ kind: 'choice', id: 'sp', name: 'Spell', pick: 1, pool: 'spell:list=nope;lvl=1' }, { id: 'g1', kind: 'spell', name: 'Moon spell', spell: '$sp' }] };
+    const c = addFromCatalog(blankCharacter(), cat, e, A({ sp: ['Moonbeam Arrow'] }));
+    expect(c.spells[0]).toMatchObject({ name: 'Moonbeam Arrow', lvl: 1 });
+  });
+
+  it('adds what it can when a pool offers nothing', () => {
+    const c = addFromCatalog(blankCharacter(), cat, E('feature/ranger/expertise'), A());
+    expect(c.feats).toHaveLength(1);
+    expect(c.grants).toEqual([]);
+    const d = addFromCatalog(blankCharacter(), cat, E('feature/ranger/deft-explorer'), A({ lang: ['Elvish', 'Dwarvish'] }));
+    expect(d.grants.map((g) => [g.cat, g.target])).toEqual([['language', 'Elvish'], ['language', 'Dwarvish']]);
+    expect(JSON.stringify(d.grants)).not.toContain('$');
+  });
+
+  const goliathAns = A({}, { 'trait/goliath/giant-ancestry': A({ anc: ['trait/goliath/stones-endurance-stone-giant'] }) });
+  it('copies a new species’ Speed and size onto the sheet, never over a species already typed', () => {
+    const blank = blankCharacter();
+    const g = addFromCatalog(blank, cat, E('species/goliath'), goliathAns);
+    expect([g.speedBase, g.size, g.ch.species]).toEqual([35, 'medium', 'Goliath']);
+    const gnome = addFromCatalog(blank, cat, E('species/gnome'),
+      A({}, { 'trait/gnome/gnomish-lineage': A({ lin: ['trait/gnome/rock-gnome'] }, { 'trait/gnome/rock-gnome': A({ ab: ['int'] }) }) }));
+    expect(gnome.size).toBe('small');
+    const human = addFromCatalog(blank, cat, E('species/human'),
+      A({}, { 'trait/human/skillful': A({ c1: ['stealth'] }), 'trait/human/versatile': A({ c1: ['feat/alert'] }) }));
+    expect(human.size).toBe('medium');
+    const hf = human.feats.find((f) => f.g === 'species' && f.cid === 'species/human')!;
+    expect(hf.desc.endsWith('Size: Small or Medium (set it in Edit details)')).toBe(true);
+    expect(human.feats.some((f) => f.cid === 'feat/alert')).toBe(true);
+    const typed = { ...blank, ch: { ...blank.ch, species: 'Wood Elf' }, speedBase: 30, size: 'small' as const };
+    const t = addFromCatalog(typed, cat, E('species/goliath'), goliathAns);
+    expect([t.speedBase, t.size, t.ch.species]).toEqual([30, 'small', 'Wood Elf']);
+    expect(() => addFromCatalog(blank, cat, E('species/goliath'), A())).toThrow();
+  });
+
+  it('adds the Elf species as one feature with every trait under it, answers following the tree', () => {
+    const ans = A({}, {
+      'trait/elf/elven-lineage': A({ lin: ['trait/elf/wood-elf'] }, { 'trait/elf/wood-elf': A({ ab: ['wis'] }) }),
+      'trait/elf/keen-senses': A({ c1: ['o2'] })
+    });
+    const c = addFromCatalog(blankCharacter(), cat, E('species/elf'), ans);
+    expect(c.ch.species).toBe('Elf');
+    const elf = c.feats.find((f) => f.cid === 'species/elf')!;
+    expect(elf.g).toBe('species');
+    const traits = c.feats.filter((f) => f.from === 'feature:' + elf.id);
+    expect(traits.map((f) => f.cid).sort()).toEqual(['trait/elf/darkvision', 'trait/elf/elven-lineage', 'trait/elf/fey-ancestry', 'trait/elf/keen-senses', 'trait/elf/trance']);
+    const lineage = c.feats.find((f) => f.cid === 'trait/elf/elven-lineage')!;
+    const wood = c.feats.find((f) => f.cid === 'trait/elf/wood-elf')!;
+    expect(wood.from).toBe('feature:' + lineage.id);
+    expect(c.senses.map((x) => x.name)).toEqual(['Darkvision']);
+    expect(c.defenses.map((x) => x.name)).toEqual(['vs Charmed']);
+    expect(c.grants).toContainEqual(expect.objectContaining({ kind: 'prof', target: 'perception' }));
+    const dc = c.spells.find((x) => x.cid === 'spell/druidcraft')!;
+    expect(dc.castAb).toBe('wis');
+    const ls = c.spells.find((x) => x.cid === 'spell/longstrider')!, pwt = c.spells.find((x) => x.cid === 'spell/pass-without-trace')!;
+    expect([ls.minLvl, ls.lvl, pwt.minLvl, pwt.lvl]).toEqual([3, 1, 5, 2]);
+    expect(isActive(c, ls)).toBe(false);
+    const kept = addFromCatalog({ ...blankCharacter(), ch: { ...blankCharacter().ch, species: 'Wood Elf' } }, cat, E('species/elf'), ans);
+    expect(kept.ch.species).toBe('Wood Elf');
+    const gone = removeFeature(c, elf.id);
+    expect([gone.feats, gone.spells, gone.senses, gone.defenses, gone.grants, gone.res]).toEqual([[], [], [], [], [], []]);
+    const flat = A({}, {
+      'trait/elf/elven-lineage': A({ lin: ['trait/elf/wood-elf'] }), 'trait/elf/wood-elf': A({ ab: ['wis'] }), 'trait/elf/keen-senses': A({ c1: ['o2'] })
+    });
+    expect(() => addFromCatalog(blankCharacter(), cat, E('species/elf'), flat)).toThrow();
+  });
+
+  it('adds every Goliath trait, Large Form waiting for level 5, and only the picked ancestry', () => {
+    const c = addFromCatalog(blankCharacter(), cat, E('species/goliath'), goliathAns);
+    const gol = c.feats.find((f) => f.cid === 'species/goliath')!;
+    expect(c.feats.filter((f) => f.from === 'feature:' + gol.id).map((f) => f.name).sort()).toEqual(['Giant Ancestry', 'Large Form', 'Powerful Build']);
+    const ancestries = cat.list.filter((e) => e.kind === 'trait' && e.of === 'trait/goliath/giant-ancestry').map((e) => e.id);
+    expect(ancestries).toHaveLength(6);
+    expect(c.feats.filter((f) => ancestries.includes(f.cid ?? '')).map((f) => f.cid)).toEqual(['trait/goliath/stones-endurance-stone-giant']);
+    const lf = c.feats.find((f) => f.name === 'Large Form')!;
+    expect(lf.minLvl).toBe(5);
+    const lfRes = c.res.find((r) => r.from === 'feature:' + lf.id)!;
+    expect(inactiveReason(c, lfRes)).toBe('from level 5');
+    expect(isActive({ ...c, level: 5 }, lfRes)).toBe(true);
+  });
+
+  it('stores counted and links answers on the grants', () => {
+    const c = addFromCatalog(blankCharacter(), cat, E('background/acolyte'),
+      A({ abil: ['o1', 'o2', 'o3'] }, { 'feat/magic-initiate': A({ cantrips: ['spell/guidance', 'spell/sacred-flame'], spell1: ['spell/bless'], ab: ['wis'] }) },
+        { counted: { o1: true } }));
+    expect(c.grants.find((g) => g.ab === 'int')!.counted).toBe(true);
+    expect(c.grants.find((g) => g.ab === 'wis')!.counted).toBeUndefined();
+    const own: Character = { ...blankCharacter(), res: [{ id: 'r1', name: 'Favored Enemy', count: 2, max: 2, recharge: 'long' }] };
+    const fe = addFromCatalog(own, cat, E('feature/ranger/favored-enemy'), A({}, undefined, { links: { g2: 'r1' } }));
+    expect(fe.res).toHaveLength(1);
+    expect(fe.res[0]).toMatchObject({ id: 'r1', from: 'feature:' + fe.feats[0].id, linked: true });
+  });
+
+  it('adds a pack entry the same way', () => {
+    const fake: Entry = { id: 'feat/fake-feat', kind: 'feat', name: 'Fake Feat', src: 'phb', desc: 'Invented text.', cat: 'origin',
+      grants: [{ id: 'g1', kind: 'init', name: 'Initiative +1', val: '1' }] };
+    const merged = mergeCatalog(srdEntries, [fake]);
+    const c = addFromCatalog(blankCharacter(), merged, merged.byId.get('feat/fake-feat')!, A());
+    expect(c.feats[0]).toMatchObject({ name: 'Fake Feat', g: 'feat', cid: 'feat/fake-feat', desc: 'Invented text.' });
+    expect(c.grants).toEqual([expect.objectContaining({ kind: 'init', val: '1', from: 'feature:' + c.feats[0].id })]);
   });
 });
