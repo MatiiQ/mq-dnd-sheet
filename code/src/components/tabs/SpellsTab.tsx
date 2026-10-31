@@ -1,20 +1,22 @@
 import { useState } from 'react';
 import {
-  AC_SPELLS, CAST_NAMES, SPELL_SORTS, acAfterEdit, castSpell, concAfterEdit, detectAcSpell, fmt, preparedCount, removeSpell, setConc, setSlotUsed,
-  slotsLeft, sortSpells, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, toggleFreeCast, type AcPart
+  AC_SPELLS, CAST_NAMES, SPELL_SORTS, acAfterEdit, castSpell, concAfterEdit, detectAcSpell, effectsAfterEdit, fmt, preparedCount, removeSpell, setConc, setSlotUsed,
+  slotsLeft, sortSpells, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, castFree, freeCastsOf, spellAttackFor, spellSaveDcFor, toggleEffect, type AcPart
 } from '../../logic';
+import { hasActiveEffect, inactiveReason, linkOf, sourceLabel } from '../../links';
 import { patchEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
-import type { AcEffect, Spell } from '../../types';
+import type { AcEffect, Spell, SrcKind } from '../../types';
+import { SourcePicker } from '../SourcePicker';
 import { AddButton, ChevronDown, DieBadge, EntryForm, EntryRow, NumInput, Step, TextField, UsePips } from '../ui';
 
 const ORDINAL = ['Cantrip', '1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th'];
-const BLANK = { name: '', lvl: '1', time: 'Action', range: '', dice: '', conc: false, source: '', dur: '', comp: '', always: false, acFx: '' as AcEffect | '', acVal: 0 };
+const BLANK = { name: '', lvl: '1', time: 'Action', range: '', dice: '', conc: false, from: undefined as string | undefined, srcKind: undefined as SrcKind | undefined, srcName: undefined as string | undefined, dur: '', comp: '', always: false, acFx: '' as AcEffect | '', acVal: 0 };
 const AC_EFFECTS: [AcEffect | '', string][] = [['', 'None'], ['bonus', 'Bonus'], ['base', 'Base (+ DEX)'], ['floor', 'Floor']];
 type Draft = typeof BLANK;
 
 const toDraft = (e: Spell): Draft => ({
   name: e.name, lvl: String(e.lvl || 0), time: e.time || 'Action', range: e.range || '', dice: e.dice || '',
-  conc: !!e.c, source: e.source || '', dur: e.dur || '', comp: e.comp || '', always: !!e.always,
+  conc: !!e.c, from: e.from, srcKind: e.srcKind, srcName: e.srcName, dur: e.dur || '', comp: e.comp || '', always: !!e.always,
   acFx: e.acFx || '', acVal: e.acVal ?? 0
 });
 
@@ -37,13 +39,13 @@ export function SpellsTab() {
     const found = !id && !d.acFx ? detectAcSpell(name) : null;
     const built = {
       name, lvl: parseInt(d.lvl, 10) || 0, time: d.time, range: d.range.trim(), dice: d.dice.trim(), c: d.conc,
-      source: d.source.trim() || 'Custom', dur: d.dur.trim(), comp: d.comp.trim(), always: d.always,
+      from: d.from, srcKind: d.srcKind, srcName: d.srcName?.trim() || undefined, dur: d.dur.trim(), comp: d.comp.trim(), always: d.always,
       // Both keys always present: undefined clears the effect when editing.
       acFx: d.acFx || found?.acFx, acVal: d.acFx ? d.acVal : found?.acVal
     };
     update((p) => ({
       spells: saveEntry<Spell>(p.spells, built, id, { prep: true }),
-      ...(id ? { ...concAfterEdit(p, { ...built, id }), ...acAfterEdit(p, { ...built, id }) } : {})
+      ...(id ? { ...concAfterEdit(p, { ...built, id }), ...acAfterEdit(p, { ...built, id }), ...effectsAfterEdit(p, { ...built, id }) } : {})
     }));
     f.close();
   };
@@ -62,7 +64,7 @@ export function SpellsTab() {
           </select>
         </label>
         <TextField label="Range" value={f.draft.range} placeholder="e.g. 60 ft" onChange={(v) => f.set({ range: v })} />
-        <TextField label="Source" value={f.draft.source} placeholder="e.g. Ranger, Feat" onChange={(v) => f.set({ source: v })} />
+        <SourcePicker self={f.editingId ? linkOf('spell', f.editingId) : undefined} value={f.draft} onChange={(v) => f.set(v)} />
         <TextField label="Dice / effect" value={f.draft.dice} placeholder="e.g. DEX save · 3d6 Fire" onChange={(v) => f.set({ dice: v })} />
         <TextField label="Duration" value={f.draft.dur} placeholder="e.g. 1 hour, Instantaneous" onChange={(v) => f.set({ dur: v })} />
         <TextField label="Components" value={f.draft.comp} placeholder="e.g. V, S, M (a pinch of salt)" onChange={(v) => f.set({ comp: v })} />
@@ -258,7 +260,11 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
   const prepOn = !usePrep || !!sp.prep;
   const usable = spellUsable(c, sp);
   const concOn = c.conc?.id === sp.id;
-  const freeUsed = !!c.free[sp.id];
+  const frees = freeCastsOf(c, sp.id);
+  // A non-Concentration spell whose grants need it on (Shillelagh) gets an On/Off switch; a Concentration one is on
+  // while concentrating.
+  const link = linkOf('spell', sp.id);
+  const effect = !sp.c && hasActiveEffect(c, link), effectOn = c.effectsOn.includes(link);
   const concOf = { id: sp.id, name: sp.name };
 
   const casts: { l: number; left: number }[] = [];
@@ -290,16 +296,20 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
     {usePrep && lvl === 0 && <span aria-hidden="true" style={{ flex: 'none', width: 44 }} />}
   </>;
 
+  // A spell from an item that is off, or granted from a higher level, doesn't count yet.
+  const why = inactiveReason(c, sp);
   const head = (
-    <span className="col" style={{ opacity: lvl > 0 && !usable ? 0.45 : 1 }}>
+    <span className="col" style={{ opacity: (lvl > 0 && !usable) || why ? 0.45 : 1 }}>
       <span className="row gap-6" style={{ fontWeight: 600 }}>
         {sp.name}
         {lvl > 0 && !usable && <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>not prepared</span>}
         {sp.c && <span title="Concentration" style={{ fontSize: 11, fontWeight: 700, border: '1px solid var(--blue)', color: 'var(--blue)', borderRadius: 4, padding: '0 4px' }}>C</span>}
       </span>
+      {why && <span className="small">Inactive: {why}</span>}
       <span className="muted">{[sp.time, sp.range].filter((x) => x).join(' · ')}</span>
       {(sp.dur || sp.comp) && <span className="muted">{[sp.dur, sp.comp].filter((x) => x).join(' · ')}</span>}
       {sp.dice && <span style={{ fontSize: 14, fontWeight: 700, marginTop: 2 }}>{sp.dice}</span>}
+      {sp.castAb && <span className="muted">Casts with {sp.castAb.toUpperCase()}: save DC {spellSaveDcFor(c, sp)} · attack {fmt(spellAttackFor(c, sp)!)}</span>}
     </span>
   );
 
@@ -310,11 +320,19 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
           className="btn btn-sm" style={{ border: '1px solid var(--blue)', background: concOn ? 'var(--blue)' : 'transparent', color: concOn ? 'var(--on-accent)' : 'var(--blue)' }}
           onClick={() => update(setConc(concOn ? null : concOf))}>{concOn ? 'Conc. ✓' : 'Conc.'}</button>
       )}
-      {sp.free && usable && (
-        <button type="button" aria-pressed={freeUsed} aria-label={freeUsed ? 'Free cast of ' + sp.name + ' used; tap to restore' : 'Use free cast of ' + sp.name}
-          className="btn btn-sm" style={{ border: '1px solid ' + (freeUsed ? 'var(--line-2)' : 'var(--accent)'), background: 'transparent', color: freeUsed ? 'var(--muted)' : 'var(--accent)' }}
-          onClick={() => update((p) => toggleFreeCast(p, sp))}>{freeUsed ? 'Free used' : 'Free'}</button>
+      {effect && (
+        <button type="button" aria-pressed={effectOn} aria-label={(effectOn ? 'Switch off ' : 'Switch on ') + sp.name}
+          className="btn btn-sm" style={{ border: '1px solid var(--accent)', background: effectOn ? 'var(--accent)' : 'transparent', color: effectOn ? 'var(--on-accent)' : 'var(--accent)' }}
+          onClick={() => update((p) => toggleEffect(p, link))}>{effectOn ? 'On' : 'Off'}</button>
       )}
+      {(lvl === 0 || usable) && frees.map((r) => {
+        const used = r.count <= 0;
+        return (
+          <button key={r.id} type="button" aria-pressed={used} aria-label={used ? 'Free casts of ' + sp.name + ' (' + r.name + ') used up; tap to give one back' : 'Use a free cast of ' + sp.name + ' (' + r.name + '), ' + r.count + ' left'}
+            className="btn btn-sm" style={{ border: '1px solid ' + (used ? 'var(--line-2)' : 'var(--accent)'), background: 'transparent', color: used ? 'var(--muted)' : 'var(--accent)' }}
+            onClick={() => update((p) => castFree(p, sp, r.id))}>{used ? 'Free used' : 'Free · ' + r.count + ' left'}</button>
+        );
+      })}
       {!!first && usable && (
         <div role="group" aria-label={'Spell slots for ' + sp.name} className="row wrap gap-6">
           <button type="button" aria-label={'Cast ' + sp.name + ' with a level ' + first.l + ' slot, ' + first.left + ' left'}
@@ -330,10 +348,10 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
     </div>
   );
 
-  const noSlots = lvl > 0 && !sp.free && !first && usable;
+  const noSlots = lvl > 0 && !frees.some((r) => r.count > 0) && !first && usable;
   return (
     <EntryRow name={sp.name} before={before} head={head} side={side}
-      body={sp.source ? <span className="muted">Source: {sp.source}</span> : undefined}
+      body={sourceLabel(c, sp) ? <span className="muted">Source: {sourceLabel(c, sp)}</span> : undefined}
       onEdit={onEdit} onRemove={() => update((p) => removeSpell(p, sp.id))}>
       {(picking && upcasts.length > 0 || noSlots) && <>
         {picking && upcasts.length > 0 && (

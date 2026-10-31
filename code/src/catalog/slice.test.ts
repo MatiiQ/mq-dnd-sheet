@@ -76,3 +76,15 @@ describe('vertical slice (SRD)', () => {
     for (const e of asi) expect([e.id, choices(e.id)[0]?.pool]).toEqual([e.id, 'feat:cat=general']);
   });
 });
+
+describe('spell grants in the slice', () => {
+  it('Shillelagh overrides the attack ability of a club or quarterstaff while on (PHB p.316)', () => {
+    expect(grants('spell/shillelagh')).toEqual([{ id: 'g1', kind: 'atkAbil', name: 'Shillelagh', ab: 'cast', weapons: 'club,quarterstaff', amode: 'melee', die: '1:1d8,5:1d10,11:1d12,17:2d6', when: 'active' }]);
+  });
+});
+
+describe('Resourceful', () => {
+  it('gives Heroic Inspiration on each Long Rest (PHB p.194)', () => {
+    expect(grants('trait/human/resourceful')).toEqual([{ id: 'g1', kind: 'resource', name: 'Heroic Inspiration', max: '1', recharge: 'long' }]);
+  });
+});

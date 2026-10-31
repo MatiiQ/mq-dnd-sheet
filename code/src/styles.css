@@ -168,6 +168,11 @@ h1, h2, h3 { margin: 0; }
   font-size: 13px; font-weight: 600; cursor: pointer; min-height: 40px; padding: 0 12px; border-radius: 20px;
   border: none; background: var(--well); color: var(--text-2);
 }
+.prof-chip {
+  display: inline-flex; align-items: center; gap: 4px; min-height: 44px; padding: 0 4px 0 12px; border-radius: 22px;
+  background: var(--well); color: var(--text-2); font-size: 13px; font-weight: 600;
+}
+.prof-chip:not(:has(button)) { padding-right: 12px; }
 .filter-btn {
   font-size: 13px; font-weight: 600; cursor: pointer; border: none; min-height: 40px; padding: 0 14px; border-radius: 20px;
   background: var(--well); color: var(--text-2);
@@ -344,6 +349,7 @@ button.stat.open { box-shadow: inset 0 0 0 2px var(--accent); }
   position: relative; flex: none; width: 60px; height: 52px; border-radius: 14px; background: var(--well);
   display: flex; align-items: center; justify-content: center; font-family: var(--serif); font-size: 26px; font-weight: 700;
 }
+button.mod-token { border: none; color: inherit; cursor: pointer; padding: 0; }
 .score-coin {
   position: absolute; bottom: -11px; left: 50%; transform: translateX(-50%); min-width: 28px; height: 22px; padding: 0 4px;
   border-radius: 11px; background: var(--bg); box-shadow: 0 0 0 2px var(--card);
@@ -418,3 +424,22 @@ button.stat.open { box-shadow: inset 0 0 0 2px var(--accent); }
 .wide .abil-cur-label { margin-right: auto; }
 .wide .abil-stepper { order: 1; }
 .wide .stat-hint { display: none; } /* the Speed value still turns red at 0 */
+
+/* A value that opens its breakdown: looks like the text it replaces, still a 44 px target. */
+button.link-btn { background: none; border: none; padding: 0; cursor: pointer; text-align: left; color: inherit; min-height: 44px; display: inline-flex; align-items: center; }
+/* An entry whose source or condition doesn't count right now (inactiveReason). */
+.inactive { opacity: 0.55; }
+
+/* Remove with a confirm list (removalSummary) under the armed button. */
+.remove-wrap { position: relative; display: inline-flex; }
+.remove-confirm {
+  position: absolute; right: 0; top: 100%; z-index: 5; width: max-content; max-width: min(320px, 80vw); margin-top: 4px; padding: 8px 10px;
+  border-radius: 10px; background: var(--raised); color: var(--text); font-size: 13px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  display: flex; flex-direction: column; gap: 4px;
+}
+/* Chips: what a source gives. Tap jumps to where it lives; inactive ones are dimmed with their reason. */
+.grant-chip {
+  font-size: 13px; font-weight: 600; cursor: pointer; min-height: 44px; padding: 0 12px; border-radius: 22px;
+  border: 1px solid var(--line-2); background: transparent; color: var(--text-2); display: inline-flex; align-items: center; gap: 4px;
+}
+.grant-chip.inactive { border-style: dashed; }

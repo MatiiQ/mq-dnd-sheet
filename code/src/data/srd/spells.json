@@ -5415,7 +5415,19 @@
     "conc": false,
     "ritual": false,
     "fx": "other",
-    "scale": "cantrip"
+    "scale": "cantrip",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "atkAbil",
+        "name": "Shillelagh",
+        "ab": "cast",
+        "weapons": "club,quarterstaff",
+        "amode": "melee",
+        "die": "1:1d8,5:1d10,11:1d12,17:2d6",
+        "when": "active"
+      }
+    ]
   },
   {
     "id": "spell/shining-smite",

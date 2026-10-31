@@ -1,4 +1,5 @@
-import { ABILITIES, SKILLS, abilityMod, clamp, effScore, fmt, saveMod, skillMod } from '../logic';
+import { useState } from 'react';
+import { ABILITIES, SKILLS, abilityMod, abilityParts, clamp, effScore, fmt, saveMod, saveProficient, skillLevel, skillMod } from '../logic';
 import { useWide } from '../layout';
 import { useSheet } from '../sheet';
 import type { Ability } from '../types';
@@ -26,16 +27,22 @@ export function Abilities() {
 function AbilityCard({ k, name }: { k: Ability; name: string }) {
   const { c, update, edit } = useSheet();
   const wide = useWide();
+  const [open, setOpen] = useState(false);
   const cur = effScore(c, k), base = c.abil[k], changed = cur !== base;
   const saveProf = !!c.saveProf[k];
+  // A grant can make a save proficient on top of the hand toggle; the dot shows the result and names the grant.
+  const save = saveProficient(c, k);
   const scoreColor = cur > base ? 'var(--blue)' : cur < base ? 'var(--danger)' : 'var(--text)';
   const lower = name.toLowerCase();
+  // Accepted: the steppers commit per tap. A mis-tap that lowers a score lowers a formula maximum such as 'wis>=1', and
+  // normalize() cuts that resource's count for good; tapping + again doesn't give it back. That is the spec's rule for
+  // drops (uses lost while a score is reduced are not given back); only typed numbers (Level) commit once.
   const adjust = (d: number) => update((p) => {
     const adj = p.abilAdj[k] || 0, next = p.abil[k] + adj + d;
     return next < 1 || next > 30 ? {} : { abilAdj: { ...p.abilAdj, [k]: adj + d } };
   });
   const saveText = fmt(saveMod(c, k));
-  const saveRow = <><ProfDot level={saveProf ? 1 : 0} /><span className="grow" style={{ fontWeight: 600 }}>Saving Throw</span><span style={{ fontWeight: 700 }}>{saveText}</span></>;
+  const saveRow = <><ProfDot level={save.on ? 1 : 0} /><span className="grow col" style={{ fontWeight: 600 }}>Saving Throw{save.by && <span className="small">Proficient from {save.by}</span>}</span><span style={{ fontWeight: 700 }}>{saveText}</span></>;
 
   return (
     <div className="card" style={{ gap: 2 }}>
@@ -52,10 +59,23 @@ function AbilityCard({ k, name }: { k: Ability; name: string }) {
             </label>
           )}
         </div>
-        <div role="img" aria-label={name + ' modifier ' + fmt(abilityMod(c, k)) + ', score ' + cur} className="mod-token">
+        {/* Tapping the modifier shows how the score is made (base, grants, adjustment), in and out of Edit mode. */}
+        <button type="button" aria-expanded={open} aria-label={name + ' modifier ' + fmt(abilityMod(c, k)) + ', score ' + cur + '. Show breakdown.'}
+          className="mod-token" onClick={() => setOpen(!open)}>
           {fmt(abilityMod(c, k))}<span className="score-coin" style={{ color: scoreColor }}>{cur}</span>
-        </div>
+        </button>
       </div>
+      {open && (
+        <div className="grid speed-grid" style={{ paddingBottom: 6 }}>
+          {abilityParts(c, k).map((p, i) => (
+            <div key={i} className="tile">
+              <span className="muted">{p.label}</span>
+              <span className="speed-value">{i === 0 ? p.value : fmt(p.value)}</span>
+              {p.note && <span className="muted">{p.note}</span>}
+            </div>
+          ))}
+        </div>
+      )}
 
       {edit && (
         <div className="row wrap gap-6" style={{ paddingBottom: 6 }}>
@@ -84,15 +104,16 @@ function AbilityCard({ k, name }: { k: Ability; name: string }) {
       )}
 
       {SKILLS.filter((s) => s[2] === k).map(([key, skill]) => {
-        const lv = c.skillProf[key] || 0;
+        // The dot shows the effective level; tapping in Edit mode still cycles only the hand value.
+        const { level: lv, hand, by } = skillLevel(c, key);
         const modText = fmt(skillMod(c, key, k));
-        const label = <><ProfDot level={lv} /><span className="grow">{skill}</span></>;
+        const label = <><ProfDot level={lv} /><span className="grow col">{skill}{by && <span className="small">{LEVEL_NAMES[lv]} from {by}</span>}</span></>;
         return edit ? (
-          <button key={key} type="button" aria-label={skill + ': ' + LEVEL_NAMES[lv] + '. Tap to change.'} className="row gap-10 abil-edit-row skill-edit"
+          <button key={key} type="button" aria-label={skill + ': ' + LEVEL_NAMES[hand] + (by ? ', ' + LEVEL_NAMES[lv] + ' from ' + by : '') + '. Tap to change.'} className="row gap-10 abil-edit-row skill-edit"
             style={{ cursor: 'pointer', background: 'transparent', border: 'none', borderBottom: '1px dashed var(--line)', minHeight: 44, textAlign: 'left' }}
             onClick={() => update((p) => ({ skillProf: { ...p.skillProf, [key]: ((p.skillProf[key] || 0) + 1) % 3 } }))}>
             <ProfDot level={lv} />
-            <span className="grow skill-edit-name"><span>{skill}</span><span className="small">{LEVEL_NAMES[lv]}</span></span>
+            <span className="grow skill-edit-name"><span>{skill}</span><span className="small">{LEVEL_NAMES[hand]}{by && ' · ' + LEVEL_NAMES[lv] + ' from ' + by}</span></span>
             <span className="skill-edit-mod">{modText}</span>
           </button>
         ) : (

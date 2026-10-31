@@ -1,8 +1,11 @@
 import type { CSSProperties } from 'react';
-import { COMBAT_ACTIONS } from '../../logic';
-import { removeEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
+import { activeGrants, sourceLabel } from '../../links';
+import { COMBAT_ACTIONS, removeRef } from '../../logic';
+import { patchEntry, removeEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { Attack, Rider } from '../../types';
-import { AddButton, DieBadge, EntryForm, EntryRow, TextField } from '../ui';
+import { AddButton, DieBadge, EntryForm, EntryRow, Step, TextField } from '../ui';
+
+const ECON: Record<string, string> = { action: 'Action', bonus: 'Bonus Action', reaction: 'Reaction', free: 'Free', other: 'Other' };
 
 const ATTACK_BLANK = { name: '', hit: '', dmg: '', info: '', mastery: '' };
 const RIDER_BLANK = { name: '', dice: '' };
@@ -48,8 +51,31 @@ export function ActionsTab() {
     </EntryForm>
   );
 
+  // Actions that features give (Wild Shape, Healing Hands), with the uses of the resource they spend. Plan 5 replaces this.
+  const featureActions = activeGrants(c, 'action');
   return (
     <div className="col gap-12">
+      {featureActions.length > 0 && (
+        <div className="block col gap-6">
+          <h3 className="block-title">From features</h3>
+          {featureActions.map((g) => {
+            const r = g.res ? c.res.find((x) => x.id === g.res) : undefined;
+            return (
+              <div key={g.id} className="well row gap-8">
+                <span className="col grow">
+                  <strong>{g.name}</strong>
+                  <span className="muted">{[g.econ && ECON[g.econ], g.dice, g.note, sourceLabel(c, g)].filter(Boolean).join(' · ')}</span>
+                </span>
+                {r && <>
+                  <Step label={'Use ' + r.name} onClick={() => update((p) => ({ res: patchEntry(p.res, r.id, (x) => ({ count: Math.max(0, x.count - 1) })) }))}>−</Step>
+                  <span style={{ fontWeight: 700, minWidth: 36, textAlign: 'center' }} aria-label={r.name + ' uses left'}>{r.count}</span>
+                  <Step label={'Restore ' + r.name} onClick={() => update((p) => ({ res: patchEntry(p.res, r.id, (x) => ({ count: x.count + 1 })) }))}>+</Step>
+                </>}
+              </div>
+            );
+          })}
+        </div>
+      )}
       {c.attacks.map((a) => (fa.editingId === a.id ? <div key={a.id}>{attackForm}</div> : (
         <EntryRow key={a.id} name={a.name}
           head={<>
@@ -62,7 +88,7 @@ export function ActionsTab() {
             <span className="sr-only">Damage</span><span style={{ fontSize: 16, fontWeight: 600 }}>{a.dmg || '—'}</span>
           </div>}
           onEdit={() => fa.openEdit(a.id, { name: a.name, hit: a.hit || '', dmg: a.dmg || '', info: a.info || '', mastery: a.mastery || '' })}
-          onRemove={() => update((p) => ({ attacks: removeEntry(p.attacks, a.id) }))} />
+          onRemove={() => update((p) => removeRef(p, { kind: 'attack', id: a.id }))} />
       )))}
       {!fa.isOpen && <AddButton onClick={fa.openAdd}>+ Add attack</AddButton>}
       {fa.isOpen && !fa.editingId && attackForm}

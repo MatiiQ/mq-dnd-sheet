@@ -1,9 +1,10 @@
-import { SRC_KINDS, passiveScore } from '../logic';
-import { removeEntry, saveEntry, useEntryForm, useSheet } from '../sheet';
+import { SourcePicker } from './SourcePicker';
+import { mergedSenses, passiveScore, removeRef } from '../logic';
+import { saveEntry, useEntryForm, useSheet } from '../sheet';
 import type { Sense, SrcKind } from '../types';
 import { AddButton, EntryForm, EntryRow } from './ui';
 
-const BLANK = { name: '', range: '', desc: '', srcKind: '' as SrcKind | '', srcName: '' };
+const BLANK = { name: '', range: '', desc: '', from: undefined as string | undefined, srcKind: undefined as SrcKind | undefined, srcName: undefined as string | undefined };
 
 export function Senses() {
   const { c, update } = useSheet();
@@ -18,12 +19,17 @@ export function Senses() {
     // Empty optional fields are cleared (undefined), so editing can remove them.
     const built = {
       name, range: r ? (/^\d+$/.test(r) ? r + ' ft' : r) : '—', desc: f.draft.desc.trim() || undefined,
-      srcKind: f.draft.srcKind || undefined, srcName: f.draft.srcName.trim() || undefined
+      from: f.draft.from, srcKind: f.draft.srcKind, srcName: f.draft.srcName?.trim() || undefined
     };
     update((p) => ({ senses: saveEntry<Sense>(p.senses, built, f.editingId) }));
     f.close();
   };
-  const source = (se: Sense) => [SRC_KINDS.find(([k]) => k === se.srcKind)?.[1], se.srcName].filter(Boolean).join(' · ');
+  // One row per sense name (mergedSenses). Edit and Remove act on the row's hand entry; a row only grants hold acts on
+  // those entries (the grants come back when their source is edited).
+  const rows = mergedSenses(c).map((r) => {
+    const all = c.senses.filter((se) => r.ids.includes(se.id));
+    return { ...r, own: all.find((se) => !se.from) ?? all[0], hand: all.filter((se) => !se.from), all };
+  });
   const form = f.isOpen && (
     <EntryForm kind="sense" inline title={f.title} saveLabel={f.saveLabel} onSave={save} onCancel={f.close}>
       <div className="row wrap gap-6">
@@ -33,13 +39,7 @@ export function Senses() {
           value={f.draft.range} onChange={(e) => f.set({ range: e.target.value })} />
         <input type="text" className="input" style={{ flex: '1 1 100%', padding: '0 10px' }} aria-label="Sense description" placeholder="Description"
           value={f.draft.desc} onChange={(e) => f.set({ desc: e.target.value })} />
-        <select className="input" style={{ flex: '1 1 120px', width: 120 }} aria-label="Source kind" value={f.draft.srcKind}
-          onChange={(e) => f.set({ srcKind: e.target.value as SrcKind | '' })}>
-          <option value="">—</option>
-          {SRC_KINDS.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
-        </select>
-        <input type="text" className="input" style={{ flex: '2 1 160px', width: 160, padding: '0 10px' }} aria-label="Source name" placeholder="Source, e.g. Wood Elf"
-          value={f.draft.srcName} onChange={(e) => f.set({ srcName: e.target.value })} />
+        <SourcePicker value={f.draft} onChange={(v) => f.set(v)} />
       </div>
     </EntryForm>
   );
@@ -54,17 +54,17 @@ export function Senses() {
         {passive('Passive Perception', passiveScore(c, 'perception'))}
         {passive('Passive Investigation', passiveScore(c, 'investigation'))}
         {passive('Passive Insight', passiveScore(c, 'insight'))}
-        {c.senses.map((se) => (f.editingId === se.id ? <div key={se.id} className="sense-form">{form}</div> : (
-          <EntryRow key={se.id} name={se.name} className="sense-entry"
-            head={<span className="row gap-8"><span>{se.name}</span><strong style={{ fontSize: 17 }}>{se.range}</strong></span>}
-            body={(se.desc || source(se)) && <>
+        {rows.map(({ key, name, range, sources, own: se, hand, all }) => (f.editingId === se.id ? <div key={key} className="sense-form">{form}</div> : (
+          <EntryRow key={key} name={name} className="sense-entry"
+            head={<span className="row gap-8"><span>{name}</span><strong style={{ fontSize: 17 }}>{range}</strong></span>}
+            body={(se.desc || sources.length > 0) && <>
               {se.desc && <span>{se.desc}</span>}
-              {source(se) && <span className="muted">Source: {source(se)}</span>}
+              {sources.length > 0 && <span className="muted">Source: {sources.join(', ')}</span>}
             </>}
             onEdit={() => f.openEdit(se.id, {
-              name: se.name, range: se.range === '—' ? '' : se.range, desc: se.desc || '', srcKind: se.srcKind || '', srcName: se.srcName || ''
+              name: se.name, range: se.range === '—' ? '' : se.range, desc: se.desc || '', from: se.from, srcKind: se.srcKind, srcName: se.srcName
             })}
-            onRemove={() => update((p) => ({ senses: removeEntry(p.senses, se.id) }))} />
+            onRemove={() => update((p) => (hand.length ? hand : all).reduce((x, y) => removeRef(x, { kind: 'sense', id: y.id }), p))} />
         )))}
       </div>
     </section>

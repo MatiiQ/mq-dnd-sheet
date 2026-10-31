@@ -1,7 +1,8 @@
 import { useState, type CSSProperties } from 'react';
-import { ABILITIES, CONDITION_OPTIONS, DAMAGE_TYPES } from '../logic';
-import { useSheet } from '../sheet';
-import type { DefenseKind } from '../types';
+import { ABILITIES, CONDITION_OPTIONS, DAMAGE_TYPES, mergedDefenses, newId, normName, removeRef } from '../logic';
+import { patchEntry, useSheet } from '../sheet';
+import { SourcePicker } from './SourcePicker';
+import type { Character, Defense, DefenseKind } from '../types';
 import { RemoveButton, XIcon, useArmed } from './ui';
 
 // Choices for Advantage on saves; free text can be added too.
@@ -39,18 +40,25 @@ function DefenseGroup({ kind, title, noun, color, addLabel, options, placeholder
 }) {
   const { c, update, edit } = useSheet();
   const [text, setText] = useState('');
-  const list = c.def[kind];
-  const add = (v: string) => update((p) => ({ def: { ...p.def, [kind]: p.def[kind].includes(v) ? p.def[kind] : [...p.def[kind], v] } }));
-  const remove = (n: string) => update((p) => ({ def: { ...p.def, [kind]: p.def[kind].filter((x) => x !== n) } }));
+  const list = mergedDefenses(c, kind);
+  // A hand entry, unless this kind already has one with that name.
+  const add = (v: string) => update((p) => (p.defenses.some((d) => d.kind === kind && normName(d.name) === normName(v)) ? {}
+    : { defenses: [...p.defenses, { id: newId(), kind, name: v }] }));
+  // Removing a row removes its hand entries; a row that only grants hold removes those (its sources are listed first).
+  const remove = (ids: string[]) => update((p) => {
+    const own = p.defenses.filter((d) => ids.includes(d.id) && !d.from).map((d) => d.id);
+    return (own.length ? own : ids).reduce<Character>((x, id) => removeRef(x, { kind: 'defense', id }), p);
+  });
   const addText = () => { const v = text.trim(); if (v) add(v); setText(''); };
   const opts = (vals: string[]) => vals.map((d) => <option key={d} value={d}>{d}</option>);
   return (
     <div className="col gap-6">
       <span style={{ fontWeight: 700, fontSize: 14, color }}>{title}</span>
       <div className="row wrap gap-6" style={{ minHeight: 44 }}>
-        {list.map((n) => edit
-          ? <DefenseChip key={n} name={n} noun={noun} color={color} onRemove={() => remove(n)} />
-          : <OpenChip key={n} name={n} noun={noun} color={color} onRemove={() => remove(n)} />)}
+        {list.map((r) => edit
+          ? <DefenseChip key={r.key} name={r.name} noun={noun} color={color} onRemove={() => remove(r.ids)} />
+          : <OpenChip key={r.key} name={r.name} noun={noun} color={color} sources={r.sources} onRemove={() => remove(r.ids)}
+            entry={c.defenses.find((x) => r.ids.includes(x.id) && !x.from) ?? c.defenses.find((x) => x.id === r.ids[0])} />)}
         {list.length === 0 && <span className="muted">None</span>}
       </div>
       <select className="input" aria-label={addLabel} value="" onChange={(e) => { if (e.target.value) add(e.target.value); }}>
@@ -73,13 +81,20 @@ const chipStyle = (color: string): CSSProperties => ({
   border: '1px solid ' + color, background: 'transparent', color
 });
 
-// Outside Edit mode: tapping the chip shows its Remove button.
-function OpenChip({ name, noun, color, onRemove }: { name: string; noun: string; color: string; onRemove: () => void }) {
+// Outside Edit mode: tapping the chip shows its sources, a source picker for its own entry and its Remove button.
+function OpenChip({ name, noun, color, sources, onRemove, entry }: { name: string; noun: string; color: string; sources: string[]; onRemove: () => void; entry?: Defense }) {
   const [open, setOpen] = useState(false);
+  const { update } = useSheet();
   return (
-    <span className="row gap-4">
+    <span className="row wrap gap-4">
       <button type="button" aria-expanded={open} aria-label={name + ' ' + noun} onClick={() => setOpen(!open)} style={chipStyle(color)}>{name}</button>
+      {open && sources.length > 0 && <span className="small">From {sources.join(', ')}</span>}
       {open && <RemoveButton name={name + ' ' + noun} onRemove={onRemove} />}
+      {open && entry && (
+        <span className="col gap-4" style={{ flex: '1 1 100%' }}>
+          <SourcePicker value={entry} onChange={(v) => update((p) => ({ defenses: patchEntry(p.defenses, entry.id, v) }))} />
+        </span>
+      )}
     </span>
   );
 }

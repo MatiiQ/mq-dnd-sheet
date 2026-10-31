@@ -43,12 +43,13 @@ Every push to `main` runs `.github/workflows/deploy.yml` (test → build → dep
 |---|---|
 | `types.ts` | `Character` model and its sub-types |
 | `defaults.ts` | `sampleCharacter()` (Ilyra Moonbrook, Wood Elf Ranger 5) and `blankCharacter()` |
-| `logic.ts` | Pure rules functions (`Character → Character`): modifiers, skills, damage/heal/temp HP, death saves, massive damage, concentration DC, rests, hit dice, conditions, exhaustion, speed, armor class. Also holds the skill list and condition rule texts, and `migrate()` for old saves |
+| `logic.ts` | Pure rules functions (`Character → Character`): modifiers, skills, damage/heal/temp HP, death saves, massive damage, concentration DC, rests and Dawn, hit dice, conditions, exhaustion, speed, armor class, resource maxima (`maxOf`), every derived number with its grants. Also `addGrants`, the one removal path `removeRef` (loop-safe cascade, `removalSummary`), `grantChips`, `normalize()` (the single clamp), the skill list and condition rule texts, and `migrate()` for old saves |
+| `links.ts` | Links between entries: the `from` format (`'feature:<id>' \| 'item:<id>' \| 'spell:<id>'`), `sourceLabel`, `wouldLoop`/`fixLinks`, and when a grant or entry counts (`inactiveReason`, `isActive`, `activeGrants`, `effectsOn`). Imports types only |
 | `logic.test.ts` | Tests for `logic.ts`; add one whenever rules behaviour changes |
-| `storage.ts` | `useCharacters()` hook: multi-character list, localStorage persistence, JSON backup export/import |
+| `storage.ts` | `useCharacters()` hook: multi-character list, localStorage persistence, JSON backup export/import; `applyPatch()` (patch, then `normalize()`) behind `update()` |
 | `sheet.ts` | `Sheet` context (`c`, `update`, `edit`, `form`), `useEntryForm()` for add/edit forms (one open at a time), `saveEntry()` |
 | `App.tsx` | Page assembly, UI-only state (edit mode, menu, active section, hit-die prompt), scroll-spy |
-| `components/` | `TopBar` (bar, nav, menu with rests/characters/backup), `EditDetails`, `Vitals` (AC and Speed panels), `HitPoints`, `Abilities`, `Senses`, `Defenses`, `Conditions`, `Resources` |
+| `components/` | `TopBar` (bar, nav, menu with rests, Dawn, characters, backup), `RestPrompt` (die-roll regains before a rest), `EditDetails`, `Vitals` (AC and Speed panels), `HitPoints`, `Abilities`, `Senses`, `Defenses`, `Conditions`, `Resources`, `SourcePicker` (link an entry to a feature, item or spell, or name a source), `GrantEditor` (one form for every grant kind, `GRANT_FIELDS`), `Chips` (a source's chips and its grant list), `nav.ts` (`jumpTo` a chip's target) |
 | `components/tabs/` | `ActionsTab`, `SpellsTab`, `InventoryTab`, `FeaturesTab`, `NotesTab` |
 | `components/ui.tsx` | Shared bits: icons, `RemoveButton` (tap twice to confirm), `EntryActions`, `Step`, `UsePips`/`MarkPips`, `ProfDot`, `NumInput`, `EntryForm`, `TextField`, `useArmed` |
 | `styles.css` | Colour tokens on `:root` (indigo theme, amber `--accent`), layout utilities, component classes |
@@ -64,7 +65,8 @@ Conventions:
 
 ## Storage and offline
 
-- localStorage keys: `dnd-index-v3` (`{active, list:[{id,name,info}]}`) and `dnd-sheet-v3:<id>` (one `Character` per key). These match the design prototype's keys. `dnd-layout` (`auto`/`one`/`two`) holds the menu's layout override per device; it isn't part of a `Character` or the backup. Changing the `Character` shape needs a step in `migrate()`, because existing saves are merged over `sampleCharacter()`.
+- localStorage keys: `dnd-index-v3` (`{active, list:[{id,name,info}]}`) and `dnd-sheet-v3:<id>` (one `Character` per key). These match the design prototype's keys. `dnd-layout` (`auto`/`one`/`two`) holds the menu's layout override per device; it isn't part of a `Character` or the backup. Changing the `Character` shape needs a step in `migrate()`, because existing saves are merged over `sampleCharacter()`. A new top-level key goes into `NEW_FIELDS` and onto `blankCharacter()` and both samples (plan 3 added `grants`, `defenses`, `profs`, `effectsOn`; `def`, `free` and `ch.bg` are gone, read from the raw save by their migration steps).
+- Entries that can be granted carry `from` (and `srcKind`/`srcName`, `when`, `minLvl`, `needEq`/`needAtt`, `linked`); grants that aren't entries of a list live in `c.grants`. Every change runs through `normalize()` (in `update()` and at the end of `migrate()`): resource and item-charge counts at most their maximum, HP at most `maxHpOf`.
 - Backup file: `{app:'dnd-character-sheet', version:1, exportedAt, characters:[Character…]}`. Import adds the characters next to the existing ones (new ids). Export uses the share sheet on iPad, or a download elsewhere.
 - `vite.config.ts` contains an inline plugin that writes `dist/sw.js`. That service worker precaches every built file plus `public/` files (listed in `PUBLIC_FILES`). Pages load network-first; hashed assets are served cache-first. Add new `public/` files to `PUBLIC_FILES`.
 
