@@ -86,6 +86,14 @@ describe('weapon attacks', () => {
     expect(use(c, c.inv[0], 'thrown')).toMatchObject({ hit: 5, dmg: '1d6+3' });
   });
 
+  it('lets a ranged Finesse weapon use the better of STR and DEX (PHB p.213, Finesse)', () => {
+    const strong = fighter({ str: 16, dex: 10 }, [dart({ id: 'dt' })]);
+    expect(weaponAbility(strong, strong.inv[0], 'ranged')).toBe('str');
+    expect(use(strong, strong.inv[0], 'ranged')).toMatchObject({ hit: 5, dmg: '1d4+3' });
+    const quick = fighter({ str: 10, dex: 16 }, [dart({ id: 'dt' })]);
+    expect(weaponAbility(quick, quick.inv[0], 'ranged')).toBe('dex');
+  });
+
   it('adds Dueling only to a Melee weapon alone in one hand (PHB p.209)', () => {
     const ls = longsword({ id: 'ls' });
     const alone = withGrants(fighter({ str: 16 }, [ls], undefined, { hands: ['ls'] }), dueling);

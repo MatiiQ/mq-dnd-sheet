@@ -60,12 +60,14 @@ function overAbility(c: Character, g: Grant): Ability | null {
 const overridesFor = (c: Character, it: Item, use: Use) =>
   activeGrants(c, 'atkAbil').filter((g) => (!g.weapons || weaponMatches(it, g.weapons)) && (!g.amode || g.amode === attackMode(use)));
 
-// Strength for melee attacks and Dexterity for ranged ones (PHB p.12); Finesse takes the better (PHB p.213); a thrown
-// Melee weapon uses its melee ability (PHB p.214, Thrown). An override says "instead of" (Shillelagh PHB p.316, Martial
-// Arts PHB p.101), an option, so the attack takes the better of it and the normal ability; a tie keeps the normal one.
+// Strength for melee attacks and Dexterity for ranged ones (PHB p.12); Finesse takes the better of the two on any use,
+// a ranged Finesse weapon (Dart) included (PHB p.213); a thrown Melee weapon uses its melee ability (PHB p.214, Thrown).
+// An override says "instead of" (Shillelagh PHB p.316, Martial Arts PHB p.101), an option, so the attack takes the
+// better of it and the normal ability; a tie keeps the normal one.
 export function weaponAbility(c: Character, it: Item, use: Use): Ability {
   let ab: Ability = use === 'ranged' ? 'dex' : 'str';
-  if (hasProp(it, 'finesse') && abilityMod(c, 'dex') > abilityMod(c, 'str')) ab = 'dex';
+  const other: Ability = ab === 'dex' ? 'str' : 'dex';
+  if (hasProp(it, 'finesse') && abilityMod(c, other) > abilityMod(c, ab)) ab = other;
   for (const g of overridesFor(c, it, use)) {
     const o = overAbility(c, g);
     if (o && abilityMod(c, o) > abilityMod(c, ab)) ab = o;
