@@ -134,3 +134,22 @@ it.skipIf(!existsSync(PACK))('gives Elemental Weapon an extra 1d4 and +1 to atta
     expect.objectContaining({ kind: 'atkBonus', val: '1', when: 'active' })]);
   expect(e.grants!.some((g) => g.weapon || g.wrange || g.prop)).toBe(false);
 });
+
+// PHB spells with more than one damage effect: one row per part. Lightning Arrow's hit rides on the weapon attack
+// (no save on its main row, so it groups as damage); Hunger of Hadar's start-of-turn Cold has no save.
+it.skipIf(!existsSync(PACK))('gives the PHB multi-damage spells their parts', () => {
+  const cat = mergeCatalog(srdEntries, (JSON.parse(readFileSync(PACK, 'utf8')) as { entries: Entry[] }).entries);
+  const row = (e: Record<string, unknown>) => [e.dice, e.dtype ?? e.dtypes, e.save ?? e.atk ?? '-', e.scale ?? '-'].join(' ');
+  const want: Record<string, string[]> = {
+    'spell/toll-the-dead': ['1d8 Necrotic wis cantrip', 'Missing HP: 1d12 Necrotic wis cantrip'],
+    'spell/destructive-wave': ['5d6 Thunder con -', 'Radiant or Necrotic: 5d6 Radiant,Necrotic con -'],
+    'spell/lightning-arrow': ['4d8 Lightning - 1d8/slot', 'Burst: 2d8 Lightning dex 1d8/slot'],
+    'spell/hunger-of-hadar': ['2d6 Cold - 1d6/slot', 'Acid: 2d6 Acid dex 1d6/slot'],
+    'spell/jallarzis-storm-of-radiance': ['2d10 Radiant con 1d10/slot', 'Thunder: 2d10 Thunder con 1d10/slot'],
+    'spell/witch-bolt': ['2d12 Lightning ranged 1d12/slot', 'Later: 1d12 Lightning - -']
+  };
+  for (const [id, rows] of Object.entries(want)) {
+    const e = cat.byId.get(id) as unknown as Record<string, unknown> & { parts?: Record<string, unknown>[] };
+    expect([id, [row(e), ...(e.parts ?? []).map((p) => `${p.label}: ${row(p)}`)]]).toEqual([id, rows]);
+  }
+});

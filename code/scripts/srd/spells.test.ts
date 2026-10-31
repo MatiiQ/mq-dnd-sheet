@@ -65,3 +65,13 @@ it('reads the same dice of two types, "NdM <Type> damage (…) or NdM <Type> dam
   expect(g.dtype).toBeUndefined();
   expect(block('The target takes 8d6 Fire damage on a failed save.')).toMatchObject({ dice: '8d6', dtype: 'Fire' });
 });
+
+it('reads a second damage of the same sentence as a part, with the main row’s save or attack', () => {
+  const strike = block('Each creature in the Cylinder makes a Dexterity saving throw. A creature takes 5d6 Fire damage and 5d6 Radiant damage on a failed save.');
+  expect(strike).toMatchObject({ fx: 'damage', dice: '5d6', dtype: 'Fire', save: 'dex', parts: [{ label: 'Radiant', fx: 'damage', dice: '5d6', dtype: 'Radiant', save: 'dex' }] });
+  const sphere = block('Each creature makes a Dexterity saving throw. On a failed save, a creature takes 10d4 Acid damage and another 5d4 Acid damage at the end of its next turn.');
+  expect(sphere.parts).toEqual([{ label: 'Acid', fx: 'damage', dice: '5d4', dtype: 'Acid', save: 'dex' }]);
+  const arrow = block('Make a ranged spell attack. On a hit, the target takes 4d4 Acid damage and 2d4 Acid damage at the end of its next turn.');
+  expect(arrow.parts).toEqual([{ label: 'Acid', fx: 'damage', dice: '2d4', dtype: 'Acid', atk: 'ranged' }]);
+  expect(block('The target takes 8d6 Fire damage. Later it takes 2d6 Cold damage.').parts).toBeUndefined();
+});

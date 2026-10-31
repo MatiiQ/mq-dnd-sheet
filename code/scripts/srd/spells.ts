@@ -22,6 +22,9 @@ const DAMAGE_WORDINGS: RegExp[] = [
   new RegExp(`(${DAMAGE_ALT}) damage equal to ${DICE}( plus your spellcasting ability modifier)?`),
   DAMAGE
 ];
+// A second damage right after the first, in the same sentence: "5d6 Fire damage and 5d6 Radiant damage", "10d4 Acid
+// damage and another 5d4 Acid damage". It becomes a part labelled with its type; the overlay corrects the rest.
+const SECOND = new RegExp(`^${DICE} (?:${DAMAGE_ALT}) damage and (?:another )?${DICE} (${DAMAGE_ALT}) damage`);
 const typesIn = (s: string) => [...new Set([...s.matchAll(new RegExp(`\\b(${DAMAGE_ALT})\\b`, 'g'))].map((m) => m[1]))];
 // The first damage the text names: where, its dice, and its type or the list a type is chosen from.
 function damageOf(body: string): { at: number; dice: string; dtype?: string; dtypes?: string; dmgMod?: true } | null {
@@ -92,6 +95,8 @@ export function parseSpells(text: string): SpellEntry[] {
     if (fx === 'damage' && dmg!.dtype) e.dtype = dmg!.dtype;
     if (fx === 'damage' && dmg!.dtypes) e.dtypes = dmg!.dtypes;
     if (fx === 'damage' && dmg!.dmgMod) e.dmgMod = true;
+    const second = fx === 'damage' ? SECOND.exec(body.slice(dmg!.at)) : null;
+    if (second) e.parts = [{ label: second[3], fx: 'damage', dice: second[2].replace(/ /g, ''), dtype: second[3], ...(e.save ? { save: e.save } : e.atk ? { atk: e.atk } : {}) }];
     if (scale) e.scale = scale;
     if (higher) e.higher = higher;
     // Healing that adds the modifier: "regains Hit Points equal to 2d8 plus your spellcasting ability modifier".

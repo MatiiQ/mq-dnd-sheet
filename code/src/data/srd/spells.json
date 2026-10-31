@@ -19,6 +19,15 @@
     "atk": "ranged",
     "dice": "4d4",
     "dtype": "Acid",
+    "parts": [
+      {
+        "label": "Later",
+        "fx": "damage",
+        "dice": "2d4",
+        "dtype": "Acid",
+        "scale": "1d4/slot"
+      }
+    ],
     "scale": "1d4/slot",
     "higher": "The damage (both initial and later) increases by 1d4 for each spell slot level above 2."
   },
@@ -288,8 +297,18 @@
     "atk": "melee",
     "dice": "5d8",
     "dtype": "Force",
-    "scale": "2d6/slot",
-    "higher": "The damage of the Clenched Fist increases by 2d8 and the damage of the Grasping Hand increases by 2d6 for each spell slot level above 5."
+    "scale": "2d8/slot",
+    "higher": "The damage of the Clenched Fist increases by 2d8 and the damage of the Grasping Hand increases by 2d6 for each spell slot level above 5.",
+    "parts": [
+      {
+        "label": "Grasping Hand",
+        "fx": "damage",
+        "dice": "4d6",
+        "dtype": "Bludgeoning",
+        "dmgMod": true,
+        "scale": "2d6/slot"
+      }
+    ]
   },
   {
     "id": "spell/arcane-lock",
@@ -1131,12 +1150,21 @@
     "dur": "Concentration, up to 10 minutes",
     "conc": true,
     "ritual": false,
-    "fx": "healing",
+    "fx": "damage",
     "save": "dex",
-    "dice": "4d12",
+    "dice": "6d12",
     "scale": "1d12/slot",
     "higher": "The healing and damage increase by 1d12 for each spell slot level above 7.",
-    "healMod": true
+    "dtype": "Radiant",
+    "parts": [
+      {
+        "label": "Healing Light",
+        "fx": "healing",
+        "dice": "4d12",
+        "healMod": true,
+        "scale": "1d12/slot"
+      }
+    ]
   },
   {
     "id": "spell/conjure-elemental",
@@ -2553,6 +2581,16 @@
     "save": "dex",
     "dice": "5d6",
     "dtype": "Fire",
+    "parts": [
+      {
+        "label": "Radiant",
+        "fx": "damage",
+        "dice": "5d6",
+        "dtype": "Radiant",
+        "save": "dex",
+        "scale": "1d6/slot"
+      }
+    ],
     "scale": "1d6/slot",
     "higher": "The Fire damage and the Radiant damage increase by 1d6 for each spell slot level above 5."
   },
@@ -3453,8 +3491,17 @@
     "atk": "ranged",
     "dice": "1d10",
     "dtype": "Piercing",
-    "scale": "1d6/slot",
-    "higher": "The Cold damage increases by 1d6 for each spell slot level above 1."
+    "higher": "The Cold damage increases by 1d6 for each spell slot level above 1.",
+    "parts": [
+      {
+        "label": "Burst",
+        "fx": "damage",
+        "dice": "2d6",
+        "dtype": "Cold",
+        "save": "dex",
+        "scale": "1d6/slot"
+      }
+    ]
   },
   {
     "id": "spell/ice-storm",
@@ -3476,6 +3523,15 @@
     "save": "dex",
     "dice": "2d10",
     "dtype": "Bludgeoning",
+    "parts": [
+      {
+        "label": "Cold",
+        "fx": "damage",
+        "dice": "4d6",
+        "dtype": "Cold",
+        "save": "dex"
+      }
+    ],
     "scale": "1d10/slot",
     "higher": "The Bludgeoning damage increases by 1d10 for each spell slot level above 4."
   },
@@ -4210,7 +4266,16 @@
     "fx": "damage",
     "save": "dex",
     "dice": "20d6",
-    "dtype": "Fire"
+    "dtype": "Fire",
+    "parts": [
+      {
+        "label": "Bludgeoning",
+        "fx": "damage",
+        "dice": "20d6",
+        "dtype": "Bludgeoning",
+        "save": "dex"
+      }
+    ]
   },
   {
     "id": "spell/mind-blank",
@@ -6395,6 +6460,14 @@
     "save": "dex",
     "dice": "10d4",
     "dtype": "Acid",
+    "parts": [
+      {
+        "label": "Later",
+        "fx": "damage",
+        "dice": "5d4",
+        "dtype": "Acid"
+      }
+    ],
     "scale": "2d4/slot",
     "higher": "The initial damage increases by 2d4 for each spell slot level above 4."
   },
@@ -6459,8 +6532,18 @@
     "save": "dex",
     "dice": "10d6",
     "dtype": "Cold",
-    "scale": "1d6/slot",
-    "higher": "The damage the wall deals when it appears increases by 2d6 and the damage from passing through the sheet of frigid air increases by 1d6 for each spell slot level above 6."
+    "scale": "2d6/slot",
+    "higher": "The damage the wall deals when it appears increases by 2d6 and the damage from passing through the sheet of frigid air increases by 1d6 for each spell slot level above 6.",
+    "parts": [
+      {
+        "label": "Frigid Air",
+        "fx": "damage",
+        "dice": "5d6",
+        "dtype": "Cold",
+        "save": "con",
+        "scale": "1d6/slot"
+      }
+    ]
   },
   {
     "id": "spell/wall-of-stone",
@@ -6502,7 +6585,17 @@
     "dice": "7d8",
     "dtype": "Piercing",
     "scale": "1d8/slot",
-    "higher": "Both types of damage increase by 1d8 for each spell slot level above 6."
+    "higher": "Both types of damage increase by 1d8 for each spell slot level above 6.",
+    "parts": [
+      {
+        "label": "Slashing",
+        "fx": "damage",
+        "dice": "7d8",
+        "dtype": "Slashing",
+        "save": "dex",
+        "scale": "1d8/slot"
+      }
+    ]
   },
   {
     "id": "spell/warding-bond",

@@ -59,6 +59,10 @@ describe('spellSummary', () => {
     const celestial = { ...base, atk: undefined, save: 'dex' as const, dice: '6d12', dtype: 'Radiant', parts: [{ label: 'Healing Light', fx: 'healing' as const, dice: '4d12', healMod: true }] };
     expect(spellSummary(celestial)).toBe('6d12 Radiant · DEX save; Healing Light: 4d12 healing');
   });
+  it('summarises the catalog’s Conjure Celestial and Ice Knife with their parts', () => {
+    expect(spellSummary(spell('spell/conjure-celestial'))).toBe('6d12 Radiant · DEX save; Healing Light: 4d12 healing');
+    expect(spellSummary(spell('spell/ice-knife'))).toBe('1d10 Piercing · ranged attack; Burst: 2d6 Cold · DEX save');
+  });
   it('names a chosen damage type as the list of types', () => {
     const base = spell('spell/fire-bolt');
     expect(spellSummary({ ...base, dice: '3d8', dtype: undefined, dtypes: 'Acid,Cold,Fire' })).toBe('3d8 Acid/Cold/Fire · ranged attack');

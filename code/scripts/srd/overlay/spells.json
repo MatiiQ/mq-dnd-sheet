@@ -8,5 +8,14 @@
   "spell/fire-shield": { "dtype": null, "dtypes": "Fire,Cold" },
   "spell/delayed-blast-fireball": { "fx": "damage", "dice": "12d6", "dtype": "Fire" },
   "spell/animate-objects": { "fx": "other", "dice": null, "dtype": null },
-  "spell/conjure-minor-elementals": { "grants": [{ "id": "g1", "kind": "xdmg", "name": "Conjure Minor Elementals", "dice": "2d8", "dtype": "Acid/Cold/Fire/Lightning", "on": "hits on a creature in the Emanation; type chosen at the table", "when": "active" }] }
+  "spell/conjure-minor-elementals": { "grants": [{ "id": "g1", "kind": "xdmg", "name": "Conjure Minor Elementals", "dice": "2d8", "dtype": "Acid/Cold/Fire/Lightning", "on": "hits on a creature in the Emanation; type chosen at the table", "when": "active" }] },
+  "spell/conjure-celestial": { "fx": "damage", "dice": "6d12", "dtype": "Radiant", "healMod": null,
+    "parts": [{ "label": "Healing Light", "fx": "healing", "dice": "4d12", "healMod": true, "scale": "1d12/slot" }] },
+  "spell/ice-knife": { "scale": null, "parts": [{ "label": "Burst", "fx": "damage", "dice": "2d6", "dtype": "Cold", "save": "dex", "scale": "1d6/slot" }] },
+  "spell/wall-of-ice": { "scale": "2d6/slot", "parts": [{ "label": "Frigid Air", "fx": "damage", "dice": "5d6", "dtype": "Cold", "save": "con", "scale": "1d6/slot" }] },
+  "spell/flame-strike": { "parts": [{ "label": "Radiant", "fx": "damage", "dice": "5d6", "dtype": "Radiant", "save": "dex", "scale": "1d6/slot" }] },
+  "spell/acid-arrow": { "parts": [{ "label": "Later", "fx": "damage", "dice": "2d4", "dtype": "Acid", "scale": "1d4/slot" }] },
+  "spell/arcane-hand": { "scale": "2d8/slot", "parts": [{ "label": "Grasping Hand", "fx": "damage", "dice": "4d6", "dtype": "Bludgeoning", "dmgMod": true, "scale": "2d6/slot" }] },
+  "spell/vitriolic-sphere": { "parts": [{ "label": "Later", "fx": "damage", "dice": "5d4", "dtype": "Acid" }] },
+  "spell/wall-of-thorns": { "parts": [{ "label": "Slashing", "fx": "damage", "dice": "7d8", "dtype": "Slashing", "save": "dex", "scale": "1d8/slot" }] }
 }

@@ -288,6 +288,37 @@ describe('spell actions', () => {
     const hr = spellActions(ilyra({ spells: [hand] })).filter((a) => a.part !== undefined);
     expect(hr.map((r) => [r.group, r.dice])).toEqual([['damage', '4d6 + WIS (+2)'], ['healing', '4d12 + WIS (+2)']]);
   });
+  it('shows the SRD spells with more than one damage or healing effect as one row per part', () => {
+    // [name, group, dice, type] per row; Ilyra: WIS +2 modifier, level 5.
+    const want: Record<string, [string, string, string, string?][]> = {
+      'spell/conjure-celestial': [['Conjure Celestial', 'save', '6d12', 'Radiant'], ['Conjure Celestial · Healing Light', 'healing', '4d12 + WIS (+2)']],
+      'spell/ice-knife': [['Ice Knife', 'damage', '1d10', 'Piercing'], ['Ice Knife · Burst', 'save', '2d6', 'Cold']],
+      'spell/wall-of-ice': [['Wall of Ice', 'save', '10d6', 'Cold'], ['Wall of Ice · Frigid Air', 'save', '5d6', 'Cold']],
+      'spell/flame-strike': [['Flame Strike', 'save', '5d6', 'Fire'], ['Flame Strike · Radiant', 'save', '5d6', 'Radiant']],
+      'spell/ice-storm': [['Ice Storm', 'save', '2d10', 'Bludgeoning'], ['Ice Storm · Cold', 'save', '4d6', 'Cold']],
+      'spell/meteor-swarm': [['Meteor Swarm', 'save', '20d6', 'Fire'], ['Meteor Swarm · Bludgeoning', 'save', '20d6', 'Bludgeoning']],
+      'spell/acid-arrow': [['Acid Arrow', 'damage', '4d4', 'Acid'], ['Acid Arrow · Later', 'damage', '2d4', 'Acid']],
+      'spell/arcane-hand': [['Arcane Hand', 'damage', '5d8', 'Force'], ['Arcane Hand · Grasping Hand', 'damage', '4d6 + WIS (+2)', 'Bludgeoning']],
+      'spell/vitriolic-sphere': [['Vitriolic Sphere', 'save', '10d4', 'Acid'], ['Vitriolic Sphere · Later', 'damage', '5d4', 'Acid']],
+      'spell/wall-of-thorns': [['Wall of Thorns', 'save', '7d8', 'Piercing'], ['Wall of Thorns · Slashing', 'save', '7d8', 'Slashing']]
+    };
+    for (const [id, rows] of Object.entries(want)) {
+      const sp = catSpell(id, { always: true });
+      const got = spellActions(ilyra({ spells: [sp] })).map((a) => [a.name, a.group, a.dice, a.dtype].filter((x) => x !== undefined));
+      expect([id, got]).toEqual([id, rows.map((r) => r.filter((x) => x !== undefined))]);
+    }
+    const scales = (id: string) => { const e = cat.byId.get(id) as SpellEntry; return [e.scale, ...(e.parts ?? []).map((p) => p.scale)]; };
+    expect(scales('spell/conjure-celestial')).toEqual(['1d12/slot', '1d12/slot']);
+    expect(scales('spell/ice-knife')).toEqual([undefined, '1d6/slot']);
+    expect(scales('spell/wall-of-ice')).toEqual(['2d6/slot', '1d6/slot']);
+    expect(scales('spell/flame-strike')).toEqual(['1d6/slot', '1d6/slot']);
+    expect(scales('spell/ice-storm')).toEqual(['1d10/slot', undefined]);
+    expect(scales('spell/acid-arrow')).toEqual(['1d4/slot', '1d4/slot']);
+    expect(scales('spell/arcane-hand')).toEqual(['2d8/slot', '2d6/slot']);
+    expect(scales('spell/vitriolic-sphere')).toEqual(['2d4/slot', undefined]);
+    expect(scales('spell/wall-of-thorns')).toEqual(['1d8/slot', '1d8/slot']);
+    expect((cat.byId.get('spell/conjure-celestial') as SpellEntry).healMod).toBeUndefined();
+  });
   it('adds a cantrip damage bonus to the feature’s class cantrips only', () => {
     const bonus = (from: string) => grant({ id: 'gp', kind: 'dmgBonus', name: 'Potent Spellcasting', val: 'wis', cantrip: true, from });
     const c = { ...druidSample(), grants: [...druidSample().grants, bonus('feature:f7')] };
