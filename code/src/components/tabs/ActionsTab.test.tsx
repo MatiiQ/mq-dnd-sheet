@@ -5,12 +5,16 @@ import { druidSample, sampleCharacter } from '../../defaults';
 import { Sheet } from '../../sheet';
 import { dagger } from '../../test-fixtures';
 import type { Character } from '../../types';
-import { ActionsTab } from './ActionsTab';
+import { ActionsTab, Section } from './ActionsTab';
 
 const render = (c: Character) =>
   renderToString(<Sheet.Provider value={{ c, update: () => {}, edit: false, form: null, setForm: () => {} }}><ActionsTab /></Sheet.Provider>).replace(/<!-- -->/g, '');
 
 describe('ActionsTab', () => {
+  it('hides a section whose rows the filter all hid, even with its header lines', () => {
+    expect(renderToString(<Section title="Weapon attacks" aside={<span>Mastery: Longbow</span>}>{[false, false]}</Section>)).toBe('');
+    expect(renderToString(<Section title="Weapon attacks">{[<span key="a">Row</span>]}</Section>)).toContain('Weapon attacks');
+  });
   it('renders Ilyra’s sections in order', () => {
     const html = render(sampleCharacter());
     const at = (s: string) => { const i = html.indexOf(s); expect(i, s).toBeGreaterThan(-1); return i; };

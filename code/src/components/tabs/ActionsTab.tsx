@@ -48,9 +48,10 @@ function ActRow({ name, sub, econ, side, body, extra }: { name: ReactNode; sub?:
     </div>
   );
 }
-function Section({ title, children, aside }: { title: string; children: ReactNode[]; aside?: ReactNode }) {
+export function Section({ title, children, aside }: { title: string; children: ReactNode[]; aside?: ReactNode }) {
   const rows = children.filter(Boolean);
-  if (!rows.length && !aside) return null;
+  // Hidden when the filter left no rows: its header lines (aside) alone don't make it show.
+  if (!rows.length) return null;
   return (
     <section className="block col gap-6">
       <h3 className="block-title">{title}</h3>
