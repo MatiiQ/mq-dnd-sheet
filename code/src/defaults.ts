@@ -26,8 +26,7 @@ export function sampleCharacter(): Character {
     ],
     attacks: [
       { id: 'a1', name: 'Longbow', hit: '+9', dmg: '1d8 +4 Piercing', info: '150/600 ft · Ammunition, Heavy, Two-Handed · includes Archery +2', mastery: 'Slow: on a hit, target’s Speed drops 10 ft until your next turn' },
-      { id: 'a2', name: 'Shortsword', hit: '+7', dmg: '1d6 +4 Piercing', info: 'Melee 5 ft · Finesse, Light', mastery: 'Vex: on a hit, Advantage on your next attack against that target' },
-      { id: 'a3', name: 'Unarmed Strike', hit: '+4', dmg: '2 Bludgeoning', info: 'Melee 5 ft · or Grapple / Shove (DC 12)', mastery: '' }
+      { id: 'a2', name: 'Shortsword', hit: '+7', dmg: '1d6 +4 Piercing', info: 'Melee 5 ft · Finesse, Light', mastery: 'Vex: on a hit, Advantage on your next attack against that target' }
     ],
     riders: [
       { id: 'r1', name: 'Hunter’s Mark · marked target', dice: '+1d6 Force' },
@@ -96,7 +95,7 @@ export function sampleCharacter(): Character {
       { id: 'g10', kind: 'prof', name: 'Insight', cat: 'skill', target: 'insight', from: 'feature:f13', srcKind: 'species' },
       { id: 'g11', kind: 'speed', name: 'Speed +5 ft', mode: 'walk', val: '5', counted: true, from: 'feature:f15', srcKind: 'species' }
     ],
-    effectsOn: [],
+    effectsOn: [], hands: [],
     profs: [
       { id: 'p1', cat: 'armor', name: 'Light armor' }, { id: 'p2', cat: 'armor', name: 'Medium armor' }, { id: 'p3', cat: 'armor', name: 'Shields' },
       { id: 'p4', cat: 'weapon', name: 'Simple weapons' }, { id: 'p5', cat: 'weapon', name: 'Martial weapons' },
@@ -142,8 +141,7 @@ export function druidSample(): Character {
       { id: 'a3', name: 'Produce Flame', hit: '+9', dmg: '3d8 Fire', info: 'Magic action · 60 ft · flame summoned as a Bonus Action', mastery: '' },
       { id: 'a4', name: 'Starry Wisp', hit: '+9', dmg: '3d8 Radiant', info: 'Action · 60 ft · target can’t be Invisible', mastery: '' },
       { id: 'a5', name: 'Thorn Whip', hit: '+9', dmg: '3d6 Piercing', info: 'Action · melee spell attack, 30 ft · pull 10 ft', mastery: '' },
-      { id: 'a6', name: 'Fire Bolt', hit: '+9', dmg: '3d10 Fire', info: 'Action · 120 ft · Magic Initiate', mastery: '' },
-      { id: 'a7', name: 'Unarmed Strike', hit: '+3', dmg: '0 Bludgeoning', info: 'Melee 5 ft · or Grapple / Shove (DC 11)', mastery: '' }
+      { id: 'a6', name: 'Fire Bolt', hit: '+9', dmg: '3d10 Fire', info: 'Action · 120 ft · Magic Initiate', mastery: '' }
     ],
     riders: [
       { id: 'r1', name: 'Primal Strike · weapon or beast hit, once per turn', dice: '+1d8 Cold, Fire, Lightning or Thunder' },
@@ -249,7 +247,7 @@ export function druidSample(): Character {
       // Shillelagh, as in the catalog: the spellcasting ability and a bigger die for a club or quarterstaff while on (PHB p.316).
       { id: 'g15', kind: 'atkAbil', name: 'Shillelagh', ab: 'cast', weapons: 'club,quarterstaff', amode: 'melee', die: '1:1d8,5:1d10,11:1d12,17:2d6', when: 'active', from: 'spell:ds3', srcKind: 'spell' }
     ],
-    effectsOn: [],
+    effectsOn: [], hands: [],
     profs: [
       { id: 'p1', cat: 'armor', name: 'Light armor' }, { id: 'p2', cat: 'armor', name: 'Shields' }, { id: 'p3', cat: 'weapon', name: 'Simple weapons' },
       { id: 'p4', cat: 'tool', name: 'Herbalism Kit' }, { id: 'p5', cat: 'language', name: 'Common' }, { id: 'p6', cat: 'language', name: 'Elvish' }, { id: 'p7', cat: 'language', name: 'Dwarvish' }
@@ -268,6 +266,6 @@ export function blankCharacter(): Character {
     slotMax: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], slotUsed: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     defenses: [], senses: [], res: [], attacks: [], riders: [],
     coins: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 }, attuneIds: ['', '', ''], inv: [], spells: [], feats: [], prepMax: 0,
-    grants: [], effectsOn: [], profs: []
+    grants: [], effectsOn: [], profs: [], hands: []
   };
 }

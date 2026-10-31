@@ -2,6 +2,7 @@ import { useState, type CSSProperties } from 'react';
 import { BLANK_ITEM, catForKind, draftFromItem, itemFromForm, withDetectedArmor, WEAPON_PROPS, type ItemDraft, type ItemKind, type WeaponProp } from '../../catalog/copy';
 import { isValue } from '../../catalog/value';
 import { CARRY_MULT, DAMAGE_TYPES, SIZES, maxFields, maxOf, rechargeOf, carriedWeight, carryCapacity, carryUpOf, sizeOf, effScore, fmt, addGrants, grantChips, newId, removeItem, type GrantInput } from '../../logic';
+import { equipShield, setHands } from '../../hands';
 import { linkOf } from '../../links';
 import { GrantList, SourceChips } from '../Chips';
 import { ItemPicker } from '../pickers/ItemPicker';
@@ -43,8 +44,21 @@ export function InventoryTab() {
   const f = useEntryForm('item', BLANK, 'item', 'Add a custom item');
   const picking = openForm?.kind === 'pick-item';
   const [carryOpen, setCarryOpen] = useState(false);
+  // What equipping a Shield put away ("Put away: Longbow"), shown under its row until the next action (spec).
+  const [awayMsg, setAwayMsg] = useState<{ id: string; names: string[] } | null>(null);
   const cap = carryCapacity(c), carried = carriedWeight(c), over = carried > cap.carry;
-  const patch = (id: string, p: Partial<Item>) => update((s) => ({ inv: patchEntry(s.inv, id, p) }));
+  const patch = (id: string, p: Partial<Item>) => { setAwayMsg(null); update((s) => ({ inv: patchEntry(s.inv, id, p) })); };
+  // The equip toggle: a Shield takes a hand (equipShield trims hands and names what went); unequipping lets go of it.
+  const toggleEq = (it: Item) => {
+    setAwayMsg(null);
+    if (!it.eq && it.armor === 'shield') {
+      const r = equipShield(c, it.id);
+      if (r.away.length) setAwayMsg({ id: it.id, names: r.away });
+      update(() => r.c);
+      return;
+    }
+    update((s) => { const next = { ...s, inv: patchEntry(s.inv, it.id, { eq: !it.eq }) }; return it.eq ? setHands(next, next.hands) : next; });
+  };
   const d = f.draft;
   const editing = f.editingId ? c.inv.find((i) => i.id === f.editingId) : undefined;
   // An AC bonus left on an item that isn't armor isn't counted (its AC is a grant); saving clears it.
@@ -271,7 +285,7 @@ export function InventoryTab() {
                   </span>}
                 </>}
                 side={<div className="row gap-8" style={{ padding: '6px 0' }}>
-                  <button type="button" aria-pressed={it.eq} onClick={() => patch(it.id, { eq: !it.eq })} style={{
+                  <button type="button" aria-pressed={it.eq} onClick={() => toggleEq(it)} style={{
                     fontSize: 13, fontWeight: 600, cursor: 'pointer', minHeight: 44, minWidth: 92, padding: '0 10px', borderRadius: 22,
                     border: '1px solid ' + (it.eq ? 'var(--accent)' : 'var(--line-2)'), background: 'transparent', color: it.eq ? 'var(--accent)' : 'var(--muted)'
                   }}>{it.eq ? 'Equipped' : 'Carried'}</button>
@@ -294,7 +308,10 @@ export function InventoryTab() {
                 body={it.desc ? <span className="entry-desc">{it.desc}</span> : undefined}
                 onEdit={() => f.openEdit(it.id, { ...draftFromItem(it), pending: [] })}
                 onRemove={() => update((p) => removeItem(p, it.id))}>
-                {grantChips(c, linkOf('item', it.id)).length > 0 && <SourceChips link={linkOf('item', it.id)} />}
+                {(grantChips(c, linkOf('item', it.id)).length > 0 || awayMsg?.id === it.id) && <>
+                  {grantChips(c, linkOf('item', it.id)).length > 0 && <SourceChips link={linkOf('item', it.id)} />}
+                  {awayMsg?.id === it.id && <span role="status" className="small muted">Put away: {awayMsg.names.join(', ')}</span>}
+                </>}
               </EntryRow>
             )}
           </li>

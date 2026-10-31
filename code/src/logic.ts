@@ -3,6 +3,7 @@ import { blankCharacter, sampleCharacter } from './defaults';
 import { grantErrors, ITEM_CATS, type GrantSpec } from './catalog/schema';
 import { isValue, valueAt, type ValueCtx } from './catalog/value';
 import { PROF_NAMES, type ProfCat } from './catalog/names';
+import { setHands } from './hands';
 import { activeGrants, dropLinkOnly, fixLinks, hasActiveEffect, inactiveReason, isActive, LINKED_LISTS, srcKindOfLink, type SourceKind, linkOf, parseLink, sourceLabel, sourceOf, SRC_KINDS } from './links';
 import type { AcEffect, Ability, ArmorKind, CastAbility, Character, Concentration, Counter, DefenseKind, Feature, Grant, HpSnapshot, Item, Prof, Linked, Recharge, Resource, Size, Spell, SpeedKind, SpellSort, Tab, Unarmored, When } from './types';
 
@@ -537,8 +538,10 @@ export function maxFields(kind: 'none' | 'number' | 'formula', text: string): Pi
 
 // The single clamp, run by update() and migrate() after every change: resource counts at most their maximum, HP at
 // most max HP. Uses lost while a maximum is lower are not given back when it rises (spec). Returns c when nothing moves.
-export function normalize(c: Character): Character {
-  let changed = false;
+export function normalize(c0: Character): Character {
+  // Weapons in hand first (plan 5): a quantity or equip change may take one out of hand, through setHands.
+  const c = setHands(c0, c0.hands);
+  let changed = c !== c0;
   const res = c.res.map((r) => {
     const m = maxOf(c, r);
     if (m === null || r.count <= m) return r;
@@ -736,7 +739,7 @@ const ITEM_FIELDS: Record<string, FieldCheck> = {
 const cleanFields = <T extends object>(x: T, fields: Record<string, FieldCheck>): T =>
   Object.fromEntries(Object.entries(x).filter(([k, v]) => !Object.hasOwn(fields, k) || fields[k](v))) as T;
 
-export const NEW_FIELDS: readonly (keyof Character)[] = ['spellSort', 'size', 'carryUp', 'attuneIds', 'grants', 'effectsOn', 'profs', 'defenses'];
+export const NEW_FIELDS: readonly (keyof Character)[] = ['spellSort', 'size', 'carryUp', 'attuneIds', 'grants', 'effectsOn', 'profs', 'defenses', 'hands'];
 // Resources the Inventory tab echoed before `inv` existed.
 const OLD_INVENTORY_RESOURCES = ['arrows', 'potions'];
 
@@ -767,6 +770,12 @@ export function migrate(data: unknown): Character {
   });
   c.feats = c.feats.map((x) => cleanCid(cleanLinked(x)));
   c.attacks = c.attacks.map(cleanLinked);
+  // Every character now has a computed Unarmed Strike (plan 5), and saves copied from the old samples hold a typed one.
+  // It goes once, only from a save from before `hands` existed; one typed later stays. Its "Grapple / Shove (DC n)"
+  // text is covered by the computed row's Grapple and Shove DC.
+  if (data.hands === undefined) c.attacks = c.attacks.filter((a) => normName(a.name) !== 'unarmed strike');
+  // Weapons in hand: strings here; normalize() (below, through setHands) keeps only a valid list.
+  c.hands = strings(c.hands);
   c.profs = c.profs.filter((p) => PROF_CATS.includes(p.cat));
   // Saves from before proficiencies were data: their Training features become proficiencies, once.
   if (data.profs === undefined) ({ feats: c.feats, profs: c.profs } = splitTraining(c.feats));
@@ -1103,8 +1112,12 @@ export function removalChain(c: Character, ref: Ref): Ref[] {
 
 // The one removal path for features, items, spells, resources, senses, defenses, grants and attacks (roadmap). Removes
 // the chain; entries a grant only linked lose the link (from, linked and the srcKind it set) and keep everything else.
-export function removeRef(c: Character, ref: Ref): Character {
-  const chain = removalChain(c, ref);
+export function removeRef(c0: Character, ref: Ref): Character {
+  const chain = removalChain(c0, ref);
+  // Removed items leave hands first, while they are still in inv: setHands reads the kind of each weapon that left
+  // (Shillelagh's Quarterstaff), which it can't once the item is gone.
+  const goneItems = chain.filter((r) => r.kind === 'item').map((r) => r.id);
+  const c = goneItems.length ? setHands(c0, c0.hands.filter((id) => !goneItems.includes(id))) : c0;
   const gone = (kind: RefKind) => chain.filter((r) => r.kind === kind).map((r) => r.id);
   const links = chain.map(refLink).filter((l): l is string => !!l);
   const spells = gone('spell'), res = gone('res'), items = gone('item');

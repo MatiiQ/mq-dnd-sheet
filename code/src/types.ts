@@ -105,4 +105,6 @@ export interface Character {
   grants: Grant[]; profs: Prof[];
   /** Effects switched on: 'feature:<id>', 'item:<id>' or a non-Concentration 'spell:<id>' (a Concentration spell's is on through conc). */
   effectsOn: string[];
+  /** Weapons in hand: item ids, oldest first, one entry per hand (a Two-Handed weapon or a Versatile one in two hands twice). Changed only through setHands (hands.ts). */
+  hands: string[];
 }

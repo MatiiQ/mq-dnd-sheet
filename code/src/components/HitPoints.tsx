@@ -63,9 +63,9 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
         <div role="status" className="row gap-8" style={{ alignItems: 'flex-start', borderRadius: 10, padding: '8px 4px 8px 12px', background: 'var(--warm-bg)', color: 'var(--warm-fg)' }}>
           <div className="col grow gap-4" style={{ paddingTop: 4, gap: 2 }}>
             <strong>{c.restMsg.title}</strong>
-            <span style={{ fontSize: 14 }}>{c.restMsg.body}</span>
+            <span style={{ fontSize: 14, whiteSpace: 'pre-line' }}>{c.restMsg.body}</span>
           </div>
-          <button type="button" className="icon-btn" style={{ color: 'var(--warm-fg)' }} aria-label="Dismiss rest summary" onClick={() => update({ restMsg: null })}><XIcon /></button>
+          <button type="button" className="icon-btn" style={{ color: 'var(--warm-fg)' }} aria-label="Dismiss notice" onClick={() => update({ restMsg: null })}><XIcon /></button>
         </div>
       )}
 
