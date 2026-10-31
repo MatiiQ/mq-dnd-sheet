@@ -1,4 +1,5 @@
 // SRD equipment and magic items → ItemEntry. Tables come from the -layout text, prose from the column text.
+import { withBase } from '../../src/catalog/base.ts';
 import { catalogId, slug, type ItemEntry } from '../../src/catalog/schema.ts';
 import { paragraphs, srdLines } from './text.ts';
 
@@ -164,6 +165,10 @@ export function parseMagicItems(text: string): ItemEntry[] {
     if (regain) { e.recharge = 'dawn'; if (regain[1] !== 'all') { e.regain = regain[1].replace(/ /g, ''); e.regainOn = 'dawn'; } }
     // Charges the text never gives back (Luck Blade, Gem of Brightness): the player resets them by hand.
     else if (charges) e.recharge = 'none';
+    // "+3 bonus to attack and damage rolls" (the weapon's magic); a staff "wielded as a magic Quarterstaff" is one.
+    const magic = /\+(\d) bonus to attack (?:rolls )?and damage rolls/.exec(desc);
+    if (magic) e.magic = Number(magic[1]);
+    if (/wielded as a magic Quarterstaff/.test(desc)) e.base = 'item/quarterstaff';
     const cap = /hold up to (\d+) pounds, not exceeding a volume of (\d+ cubic feet)/.exec(desc);
     if (cap) { e.xdim = true; e.cap = Number(cap[1]); e.capVol = cap[2]; }
     const wt = /weighs (\d+) pounds/.exec(desc);
@@ -172,19 +177,19 @@ export function parseMagicItems(text: string): ItemEntry[] {
   });
 }
 
-const WEAPON_FIELDS = ['wcat', 'wrange', 'dmg', 'dtype', 'props', 'thrown', 'vers', 'ammo', 'mastery'] as const;
-const ARMOR_FIELDS = ['armor', 'acBase', 'strReq', 'stealthDis'] as const;
-// A magic item whose `base` (set in the overlay) is an item id gets that item's weapon or armor fields, and its weight
-// when it has none; its own fields win. A base id that names no weapon or armor fails the build.
+// A magic item whose `base` (set in the overlay) is an item id gets that item's weapon or armor fields (withBase, shared
+// with the add flow). A base id that names no mundane weapon, armor or Shield fails the build, and so does a `baseOf`
+// id that names no item of the kind its base allows (a weapon for 'weapon', armor for 'armor', ammunition for 'ammo').
+const BASE_CAT: Record<string, ItemEntry['cat']> = { weapon: 'weapon', armor: 'armor', ammo: 'ammo' };
 export function copyBase(entries: ItemEntry[]): ItemEntry[] {
   const byId = new Map(entries.map((e) => [e.id, e]));
   return entries.map((e) => {
+    for (const id of e.baseOf?.split(',') ?? []) {
+      if (byId.get(id)?.cat !== BASE_CAT[e.base ?? '']) throw new Error(`${e.id}: baseOf ${id} is no ${e.base}`);
+    }
     if (!e.base?.startsWith('item/')) return e;
     const b = byId.get(e.base);
-    if (!b || (b.cat !== 'weapon' && !b.armor)) throw new Error(`${e.id}: base ${e.base} is no weapon or armor`);
-    const from: Partial<ItemEntry> = {};
-    for (const k of b.cat === 'weapon' ? WEAPON_FIELDS : ARMOR_FIELDS) if (b[k] !== undefined) (from as Record<string, unknown>)[k] = b[k];
-    if (e.wt === undefined && b.wt !== undefined) from.wt = b.wt;
-    return { ...from, ...e };
+    if (!b) throw new Error(`${e.id}: base ${e.base} is no item`);
+    return withBase(e, b);
   });
 }

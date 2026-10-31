@@ -36,6 +36,11 @@ export interface ItemEntry extends EntryBase {
   // A magic weapon or armor's base item: an item id ('item/dagger', whose weapon or armor fields the SRD builder copies
   // in) or 'armor' / 'weapon' when the player chooses the base ("any Medium or Heavy armor").
   base?: string;
+  // baseOf: the bases the player may choose from, a comma list of item ids, when the type line names fewer than "any".
+  // Catalog-only: the picker reads it from the entry.
+  baseOf?: string;
+  magic?: number;      // "+N bonus to attack and damage rolls" (1–3)
+  magicPick?: boolean; // the bonus is the player's +1, +2 or +3, asked when added (Weapon, Armor, Shield +N…)
   grants?: Spec[];
 }
 export interface FeatEntry extends EntryBase { kind: 'feat'; cat: 'origin' | 'general' | 'style' | 'boon'; prereq?: string; repeat?: boolean; grants: Spec[] }
@@ -198,7 +203,9 @@ const ITEM: Record<string, [Check, boolean]> = {
   armor: [oneOf(...ARMOR_KINDS), false], acBase: [num, false], acBonus: [num, false], strReq: [num, false], stealthDis: [bool, false],
   cap: [num, false], capVol: [str, false], xdim: [bool, false],
   rarity: [str, false], attune: [bool, false], charges: [value, false], recharge: [RECHARGE, false], regain: [value, false], regainOn: [oneOf('short', 'dawn'), false],
-  base: [(v) => v === 'armor' || v === 'weapon' || (typeof v === 'string' && /^item\/[a-z0-9-]+$/.test(v)), false]
+  base: [(v) => v === 'armor' || v === 'weapon' || (typeof v === 'string' && /^item\/[a-z0-9-]+$/.test(v)), false],
+  baseOf: [(v) => typeof v === 'string' && v.split(',').every((x) => /^item\/[a-z0-9-]+$/.test(x)), false],
+  magic: [whole(1, 3), false], magicPick: [oneOf(true), false]
 };
 // A comma list of two or more damage types, no repeats.
 export const isDtypes = (v: unknown): boolean => {
@@ -305,6 +312,7 @@ export function validateEntry(x: unknown): string[] {
     checkRegain(x, at, errs);
     if (e.acBonus !== undefined && !e.armor) errs.push(`${at}: acBonus is for armor and Shields; use an ac grant`);
     if (e.base !== undefined && e.cat !== 'magic') errs.push(`${at}: base is for magic items`);
+    if (e.baseOf !== undefined && !['weapon', 'armor', 'ammo'].includes(e.base ?? '')) errs.push(`${at}: baseOf needs a base of the player's choice`);
   }
   if (e.kind === 'feature' && e.again !== undefined) {
     const lv = e.again.split(',').map(Number);

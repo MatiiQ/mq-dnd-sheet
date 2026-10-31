@@ -19,7 +19,8 @@
     "cat": "magic",
     "page": 209,
     "rarity": "Uncommon",
-    "base": "armor"
+    "base": "armor",
+    "baseOf": "item/breastplate,item/chain-mail,item/chain-shirt,item/half-plate-armor,item/plate-armor,item/ring-mail,item/scale-mail,item/splint-armor"
   },
   {
     "id": "item/alchemists-fire",
@@ -160,7 +161,8 @@
     "cat": "magic",
     "page": 210,
     "rarity": "Rare (+1), Very Rare (+2), or Legendary (+3)",
-    "base": "armor"
+    "base": "armor",
+    "magicPick": true
   },
   {
     "armor": "heavy",
@@ -686,6 +688,7 @@
     "page": 213,
     "rarity": "Rare",
     "attune": true,
+    "magic": 1,
     "grants": [
       {
         "id": "g1",
@@ -695,7 +698,8 @@
         "needAtt": true
       }
     ],
-    "base": "weapon"
+    "base": "weapon",
+    "baseOf": "item/battleaxe,item/greataxe,item/halberd"
   },
   {
     "id": "item/blanket",
@@ -1488,6 +1492,7 @@
     "cat": "magic",
     "page": 216,
     "rarity": "Rare",
+    "magic": 1,
     "base": "item/dagger"
   },
   {
@@ -1500,7 +1505,8 @@
     "page": 217,
     "rarity": "Very Rare",
     "attune": true,
-    "base": "weapon"
+    "base": "weapon",
+    "baseOf": "item/greatsword,item/longsword,item/rapier,item/scimitar,item/shortsword"
   },
   {
     "id": "item/dart",
@@ -1550,7 +1556,9 @@
     "page": 218,
     "rarity": "Legendary",
     "attune": true,
-    "base": "weapon"
+    "magic": 3,
+    "base": "weapon",
+    "baseOf": "item/battleaxe,item/club,item/dagger,item/flail,item/glaive,item/greataxe,item/greatclub,item/greatsword,item/halberd,item/handaxe,item/javelin,item/lance,item/light-hammer,item/longsword,item/mace,item/maul,item/morningstar,item/pike,item/quarterstaff,item/rapier,item/scimitar,item/shortsword,item/sickle,item/spear,item/trident,item/war-pick,item/warhammer,item/whip"
   },
   {
     "id": "item/demon-armor",
@@ -1739,6 +1747,7 @@
     "cat": "magic",
     "page": 219,
     "rarity": "Rare",
+    "magic": 1,
     "base": "weapon"
   },
   {
@@ -1822,6 +1831,7 @@
     "page": 219,
     "rarity": "Very Rare",
     "attune": true,
+    "magic": 3,
     "base": "item/warhammer"
   },
   {
@@ -1887,7 +1897,9 @@
     "page": 220,
     "rarity": "Very Rare",
     "attune": true,
-    "base": "weapon"
+    "magic": 1,
+    "base": "weapon",
+    "baseOf": "item/longbow,item/shortbow"
   },
   {
     "id": "item/entertainers-pack",
@@ -2022,7 +2034,8 @@
     "page": 223,
     "rarity": "Rare",
     "attune": true,
-    "base": "weapon"
+    "base": "weapon",
+    "baseOf": "item/battleaxe,item/club,item/dagger,item/flail,item/glaive,item/greataxe,item/greatclub,item/greatsword,item/halberd,item/handaxe,item/javelin,item/lance,item/light-hammer,item/longsword,item/mace,item/maul,item/morningstar,item/pike,item/quarterstaff,item/rapier,item/scimitar,item/shortsword,item/sickle,item/spear,item/trident,item/war-pick,item/warhammer,item/whip"
   },
   {
     "id": "item/flask",
@@ -2078,7 +2091,8 @@
         "needAtt": true
       }
     ],
-    "base": "weapon"
+    "base": "weapon",
+    "baseOf": "item/glaive,item/greatsword,item/longsword,item/rapier,item/scimitar,item/shortsword"
   },
   {
     "id": "item/gaming-set",
@@ -2147,6 +2161,7 @@
     "cat": "magic",
     "page": 223,
     "rarity": "Rare",
+    "magic": 1,
     "base": "weapon"
   },
   {
@@ -2373,7 +2388,9 @@
     "recharge": "dawn",
     "regain": "1d4+1",
     "regainOn": "dawn",
-    "base": "weapon"
+    "magic": 1,
+    "base": "weapon",
+    "baseOf": "item/maul,item/warhammer"
   },
   {
     "id": "item/hand-crossbow",
@@ -2575,6 +2592,7 @@
     "page": 226,
     "rarity": "Legendary",
     "attune": true,
+    "magic": 3,
     "grants": [
       {
         "id": "g1",
@@ -2984,6 +3002,7 @@
     "attune": true,
     "charges": "1d3",
     "recharge": "none",
+    "magic": 1,
     "grants": [
       {
         "id": "g1",
@@ -2994,7 +3013,8 @@
         "needAtt": true
       }
     ],
-    "base": "weapon"
+    "base": "weapon",
+    "baseOf": "item/glaive,item/greatsword,item/longsword,item/rapier,item/scimitar,item/sickle,item/shortsword"
   },
   {
     "id": "item/mace",
@@ -3044,6 +3064,7 @@
     "cat": "magic",
     "page": 229,
     "rarity": "Rare",
+    "magic": 1,
     "base": "item/mace"
   },
   {
@@ -3255,7 +3276,10 @@
     "cat": "magic",
     "page": 231,
     "rarity": "Uncommon",
-    "base": "armor"
+    "base": "armor",
+    "baseOf": "item/breastplate,item/chain-mail,item/chain-shirt,item/half-plate-armor,item/plate-armor,item/ring-mail,item/scale-mail,item/splint-armor",
+    "strReq": 0,
+    "stealthDis": false
   },
   {
     "id": "item/morningstar",
@@ -3395,6 +3419,7 @@
     "attune": true,
     "charges": "1d8+1",
     "recharge": "none",
+    "magic": 2,
     "base": "weapon"
   },
   {
@@ -3407,7 +3432,8 @@
     "page": 233,
     "rarity": "Very Rare",
     "attune": true,
-    "base": "weapon"
+    "base": "weapon",
+    "baseOf": "item/longbow,item/shortbow"
   },
   {
     "id": "item/oil",
@@ -4016,6 +4042,7 @@
     "page": 237,
     "rarity": "Very Rare",
     "attune": true,
+    "magic": 2,
     "base": "item/quarterstaff"
   },
   {
@@ -4601,6 +4628,12 @@
     "attune": true
   },
   {
+    "wcat": "simple",
+    "wrange": "melee",
+    "dmg": "1d6",
+    "dtype": "Bludgeoning",
+    "mastery": "sap",
+    "wt": 4,
     "id": "item/rod-of-lordly-might",
     "kind": "item",
     "name": "Rod of Lordly Might",
@@ -4609,7 +4642,9 @@
     "cat": "magic",
     "page": 241,
     "rarity": "Legendary",
-    "attune": true
+    "attune": true,
+    "magic": 3,
+    "base": "item/mace"
   },
   {
     "id": "item/rod-of-resurrection",
@@ -4771,6 +4806,7 @@
     "page": 243,
     "rarity": "Very Rare",
     "attune": true,
+    "magic": 2,
     "base": "item/scimitar"
   },
   {
@@ -4817,7 +4853,8 @@
     "page": 243,
     "rarity": "Uncommon (+1), Rare (+2), or Very Rare (+3)",
     "armor": "shield",
-    "acBase": 2
+    "acBase": 2,
+    "magicPick": true
   },
   {
     "id": "item/shield-of-missile-attraction",
@@ -5173,6 +5210,14 @@
     "regainOn": "dawn"
   },
   {
+    "wcat": "simple",
+    "wrange": "melee",
+    "dmg": "1d6",
+    "dtype": "Bludgeoning",
+    "props": "versatile",
+    "vers": "1d8",
+    "mastery": "topple",
+    "wt": 4,
     "id": "item/staff-of-power",
     "kind": "item",
     "name": "Staff of Power",
@@ -5186,6 +5231,8 @@
     "recharge": "dawn",
     "regain": "2d8+4",
     "regainOn": "dawn",
+    "magic": 2,
+    "base": "item/quarterstaff",
     "grants": [
       {
         "id": "g1",
@@ -5208,6 +5255,14 @@
     ]
   },
   {
+    "wcat": "simple",
+    "wrange": "melee",
+    "dmg": "1d6",
+    "dtype": "Bludgeoning",
+    "props": "versatile",
+    "vers": "1d8",
+    "mastery": "topple",
+    "wt": 4,
     "id": "item/staff-of-striking",
     "kind": "item",
     "name": "Staff of Striking",
@@ -5220,7 +5275,9 @@
     "charges": "10",
     "recharge": "dawn",
     "regain": "1d6+4",
-    "regainOn": "dawn"
+    "regainOn": "dawn",
+    "magic": 3,
+    "base": "item/quarterstaff"
   },
   {
     "id": "item/staff-of-swarming-insects",
@@ -5238,6 +5295,14 @@
     "regainOn": "dawn"
   },
   {
+    "wcat": "simple",
+    "wrange": "melee",
+    "dmg": "1d6",
+    "dtype": "Bludgeoning",
+    "props": "versatile",
+    "vers": "1d8",
+    "mastery": "topple",
+    "wt": 4,
     "id": "item/staff-of-the-magi",
     "kind": "item",
     "name": "Staff of the Magi",
@@ -5250,7 +5315,9 @@
     "charges": "50",
     "recharge": "dawn",
     "regain": "4d6+2",
-    "regainOn": "dawn"
+    "regainOn": "dawn",
+    "magic": 2,
+    "base": "item/quarterstaff"
   },
   {
     "id": "item/staff-of-the-python",
@@ -5264,6 +5331,14 @@
     "attune": true
   },
   {
+    "wcat": "simple",
+    "wrange": "melee",
+    "dmg": "1d6",
+    "dtype": "Bludgeoning",
+    "props": "versatile",
+    "vers": "1d8",
+    "mastery": "topple",
+    "wt": 4,
     "id": "item/staff-of-the-woodlands",
     "kind": "item",
     "name": "Staff of the Woodlands",
@@ -5276,9 +5351,19 @@
     "charges": "6",
     "recharge": "dawn",
     "regain": "1d6",
-    "regainOn": "dawn"
+    "regainOn": "dawn",
+    "magic": 2,
+    "base": "item/quarterstaff"
   },
   {
+    "wcat": "simple",
+    "wrange": "melee",
+    "dmg": "1d6",
+    "dtype": "Bludgeoning",
+    "props": "versatile",
+    "vers": "1d8",
+    "mastery": "topple",
+    "wt": 4,
     "id": "item/staff-of-thunder-and-lightning",
     "kind": "item",
     "name": "Staff of Thunder and Lightning",
@@ -5287,9 +5372,19 @@
     "cat": "magic",
     "page": 247,
     "rarity": "Very Rare",
-    "attune": true
+    "attune": true,
+    "magic": 2,
+    "base": "item/quarterstaff"
   },
   {
+    "wcat": "simple",
+    "wrange": "melee",
+    "dmg": "1d6",
+    "dtype": "Bludgeoning",
+    "props": "versatile",
+    "vers": "1d8",
+    "mastery": "topple",
+    "wt": 4,
     "id": "item/staff-of-withering",
     "kind": "item",
     "name": "Staff of Withering",
@@ -5302,7 +5397,8 @@
     "charges": "3",
     "recharge": "dawn",
     "regain": "1d3",
-    "regainOn": "dawn"
+    "regainOn": "dawn",
+    "base": "item/quarterstaff"
   },
   {
     "id": "item/stone-of-controlling-earth-elementals",
@@ -5383,6 +5479,7 @@
     "page": 248,
     "rarity": "Rare",
     "attune": true,
+    "magic": 2,
     "base": "item/longsword"
   },
   {
@@ -5395,7 +5492,8 @@
     "page": 248,
     "rarity": "Rare",
     "attune": true,
-    "base": "weapon"
+    "base": "weapon",
+    "baseOf": "item/glaive,item/greatsword,item/longsword,item/rapier,item/scimitar,item/shortsword"
   },
   {
     "id": "item/sword-of-sharpness",
@@ -5407,7 +5505,8 @@
     "page": 248,
     "rarity": "Very Rare",
     "attune": true,
-    "base": "weapon"
+    "base": "weapon",
+    "baseOf": "item/glaive,item/greatsword,item/longsword,item/scimitar"
   },
   {
     "id": "item/sword-of-wounding",
@@ -5419,7 +5518,8 @@
     "page": 248,
     "rarity": "Rare",
     "attune": true,
-    "base": "weapon"
+    "base": "weapon",
+    "baseOf": "item/glaive,item/greatsword,item/longsword,item/rapier,item/scimitar,item/shortsword"
   },
   {
     "id": "item/talisman-of-pure-good",
@@ -5657,7 +5757,9 @@
     "page": 250,
     "rarity": "Legendary",
     "attune": true,
-    "base": "weapon"
+    "magic": 3,
+    "base": "weapon",
+    "baseOf": "item/glaive,item/greatsword,item/longsword,item/scimitar"
   },
   {
     "id": "item/wand-of-binding",
@@ -5815,7 +5917,8 @@
     "cat": "magic",
     "page": 251,
     "rarity": "Uncommon (+1), Rare (+2), or Very Rare (+3)",
-    "attune": true
+    "attune": true,
+    "magicPick": true
   },
   {
     "id": "item/wand-of-web",
@@ -5901,7 +6004,8 @@
     "cat": "magic",
     "page": 253,
     "rarity": "Uncommon (+1), Rare (+2), or Very Rare (+3)",
-    "base": "weapon"
+    "base": "weapon",
+    "magicPick": true
   },
   {
     "id": "item/weapon-of-warning",

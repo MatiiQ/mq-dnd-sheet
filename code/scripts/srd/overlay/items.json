@@ -1,6 +1,7 @@
 {
   "item/adamantine-armor": {
-    "base": "armor"
+    "base": "armor",
+    "baseOf": "item/breastplate,item/chain-mail,item/chain-shirt,item/half-plate-armor,item/plate-armor,item/ring-mail,item/scale-mail,item/splint-armor"
   },
   "item/amulet-of-health": {
     "grants": [
@@ -19,7 +20,8 @@
     "base": "item/shield"
   },
   "item/armor-1-2-or-3": {
-    "base": "armor"
+    "base": "armor",
+    "magicPick": true
   },
   "item/armor-of-invulnerability": {
     "grants": [
@@ -317,7 +319,8 @@
         "needAtt": true
       }
     ],
-    "base": "weapon"
+    "base": "weapon",
+    "baseOf": "item/battleaxe,item/greataxe,item/halberd"
   },
   "item/boots-of-the-winterlands": {
     "grants": [
@@ -450,10 +453,12 @@
     "base": "item/dagger"
   },
   "item/dancing-sword": {
-    "base": "weapon"
+    "base": "weapon",
+    "baseOf": "item/greatsword,item/longsword,item/rapier,item/scimitar,item/shortsword"
   },
   "item/defender": {
-    "base": "weapon"
+    "base": "weapon",
+    "baseOf": "item/battleaxe,item/club,item/dagger,item/flail,item/glaive,item/greataxe,item/greatclub,item/greatsword,item/halberd,item/handaxe,item/javelin,item/lance,item/light-hammer,item/longsword,item/mace,item/maul,item/morningstar,item/pike,item/quarterstaff,item/rapier,item/scimitar,item/shortsword,item/sickle,item/spear,item/trident,item/war-pick,item/warhammer,item/whip"
   },
   "item/demon-armor": {
     "armor": "heavy",
@@ -585,10 +590,12 @@
     "acBonus": 1
   },
   "item/energy-bow": {
-    "base": "weapon"
+    "base": "weapon",
+    "baseOf": "item/longbow,item/shortbow"
   },
   "item/flame-tongue": {
-    "base": "weapon"
+    "base": "weapon",
+    "baseOf": "item/battleaxe,item/club,item/dagger,item/flail,item/glaive,item/greataxe,item/greatclub,item/greatsword,item/halberd,item/handaxe,item/javelin,item/lance,item/light-hammer,item/longsword,item/mace,item/maul,item/morningstar,item/pike,item/quarterstaff,item/rapier,item/scimitar,item/shortsword,item/sickle,item/spear,item/trident,item/war-pick,item/warhammer,item/whip"
   },
   "item/frost-brand": {
     "grants": [
@@ -602,7 +609,8 @@
         "needAtt": true
       }
     ],
-    "base": "weapon"
+    "base": "weapon",
+    "baseOf": "item/glaive,item/greatsword,item/longsword,item/rapier,item/scimitar,item/shortsword"
   },
   "item/gauntlets-of-ogre-power": {
     "grants": [
@@ -659,7 +667,8 @@
     ]
   },
   "item/hammer-of-thunderbolts": {
-    "base": "weapon"
+    "base": "weapon",
+    "baseOf": "item/maul,item/warhammer"
   },
   "item/handy-haversack": {
     "xdim": true,
@@ -707,7 +716,8 @@
         "needAtt": true
       }
     ],
-    "base": "weapon"
+    "base": "weapon",
+    "baseOf": "item/glaive,item/greatsword,item/longsword,item/rapier,item/scimitar,item/sickle,item/shortsword"
   },
   "item/mace-of-disruption": {
     "base": "item/mace"
@@ -732,7 +742,10 @@
     ]
   },
   "item/mithral-armor": {
-    "base": "armor"
+    "base": "armor",
+    "baseOf": "item/breastplate,item/chain-mail,item/chain-shirt,item/half-plate-armor,item/plate-armor,item/ring-mail,item/scale-mail,item/splint-armor",
+    "strReq": 0,
+    "stealthDis": false
   },
   "item/necklace-of-adaptation": {
     "grants": [
@@ -751,7 +764,8 @@
     "base": "weapon"
   },
   "item/oathbow": {
-    "base": "weapon"
+    "base": "weapon",
+    "baseOf": "item/longbow,item/shortbow"
   },
   "item/periapt-of-health": {
     "grants": [
@@ -1011,6 +1025,9 @@
       }
     ]
   },
+  "item/rod-of-lordly-might": {
+    "base": "item/mace"
+  },
   "item/scarab-of-protection": {
     "grants": [
       {
@@ -1032,7 +1049,8 @@
   },
   "item/shield-1-2-or-3": {
     "armor": "shield",
-    "acBase": 2
+    "acBase": 2,
+    "magicPick": true
   },
   "item/shield-of-missile-attraction": {
     "armor": "shield",
@@ -1143,13 +1161,16 @@
     "base": "item/longsword"
   },
   "item/sword-of-life-stealing": {
-    "base": "weapon"
+    "base": "weapon",
+    "baseOf": "item/glaive,item/greatsword,item/longsword,item/rapier,item/scimitar,item/shortsword"
   },
   "item/sword-of-sharpness": {
-    "base": "weapon"
+    "base": "weapon",
+    "baseOf": "item/glaive,item/greatsword,item/longsword,item/scimitar"
   },
   "item/sword-of-wounding": {
-    "base": "weapon"
+    "base": "weapon",
+    "baseOf": "item/glaive,item/greatsword,item/longsword,item/rapier,item/scimitar,item/shortsword"
   },
   "item/thunderous-greatclub": {
     "base": "item/greatclub"
@@ -1161,10 +1182,15 @@
     "base": "weapon"
   },
   "item/vorpal-sword": {
-    "base": "weapon"
+    "base": "weapon",
+    "baseOf": "item/glaive,item/greatsword,item/longsword,item/scimitar"
+  },
+  "item/wand-of-the-war-mage-1-2-or-3": {
+    "magicPick": true
   },
   "item/weapon-1-2-or-3": {
-    "base": "weapon"
+    "base": "weapon",
+    "magicPick": true
   },
   "item/weapon-of-warning": {
     "base": "weapon"

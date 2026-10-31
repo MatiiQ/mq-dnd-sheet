@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { parseArmor, parseGear, parseMagicItems, parseTools, parseWeapons } from './items.ts';
+import { copyBase, parseArmor, parseGear, parseMagicItems, parseTools, parseWeapons } from './items.ts';
+import type { ItemEntry } from '../../src/catalog/schema.ts';
 
 const fx = (f: string) => readFileSync(new URL(`./fixtures/${f}`, import.meta.url), 'utf8');
 const by = <T extends { name: string }>(list: T[], name: string) => list.find((e) => e.name === name);
@@ -64,6 +65,26 @@ describe('magic items', () => {
     expect(one('Wondrous Item, Rare', 'The cube starts with 10 charges, and it regains 1d6 expended charges daily at dawn.')).toMatchObject({ charges: '10', recharge: 'dawn', regain: '1d6' });
     expect(one('Rod, Legendary', 'The rod has 5 charges. The rod regains 1 expended charge daily at dawn.')).toMatchObject({ charges: '5', recharge: 'dawn', regain: '1', regainOn: 'dawn' });
     expect(one('Wondrous Item, Rare', 'No charges here.').recharge).toBeUndefined();
+  });
+  it('reads a weapon’s +N bonus as magic, and a staff wielded as a magic Quarterstaff as one', () => {
+    const one = (type: string, body: string) => parseMagicItems(`Test Item\n${type}\n\n${body}\n`)[0];
+    expect(one('Weapon (Any Sword), Legendary', 'You gain a +3 bonus to attack and damage rolls made with this magic weapon.').magic).toBe(3);
+    expect(one('Weapon (Any Axe), Rare', 'You gain a +1 bonus to attack rolls and damage rolls made with this magic weapon.').magic).toBe(1);
+    expect(one('Staff, Very Rare', 'This staff can be wielded as a magic Quarterstaff that grants a +2 bonus to attack and damage rolls made with it.'))
+      .toMatchObject({ base: 'item/quarterstaff', magic: 2 });
+    expect(one('Staff, Rare', 'This staff can be wielded as a magic Quarterstaff. On a hit, it deals extra Necrotic damage.')).toMatchObject({ base: 'item/quarterstaff' });
+    expect(one('Staff, Rare', 'While holding this staff, you can cast Cure Wounds.').base).toBeUndefined();
+    expect(one('Ring, Rare', 'You gain a +1 bonus to AC and saving throws.').magic).toBeUndefined();
+  });
+  it('checks a baseOf list names items of the kind its base allows', () => {
+    const sword = { id: 'item/longsword', kind: 'item', name: 'Longsword', src: 'srd', desc: '', cat: 'weapon', dmg: '1d8' } as ItemEntry;
+    const plate = { id: 'item/plate-armor', kind: 'item', name: 'Plate Armor', src: 'srd', desc: '', cat: 'armor', armor: 'heavy', acBase: 18 } as ItemEntry;
+    const magic = (p: Partial<ItemEntry>) => ({ id: 'item/test', kind: 'item', name: 'Test', src: 'srd', desc: '', cat: 'magic', ...p }) as ItemEntry;
+    expect(() => copyBase([sword, plate, magic({ base: 'weapon', baseOf: 'item/longsword' })])).not.toThrow();
+    expect(() => copyBase([sword, plate, magic({ base: 'weapon', baseOf: 'item/plate-armor' })])).toThrow(/baseOf/);
+    expect(() => copyBase([sword, plate, magic({ base: 'armor', baseOf: 'item/longsword' })])).toThrow(/baseOf/);
+    expect(() => copyBase([sword, plate, magic({ base: 'armor', baseOf: 'item/nope' })])).toThrow(/baseOf/);
+    expect(copyBase([sword, plate, magic({ base: 'item/longsword', magic: 1 })])[2]).toMatchObject({ dmg: '1d8', base: 'item/longsword', magic: 1 });
   });
   it('reads Bag of Holding’s capacity from its text', () => {
     expect(by(list, 'Bag of Holding')).toMatchObject({ rarity: 'Uncommon', xdim: true, cap: 500, capVol: '64 cubic feet', wt: 5 });

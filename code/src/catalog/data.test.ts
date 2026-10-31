@@ -116,6 +116,32 @@ describe('SRD items', () => {
       expect([id, it(id).recharge]).toEqual([id, 'none']);
     expect((items as ItemEntry[]).filter((e) => e.charges !== undefined && e.recharge === undefined).map((e) => e.id)).toEqual([]);
   });
+  it('give the 22 weapons with a fixed +N bonus their magic (plan 7, Task 9)', () => {
+    const want: Record<string, number> = {
+      'berserker-axe': 1, 'dagger-of-venom': 1, defender: 3, 'dragon-slayer': 1, 'dwarven-thrower': 3, 'energy-bow': 1, 'giant-slayer': 1,
+      'hammer-of-thunderbolts': 1, 'holy-avenger': 3, 'luck-blade': 1, 'mace-of-smiting': 1, 'nine-lives-stealer': 2, 'quarterstaff-of-the-acrobat': 2,
+      'rod-of-lordly-might': 3, 'scimitar-of-speed': 2, 'staff-of-power': 2, 'staff-of-striking': 3, 'staff-of-the-magi': 2, 'staff-of-the-woodlands': 2,
+      'staff-of-thunder-and-lightning': 2, 'sun-blade': 2, 'vorpal-sword': 3
+    };
+    const got = Object.fromEntries((items as ItemEntry[]).filter((e) => e.magic !== undefined).map((e) => [e.id.slice(5), e.magic]));
+    expect(got).toEqual(want);
+    expect((items as ItemEntry[]).find((e) => e.id === 'item/rod-of-lordly-might')).toMatchObject({ base: 'item/mace', dmg: '1d6' });
+  });
+  it('make only the staffs wielded as a magic Quarterstaff weapons', () => {
+    const staffs = (items as ItemEntry[]).filter((e) => e.base === 'item/quarterstaff' && e.name.startsWith('Staff')).map((e) => e.id).sort();
+    expect(staffs).toEqual(['item/staff-of-power', 'item/staff-of-striking', 'item/staff-of-the-magi', 'item/staff-of-the-woodlands', 'item/staff-of-thunder-and-lightning', 'item/staff-of-withering']);
+  });
+  it('narrow a base of the player’s choice to what its type line names, and mark the +1/+2/+3 picks', () => {
+    const it = (id: string) => (items as ItemEntry[]).find((e) => e.id === 'item/' + id)!;
+    const swords6 = 'item/glaive,item/greatsword,item/longsword,item/rapier,item/scimitar,item/shortsword';
+    expect(it('frost-brand').baseOf).toBe(swords6);
+    expect(it('hammer-of-thunderbolts').baseOf).toBe('item/maul,item/warhammer');
+    expect(it('energy-bow').baseOf).toBe('item/longbow,item/shortbow');
+    expect(it('mithral-armor').baseOf!.split(',')).not.toContain('item/hide-armor');
+    expect(it('mithral-armor')).toMatchObject({ strReq: 0, stealthDis: false });
+    expect(it('defender').baseOf!.split(',')).toHaveLength(28);
+    expect((items as ItemEntry[]).filter((e) => e.magicPick).map((e) => e.id).sort()).toEqual(['item/armor-1-2-or-3', 'item/shield-1-2-or-3', 'item/wand-of-the-war-mage-1-2-or-3', 'item/weapon-1-2-or-3']);
+  });
   it('read Bag of Holding’s capacity from its SRD text', () => {
     expect(by('Bag of Holding')).toMatchObject({ xdim: true, cap: 500, capVol: '64 cubic feet', wt: 5 });
   });

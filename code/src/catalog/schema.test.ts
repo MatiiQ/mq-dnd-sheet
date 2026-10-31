@@ -99,6 +99,19 @@ describe('validateEntry', () => {
     expect(validateEntry({ ...cure, parts: ['burst'] })).not.toEqual([]);
     expect(validateEntry({ ...cure, desc: { x: 1 } })).not.toEqual([]);                           // other fields stay plain values
   });
+  it('takes magic (1–3), magicPick, and a baseOf list only on a base of the player’s choice', () => {
+    const its = items as unknown as ItemEntry[];
+    const avenger = its.find((e) => e.id === 'item/holy-avenger')!, weaponN = its.find((e) => e.id === 'item/weapon-1-2-or-3')!;
+    expect(validateEntry({ ...avenger, magic: 3 })).toEqual([]);
+    for (const bad of [0, 4, 1.5, '2']) expect([bad, validateEntry({ ...avenger, magic: bad })]).not.toEqual([bad, []]);
+    expect(validateEntry({ ...weaponN, magicPick: true })).toEqual([]);
+    expect(validateEntry({ ...weaponN, magicPick: false })).not.toEqual([]);
+    expect(validateEntry({ ...avenger, baseOf: 'item/longsword,item/shortsword' })).toEqual([]);
+    expect(validateEntry({ ...avenger, baseOf: 'longsword' })).not.toEqual([]);
+    expect(validateEntry({ ...avenger, baseOf: '' })).not.toEqual([]);
+    const sun = its.find((e) => e.id === 'item/sun-blade')!;
+    expect(validateEntry({ ...sun, baseOf: 'item/longsword' })).not.toEqual([]);           // a fixed base takes no list
+  });
   it('takes a damage type on an Unarmed Strike grant (Demon Armor)', () => {
     expect(validateEntry({ ...feature, grants: [{ id: 'g1', kind: 'unarmed', name: 'Claws', die: '1d8', abs: 'str', dtype: 'Slashing' }] })).toEqual([]);
     const demon = (items as unknown as ItemEntry[]).find((e) => e.id === 'item/demon-armor')!;
