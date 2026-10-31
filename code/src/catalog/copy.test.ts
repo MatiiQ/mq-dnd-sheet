@@ -63,6 +63,11 @@ describe('spellSummary', () => {
     expect(spellSummary(spell('spell/conjure-celestial'))).toBe('6d12 Radiant · DEX save; Healing Light: 4d12 healing');
     expect(spellSummary(spell('spell/ice-knife'))).toBe('1d10 Piercing · ranged attack; Burst: 2d6 Cold · DEX save');
   });
+  it('writes fixed healing as "heals N HP"', () => {
+    expect(spellSummary(spell('spell/heal'))).toBe('heals 70 HP');
+    expect(spellSummary(spell('spell/mass-heal'))).toBe('heals 700 HP');
+    expect(spellSummary(spell('spell/power-word-heal'))).toBe('heals all HP');
+  });
   it('names a chosen damage type as the list of types', () => {
     const base = spell('spell/fire-bolt');
     expect(spellSummary({ ...base, dice: '3d8', dtype: undefined, dtypes: 'Acid,Cold,Fire' })).toBe('3d8 Acid/Cold/Fire · ranged attack');

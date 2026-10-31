@@ -1720,9 +1720,7 @@
     "dur": "Instantaneous",
     "conc": false,
     "ritual": false,
-    "fx": "damage",
-    "dice": "4d6",
-    "dtype": "Force"
+    "fx": "other"
   },
   {
     "id": "spell/disguise-self",
@@ -2391,7 +2389,7 @@
     "dur": "Instantaneous",
     "conc": false,
     "ritual": false,
-    "fx": "healing",
+    "fx": "other",
     "higher": "Use the spell slot’s level for the spell’s level in the stat block."
   },
   {
@@ -2885,9 +2883,7 @@
     "dur": "Concentration, up to 10 minutes",
     "conc": true,
     "ritual": false,
-    "fx": "damage",
-    "dice": "1d4",
-    "dtype": "Poison",
+    "fx": "other",
     "higher": "Use the spell slot’s level for the spell’s level in the stat block."
   },
   {
@@ -3212,8 +3208,9 @@
     "dur": "Instantaneous",
     "conc": false,
     "ritual": false,
-    "fx": "other",
-    "higher": "The healing increases by 10 for each spell slot level above 6."
+    "fx": "healing",
+    "higher": "The healing increases by 10 for each spell slot level above 6.",
+    "dice": "70"
   },
   {
     "id": "spell/healing-word",
@@ -4129,7 +4126,8 @@
     "dur": "Instantaneous",
     "conc": false,
     "ritual": false,
-    "fx": "other"
+    "fx": "healing",
+    "dice": "700"
   },
   {
     "id": "spell/mass-healing-word",
@@ -4207,9 +4205,7 @@
     "dur": "8 hours",
     "conc": false,
     "ritual": true,
-    "fx": "damage",
-    "dice": "6d6",
-    "dtype": "Force"
+    "fx": "other"
   },
   {
     "id": "spell/mending",
@@ -4716,7 +4712,8 @@
     "dur": "Instantaneous",
     "conc": false,
     "ritual": false,
-    "fx": "healing"
+    "fx": "healing",
+    "dice": "all HP"
   },
   {
     "id": "spell/power-word-kill",
@@ -4815,7 +4812,7 @@
     "fx": "damage",
     "save": "dex",
     "dice": "12d6",
-    "dtype": "Fire"
+    "dtypes": "Fire,Acid,Lightning,Poison,Cold"
   },
   {
     "id": "spell/prismatic-wall",
@@ -4834,9 +4831,9 @@
     "conc": false,
     "ritual": false,
     "fx": "damage",
-    "save": "con",
+    "save": "dex",
     "dice": "12d6",
-    "dtype": "Fire"
+    "dtypes": "Fire,Acid,Lightning,Poison,Cold"
   },
   {
     "id": "spell/private-sanctum",
@@ -6071,10 +6068,7 @@
     "dur": "Until dispelled or triggered",
     "conc": false,
     "ritual": false,
-    "fx": "damage",
-    "save": "con",
-    "dice": "10d10",
-    "dtype": "Necrotic"
+    "fx": "other"
   },
   {
     "id": "spell/telekinesis",
@@ -6129,9 +6123,7 @@
     "dur": "Instantaneous",
     "conc": false,
     "ritual": false,
-    "fx": "damage",
-    "dice": "3d10",
-    "dtype": "Force"
+    "fx": "other"
   },
   {
     "id": "spell/teleportation-circle",
@@ -6748,7 +6740,7 @@
     "dur": "Instantaneous",
     "conc": false,
     "ritual": false,
-    "fx": "healing"
+    "fx": "other"
   },
   {
     "id": "spell/word-of-recall",

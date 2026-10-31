@@ -16,7 +16,8 @@ export const dtypeText = (x: { dtype?: string; dtypes?: string }) => x.dtype || 
 // One row's summary: '8d6 Fire · DEX save', '1d10 Fire · ranged attack', '2d8 healing', '' for none.
 function rowSummary(e: Pick<SpellEntry, 'fx' | 'dice' | 'dtype' | 'dtypes' | 'save' | 'atk'>): string {
   if (e.fx === 'other' || !e.dice) return '';
-  if (e.fx === 'healing') return e.dice + ' healing';
+  // Fixed healing that isn't dice (Heal's 70, Power Word Heal's all HP) reads as an amount.
+  if (e.fx === 'healing') return /\d+d\d+/.test(e.dice) ? e.dice + ' healing' : `heals ${e.dice.replace(/ HP$/, '')} HP`;
   const dmg = [e.dice, dtypeText(e)].filter(Boolean).join(' ');
   const how = e.save ? ABBR[e.save] + ' save' : e.atk ? e.atk + ' attack' : '';
   return [dmg, how].filter(Boolean).join(' · ');

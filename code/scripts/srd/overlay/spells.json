@@ -17,5 +17,17 @@
   "spell/acid-arrow": { "parts": [{ "label": "Later", "fx": "damage", "dice": "2d4", "dtype": "Acid", "scale": "1d4/slot" }] },
   "spell/arcane-hand": { "scale": "2d8/slot", "parts": [{ "label": "Grasping Hand", "fx": "damage", "dice": "4d6", "dtype": "Bludgeoning", "dmgMod": true, "scale": "2d6/slot" }] },
   "spell/vitriolic-sphere": { "parts": [{ "label": "Later", "fx": "damage", "dice": "5d4", "dtype": "Acid" }] },
-  "spell/wall-of-thorns": { "parts": [{ "label": "Slashing", "fx": "damage", "dice": "7d8", "dtype": "Slashing", "save": "dex", "scale": "1d8/slot" }] }
+  "spell/wall-of-thorns": { "parts": [{ "label": "Slashing", "fx": "damage", "dice": "7d8", "dtype": "Slashing", "save": "dex", "scale": "1d8/slot" }] },
+  "spell/teleport": { "fx": "other", "dice": null, "dtype": null },
+  "spell/dimension-door": { "fx": "other", "dice": null, "dtype": null },
+  "spell/meld-into-stone": { "fx": "other", "dice": null, "dtype": null },
+  "spell/giant-insect": { "fx": "other", "dice": null, "dtype": null },
+  "spell/symbol": { "fx": "other", "dice": null, "dtype": null, "save": null },
+  "spell/prismatic-spray": { "dtype": null, "dtypes": "Fire,Acid,Lightning,Poison,Cold" },
+  "spell/prismatic-wall": { "dtype": null, "dtypes": "Fire,Acid,Lightning,Poison,Cold", "save": "dex" },
+  "spell/heal": { "fx": "healing", "dice": "70" },
+  "spell/mass-heal": { "fx": "healing", "dice": "700" },
+  "spell/power-word-heal": { "dice": "all HP" },
+  "spell/wish": { "fx": "other" },
+  "spell/find-steed": { "fx": "other" }
 }

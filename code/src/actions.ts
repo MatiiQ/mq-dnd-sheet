@@ -276,7 +276,8 @@ export function spellActions(c: Character): SpellAction[] {
   return out;
 }
 type RowFields = Pick<SpellPart, 'dtype' | 'dtypes' | 'save' | 'atk' | 'dmgMod' | 'healMod' | 'scale'> & { fx?: Spell['fx']; dice?: string };
-// The numbers of one row of a spell: the spell's own fields or one part's. Its group: a save puts it under save, an
+// The numbers of one row of a spell: the spell's own fields or one part's. Healing that isn't dice (Heal's '70', Power
+// Word Heal's 'all HP') shows as it is. Its group: a save puts it under save, an
 // attack or damage under damage, healing under healing. To-hit and DC follow the spell's casting ability (PHB p.41).
 function spellRow(c: Character, sp: Spell, r: RowFields): Omit<SpellAction, 'name' | 'econ'> {
   const group: SpellAction['group'] = r.save ? 'save' : r.atk || r.fx === 'damage' ? 'damage' : r.fx === 'healing' ? 'healing' : 'damage';
@@ -286,7 +287,7 @@ function spellRow(c: Character, sp: Spell, r: RowFields): Omit<SpellAction, 'nam
     dice = `${cantripTier(c.level)} beams × ${dice}`;
   } else if (dice && r.scale === 'cantrip') {
     dice = diceText(cantripDice(dice, c.level), cantripBonus(c, sp));
-  } else if (dice && ((r.fx === 'healing' && r.healMod) || (r.fx === 'damage' && r.dmgMod))) {
+  } else if (/\d+d\d+/.test(dice) && ((r.fx === 'healing' && r.healMod) || (r.fx === 'damage' && r.dmgMod))) {
     // Cure Wounds, Healing Word, Mass Cure Wounds: "+ your spellcasting ability modifier" (PHB pp.259, 284, 296);
     // damage that says the same: Spiritual Weapon, Flame Blade (PHB pp.319, 275).
     const ab = sp.castAb ?? (c.castAb === 'none' ? null : c.castAb);

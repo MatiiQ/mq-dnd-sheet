@@ -58,6 +58,24 @@ describe('SRD spell damage (plan 7)', () => {
   });
 });
 
+describe('SRD spells with false or missing damage and healing (plan 7, Task 5)', () => {
+  const sp = (id: string) => (spells as SpellEntry[]).find((e) => e.id === id)!;
+  it('give no damage to spells whose dice are a mishap, a stat block or one of several glyphs', () => {
+    for (const id of ['spell/teleport', 'spell/dimension-door', 'spell/meld-into-stone', 'spell/giant-insect', 'spell/symbol'])
+      expect([id, sp(id).fx, sp(id).dice, sp(id).dtype, sp(id).save]).toEqual([id, 'other', undefined, undefined, undefined]);
+  });
+  it('give the prismatic rays their damage types as a list, with the Dexterity save', () => {
+    for (const id of ['spell/prismatic-spray', 'spell/prismatic-wall'])
+      expect([id, sp(id).fx, sp(id).dice, sp(id).dtypes, sp(id).dtype, sp(id).save]).toEqual([id, 'damage', '12d6', 'Fire,Acid,Lightning,Poison,Cold', undefined, 'dex']);
+  });
+  it('give fixed healing as its amount, and no healing row to spells that only mention it', () => {
+    expect([sp('spell/heal').fx, sp('spell/heal').dice]).toEqual(['healing', '70']);
+    expect([sp('spell/mass-heal').fx, sp('spell/mass-heal').dice]).toEqual(['healing', '700']);
+    expect([sp('spell/power-word-heal').fx, sp('spell/power-word-heal').dice]).toEqual(['healing', 'all HP']);
+    expect([sp('spell/wish').fx, sp('spell/find-steed').fx]).toEqual(['other', 'other']);
+  });
+});
+
 describe('SRD items', () => {
   const list = items as ItemEntry[];
   const by = (name: string) => list.find((e) => e.name === name);

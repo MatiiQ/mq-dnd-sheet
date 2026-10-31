@@ -319,6 +319,10 @@ describe('spell actions', () => {
     expect(scales('spell/wall-of-thorns')).toEqual(['1d8/slot', '1d8/slot']);
     expect((cat.byId.get('spell/conjure-celestial') as SpellEntry).healMod).toBeUndefined();
   });
+  it('shows fixed healing as it is, never with a modifier or dice arithmetic', () => {
+    expect(actionOf(ilyra({ spells: [catSpell('spell/heal', { always: true })] }), 'heal')).toMatchObject({ group: 'healing', dice: '70' });
+    expect(actionOf(ilyra({ spells: [catSpell('spell/power-word-heal', { always: true, healMod: true })] }), 'power-word-heal')!.dice).toBe('all HP');
+  });
   it('adds a cantrip damage bonus to the feature’s class cantrips only', () => {
     const bonus = (from: string) => grant({ id: 'gp', kind: 'dmgBonus', name: 'Potent Spellcasting', val: 'wis', cantrip: true, from });
     const c = { ...druidSample(), grants: [...druidSample().grants, bonus('feature:f7')] };
