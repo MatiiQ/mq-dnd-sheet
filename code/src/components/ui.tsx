@@ -34,6 +34,17 @@ export function useArmed(ms = 3000) {
   return [armed, tap] as const;
 }
 
+// ---------- a note shown until the next change to the character ("Put away: Longbow", plan 5) ----------
+// Set it in the same handler as the update it describes. The render after that update remembers the character it
+// shows; any later change (from any tab, the menu or a rest) gives a new character object, which hides the note.
+export function useNoteUntilChange<T>() {
+  const { c } = useSheet();
+  const [note, setNote] = useState<{ value: T; at: unknown } | null>(null);
+  if (note && note.at === null) setNote({ ...note, at: c });
+  const shown = note && (note.at === null || note.at === c) ? note.value : null;
+  return [shown, (v: T | null) => setNote(v === null ? null : { value: v, at: null })] as const;
+}
+
 // confirm: shown while armed, e.g. what else a removal takes with it (removalSummary).
 export function RemoveButton({ name, onRemove, confirm }: { name: string; onRemove: () => void; confirm?: ReactNode }) {
   const [armed, tap] = useArmed(confirm ? 6000 : 3000);

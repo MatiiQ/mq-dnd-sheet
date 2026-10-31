@@ -9,7 +9,7 @@ import { linkOf, sourceLabel } from '../../links';
 import { castFree, castSpell, COMBAT_ACTIONS, fmt, freeCastsOf, removeRef, slotsLeft, spellUsable, toggleEffect, type AcPart } from '../../logic';
 import { patchEntry, removeEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { Attack, Character, Econ, Item, Rider, Spell } from '../../types';
-import { AddButton, ChevronDown, DieBadge, EntryForm, EntryRow, Step, TextField } from '../ui';
+import { AddButton, ChevronDown, DieBadge, EntryForm, EntryRow, Step, TextField, useNoteUntilChange } from '../ui';
 
 const ECON: Record<Econ, string> = { action: 'Action', bonus: 'Bonus Action', reaction: 'Reaction', free: 'Free', other: 'Other' };
 type Filter = 'all' | 'action' | 'bonus' | 'reaction';
@@ -64,7 +64,8 @@ export function Section({ title, children, aside }: { title: string; children: R
 export function ActionsTab() {
   const { c, update } = useSheet();
   const [filter, setFilter] = useState<Filter>('all');
-  const [away, setAway] = useState<{ id: string; text: string } | null>(null);
+  // What taking a weapon put away, shown under its row until the next change to the character.
+  const [away, setAway] = useNoteUntilChange<{ id: string; text: string }>();
   const [othersOpen, setOthersOpen] = useState(false);
   const [masteryOpen, setMasteryOpen] = useState(false);
   const [rulesWanted, setRulesWanted] = useState(false);

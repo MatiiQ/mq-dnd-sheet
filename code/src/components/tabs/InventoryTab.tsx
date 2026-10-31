@@ -8,7 +8,7 @@ import { GrantList, SourceChips } from '../Chips';
 import { ItemPicker } from '../pickers/ItemPicker';
 import { patchEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { ArmorKind, Character, Coin, Item, Recharge } from '../../types';
-import { AddButton, EntryForm, EntryRow, NumInput, TextField } from '../ui';
+import { AddButton, EntryForm, EntryRow, NumInput, TextField, useNoteUntilChange } from '../ui';
 
 const COINS: [Coin, string, string][] = [['cp', 'CP', 'var(--coin-cp)'], ['sp', 'SP', 'var(--coin-sp)'], ['ep', 'EP', 'var(--coin-ep)'], ['gp', 'GP', 'var(--accent)'], ['pp', 'PP', 'var(--coin-pp)']];
 // The item form's draft (catalog/copy.ts) plus the grants of a new item (pending), added once it exists.
@@ -44,8 +44,9 @@ export function InventoryTab() {
   const f = useEntryForm('item', BLANK, 'item', 'Add a custom item');
   const picking = openForm?.kind === 'pick-item';
   const [carryOpen, setCarryOpen] = useState(false);
-  // What equipping a Shield put away ("Put away: Longbow"), shown under its row until the next action (spec).
-  const [awayMsg, setAwayMsg] = useState<{ id: string; names: string[] } | null>(null);
+  // What equipping a Shield put away ("Put away: Longbow"), shown under its row until the next action (spec): the next
+  // change to the character hides it.
+  const [awayMsg, setAwayMsg] = useNoteUntilChange<{ id: string; names: string[] }>();
   const cap = carryCapacity(c), carried = carriedWeight(c), over = carried > cap.carry;
   const patch = (id: string, p: Partial<Item>) => { setAwayMsg(null); update((s) => ({ inv: patchEntry(s.inv, id, p) })); };
   // The equip toggle: a Shield takes a hand (equipShield trims hands and names what went); unequipping lets go of it.
