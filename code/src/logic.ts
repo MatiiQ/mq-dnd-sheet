@@ -124,6 +124,10 @@ export const saveMod = (c: Character, k: Ability) => abilityMod(c, k) + (savePro
 // Spell save DC = 8 + spellcasting ability modifier + PB; spell attack = modifier + PB (PHB p.41). null without a spellcasting ability.
 export const spellSaveDC = (c: Character) => (c.castAb === 'none' ? null : 8 + abilityMod(c, c.castAb) + profBonus(c.level));
 export const spellAttack = (c: Character) => (c.castAb === 'none' ? null : abilityMod(c, c.castAb) + profBonus(c.level));
+// The same for one spell, which may cast with its own ability (Light Bearer: Light with CHA).
+const castAbOf = (c: Character, sp: Spell): Ability | null => sp.castAb ?? (c.castAb === 'none' ? null : c.castAb);
+export const spellSaveDcFor = (c: Character, sp: Spell) => { const ab = castAbOf(c, sp); return ab ? 8 + abilityMod(c, ab) + profBonus(c.level) : null; };
+export const spellAttackFor = (c: Character, sp: Spell) => { const ab = castAbOf(c, sp); return ab ? abilityMod(c, ab) + profBonus(c.level) : null; };
 // The same two numbers as parts, for the breakdown under each badge (PHB p.41). Their sums equal the values above.
 export function spellAttackParts(c: Character): AcPart[] | null {
   if (c.castAb === 'none') return null;
@@ -281,11 +285,18 @@ export function effectsAfterEdit(c: Character, sp: Pick<Spell, 'id' | 'c'>): Par
   return sp.c && c.effectsOn.includes(link) ? { effectsOn: c.effectsOn.filter((x) => x !== link) } : {};
 }
 
-// Using a free cast works like casting; tapping it again restores the cast but leaves the effects alone.
-export function toggleFreeCast(c: Character, sp: Spell): Partial<Character> {
-  const used = !c.free[sp.id];
-  return { free: { ...c.free, [sp.id]: used }, ...(used && sp.c ? setConc({ id: sp.id, name: sp.name }) : {}), ...(used ? { ...acOnCast(c, sp), ...effectOnCast(c, sp) } : {}) };
+// A free cast (a resource that casts the spell): with uses left it uses one and casts, like a slot; at 0 a tap gives
+// one back and leaves the effects alone. Above 0 a tap never gives a use back (a multi-use resource is undone with
+// its counter in Resources).
+export function castFree(c: Character, sp: Spell, resId: string): Partial<Character> {
+  const r = c.res.find((x) => x.id === resId);
+  if (!r) return {};
+  const res = c.res.map((x) => (x.id === resId ? { ...x, count: x.count > 0 ? x.count - 1 : 1 } : x));
+  if (r.count <= 0) return { res };
+  return { res, ...(sp.c ? setConc({ id: sp.id, name: sp.name }) : {}), ...acOnCast(c, sp), ...effectOnCast(c, sp) };
 }
+// The resources that cast this spell: its own free casts and a feature's (Favored Enemy's Hunter's Mark).
+export const freeCastsOf = (c: Character, spellId: string) => c.res.filter((r) => r.casts === spellId);
 
 // Switches a non-Concentration spell's AC effect on or off, without casting it.
 export const toggleAcSpell = (c: Character, id: string): Partial<Character> =>
@@ -296,11 +307,15 @@ export function acAfterEdit(c: Character, sp: Pick<Spell, 'id' | 'c' | 'acFx'>):
   return c.acOn.includes(sp.id) && (sp.c || !sp.acFx) ? { acOn: c.acOn.filter((x) => x !== sp.id) } : {};
 }
 
-// Removing a spell ends Concentration on it, switches its AC effect off and drops its free cast.
+// Removing a spell ends Concentration on it, switches its effects off and removes its own free casts (resources from
+// it, and pills naming them); a resource from elsewhere that casts it stays, without casts.
 export function removeSpell(c: Character, id: string): Character {
-  const { [id]: _, ...free } = c.free;
+  const link = linkOf('spell', id);
+  const gone = c.res.filter((r) => r.from === link).map((r) => r.id);
   return {
-    ...c, spells: c.spells.filter((x) => x.id !== id), free, acOn: c.acOn.filter((x) => x !== id),
+    ...c, spells: c.spells.filter((x) => x.id !== id), acOn: c.acOn.filter((x) => x !== id), effectsOn: c.effectsOn.filter((x) => x !== link),
+    res: c.res.filter((r) => !gone.includes(r.id)).map((r) => (r.casts === id ? (({ casts: _, ...x }) => x)(r) : r)),
+    pills: c.pills.map((k) => (gone.some((r) => k === resPill(r)) ? '' : k)),
     ...(c.conc?.id === id ? setConc(null) : {})
   };
 }
@@ -618,11 +633,11 @@ export function longRest(c: Character): Character {
     Object.values(c.abilAdj).some((v) => (v || 0) < 0) ? ', reduced ability scores restored' : ''
   ].join('');
   return {
-    ...c, maxHp, abilAdj, hp: maxHpOf({ ...c, maxHp, abilAdj }), temp: 0, slotUsed: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], hdUsed: 0, ds: 0, df: 0, free: {}, acOn: [], effectsOn: [],
+    ...c, maxHp, abilAdj, hp: maxHpOf({ ...c, maxHp, abilAdj }), temp: 0, slotUsed: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], hdUsed: 0, ds: 0, df: 0, acOn: [], effectsOn: [],
     hpUndo: null, concCheck: null, res, inv, exh: Math.max(0, c.exh - 1),
     restMsg: {
       title: 'Long Rest complete',
-      body: 'HP set to max, temp HP cleared, all spell slots, Hit Dice and free casts restored' + restored +
+      body: 'HP set to max, temp HP cleared, all spell slots and Hit Dice restored' + restored +
         (c.exh ? ', Exhaustion −1' : '') + (refilled.length ? '. Refilled: ' + refilled.join(', ') : '') +
         (ended.length ? '. ' + ended.join(', ') + ' ended' : '') + '.' +
         (dawnNames.length ? ' Dawn: ' + dawnNames.join(', ') + ' regain at dawn (menu → Dawn).' : '')
@@ -872,6 +887,15 @@ export function migrate(data: unknown): Character {
     return false;
   });
   c.res = c.res.map(cleanResource);
+  // Free casts were a flag on the spell (Spell.free) and a used-list on the character (free); both are gone, so read
+  // them raw. Each becomes a resource from the spell that casts it, used up when the old list said so.
+  const usedFree = isObj(data.free) ? data.free : {};
+  c.spells = c.spells.map((sp) => {
+    const { free, ...x } = sp as Spell & { free?: unknown };
+    if (free === true) c.res = [...c.res, { id: newId(), name: sp.name, note: 'Free cast', count: usedFree[sp.id] === true ? 0 : 1, max: 1, recharge: 'long', from: linkOf('spell', sp.id), srcKind: 'spell', casts: sp.id }];
+    return free === undefined ? sp : x;
+  });
+  c.res = c.res.map((r) => (r.casts !== undefined && !c.spells.some((sp) => sp.id === r.casts) ? (({ casts: _, ...x }) => x)(r) : r));
   // Three slots, each an existing item id or ''. Checked slot by slot, so a bad slot never shifts the ones after it.
   const ids: unknown[] = c.attuneIds;
   c.attuneIds = [];

@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import {
-  ABILITIES, SKILLS, dawn, restRolls, maxFields, maxOf, normalize, resourceGroups, itemAcGrants, mergedDefenses, mergedSenses, removeDefense, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, splitTraining, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, NEW_FIELDS, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, removeItem, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
-  setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, toggleFreeCast, undoHp
+  ABILITIES, SKILLS, castFree, freeCastsOf, spellAttackFor, spellSaveDcFor, toggleEffect, dawn, restRolls, maxFields, maxOf, normalize, resourceGroups, itemAcGrants, mergedDefenses, mergedSenses, removeDefense, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, splitTraining, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, NEW_FIELDS, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, removeItem, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
+  setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, undoHp
 } from './logic';
+import { activeGrants } from './links';
 import { applyPatch } from './storage';
 import { oldIlyra, oldSeren } from './test-fixtures';
 import type { Character, Grant, Item, Spell } from './types';
@@ -100,15 +101,16 @@ describe('casting and Concentration', () => {
   describe('editing and removing the concentrated spell', () => {
     const bless = sp({ c: true });
     const other: Spell = { ...bless, id: 's2', name: 'Shield', c: false };
-    const conc = make({ spells: [bless, other], conc: { id: 's1', name: 'Bless' }, concCheck: 'CON save DC 10', free: { s1: true, s2: true } });
+    const fc = (id: string) => ({ id: 'fc' + id, name: 'Free', count: 1, max: 1, recharge: 'long' as const, from: 'spell:' + id, srcKind: 'spell' as const, casts: id });
+    const conc = make({ spells: [bless, other], conc: { id: 's1', name: 'Bless' }, concCheck: 'CON save DC 10', res: [fc('s1'), fc('s2')] });
     it('removing it ends Concentration and drops its free cast; removing another keeps it', () => {
       const c = removeSpell(conc, 's1');
       expect(c.spells.map((x) => x.id)).toEqual(['s2']);
       expect(c).toMatchObject({ conc: null, concCheck: null });
-      expect(c.free).toEqual({ s2: true });
+      expect(c.res.map((r) => r.id)).toEqual(['fcs2']);
       const k = removeSpell(conc, 's2');
       expect(k.conc).toEqual({ id: 's1', name: 'Bless' });
-      expect(k.free).toEqual({ s1: true });
+      expect(k.res.map((r) => r.id)).toEqual(['fcs1']);
     });
     it('renaming renames it, unticking ends it, other edits keep it', () => {
       expect(concAfterEdit(conc, { ...bless, name: 'Bless (upcast)' })).toEqual({ conc: { id: 's1', name: 'Bless (upcast)' }, concCheck: null });
@@ -505,13 +507,17 @@ describe('AC spells', () => {
     expect(castSpell(c, sp(), 1)).not.toHaveProperty('acOn');
   });
   it('a free cast turns the effect on; restoring it does not turn it off', () => {
-    const c = make({ ...all, acOn: [], free: {} });
-    const used = toggleFreeCast(c, { ...shieldSp, free: true });
-    expect(used).toMatchObject({ free: { sh: true }, acOn: ['sh'] });
-    expect(toggleFreeCast({ ...c, ...used }, shieldSp)).not.toHaveProperty('acOn');
-    expect(toggleFreeCast(c, { ...faith, free: true }).conc).toEqual({ id: 'sf', name: 'Shield of Faith' });
+    const free = (id: string) => ({ id: 'f' + id, name: 'Free', count: 1, max: 1, recharge: 'long' as const, casts: id });
+    const c = make({ ...all, acOn: [], res: [free('sh'), free('sf')] });
+    const used = castFree(c, shieldSp, 'fsh');
+    expect(used.acOn).toEqual(['sh']);
+    expect(used.res!.find((r) => r.id === 'fsh')!.count).toBe(0);
+    const back = castFree({ ...c, ...used }, shieldSp, 'fsh');
+    expect(back).not.toHaveProperty('acOn');
+    expect(back.res!.find((r) => r.id === 'fsh')!.count).toBe(1);
+    expect(castFree(c, faith, 'fsf').conc).toEqual({ id: 'sf', name: 'Shield of Faith' });
     const on = { ...c, acOn: ['sh'] }; // already on from a slot cast
-    expect({ ...on, ...toggleFreeCast(on, { ...shieldSp, free: true }) }.acOn).toEqual(['sh']);
+    expect({ ...on, ...castFree(on, shieldSp, 'fsh') }.acOn).toEqual(['sh']);
   });
   it('toggle, edit, removal and Long Rest switch AC spells off', () => {
     const c = make({ ...all, acOn: ['sh', 'bk'] });
@@ -775,21 +781,22 @@ describe('attunement and resources moving to Inventory', () => {
 
 // Numbers the samples showed before plan 3 (frozen). Every later change must keep them; the rebuilt samples too.
 describe('sample numbers', () => {
-  const numbers = (c: Character) => ({
+  // Resources: the maxima of the ones the sample had then; resources added since (free casts) are checked elsewhere.
+  const numbers = (c: Character, ids: string[] = c.res.map((r) => r.id)) => ({
     eff: ABILITIES.map(([k]) => effScore(c, k)), save: ABILITIES.map(([k]) => saveMod(c, k)),
     skills: Object.fromEntries(SKILLS.map(([k, , ab]) => [k, skillMod(c, k, ab)])),
     speed: speedNow(c), ac: armorClass(c).total, init: initiative(c), maxHp: maxHpOf(c), pp: passiveScore(c, 'perception'),
-    res: Object.fromEntries(c.res.map((r) => [r.id, maxOf(c, r)]))
+    res: Object.fromEntries(ids.map((id) => [id, c.res.some((r) => r.id === id) ? maxOf(c, c.res.find((r) => r.id === id)!) : 'missing']))
   });
   const ILYRA = { eff: [12, 18, 14, 10, 14, 8], save: [4, 7, 2, 0, 2, -1], skills: { athletics: 1, acrobatics: 4, sleight: 4, stealth: 7, arcana: 0, history: 0, investigation: 0, nature: 3, religion: 0, animal: 5, insight: 5, medicine: 2, perception: 5, survival: 8, deception: -1, intimidation: -1, performance: -1, persuasion: -1 }, speed: 35, ac: 16, init: 4, maxHp: 44, pp: 15, res: { favored: 3 } };
   const SEREN = { eff: [8, 13, 16, 13, 20, 10], save: [-1, 1, 3, 5, 9, 0], skills: { athletics: -1, acrobatics: 1, sleight: 1, stealth: 1, arcana: 5, history: 5, investigation: 1, nature: 1, religion: 1, animal: 5, insight: 5, medicine: 9, perception: 9, survival: 5, deception: 0, intimidation: 0, performance: 0, persuasion: 0 }, speed: 25, ac: 14, init: 1, maxHp: 99, pp: 19, res: { wild: 3, bolt: 5, omen: 5, resurge: 1, hands: 1, reveal: 1 } };
   it('Ilyra, and an old save of her', () => {
-    expect(numbers(sampleCharacter())).toEqual(ILYRA);
-    expect(numbers(migrate(oldIlyra()))).toEqual(ILYRA);
+    expect(numbers(sampleCharacter(), Object.keys(ILYRA.res))).toEqual(ILYRA);
+    expect(numbers(migrate(oldIlyra()), Object.keys(ILYRA.res))).toEqual(ILYRA);
   });
   it('Seren, and an old save of her', () => {
-    expect(numbers(druidSample())).toEqual(SEREN);
-    expect(numbers(migrate(oldSeren()))).toEqual(SEREN);
+    expect(numbers(druidSample(), Object.keys(SEREN.res))).toEqual(SEREN);
+    expect(numbers(migrate(oldSeren()), Object.keys(SEREN.res))).toEqual(SEREN);
   });
 });
 
@@ -1137,5 +1144,83 @@ describe('rests, Dawn and item charges', () => {
     const c = migrate({ ...sampleCharacter(), inv: [{ id: 'a', name: 'A', qty: 1, eq: false, count: 2, max: 0, recharge: 'weekly', regain: '1', regainOn: 'dawn' },
       { id: 'b', name: 'B', qty: 1, eq: false, max: 3 }] });
     expect(c.inv).toEqual([{ id: 'a', name: 'A', qty: 1, eq: false, count: 2, recharge: 'none' }, { id: 'b', name: 'B', qty: 1, eq: false }]);
+  });
+});
+
+describe('free casts as resources and spell overrides', () => {
+  it('turns an old save\'s free casts into resources that cast the spell, once', () => {
+    const c = migrate(oldSeren());
+    const fc = freeCastsOf(c, 'ds12');
+    expect(fc).toEqual([{ id: expect.any(String), name: 'Shield', note: 'Free cast', count: 0, max: 1, recharge: 'long', from: 'spell:ds12', srcKind: 'spell', casts: 'ds12' }]);
+    expect(c.spells.some((x) => 'free' in x)).toBe(false);
+    expect(c).not.toHaveProperty('free');
+    expect(migrate(c)).toEqual(c);
+    const i = migrate(oldIlyra());
+    expect(['sp8', 'sp9', 'sp12'].map((id) => freeCastsOf(i, id).map((r) => r.count))).toEqual([[1], [1], [1]]);
+  });
+  it('drops a cast link to a spell that is gone', () => {
+    const c = migrate({ ...sampleCharacter(), res: [{ id: 'x', name: 'X', count: 1, max: 1, recharge: 'long', casts: 'gone' }] });
+    expect(c.res[0].casts).toBeUndefined();
+  });
+  it('a free cast uses one and casts; at 0 a tap gives one back without touching effects', () => {
+    const c = druidSample();
+    const sh = c.spells.find((x) => x.id === 'ds12')!;
+    const withFree = { ...c, acOn: [], res: [...c.res, { id: 'fs', name: 'Shield', count: 1, max: 1, recharge: 'long' as const, casts: 'ds12' }] };
+    const used = { ...withFree, ...castFree(withFree, sh, 'fs') };
+    expect(used.res.find((r) => r.id === 'fs')!.count).toBe(0);
+    expect(used.acOn).toEqual(['ds12']);
+    const back = { ...used, ...castFree(used, sh, 'fs') };
+    expect(back.res.find((r) => r.id === 'fs')!.count).toBe(1);
+    expect(back.acOn).toEqual(['ds12']);
+  });
+  it('a free cast of a Concentration spell starts Concentration', () => {
+    const c = make({ conc: null, res: [{ id: 'favored', name: 'Favored Enemy', count: 2, max: 3, recharge: 'long', casts: 'sp4' }] });
+    const hmSp = c.spells.find((x) => x.id === 'sp4')!;
+    const r = castFree(c, hmSp, 'favored');
+    expect(r.res![0].count).toBe(1);
+    expect(r.conc).toEqual({ id: 'sp4', name: 'Hunter’s Mark' });
+  });
+  it('a multi-use free cast never gives a use back above 0', () => {
+    const c = druidSample();
+    const gb = c.spells.find((x) => x.id === 'ds11')!;
+    const star = { ...c, res: c.res.map((r) => (r.id === 'bolt' ? { ...r, count: 5, casts: 'ds11' } : r)) };
+    const one = { ...star, ...castFree(star, gb, 'bolt') };
+    const two = { ...one, ...castFree(one, gb, 'bolt') };
+    expect([one, two].map((x) => x.res.find((r) => r.id === 'bolt')!.count)).toEqual([4, 3]);
+    const zero = { ...star, res: star.res.map((r) => (r.id === 'bolt' ? { ...r, count: 0 } : r)) };
+    expect(castFree(zero, gb, 'bolt').res!.find((r) => r.id === 'bolt')!.count).toBe(1);
+  });
+  it('a Long Rest refills free casts like any resource', () => {
+    const c = make({ res: [{ id: 'fc', name: 'Goodberry', note: 'Free cast', count: 0, max: 1, recharge: 'long', casts: 'sp8' }] });
+    const l = longRest(c);
+    expect(l.res[0].count).toBe(1);
+    expect(l.restMsg?.body).toContain('Refilled: Goodberry +1');
+    expect(l.restMsg?.body).not.toContain('free casts');
+  });
+  it('removing a spell removes its own free cast and empties a pill naming it', () => {
+    const c = make({ pills: ['hp', 'res:fc', ''], res: [{ id: 'fc', name: 'Goodberry', count: 1, max: 1, recharge: 'long', from: 'spell:sp8', casts: 'sp8' }],
+      effectsOn: ['spell:sp8'] });
+    const r = removeSpell(c, 'sp8');
+    expect(r.res).toEqual([]);
+    expect(r.pills).toEqual(['hp', '', '']);
+    expect(r.effectsOn).toEqual([]);
+    const both = make({ res: [{ id: 'a', name: 'A', count: 1, from: 'spell:sp4', casts: 'sp4' }, { id: 'b', name: 'B', count: 1, from: 'feature:f2', casts: 'sp4' }] });
+    expect(freeCastsOf(both, 'sp4').map((r) => r.id)).toEqual(['a', 'b']);
+  });
+  it('Shillelagh\'s override is on while switched on, and a Long Rest switches it off', () => {
+    const g: Grant = { id: 'g1', kind: 'atkAbil', name: 'Shillelagh', ab: 'cast', weapons: 'club,quarterstaff', amode: 'melee', die: '1:1d8,5:1d10,11:1d12,17:2d6', when: 'active', from: 'spell:ds3' };
+    const c = { ...druidSample(), grants: [g] };
+    expect(activeGrants(c, 'atkAbil')).toEqual([]);
+    const on = { ...c, ...toggleEffect(c, 'spell:ds3') };
+    expect(activeGrants(on, 'atkAbil')).toEqual([g]);
+    expect(activeGrants(longRest(on), 'atkAbil')).toEqual([]);
+  });
+  it('a spell with its own casting ability has its own save DC and attack (PHB p.41)', () => {
+    const c = druidSample(); // CHA 10, WIS 20, PB 4
+    const light = { ...c.spells.find((x) => x.id === 'ds7')!, castAb: 'cha' as const };
+    expect(spellSaveDcFor(c, light)).toBe(12);
+    expect(spellAttackFor(c, light)).toBe(4);
+    expect(spellSaveDcFor(c, c.spells[0])).toBe(17);
+    expect(spellSaveDcFor(make({ castAb: 'none' }), make().spells[0])).toBeNull();
   });
 });

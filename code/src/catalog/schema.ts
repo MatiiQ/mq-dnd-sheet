@@ -14,6 +14,7 @@ export interface SpellEntry extends EntryBase {
   kind: 'spell'; lvl: number; school: string; classes: string; time: string; range: string;
   comp: string; dur: string; conc: boolean; ritual: boolean; atk?: 'melee' | 'ranged'; save?: Ability; fx: 'damage' | 'healing' | 'other';
   dice?: string; dtype?: string; scale?: string; higher?: string; acFx?: AcEffect; acVal?: number;
+  grants?: Spec[];   // effects while the spell is on (Shillelagh), read when it is added to a character
 }
 export interface ItemEntry extends EntryBase {
   kind: 'item'; cat: 'weapon' | 'armor' | 'shield' | 'gear' | 'tool' | 'pack' | 'ammo' | 'focus' | 'magic';
@@ -213,7 +214,8 @@ function checkGrant(g: unknown, e: Record<string, unknown>, where: string, errs:
     if (!(k in fields)) errs.push(`${where}: unknown field ${k}`);
     if (!primitive(v)) errs.push(`${where}: ${k} is not a plain value`);
   }
-  if (typeof g.lvl === 'number' && typeof e.lvl === 'number' && g.lvl < e.lvl) errs.push(`${where}: lvl ${g.lvl} is below the entry's ${e.lvl}`);
+  // A spell's lvl is its spell level, not a character level: nothing to compare.
+  if (e.kind !== 'spell' && typeof g.lvl === 'number' && typeof e.lvl === 'number' && g.lvl < e.lvl) errs.push(`${where}: lvl ${g.lvl} is below the entry's ${e.lvl}`);
   if ((g.needEq !== undefined || g.needAtt !== undefined) && e.kind !== 'item') errs.push(`${where}: needEq/needAtt are for item grants`);
   if (g.kind === 'resource') checkRegain(g, where, errs);
   if (g.kind === 'speed' && g.mode === 'walk' && g.val === 'walk') errs.push(`${where}: a walk speed can't equal the walking Speed`);
@@ -271,7 +273,7 @@ export function validateEntry(x: unknown): string[] {
   const grants = x.grants;
   if (HAS_GRANTS.includes(e.kind) && grants === undefined) errs.push(`${at}: missing grants`);
   if (grants !== undefined) {
-    if (!HAS_GRANTS.includes(e.kind) && e.kind !== 'item') errs.push(`${at}: ${e.kind} entries have no grants`);
+    if (!HAS_GRANTS.includes(e.kind) && e.kind !== 'item' && e.kind !== 'spell') errs.push(`${at}: ${e.kind} entries have no grants`);
     else if (!Array.isArray(grants)) errs.push(`${at}: grants is not a list`);
     else {
       grants.forEach((s, i) => {

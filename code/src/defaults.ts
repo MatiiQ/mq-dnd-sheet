@@ -12,12 +12,16 @@ export function sampleCharacter(): Character {
     saveProf: { str: true, dex: true },
     skillProf: { stealth: 1, nature: 1, animal: 1, insight: 1, perception: 1, survival: 2 },
     hp: 31, maxHp: 44, origHp: 44, origOn: false, temp: 0, amount: 5, insp: 1, pills: ['hp', 'ac', 'res:favored'], tab: 'actions', prepMax: 6, spellFilter: 'all', spellSort: 'az', usePrep: true,
-    hdUsed: 1, ds: 0, df: 0, exh: 0, conds: {}, free: {}, conc: null, hpUndo: null, concCheck: null, restMsg: null,
+    hdUsed: 1, ds: 0, df: 0, exh: 0, conds: {}, conc: null, hpUndo: null, concCheck: null, restMsg: null,
     slotMax: [0, 4, 2, 0, 0, 0, 0, 0, 0, 0], slotUsed: [0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
     defenses: [{ id: 'd1', kind: 'adv', name: 'vs Charmed' }], // Fey Ancestry (PHB p.190)
     senses: [{ id: 'se1', name: 'Darkvision', range: '60 ft', srcKind: 'species', srcName: 'Wood Elf' }],
     res: [
-      { id: 'favored', name: 'Favored Enemy', note: 'Cast Hunter’s Mark without a slot', count: 2, max: 3, recharge: 'long' }
+      { id: 'favored', name: 'Favored Enemy', note: 'Cast Hunter’s Mark without a slot', count: 2, max: 3, recharge: 'long' },
+      // Free casts: once per Long Rest each, from the spell itself until the features link them.
+      { id: 'fc8', name: 'Goodberry', note: 'Free cast', count: 1, max: 1, recharge: 'long', from: 'spell:sp8', srcKind: 'spell', casts: 'sp8' },
+      { id: 'fc9', name: 'Longstrider', note: 'Free cast', count: 1, max: 1, recharge: 'long', from: 'spell:sp9', srcKind: 'spell', casts: 'sp9' },
+      { id: 'fc12', name: 'Pass without Trace', note: 'Free cast', count: 1, max: 1, recharge: 'long', from: 'spell:sp12', srcKind: 'spell', casts: 'sp12' }
     ],
     attacks: [
       { id: 'a1', name: 'Longbow', hit: '+9', dmg: '1d8 +4 Piercing', info: '150/600 ft · Ammunition, Heavy, Two-Handed · includes Archery +2', mastery: 'Slow: on a hit, target’s Speed drops 10 ft until your next turn' },
@@ -52,11 +56,11 @@ export function sampleCharacter(): Character {
       { id: 'sp5', name: 'Cure Wounds', lvl: 1, time: 'Action', range: 'Touch', srcName: 'Ranger', dice: 'Heal 2d8 +2 · +2d8 per slot level above 1', dur: 'Instantaneous', comp: 'V, S', prep: true },
       { id: 'sp6', name: 'Ensnaring Strike', lvl: 1, time: 'Bonus Action', range: 'Self', srcName: 'Ranger', c: true, dice: 'STR save DC 13 · 1d6 Piercing/turn', dur: 'Up to 1 minute', comp: 'V', prep: true },
       { id: 'sp7', name: 'Hail of Thorns', lvl: 1, time: 'Bonus Action', range: 'Self', srcName: 'Ranger', dice: 'DEX save DC 13 · 1d10 Piercing', dur: 'Instantaneous', comp: 'V', prep: true },
-      { id: 'sp8', name: 'Goodberry', lvl: 1, time: 'Action', range: 'Self', srcName: 'Magic Initiate', free: true, dice: '10 berries · heal 1 each', dur: '24 hours', comp: 'V, S, M (a sprig of mistletoe)', always: true },
-      { id: 'sp9', name: 'Longstrider', lvl: 1, time: 'Action', range: 'Touch', srcName: 'Elf', free: true, dice: '+10 ft Speed', dur: '1 hour', comp: 'V, S, M (a pinch of dirt)', always: true },
+      { id: 'sp8', name: 'Goodberry', lvl: 1, time: 'Action', range: 'Self', srcName: 'Magic Initiate', dice: '10 berries · heal 1 each', dur: '24 hours', comp: 'V, S, M (a sprig of mistletoe)', always: true },
+      { id: 'sp9', name: 'Longstrider', lvl: 1, time: 'Action', range: 'Touch', srcName: 'Elf', dice: '+10 ft Speed', dur: '1 hour', comp: 'V, S, M (a pinch of dirt)', always: true },
       { id: 'sp10', name: 'Spike Growth', lvl: 2, time: 'Action', range: '150 ft', srcName: 'Ranger', c: true, dice: '2d4 Piercing per 5 ft', dur: 'Up to 10 minutes', comp: 'V, S, M (seven thorns)', prep: true },
       { id: 'sp11', name: 'Aid', lvl: 2, time: 'Action', range: '30 ft', srcName: 'Ranger', dice: '+5 HP max, 3 creatures', dur: '8 hours', comp: 'V, S, M (a strip of white cloth)', prep: true },
-      { id: 'sp12', name: 'Pass without Trace', lvl: 2, time: 'Action', range: 'Self', srcName: 'Elf', c: true, free: true, dice: '+10 Stealth', dur: 'Up to 1 hour', comp: 'V, S, M (ashes from mistletoe)', always: true }
+      { id: 'sp12', name: 'Pass without Trace', lvl: 2, time: 'Action', range: 'Self', srcName: 'Elf', c: true, dice: '+10 Stealth', dur: 'Up to 1 hour', comp: 'V, S, M (ashes from mistletoe)', always: true }
     ],
     feats: [
       { id: 'f1', g: 'class', name: 'Spellcasting', desc: 'Wisdom-based; 6 prepared spells.' },
@@ -97,7 +101,7 @@ export function druidSample(): Character {
     saveProf: { int: true, wis: true },
     skillProf: { arcana: 1, history: 1, medicine: 1, perception: 1 },
     hp: 71, maxHp: 99, origHp: 99, origOn: false, temp: 12, amount: 8, insp: 1, pills: ['hp', 'ac', 'res:wild'], tab: 'actions', prepMax: 16, spellFilter: 'all', spellSort: 'az', usePrep: true,
-    hdUsed: 3, ds: 0, df: 0, exh: 1, conds: { Poisoned: true }, free: { ds12: true }, conc: { id: 'ds9', name: 'Moonbeam' },
+    hdUsed: 3, ds: 0, df: 0, exh: 1, conds: { Poisoned: true }, conc: { id: 'ds9', name: 'Moonbeam' },
     hpUndo: null, concCheck: null, restMsg: null,
     slotMax: [0, 4, 3, 3, 3, 2, 1, 0, 0, 0], slotUsed: [0, 2, 1, 1, 0, 1, 0, 0, 0, 0],
     // Celestial Resistance; War Caster
@@ -109,7 +113,8 @@ export function druidSample(): Character {
       { id: 'omen', name: 'Cosmic Omen · Weal', note: 'Reaction · add 1d6 to a D20 Test within 30 ft (re-roll even/odd each Long Rest)', count: 5, max: 5, recharge: 'long' },
       { id: 'resurge', name: 'Wild Resurgence', note: 'Spend 1 Wild Shape use for a level 1 slot', count: 1, max: 1, recharge: 'long' },
       { id: 'hands', name: 'Healing Hands', note: 'Magic action · touch, heal 4d4', count: 1, max: 1, recharge: 'long' },
-      { id: 'reveal', name: 'Celestial Revelation', note: 'Bonus Action · 1 minute · wings, radiance or shroud', count: 0, max: 1, recharge: 'long' }
+      { id: 'reveal', name: 'Celestial Revelation', note: 'Bonus Action · 1 minute · wings, radiance or shroud', count: 0, max: 1, recharge: 'long' },
+      { id: 'fc12', name: 'Shield', note: 'Free cast', count: 0, max: 1, recharge: 'long', from: 'spell:ds12', srcKind: 'spell', casts: 'ds12' }
     ],
     attacks: [
       { id: 'a1', name: 'Starry Form · Archer', hit: '+9', dmg: '2d8 +5 Radiant', info: 'Bonus Action in Starry Form · ranged spell attack, 60 ft', mastery: '' },
@@ -160,7 +165,7 @@ export function druidSample(): Character {
       { id: 'ds8', name: 'Fire Bolt', lvl: 0, time: 'Action', range: '120 ft', srcName: 'Magic Initiate', dice: 'd20 +9 · 3d10 Fire', dur: 'Instantaneous', comp: 'V, S', prep: true },
       { id: 'ds10', name: 'Mage Hand', lvl: 0, time: 'Action', range: '30 ft', srcName: 'Magic Initiate', dur: '1 minute', comp: 'V, S', prep: true },
       { id: 'ds11', name: 'Guiding Bolt', lvl: 1, time: 'Action', range: '120 ft', srcName: 'Star Map', dice: 'd20 +9 · 4d6 Radiant · +1d6 per slot level above 1', dur: '1 round', comp: 'V, S', always: true },
-      { id: 'ds12', name: 'Shield', lvl: 1, time: 'Reaction', range: 'Self', srcName: 'Magic Initiate', free: true, dice: '+5 AC', dur: '1 round', comp: 'V, S', always: true, acFx: 'bonus', acVal: 5 },
+      { id: 'ds12', name: 'Shield', lvl: 1, time: 'Reaction', range: 'Self', srcName: 'Magic Initiate', dice: '+5 AC', dur: '1 round', comp: 'V, S', always: true, acFx: 'bonus', acVal: 5 },
       { id: 'ds13', name: 'Speak with Animals', lvl: 1, time: 'Action or Ritual', range: 'Self', srcName: 'Druidic', dur: '10 minutes', comp: 'V, S', always: true },
       { id: 'ds14', name: 'Cure Wounds', lvl: 1, time: 'Action', range: 'Touch', srcName: 'Druid', dice: 'Heal 2d8 +5 · +2d8 per slot level above 1', dur: 'Instantaneous', comp: 'V, S', prep: true },
       { id: 'ds15', name: 'Healing Word', lvl: 1, time: 'Bonus Action', range: '60 ft', srcName: 'Druid', dice: 'Heal 2d4 +5 · +2d4 per slot level above 1', dur: 'Instantaneous', comp: 'V', prep: true },

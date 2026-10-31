@@ -53,7 +53,7 @@ export interface AcMod { id: string; name: string; val: number }
 export interface Spell extends Linked {
   id: string; name: string; lvl: number; time: string; range: string;
   dur?: string; comp?: string; dice?: string;
-  c?: boolean; always?: boolean; prep?: boolean; free?: boolean;
+  c?: boolean; always?: boolean; prep?: boolean;
   acFx?: AcEffect; acVal?: number; castAb?: Ability; cid?: string;
 }
 export interface Feature extends Linked { id: string; g: FeatureGroup; name: string; desc: string; cid?: string }
@@ -78,7 +78,7 @@ export interface Character {
   pills: string[];
   tab: Tab; prepMax: number; spellFilter: 'all' | 'prepared'; spellSort: SpellSort; usePrep: boolean;
   hdUsed: number; ds: number; df: number; exh: number;
-  conds: Record<string, boolean>; free: Record<string, boolean>; conc: Concentration | null;
+  conds: Record<string, boolean>; conc: Concentration | null;
   hpUndo: { prev: HpSnapshot; text: string } | null; concCheck: string | null; restMsg: { title: string; body: string } | null;
   slotMax: number[]; slotUsed: number[];
   defenses: Defense[];

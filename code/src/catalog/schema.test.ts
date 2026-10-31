@@ -119,3 +119,13 @@ describe('grantErrors (a grant stored on a character)', () => {
     expect(grantErrors({ ...g, counted: 'yes' }, 'feature')).toHaveLength(1);
   });
 });
+
+describe('grants on catalog spells', () => {
+  const spell = { id: 'spell/shillelagh', kind: 'spell', name: 'Shillelagh', src: 'srd', desc: '…', lvl: 0, school: 'Transmutation', classes: 'druid',
+    time: 'Bonus Action', range: 'Self', comp: 'V, S, M', dur: '1 minute', conc: false, ritual: false, fx: 'other' };
+  it('allows an optional grants list on a spell, and never compares grant levels with the spell level', () => {
+    expect(validateEntry(spell)).toEqual([]);
+    expect(validateEntry({ ...spell, grants: [{ id: 'g1', kind: 'atkAbil', name: 'Shillelagh', ab: 'cast', when: 'active' }] })).toEqual([]);
+    expect(validateEntry({ ...spell, lvl: 3, grants: [{ id: 'g1', kind: 'speed', name: 'x', mode: 'fly', val: '60', lvl: 1 }] })).toEqual([]);
+  });
+});

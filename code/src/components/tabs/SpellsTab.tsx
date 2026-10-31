@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import {
   AC_SPELLS, CAST_NAMES, SPELL_SORTS, acAfterEdit, castSpell, concAfterEdit, detectAcSpell, effectsAfterEdit, fmt, preparedCount, removeSpell, setConc, setSlotUsed,
-  slotsLeft, sortSpells, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, toggleFreeCast, type AcPart
+  slotsLeft, sortSpells, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, castFree, freeCastsOf, spellAttackFor, spellSaveDcFor, toggleEffect, type AcPart
 } from '../../logic';
-import { sourceLabel } from '../../links';
+import { hasActiveEffect, linkOf, sourceLabel } from '../../links';
 import { patchEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { AcEffect, Spell } from '../../types';
 import { AddButton, ChevronDown, DieBadge, EntryForm, EntryRow, NumInput, Step, TextField, UsePips } from '../ui';
@@ -259,7 +259,11 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
   const prepOn = !usePrep || !!sp.prep;
   const usable = spellUsable(c, sp);
   const concOn = c.conc?.id === sp.id;
-  const freeUsed = !!c.free[sp.id];
+  const frees = freeCastsOf(c, sp.id);
+  // A non-Concentration spell whose grants need it on (Shillelagh) gets an On/Off switch; a Concentration one is on
+  // while concentrating.
+  const link = linkOf('spell', sp.id);
+  const effect = !sp.c && hasActiveEffect(c, link), effectOn = c.effectsOn.includes(link);
   const concOf = { id: sp.id, name: sp.name };
 
   const casts: { l: number; left: number }[] = [];
@@ -301,6 +305,7 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
       <span className="muted">{[sp.time, sp.range].filter((x) => x).join(' · ')}</span>
       {(sp.dur || sp.comp) && <span className="muted">{[sp.dur, sp.comp].filter((x) => x).join(' · ')}</span>}
       {sp.dice && <span style={{ fontSize: 14, fontWeight: 700, marginTop: 2 }}>{sp.dice}</span>}
+      {sp.castAb && <span className="muted">Casts with {sp.castAb.toUpperCase()}: save DC {spellSaveDcFor(c, sp)} · attack {fmt(spellAttackFor(c, sp)!)}</span>}
     </span>
   );
 
@@ -311,11 +316,19 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
           className="btn btn-sm" style={{ border: '1px solid var(--blue)', background: concOn ? 'var(--blue)' : 'transparent', color: concOn ? 'var(--on-accent)' : 'var(--blue)' }}
           onClick={() => update(setConc(concOn ? null : concOf))}>{concOn ? 'Conc. ✓' : 'Conc.'}</button>
       )}
-      {sp.free && usable && (
-        <button type="button" aria-pressed={freeUsed} aria-label={freeUsed ? 'Free cast of ' + sp.name + ' used; tap to restore' : 'Use free cast of ' + sp.name}
-          className="btn btn-sm" style={{ border: '1px solid ' + (freeUsed ? 'var(--line-2)' : 'var(--accent)'), background: 'transparent', color: freeUsed ? 'var(--muted)' : 'var(--accent)' }}
-          onClick={() => update((p) => toggleFreeCast(p, sp))}>{freeUsed ? 'Free used' : 'Free'}</button>
+      {effect && (
+        <button type="button" aria-pressed={effectOn} aria-label={(effectOn ? 'Switch off ' : 'Switch on ') + sp.name}
+          className="btn btn-sm" style={{ border: '1px solid var(--accent)', background: effectOn ? 'var(--accent)' : 'transparent', color: effectOn ? 'var(--on-accent)' : 'var(--accent)' }}
+          onClick={() => update((p) => toggleEffect(p, link))}>{effectOn ? 'On' : 'Off'}</button>
       )}
+      {(lvl === 0 || usable) && frees.map((r) => {
+        const used = r.count <= 0;
+        return (
+          <button key={r.id} type="button" aria-pressed={used} aria-label={used ? 'Free casts of ' + sp.name + ' (' + r.name + ') used up; tap to give one back' : 'Use a free cast of ' + sp.name + ' (' + r.name + '), ' + r.count + ' left'}
+            className="btn btn-sm" style={{ border: '1px solid ' + (used ? 'var(--line-2)' : 'var(--accent)'), background: 'transparent', color: used ? 'var(--muted)' : 'var(--accent)' }}
+            onClick={() => update((p) => castFree(p, sp, r.id))}>{used ? 'Free used' : 'Free · ' + r.count + ' left'}</button>
+        );
+      })}
       {!!first && usable && (
         <div role="group" aria-label={'Spell slots for ' + sp.name} className="row wrap gap-6">
           <button type="button" aria-label={'Cast ' + sp.name + ' with a level ' + first.l + ' slot, ' + first.left + ' left'}
@@ -331,7 +344,7 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
     </div>
   );
 
-  const noSlots = lvl > 0 && !sp.free && !first && usable;
+  const noSlots = lvl > 0 && !frees.some((r) => r.count > 0) && !first && usable;
   return (
     <EntryRow name={sp.name} before={before} head={head} side={side}
       body={sourceLabel(c, sp) ? <span className="muted">Source: {sourceLabel(c, sp)}</span> : undefined}
