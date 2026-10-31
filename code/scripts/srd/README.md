@@ -67,6 +67,10 @@ AC, Strength, Stealth), and its weight when the magic item has none; the magic i
   Elven Chain, Glamoured Studded Leather and the Shields with `armor: 'shield'`), ammunition (Ammunition +1/+2/+3,
   Ammunition of Slaying: not a weapon the sheet attacks with), and items only used like a weapon (staffs).
 
+Source text cut short: SRD 5.2.1 itself stops mid-sentence in Telekinesis (after "a simple tool,"), and Greater
+Restoration and Guards and Wards end without a full stop. The builder can't recover the missing words; the data keeps
+the text as printed.
+
 Armor of Resistance: `pdftotext` puts the Lever Down column of the Apparatus of the Crab Levers table (the page
 before) after Armor of Resistance's damage type table, so the parsed description ran on into it. The overlay sets its
 `desc` to the text up to the end of the table. The Apparatus of the Crab keeps its Lever Up column; its Lever Down
