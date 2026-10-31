@@ -32,6 +32,8 @@ export interface Linked { from?: string; srcKind?: SrcKind; srcName?: string; wh
 export type Grant = Omit<GrantSpec, 'opt' | 'lvl'> & { from: string; srcKind?: SrcKind; counted?: boolean; minLvl?: number };
 // A proficiency set by hand (armor, weapon, tool or language). Granted ones are grants (kind 'prof').
 export interface Prof { id: string; cat: ProfCat; name: string }
+// A resistance, vulnerability, immunity or Advantage on saves. Several with one name show once (mergedDefenses).
+export interface Defense extends Linked { id: string; kind: DefenseKind; name: string }
 export interface Sense extends Linked { id: string; name: string; range: string; desc?: string }
 // inv: legacy "Also list in Inventory" flag, kept only on resources with a max or a recharge (plan 3 moves them onto items).
 export interface Resource { id: string; name: string; note?: string; count: number; max?: number; recharge?: Recharge; refill?: boolean; inv?: boolean }
@@ -73,7 +75,7 @@ export interface Character {
   conds: Record<string, boolean>; free: Record<string, boolean>; conc: Concentration | null;
   hpUndo: { prev: HpSnapshot; text: string } | null; concCheck: string | null; restMsg: { title: string; body: string } | null;
   slotMax: number[]; slotUsed: number[];
-  def: Record<DefenseKind, string[]>;
+  defenses: Defense[];
   senses: Sense[]; res: Resource[]; attacks: Attack[]; riders: Rider[];
   /** Attunement slots: 3 item ids, '' for an empty slot. */
   coins: Record<Coin, number>; attuneIds: string[]; notes: Record<NoteKey, string>;

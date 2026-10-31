@@ -61,7 +61,7 @@ export function wouldLoop(c: Character, self: string, candidate: string): boolea
 }
 
 // Lists whose entries can carry a `from`. Later steps of plan 3 add theirs.
-export const LINKED_LISTS = ['senses', 'spells', 'feats', 'attacks', 'grants'] as const;
+export const LINKED_LISTS = ['senses', 'spells', 'feats', 'attacks', 'grants', 'defenses'] as const;
 type LinkedList = (typeof LINKED_LISTS)[number];
 
 // The fields that mean something only with a link: the item checks and "while its effect is on".

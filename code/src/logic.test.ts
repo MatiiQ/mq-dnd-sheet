@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import {
-  ABILITIES, SKILLS, itemAcGrants, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, splitTraining, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, NEW_FIELDS, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, removeItem, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
+  ABILITIES, SKILLS, itemAcGrants, mergedDefenses, mergedSenses, removeDefense, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, splitTraining, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, NEW_FIELDS, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, removeItem, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
   setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, toggleFreeCast, undoHp
 } from './logic';
 import { oldIlyra, oldSeren } from './test-fixtures';
@@ -305,7 +305,7 @@ describe('loading saves and backups', () => {
     const c = migrate({
       ...sampleCharacter(), spells: 'x', conds: null, abil: { str: '12', dex: 14 }, tab: 'nope', castAb: 'str',
       attacks: [{ id: 'a', name: 'Club', hit: {} }, { name: 'Sling', hit: '+4' }, 7],
-      def: { res: ['Fire', 3], vul: 'x' }, slotMax: [0, 4], slotUsed: [0, 'x'],
+      def: { res: ['Fire', 3], vul: 'x' }, defenses: undefined, slotMax: [0, 4], slotUsed: [0, 'x'],
       conc: { name: 'Bless' }, hpUndo: { prev: 1 }, restMsg: { title: 1 }
     });
     expect(c.spells.map((x) => x.id)).toEqual(sampleCharacter().spells.map((x) => x.id));
@@ -314,7 +314,7 @@ describe('loading saves and backups', () => {
     expect(c).toMatchObject({ tab: 'actions', castAb: 'none', conc: null, hpUndo: null, restMsg: null });
     expect(c.attacks.map((a) => a.name)).toEqual(['Sling']);
     expect(c.attacks[0].id).toBeTruthy();
-    expect(c.def).toEqual({ res: ['Fire'], vul: [], imm: [], adv: [] });
+    expect(c.defenses.map((d) => [d.kind, d.name])).toEqual([['res', 'Fire']]);
     // Resources moved out of the tabs into the left column.
     expect(migrate({ ...sampleCharacter(), tab: 'resources' }).tab).toBe('actions');
     expect(c.slotMax).toEqual([0, 4, 0, 0, 0, 0, 0, 0, 0, 0]);
@@ -622,16 +622,54 @@ describe('spell sort order', () => {
 });
 
 describe('defenses', () => {
-  const old = { ...sampleCharacter(), def: { res: ['Fire', 'Charmed', 'Exhaustion', 'Mud'], vul: ['Poisoned'], imm: ['Poison', 'Frightened'] }, saveNotes: 'Advantage vs traps' };
+  const { defenses: _, ...noDefenses } = sampleCharacter();
+  const old = { ...noDefenses, def: { res: ['Fire', 'Charmed', 'Exhaustion', 'Mud'], vul: ['Poisoned'], imm: ['Poison', 'Frightened'] }, saveNotes: 'Advantage vs traps' };
+  const pairs = (c: Character) => c.defenses.map((d) => [d.kind, d.name]);
   it('moves save notes and conditions under Resistances to Advantage on saves (PHB p.28)', () => {
     const c = migrate(old);
-    expect(c.def).toEqual({ res: ['Fire', 'Mud'], vul: ['Poisoned'], imm: ['Poison', 'Frightened'], adv: ['Advantage vs traps', 'vs Charmed', 'vs Exhaustion'] });
+    expect(pairs(c)).toEqual([['res', 'Fire'], ['res', 'Mud'], ['vul', 'Poisoned'], ['imm', 'Poison'], ['imm', 'Frightened'],
+      ['adv', 'Advantage vs traps'], ['adv', 'vs Charmed'], ['adv', 'vs Exhaustion']]);
     expect(c).not.toHaveProperty('saveNotes');
+    expect(c).not.toHaveProperty('def');
     expect(migrate(c)).toEqual(c);
   });
   it('adds nothing for blank save notes and never duplicates an entry', () => {
-    expect(migrate({ ...old, def: { res: [], vul: [], imm: [] }, saveNotes: '  ' }).def.adv).toEqual([]);
-    expect(migrate({ ...old, def: { res: ['Charmed'], vul: [], imm: [], adv: ['vs Charmed'] }, saveNotes: '' }).def.adv).toEqual(['vs Charmed']);
+    expect(migrate({ ...old, def: { res: [], vul: [], imm: [] }, saveNotes: '  ' }).defenses).toEqual([]);
+    expect(pairs(migrate({ ...old, def: { res: ['Charmed'], vul: [], imm: [], adv: ['vs Charmed'] }, saveNotes: '' }))).toEqual([['adv', 'vs Charmed']]);
+  });
+  it('turns an old save\'s defense lists into entries, and only once', () => {
+    const c = migrate({ ...oldIlyra(), def: { res: ['Poisoned'], vul: [], imm: [], adv: [] }, saveNotes: 'vs magic' });
+    expect(pairs(c)).toEqual([['adv', 'vs magic'], ['adv', 'vs Poisoned']]);
+    expect(pairs(migrate(oldIlyra()))).toEqual([['adv', 'vs Charmed']]);
+    expect(pairs(migrate({ ...sampleCharacter(), def: { res: ['Fire'], vul: [], imm: [], adv: [] } }))).toEqual(pairs(sampleCharacter()));
+  });
+  it('drops a defense of an unknown kind and reads an unknown source kind as Other', () => {
+    const c = migrate({ ...sampleCharacter(), defenses: [{ id: 'a', kind: 'weak', name: 'Fire' }, { id: 'b', kind: 'res', name: 'Cold', srcKind: 'x' }] });
+    expect(c.defenses).toEqual([{ id: 'b', kind: 'res', name: 'Cold', srcKind: 'other' }]);
+  });
+  it('shows a defense once per name with every source, active ones only', () => {
+    const cloak: Item = { id: 'ck', name: 'Cloak', qty: 1, eq: true };
+    const c = make({ inv: [cloak], defenses: [
+      { id: 'a', kind: 'res', name: 'Cold', from: 'feature:f12' }, { id: 'b', kind: 'res', name: 'cold', from: 'item:ck', needEq: true },
+      { id: 'c', kind: 'res', name: 'Fire' }] });
+    expect(mergedDefenses(c, 'res')).toEqual([
+      { key: 'cold', name: 'Cold', ids: ['a', 'b'], sources: ['Species · Fey Ancestry', 'Item · Cloak'] },
+      { key: 'fire', name: 'Fire', ids: ['c'], sources: [] }]);
+    const off = { ...c, inv: [{ ...cloak, eq: false }] };
+    expect(mergedDefenses(off, 'res')[0]).toMatchObject({ ids: ['a'], sources: ['Species · Fey Ancestry'] });
+    expect(removeDefense(c, 'c').defenses.map((d) => d.id)).toEqual(['a', 'b']);
+  });
+});
+
+describe('senses shown once per name', () => {
+  const goggles: Item = { id: 'g', name: 'Goggles', qty: 1, eq: true };
+  it('keeps the longest range and lists both sources', () => {
+    const c = make({ inv: [goggles], senses: [{ id: 'a', name: 'Darkvision', range: '60 ft', from: 'feature:f11' }, { id: 'b', name: 'Darkvision', range: '120 ft', from: 'item:g' }] });
+    expect(mergedSenses(c)).toEqual([{ key: 'darkvision', name: 'Darkvision', range: '120 ft', ids: ['a', 'b'], sources: ['Species · Darkvision', 'Item · Goggles'] }]);
+  });
+  it('shows both ranges when one has no number', () => {
+    const c = make({ senses: [{ id: 'a', name: 'Darkvision', range: '60 ft' }, { id: 'b', name: 'Darkvision', range: 'see invisible' }] });
+    expect(mergedSenses(c)[0].range).toBe('60 ft / see invisible');
   });
 });
 

@@ -3,8 +3,8 @@ import { blankCharacter, sampleCharacter } from './defaults';
 import { grantErrors } from './catalog/schema';
 import { valueAt, type ValueCtx } from './catalog/value';
 import { PROF_NAMES, type ProfCat } from './catalog/names';
-import { activeGrants, dropLinkOnly, fixLinks, hasActiveEffect, linkOf, parseLink, sourceLabel, sourceOf, SRC_KINDS } from './links';
-import type { AcEffect, Ability, ArmorKind, CastAbility, Character, Concentration, Feature, Grant, HpSnapshot, Item, Prof, Linked, Resource, Size, Spell, SpeedKind, SpellSort, Tab, Unarmored, When } from './types';
+import { activeGrants, dropLinkOnly, fixLinks, hasActiveEffect, isActive, linkOf, parseLink, sourceLabel, sourceOf, SRC_KINDS } from './links';
+import type { AcEffect, Ability, ArmorKind, CastAbility, Character, Concentration, DefenseKind, Feature, Grant, HpSnapshot, Item, Prof, Linked, Resource, Size, Spell, SpeedKind, SpellSort, Tab, Unarmored, When } from './types';
 
 export const ABILITIES: [Ability, string][] = [
   ['str', 'Strength'], ['dex', 'Dexterity'], ['con', 'Constitution'],
@@ -569,9 +569,9 @@ const strings = (v: unknown[]) => v.filter((x): x is string => typeof x === 'str
 // Spell slot counts for levels 0–9; anything missing or damaged counts as 0.
 const slots = (v: unknown[]) => Array.from({ length: 10 }, (_, i) => (typeof v[i] === 'number' ? (v[i] as number) : 0));
 // Records with fixed keys: a missing or damaged key falls back to the blank character's value.
-const FIXED_RECORDS = ['ch', 'abil', 'speeds', 'coins', 'notes', 'def'] as const;
+const FIXED_RECORDS = ['ch', 'abil', 'speeds', 'coins', 'notes'] as const;
 // Lists of entries: each needs a name and holds only plain values.
-const ENTRY_LISTS = ['senses', 'res', 'attacks', 'riders', 'inv', 'spells', 'feats', 'acMods', 'grants', 'profs'] as const;
+const ENTRY_LISTS = ['senses', 'res', 'attacks', 'riders', 'inv', 'spells', 'feats', 'acMods', 'grants', 'profs', 'defenses'] as const;
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 export const isEntry = (x: unknown): x is Record<string, unknown> =>
   isObj(x) && typeof x.name === 'string' && Object.values(x).every((v) => v === null || typeof v !== 'object');
@@ -596,7 +596,7 @@ function cleanLinked<T extends Linked>(x: T): T {
 }
 const cleanCid = <T extends { cid?: string }>(x: T): T => { const { cid, ...rest } = x; return (typeof cid === 'string' ? { ...rest, cid } : rest) as T; };
 
-export const NEW_FIELDS: readonly (keyof Character)[] = ['spellSort', 'size', 'carryUp', 'attuneIds', 'grants', 'effectsOn', 'profs'];
+export const NEW_FIELDS: readonly (keyof Character)[] = ['spellSort', 'size', 'carryUp', 'attuneIds', 'grants', 'effectsOn', 'profs', 'defenses'];
 // Resources the Inventory tab echoed before `inv` existed.
 const OLD_INVENTORY_RESOURCES = ['arrows', 'potions'];
 
@@ -633,14 +633,20 @@ export function migrate(data: unknown): Character {
   // Grants: a link that doesn't parse goes first, so grantErrors knows the source kind; then the grant must be valid.
   c.grants = c.grants.filter((g) => parseLink(g.from) && !grantErrors(g, parseLink(g.from)!.kind).length).map(cleanLinked);
   c.inv = c.inv.map(cleanCid);
-  c.def = { res: strings(c.def.res), vul: strings(c.def.vul), imm: strings(c.def.imm), adv: strings(c.def.adv) };
-  // Resistance and Vulnerability apply to damage types only; Immunity to damage types and conditions (PHB p.28).
-  // Older saves could list a condition under Resistances, meaning Advantage on saves against it, and had a free-text
-  // save note. Both move to Advantage on saves. The note is no longer a field, so it is read from the raw save.
-  const addAdv = (t: string) => { if (!c.def.adv.includes(t)) c.def.adv.push(t); };
-  if (typeof data.saveNotes === 'string' && data.saveNotes.trim()) addAdv(data.saveNotes.trim());
-  c.def.res.filter((n) => CONDITION_OPTIONS.includes(n)).forEach((n) => addAdv('vs ' + n));
-  c.def.res = c.def.res.filter((n) => !CONDITION_OPTIONS.includes(n));
+  // Saves from before defenses were entries kept string lists in `def` (no longer a field, so read from the raw save).
+  if (data.defenses === undefined) {
+    const raw = isObj(data.def) ? data.def : {};
+    const def = Object.fromEntries(DEFENSE_KINDS.map((k) => [k, Array.isArray(raw[k]) ? strings(raw[k] as unknown[]) : []])) as Record<DefenseKind, string[]>;
+    // Resistance and Vulnerability apply to damage types only; Immunity to damage types and conditions (PHB p.28).
+    // Older saves could list a condition under Resistances, meaning Advantage on saves against it, and had a free-text
+    // save note. Both move to Advantage on saves. The note is no longer a field either.
+    const addAdv = (t: string) => { if (!def.adv.includes(t)) def.adv.push(t); };
+    if (typeof data.saveNotes === 'string' && data.saveNotes.trim()) addAdv(data.saveNotes.trim());
+    def.res.filter((n) => CONDITION_OPTIONS.includes(n)).forEach((n) => addAdv('vs ' + n));
+    def.res = def.res.filter((n) => !CONDITION_OPTIONS.includes(n));
+    c.defenses = DEFENSE_KINDS.flatMap((kind) => def[kind].map((name) => ({ id: newId(), kind, name })));
+  }
+  c.defenses = c.defenses.filter((d) => DEFENSE_KINDS.includes(d.kind)).map(cleanLinked);
   c.slotMax = slots(c.slotMax);
   c.slotUsed = slots(c.slotUsed);
   // These values size lists of buttons, so an out-of-range number could freeze the sheet. Limits match the UI.
@@ -754,6 +760,34 @@ export function migrate(data: unknown): Character {
   // A grant exists only through its source: one whose link fixLinks cleared goes.
   return { ...fixed, grants: fixed.grants.filter((g) => g.from) };
 }
+
+const DEFENSE_KINDS: DefenseKind[] = ['res', 'vul', 'imm', 'adv'];
+
+// Active entries with the same name (normName) show once, listing every source.
+function merged<T extends Linked & { id: string; name: string }>(c: Character, list: T[]): { key: string; first: T; all: T[] }[] {
+  const out: { key: string; first: T; all: T[] }[] = [];
+  for (const x of list.filter((e) => isActive(c, e))) {
+    const key = normName(x.name), row = out.find((r) => r.key === key);
+    if (row) row.all.push(x); else out.push({ key, first: x, all: [x] });
+  }
+  return out;
+}
+const sourcesOf = (c: Character, all: Linked[]) => [...new Set(all.map((x) => sourceLabel(c, x)).filter((s): s is string => !!s))];
+// One row per sense name. Ranges compare by their leading number and the longest wins; when any range has no number,
+// the distinct ranges show together rather than guess (spec).
+export function mergedSenses(c: Character): { key: string; name: string; range: string; ids: string[]; sources: string[] }[] {
+  return merged(c, c.senses).map(({ key, first, all }) => {
+    const n = (r: string) => r.match(/^\s*(\d+)/)?.[1];
+    const range = all.every((x) => n(x.range) !== undefined)
+      ? all.reduce((b, x) => (Number(n(x.range)) > Number(n(b.range)) ? x : b)).range
+      : [...new Set(all.map((x) => x.range))].join(' / ');
+    return { key, name: first.name, range, ids: all.map((x) => x.id), sources: sourcesOf(c, all) };
+  });
+}
+export const mergedDefenses = (c: Character, kind: DefenseKind): { key: string; name: string; ids: string[]; sources: string[] }[] =>
+  merged(c, c.defenses.filter((d) => d.kind === kind)).map(({ key, first, all }) => ({ key, name: first.name, ids: all.map((x) => x.id), sources: sourcesOf(c, all) }));
+// Removes one defense (until removeRef handles every kind).
+export const removeDefense = (c: Character, id: string): Character => ({ ...c, defenses: c.defenses.filter((d) => d.id !== id) });
 
 const PROF_CATS: ProfCat[] = ['armor', 'weapon', 'tool', 'language'];
 // Armor, weapon, tool and language proficiencies: the hand ones (with id), then the granted ones (with their source),
