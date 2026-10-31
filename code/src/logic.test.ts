@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import {
-  ABILITIES, SKILLS, maxFields, maxOf, normalize, resourceGroups, itemAcGrants, mergedDefenses, mergedSenses, removeDefense, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, splitTraining, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, NEW_FIELDS, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, removeItem, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
+  ABILITIES, SKILLS, dawn, restRolls, maxFields, maxOf, normalize, resourceGroups, itemAcGrants, mergedDefenses, mergedSenses, removeDefense, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, splitTraining, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, NEW_FIELDS, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, removeItem, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
   setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, toggleFreeCast, undoHp
 } from './logic';
+import { applyPatch } from './storage';
 import { oldIlyra, oldSeren } from './test-fixtures';
 import type { Character, Grant, Item, Spell } from './types';
 
@@ -706,23 +707,25 @@ describe('carrying capacity', () => {
 });
 
 describe('attunement and resources moving to Inventory', () => {
-  it('turns plain inventory resources into items, keeps ones with a max or a recharge, and empties their pills', () => {
+  it('turns inventory resources into items, charged ones with their charges, and empties their pills', () => {
     const c = migrate({ inv: [], attune: ['', '', ''], pills: ['hp', 'res:r1', 'res:r2'], res: [
       { id: 'r1', name: 'Arrows', note: 'Tap −', count: 20, inv: true },
       { id: 'r2', name: 'Wand', count: 3, max: 7, recharge: 'none', inv: true },
       { id: 'r3', name: 'Herbs', count: 1, refill: true, inv: true },
       { id: 'r4', name: 'Ki', count: 2, max: 2, recharge: 'short' }] });
-    expect(c.inv).toEqual([{ id: expect.any(String), name: 'Arrows', qty: 20, eq: false, desc: 'Tap −' }]);
-    expect(c.res.map((r) => [r.id, !!r.inv, r.recharge])).toEqual([['r2', true, 'none'], ['r3', true, 'long'], ['r4', false, 'short']]);
-    expect(c.pills).toEqual(['hp', '', 'res:r2']);
+    expect(c.inv).toEqual([{ id: expect.any(String), name: 'Arrows', qty: 20, eq: false, desc: 'Tap −' },
+      { id: expect.any(String), name: 'Wand', qty: 1, eq: false, count: 3, max: 7, recharge: 'none' },
+      { id: expect.any(String), name: 'Herbs', qty: 1, eq: false, count: 1, recharge: 'long' }]);
+    expect(c.res.map((r) => [r.id, r.recharge])).toEqual([['r4', 'short']]);
+    expect(c.pills).toEqual(['hp', '', '']);
     expect(c.attuneIds).toEqual(['', '', '']);
   });
   it('still converts very old saves without the inv flag, and only on saves from before this change', () => {
     const old = migrate({ inv: [], res: [{ id: 'arrows', name: 'Arrows', count: 5 }, { id: 'n1', name: 'Rations', count: 3 }] });
     expect(old.inv.map((i) => i.name)).toEqual(['Arrows']);
     expect(old.res.map((r) => r.id)).toEqual(['n1']);
-    const now = migrate({ attuneIds: ['', '', ''], res: [{ id: 'arrows', name: 'Arrows', count: 5 }, { id: 'w', name: 'Wand', count: 1, inv: true }] });
-    expect(now.res.map((r) => r.id)).toEqual(['arrows', 'w']);
+    const now = migrate({ attuneIds: ['', '', ''], res: [{ id: 'arrows', name: 'Arrows', count: 5 }] });
+    expect(now.res.map((r) => r.id)).toEqual(['arrows']);
   });
   it('links attunement slot names to items: matches, duplicates, unknown text, converted resources', () => {
     const a = migrate({ attune: [' cloak of elvenkind ', 'Ring', 'Ring'], res: [], inv: [
@@ -742,11 +745,11 @@ describe('attunement and resources moving to Inventory', () => {
     const e = migrate({ attune: ['-', 'None', '—'], res: [], inv: [] });
     expect(e.attuneIds).toEqual(['', '', '']); // placeholder text never becomes an item
     expect(e.inv).toEqual([]);
-    // Deliberate: a charged item tracked as a resource keeps its charges in Resources and also becomes the attuned item.
+    // A charged item tracked as a resource becomes the attuned item, with its charges.
     const w = migrate({ attune: ['Wand of Magic Missiles'], inv: [],
       res: [{ id: 'w', name: 'Wand of Magic Missiles', count: 7, max: 7, recharge: 'none', inv: true }] });
-    expect(w.res.map((r) => r.id)).toEqual(['w']);
-    expect(w.inv.find((i) => i.id === w.attuneIds[0])).toMatchObject({ name: 'Wand of Magic Missiles', eq: true });
+    expect(w.res).toEqual([]);
+    expect(w.inv).toEqual([{ id: w.attuneIds[0], name: 'Wand of Magic Missiles', qty: 1, eq: true, count: 7, max: 7, recharge: 'none' }]);
   });
   it('turns damaged resource fields into safe item values', () => {
     const c = migrate({ inv: [], res: [{ id: 'r', name: 'Rope', note: 5, count: 'x', inv: true }, { id: 's', name: 'Bolts', count: 4.6, inv: true }] });
@@ -1081,5 +1084,58 @@ describe('resources', () => {
       { id: 'e', name: 'E', count: 1, recharge: 'none' }, { id: 'f', name: 'F', count: 1, maxV: 'wis>=1', recharge: 'none' },
       { id: 'g', name: 'G', count: 1, srcKind: 'class', srcName: 'Monk', recharge: 'none' }, { id: 'h', name: 'H', count: 0, recharge: 'long' }]);
     expect(migrate(c)).toEqual(c);
+  });
+});
+
+describe('rests, Dawn and item charges', () => {
+  const wild = { id: 'wild', name: 'Wild Shape', count: 1, max: 3, recharge: 'long' as const, regain: '1', regainOn: 'short' as const };
+  const wand: Item = { id: 'w', name: 'Wand of Magic Missiles', qty: 1, eq: false, count: 2, max: 7, recharge: 'dawn', regain: '1d6+1', regainOn: 'dawn' };
+  it('a Short Rest regains part of a Long Rest counter; a Long Rest refills it', () => {
+    const s = shortRest(make({ res: [wild] }));
+    expect(s.res[0].count).toBe(2);
+    expect(s.restMsg?.body).toContain('Wild Shape +1');
+    expect(longRest(make({ res: [wild] })).res[0].count).toBe(3);
+  });
+  it('a Dawn counter waits for Dawn; the Long Rest summary points to it', () => {
+    const dawnRes = { id: 'd', name: 'Lucky', count: 0, max: 3, recharge: 'dawn' as const };
+    const l = longRest(make({ res: [dawnRes] }));
+    expect(l.res[0].count).toBe(0);
+    expect(l.restMsg?.body).toContain('Dawn: Lucky regain at dawn (menu → Dawn)');
+    expect(dawn(make({ res: [dawnRes] })).res[0].count).toBe(3);
+  });
+  it('asks for the roll of a die regain and adds it, up to the maximum', () => {
+    const c = make({ inv: [wand], res: [] });
+    expect(restRolls(c, 'dawn')).toEqual([{ key: 'item:w', name: 'Wand of Magic Missiles', dice: '1d6+1' }]);
+    expect(restRolls(c, 'short')).toEqual([]);
+    expect(dawn(c, { 'item:w': 5 }).inv[0].count).toBe(7);
+    const d = dawn(c, { 'item:w': 4 });
+    expect(d.inv[0].count).toBe(6);
+    expect(d.restMsg?.body).toContain('Wand of Magic Missiles +4');
+  });
+  it('item charges refill on rests by their recharge, like resources', () => {
+    const torch: Item = { id: 't', name: 'Lantern', qty: 1, eq: true, count: 0, max: 2, recharge: 'short' };
+    const ring: Item = { id: 'r', name: 'Ring', qty: 1, eq: true, count: 0, max: 1, recharge: 'long' };
+    const s = shortRest(make({ inv: [torch, ring] }));
+    expect(s.inv.map((i) => i.count)).toEqual([2, 0]);
+    expect(longRest(make({ inv: [torch, ring] })).inv.map((i) => i.count)).toEqual([2, 1]);
+  });
+  it('clamps item charges to their maximum', () => {
+    const c = make({ inv: [{ ...wand, count: 7 }] });
+    expect(applyPatch(c, { inv: [{ ...wand, count: 7, max: 5 }] }).inv[0].count).toBe(5);
+  });
+  it('moves a charged resource onto an item, once', () => {
+    const raw = { ...sampleCharacter(), pills: ['hp', 'res:wand', ''], res: [{ id: 'wand', name: 'Wand', count: 3, max: 7, recharge: 'long', inv: true, note: 'x' },
+      { id: 'rope', name: 'Rope', count: 3, inv: true }] };
+    const c = migrate(raw);
+    expect(c.inv.slice(-2)).toEqual([{ id: expect.any(String), name: 'Wand', qty: 1, eq: false, count: 3, max: 7, recharge: 'long', desc: 'x' },
+      { id: expect.any(String), name: 'Rope', qty: 3, eq: false }]);
+    expect(c.res).toEqual([]);
+    expect(c.pills).toEqual(['hp', '', '']);
+    expect(migrate(c)).toEqual(c);
+  });
+  it('checks item charge fields on load', () => {
+    const c = migrate({ ...sampleCharacter(), inv: [{ id: 'a', name: 'A', qty: 1, eq: false, count: 2, max: 0, recharge: 'weekly', regain: '1', regainOn: 'dawn' },
+      { id: 'b', name: 'B', qty: 1, eq: false, max: 3 }] });
+    expect(c.inv).toEqual([{ id: 'a', name: 'A', qty: 1, eq: false, count: 2, recharge: 'none' }, { id: 'b', name: 'B', qty: 1, eq: false }]);
   });
 });

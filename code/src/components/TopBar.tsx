@@ -4,7 +4,7 @@ import { packSummary, parsePackFile } from '../catalog/pack';
 import { deletePack, getPack, putPack } from '../catalog/pack-db';
 import { SRD_VERSION } from '../catalog/schema';
 import { setLayoutMode, useLayoutMode, useWide, type LayoutMode } from '../layout';
-import { CONDITIONS, PILL_STATS, TABS, fmt, hpColor, maxHpOf, pillView, resPill, setConc, setPill, toggleAcSpell, type PillView } from '../logic';
+import { CONDITIONS, PILL_STATS, TABS, fmt, hpColor, maxHpOf, pillView, resPill, setConc, setPill, toggleAcSpell, type PillView, type RestEvent } from '../logic';
 import { useSheet } from '../sheet';
 import { EXAMPLES, charInfo, charName, saveBackupFile, type CharacterStore } from '../storage';
 import type { Spell, Tab } from '../types';
@@ -23,7 +23,7 @@ interface Props {
   setMenuOpen: (open: boolean) => void;
   onToggleEdit: () => void;
   onSwitched: (editOn?: boolean, keepMenu?: boolean) => void;
-  onRest: (kind: 'short' | 'long') => void;
+  onRest: (kind: RestEvent) => void;
 }
 
 export function TopBar({ store, activeSec, setActiveSec, menuOpen, setMenuOpen, onToggleEdit, onSwitched, onRest }: Props) {
@@ -221,7 +221,7 @@ function PillBody({ v }: { v: PillView }) {
   return <><span className="pill-label">{v.label}</span> <strong>{v.value}</strong>{v.max && <span style={{ color: 'var(--muted)' }}>/{v.max}</span>}</>;
 }
 
-function Menu({ store, onClose, onSwitched, onRest }: { store: CharacterStore; onClose: () => void; onSwitched: (editOn?: boolean, keepMenu?: boolean) => void; onRest: (kind: 'short' | 'long') => void }) {
+function Menu({ store, onClose, onSwitched, onRest }: { store: CharacterStore; onClose: () => void; onSwitched: (editOn?: boolean, keepMenu?: boolean) => void; onRest: (kind: RestEvent) => void }) {
   const { c } = useSheet();
   const [delArmed, tapDelete] = useArmed();
   const [longArmed, tapLong] = useArmed();
@@ -262,6 +262,8 @@ function Menu({ store, onClose, onSwitched, onRest }: { store: CharacterStore; o
             onClick={(e) => { if (!longArmed) e.preventDefault(); tapLong(() => onRest('long')); }}>
             {longArmed ? 'Tap again to rest' : 'Long Rest'}
           </a>
+          {/* Dawn: magic items and features that recharge at dawn. */}
+          <a href="#sec-hp" className="rest-btn" onClick={() => onRest('dawn')}>Dawn</a>
         </div>
 
         <span className="label">Your characters</span>

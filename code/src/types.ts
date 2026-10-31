@@ -41,13 +41,13 @@ export interface Sense extends Linked { id: string; name: string; range: string;
 // (number or die) added on regainOn instead of a full refill.
 export interface Counter { count: number; max?: number; maxV?: string; recharge?: Recharge; regain?: string; regainOn?: RegainOn }
 // typeName: a custom group name (else the source kind groups it). casts: the id of the spell this resource casts.
-// inv: legacy "Also list in Inventory" flag, kept only on resources with a max or a recharge (plan 3 moves them onto items).
-export interface Resource extends Linked, Counter { id: string; name: string; note?: string; typeName?: string; casts?: string; inv?: boolean }
+export interface Resource extends Linked, Counter { id: string; name: string; note?: string; typeName?: string; casts?: string }
 export interface Attack extends Linked { id: string; name: string; hit: string; dmg: string; info: string; mastery: string }
 export interface Rider { id: string; name: string; dice: string }
 // armor/acBase: a suit of armor or a Shield and its table base. acBonus: a magic or other bonus, counted while equipped.
 // wt: weight in lb per unit. cid (here and on spells and features): the catalog id the entry was copied from.
-export interface Item { id: string; name: string; qty: number; eq: boolean; armor?: ArmorKind; acBase?: number; acBonus?: number; wt?: number; desc?: string; cid?: string }
+// An item with charges has count (charges left) and the other Counter fields.
+export interface Item extends Partial<Counter> { id: string; name: string; qty: number; eq: boolean; armor?: ArmorKind; acBase?: number; acBonus?: number; wt?: number; desc?: string; cid?: string }
 export interface AcMod { id: string; name: string; val: number }
 // castAb: this spell's own spellcasting ability (Light Bearer casts with CHA), else the character's.
 export interface Spell extends Linked {

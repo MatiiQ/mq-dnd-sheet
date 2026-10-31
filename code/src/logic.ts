@@ -528,9 +528,15 @@ export function normalize(c: Character): Character {
     changed = true;
     return { ...r, count: m };
   });
+  const inv = c.inv.map((i) => {
+    const m = i.count === undefined ? null : maxOf(c, i);
+    if (m === null || i.count! <= m) return i;
+    changed = true;
+    return { ...i, count: m };
+  });
   const top = maxHpOf(c);
   if (c.hp > top) changed = true;
-  return changed ? { ...c, res, hp: Math.min(c.hp, top) } : c;
+  return changed ? { ...c, res, inv, hp: Math.min(c.hp, top) } : c;
 }
 
 // Resource groups: a custom type name, else the source kind, else Other. Source kinds in SRC_KINDS order, then custom
@@ -545,17 +551,49 @@ export function resourceGroups(c: Character): { title: string; list: Resource[] 
   return titles.map((t) => ({ title: t, list: c.res.filter((r) => title(r) === t) }));
 }
 
-// Refills resources for a rest; returns the new list and the names that went up.
-export function refillFor(c: Character, kind: 'short' | 'long'): [Resource[], string[]] {
-  const names: string[] = [];
-  const list = c.res.map((r) => {
-    const rc = rechargeOf(r), m = maxOf(c, r);
-    const hit = kind === 'long' ? rc === 'long' || rc === 'short' : rc === 'short';
-    if (!hit || m === null) return r;
-    if (r.count < m) names.push(r.name);
-    return { ...r, count: m };
+export type RestEvent = 'short' | 'long' | 'dawn';
+export interface RollAsk { key: string; name: string; dice: string }
+type Counted = { id: string; name: string } & Partial<Counter>;
+const counterKey = (kind: 'res' | 'item', id: string) => kind + ':' + id;
+// What a counter regains on this event: 'all', a number or die (its regain), or nothing. Short Rest: Short Rest counters
+// in full, Long Rest counters by their Short Rest regain. Long Rest: Short and Long Rest counters in full. Dawn: Dawn
+// counters by their dawn regain, else in full.
+function regainFor(x: Partial<Counter>, e: RestEvent): 'all' | string | null {
+  const rc = rechargeOf(x);
+  if (e === 'long') return rc === 'long' || rc === 'short' ? 'all' : null;
+  if (e === 'short') return rc === 'short' ? 'all' : rc === 'long' && x.regainOn === 'short' && x.regain ? x.regain : null;
+  return rc !== 'dawn' ? null : x.regainOn === 'dawn' && x.regain ? x.regain : 'all';
+}
+const counters = (c: Character): ['res' | 'item', Counted][] =>
+  [...c.res.map((r) => ['res', r] as ['res', Counted]), ...c.inv.filter((i) => i.count !== undefined).map((i) => ['item', i] as ['item', Counted])];
+// The counters whose regain for this event is a die roll, below their maximum: the app asks for each roll first.
+export function restRolls(c: Character, e: RestEvent): RollAsk[] {
+  return counters(c).flatMap(([kind, x]) => {
+    const g = regainFor(x, e), m = maxOf(c, x);
+    return g && g !== 'all' && /d/.test(g) && m !== null && (x.count ?? 0) < m ? [{ key: counterKey(kind, x.id), name: x.name, dice: g }] : [];
   });
-  return [list, names];
+}
+// Refills resources and item charges for an event, up to their maximum; a counter with no maximum is never refilled.
+// rolls: the rolled totals of die regains, by restRolls key. names: 'Wild Shape +1' for each that went up.
+export function refillFor(c: Character, e: RestEvent, rolls: Record<string, number> = {}): { res: Resource[]; inv: Item[]; names: string[] } {
+  const names: string[] = [];
+  const fill = <T extends Counted>(kind: 'res' | 'item', x: T): T => {
+    const g = regainFor(x, e), m = maxOf(c, x), n = x.count ?? 0;
+    if (!g || m === null) return x;
+    const add = g === 'all' ? m : /d/.test(g) ? rolls[counterKey(kind, x.id)] ?? 0 : num(c, g);
+    const next = Math.max(n, Math.min(m, n + add));
+    if (next > n) names.push(x.name + ' +' + (next - n));
+    return next === n ? x : { ...x, count: next };
+  };
+  const res = c.res.map((r) => fill('res', r));
+  const inv = c.inv.map((i) => (i.count === undefined ? i : fill('item', i)));
+  return { res, inv, names };
+}
+
+// Dawn: counters that recharge at dawn (magic items, some features). Not a rest, so it needs no HP.
+export function dawn(c: Character, rolls?: Record<string, number>): Character {
+  const { res, inv, names } = refillFor(c, 'dawn', rolls);
+  return { ...c, res, inv, restMsg: { title: 'Dawn', body: names.length ? 'Regained: ' + names.join(', ') + '.' : 'Nothing regains at dawn.' } };
 }
 
 // Either rest needs at least 1 HP to start (PHB p.370, p.373), and a dead character can't rest.
@@ -569,7 +607,8 @@ const restBlocked = (c: Character, title: string): Character | null =>
 export function longRest(c: Character): Character {
   const blocked = restBlocked(c, 'No Long Rest');
   if (blocked) return blocked;
-  const [res, refilled] = refillFor(c, 'long');
+  const { res, inv, names: refilled } = refillFor(c, 'long');
+  const dawnNames = counters(c).filter(([, x]) => rechargeOf(x) === 'dawn').map(([, x]) => x.name);
   const maxHp = c.origOn && c.maxHp < c.origHp ? c.origHp : c.maxHp;
   const abilAdj = Object.fromEntries(Object.entries(c.abilAdj).map(([k, v]) => [k, Math.max(0, v || 0)]));
   // Shield lasts a round, Mage Armor 8 hours, Barkskin 1 hour (PHB p.316, p.293, p.245): none outlasts a Long Rest.
@@ -580,23 +619,24 @@ export function longRest(c: Character): Character {
   ].join('');
   return {
     ...c, maxHp, abilAdj, hp: maxHpOf({ ...c, maxHp, abilAdj }), temp: 0, slotUsed: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], hdUsed: 0, ds: 0, df: 0, free: {}, acOn: [], effectsOn: [],
-    hpUndo: null, concCheck: null, res, exh: Math.max(0, c.exh - 1),
+    hpUndo: null, concCheck: null, res, inv, exh: Math.max(0, c.exh - 1),
     restMsg: {
       title: 'Long Rest complete',
       body: 'HP set to max, temp HP cleared, all spell slots, Hit Dice and free casts restored' + restored +
         (c.exh ? ', Exhaustion −1' : '') + (refilled.length ? '. Refilled: ' + refilled.join(', ') : '') +
-        (ended.length ? '. ' + ended.join(', ') + ' ended' : '') + '.'
+        (ended.length ? '. ' + ended.join(', ') + ' ended' : '') + '.' +
+        (dawnNames.length ? ' Dawn: ' + dawnNames.join(', ') + ' regain at dawn (menu → Dawn).' : '')
     }
   };
 }
 
-export function shortRest(c: Character): Character {
+export function shortRest(c: Character, rolls?: Record<string, number>): Character {
   const blocked = restBlocked(c, 'No Short Rest');
   if (blocked) return blocked;
-  const [res, refilled] = refillFor(c, 'short');
+  const { res, inv, names: refilled } = refillFor(c, 'short', rolls);
   const left = c.level - hdSpent(c);
   return {
-    ...c, res,
+    ...c, res, inv,
     restMsg: {
       title: 'Short Rest',
       body: (refilled.length ? 'Refilled: ' + refilled.join(', ') + '. ' : 'No resources recharge on a Short Rest. ') +
@@ -637,10 +677,19 @@ function cleanLinked<T extends Linked>(x: T): T {
   return out.from === undefined ? dropLinkOnly(out) : out;
 }
 const RECHARGES: Recharge[] = ['none', 'short', 'long', 'dawn'];
+// Counter fields of an item on load (resources: cleanResource). A recharge it didn't have stays unset.
+function cleanCounter({ count, max, maxV, recharge, regain, regainOn }: Partial<Record<keyof Counter, unknown>>): Partial<Counter> {
+  const rc = recharge === undefined ? undefined : RECHARGES.includes(recharge as Recharge) ? (recharge as Recharge) : 'none';
+  const pair = typeof regain === 'string' && isValue(regain) && ((regainOn === 'short' && rc === 'long') || (regainOn === 'dawn' && rc === 'dawn'));
+  return {
+    count: count as number, ...(finite(max) && max >= 1 ? { max } : {}), ...(typeof maxV === 'string' && isValue(maxV) && !/d/.test(maxV) ? { maxV } : {}),
+    ...(rc ? { recharge: rc } : {}), ...(pair ? { regain, regainOn: regainOn as Counter['regainOn'] } : {})
+  };
+}
 // Resource fields on load: a fixed max of at least 1, a formula without dice, a known recharge, a regain only with the
 // recharge it goes with (on a Short Rest for Long Rest, at dawn for Dawn), text fields as strings.
 function cleanResource(r: Resource): Resource {
-  const { count, max, maxV, recharge, regain, regainOn, typeName, note, casts, ...rest } = r as Resource & Record<string, unknown>;
+  const { count, max, maxV, recharge, regain, regainOn, typeName, note, casts, inv: _inv, ...rest } = r as Resource & Record<string, unknown>;
   const rc = RECHARGES.includes(recharge as Recharge) ? (recharge as Recharge) : 'none';
   const pair = typeof regain === 'string' && isValue(regain) && ((regainOn === 'short' && rc === 'long') || (regainOn === 'dawn' && rc === 'dawn'));
   return cleanLinked({
@@ -738,8 +787,10 @@ export function migrate(data: unknown): Character {
   // AC fields: a damaged one would show NaN or join strings, so it goes, with its partner field.
   c.acMods = c.acMods.filter((m) => finite(m.val));
   if (!Object.hasOwn(UNARMORED, c.acUnarm)) c.acUnarm = 'none';
-  c.inv = c.inv.map(({ armor, acBase, acBonus, wt, desc, ...i }) => ({
+  c.inv = c.inv.map(({ armor, acBase, acBonus, wt, desc, count, max, maxV, recharge, regain, regainOn, ...i }) => ({
     ...i,
+    // Charges: only with a count; the other fields as on resources.
+    ...(finite(count) ? cleanCounter({ count, max, maxV, recharge, regain, regainOn }) : {}),
     ...(['light', 'medium', 'heavy', 'shield'].includes(armor as string) && finite(acBase) ? { armor, acBase } : {}),
     ...(finite(acBonus) ? { acBonus } : {}),
     ...(finite(wt) && wt >= 0 ? { wt } : {}),
@@ -768,7 +819,9 @@ export function migrate(data: unknown): Character {
   // Saves from before attunement by item id have no attuneIds. The one-time steps below run only on those, so they
   // never change entries the player adds later (roadmap, "Saves keep working").
   const oldSave = data.attuneIds === undefined;
-  if (oldSave) c.res = c.res.map((r) => (r.inv === undefined && OLD_INVENTORY_RESOURCES.includes(r.id) ? { ...r, inv: true } : r));
+  // The legacy "Also list in Inventory" flag is no longer a Resource field: read it untyped.
+  const invOf = (r: Resource) => (r as Resource & { inv?: unknown }).inv;
+  if (oldSave) c.res = c.res.map((r) => (invOf(r) === undefined && OLD_INVENTORY_RESOURCES.includes(r.id) ? { ...r, inv: true } as Resource : r));
   // Older saves had a `refill` flag that meant a Long Rest recharge. Resource no longer declares it: read it untyped.
   c.res = c.res.map((r) => {
     const { refill, ...x } = r as Resource & { refill?: unknown };
@@ -776,11 +829,10 @@ export function migrate(data: unknown): Character {
   });
   const converted: string[] = [];
   if (oldSave) {
-    // Resources also listed in the Inventory become items. One with a maximum or a recharge stays a resource and keeps
-    // its inv flag: items have no charges yet, so converting it would lose them.
+    // Resources also listed in the Inventory become items. One with a maximum or a recharge moves below, with charges.
     const added: string[] = [];
     c.res = c.res.filter((r) => {
-      if (!r.inv || r.max || rechargeOf(r) !== 'none') return true;
+      if (!invOf(r) || r.max || rechargeOf(r) !== 'none') return true;
       const note = typeof r.note === 'string' ? r.note.trim() : '';
       const item: Item = { id: newId(), name: r.name, qty: finite(r.count) ? Math.max(0, Math.floor(r.count)) : 1, eq: false, ...(note ? { desc: note } : {}) };
       c.inv = [...c.inv, item];
@@ -804,6 +856,21 @@ export function migrate(data: unknown): Character {
       return id;
     });
   }
+  // Resources still listed in the Inventory (with a maximum or a recharge) move onto items with charges. An item of the
+  // same name without charges (such as one an attunement slot made above) takes them; otherwise a new item. Runs after
+  // the steps above, so it never converts a resource the player adds later (there is no flag to set any more).
+  c.res = c.res.filter((r) => {
+    if (!invOf(r)) return true;
+    const note = typeof r.note === 'string' ? r.note.trim() : '';
+    const charged = (finite(r.max) && r.max >= 1) || rechargeOf(r) !== 'none';
+    const n = finite(r.count) ? Math.max(0, Math.floor(r.count)) : charged ? 0 : 1;
+    const same = charged ? c.inv.find((it) => it.count === undefined && normName(it.name) === normName(r.name)) : undefined;
+    const fields: Partial<Item> = charged ? { count: n, ...(finite(r.max) && r.max >= 1 ? { max: r.max } : {}), recharge: rechargeOf(r) } : {};
+    if (same) c.inv = c.inv.map((it) => (it === same ? { ...it, ...fields, ...(note && !it.desc ? { desc: note } : {}) } : it));
+    else c.inv = [...c.inv, { id: newId(), name: r.name, qty: charged ? 1 : n, eq: false, ...fields, ...(note ? { desc: note } : {}) }];
+    converted.push(r.id);
+    return false;
+  });
   c.res = c.res.map(cleanResource);
   // Three slots, each an existing item id or ''. Checked slot by slot, so a bad slot never shifts the ones after it.
   const ids: unknown[] = c.attuneIds;

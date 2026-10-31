@@ -1,13 +1,19 @@
 import { useState, type CSSProperties } from 'react';
-import { ARMORS, CARRY_MULT, SIZES, carriedWeight, carryCapacity, carryUpOf, sizeOf, detectArmor, effScore, fmt, itemAcGrants, newId, num, parseWeight, removeItem } from '../../logic';
+import { isValue } from '../../catalog/value';
+import { ARMORS, CARRY_MULT, SIZES, maxOf, rechargeOf, carriedWeight, carryCapacity, carryUpOf, sizeOf, detectArmor, effScore, fmt, itemAcGrants, newId, num, parseWeight, removeItem } from '../../logic';
 import { patchEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
-import type { Character, Coin, Item } from '../../types';
+import type { Character, Coin, Item, Recharge } from '../../types';
 import { AddButton, EntryForm, EntryRow, NumInput, TextField } from '../ui';
 
 const COINS: [Coin, string, string][] = [['cp', 'CP', 'var(--coin-cp)'], ['sp', 'SP', 'var(--coin-sp)'], ['ep', 'EP', 'var(--coin-ep)'], ['gp', 'GP', 'var(--accent)'], ['pp', 'PP', 'var(--coin-pp)']];
 // armor: an ARMORS name or '' for None. bonus: armor's magic bonus. itemAc / needAtt: another item's AC bonus grant.
 // wt: the weight as typed.
-const BLANK = { name: '', armor: '', bonus: 0, itemAc: 0, needAtt: false, wt: '', desc: '' };
+const BLANK = {
+  name: '', armor: '', bonus: 0, itemAc: 0, needAtt: false, wt: '', desc: '',
+  // Charges: on/off, maximum (0 = none), charges left, recharge and a partial regain (a number or die).
+  charges: false, chMax: 0, chCount: 0, chRecharge: 'dawn' as Recharge, chRegain: ''
+};
+const RECHARGE_NAMES: Record<Recharge, string> = { none: 'Manual', short: 'Short Rest', long: 'Long Rest', dawn: 'Dawn' };
 // Weights show to one decimal place.
 const lb = (n: number) => String(Math.round(n * 10) / 10);
 const sizeName = (s: string) => SIZES.find(([k]) => k === s)?.[1] ?? s;
@@ -25,7 +31,8 @@ function itemDraft(c: Character, it: Item): typeof BLANK {
   return {
     name: it.name, armor: armorName(it), bonus: it.armor ? it.acBonus || 0 : 0,
     itemAc: it.armor ? 0 : g ? num(c, g.val) : Math.round(it.acBonus || 0), needAtt: !!g?.needAtt,
-    wt: it.wt === undefined ? '' : String(it.wt), desc: it.desc || ''
+    wt: it.wt === undefined ? '' : String(it.wt), desc: it.desc || '',
+    charges: it.count !== undefined, chMax: it.max || 0, chCount: it.count || 0, chRecharge: rechargeOf(it), chRegain: it.regain || ''
   };
 }
 
@@ -50,11 +57,16 @@ export function InventoryTab() {
     // A new item named like armor (e.g. "+1 Chain Mail") fills itself in. Editing never re-detects, so None sticks.
     const found = !f.editingId && !a ? detectArmor(name) : null;
     const armor = a?.[1] ?? found?.armor;
+    const d = f.draft, regainOn = d.chRecharge === 'long' ? 'short' as const : d.chRecharge === 'dawn' ? 'dawn' as const : undefined;
+    const regain = d.charges && regainOn && d.chRegain.trim() ? d.chRegain.trim() : undefined;
+    if (regain && !isValue(regain)) return;
     // All keys always present: an undefined one clears the field when editing. acBonus is only for armor and Shields;
     // any other item's AC bonus is its AC bonus grant, which follows equip and attunement.
     const built = {
       name, armor, acBase: a?.[2] ?? found?.acBase, acBonus: armor ? (f.draft.bonus || found?.acBonus) || undefined : undefined,
-      wt: parseWeight(f.draft.wt), desc: f.draft.desc.trim() || undefined
+      wt: parseWeight(f.draft.wt), desc: f.draft.desc.trim() || undefined,
+      count: d.charges ? d.chCount : undefined, max: d.charges && d.chMax >= 1 ? d.chMax : undefined, maxV: undefined,
+      recharge: d.charges ? d.chRecharge : undefined, regain, regainOn: regain ? regainOn : undefined
     };
     const id = f.editingId ?? newId();
     update((p) => ({
@@ -92,6 +104,28 @@ export function InventoryTab() {
         </label>
         <TextField label="Description" style={{ flex: '3 1 220px' }} value={f.draft.desc} placeholder="What it does" onChange={(v) => f.set({ desc: v })} />
       </div>
+      <label className="check"><input type="checkbox" checked={f.draft.charges} onChange={(e) => f.set({ charges: e.target.checked })} />Has charges</label>
+      {f.draft.charges && (
+        <div className="row wrap gap-6">
+          <label className="field" style={{ flex: '1 1 90px' }}>Maximum (0 = none)
+            <NumInput className="input" value={f.draft.chMax} min={0} max={999} onCommit={(chMax) => f.set({ chMax })} />
+          </label>
+          <label className="field" style={{ flex: '1 1 90px' }}>Charges left
+            <NumInput className="input" value={f.draft.chCount} min={0} max={999} onCommit={(chCount) => f.set({ chCount })} />
+          </label>
+          <label className="field" style={{ flex: '1 1 120px' }}>Recharge
+            <select className="input" value={f.draft.chRecharge} onChange={(e) => f.set({ chRecharge: e.target.value as Recharge })}>
+              {(['dawn', 'long', 'short', 'none'] as Recharge[]).map((k) => <option key={k} value={k}>{RECHARGE_NAMES[k]}</option>)}
+            </select>
+          </label>
+          {(f.draft.chRecharge === 'dawn' || f.draft.chRecharge === 'long') && (
+            <label className="field" style={{ flex: '1 1 120px' }}>{f.draft.chRecharge === 'dawn' ? 'Regain at dawn' : 'Regain on a Short Rest'}
+              <input type="text" className="input" value={f.draft.chRegain} placeholder={f.draft.chRecharge === 'dawn' ? 'e.g. 1d6+1 (empty = all)' : 'e.g. 1'}
+                onChange={(e) => f.set({ chRegain: e.target.value })} />
+            </label>
+          )}
+        </div>
+      )}
     </EntryForm>
   );
 
@@ -167,8 +201,9 @@ export function InventoryTab() {
               <EntryRow name={it.name}
                 head={<>
                   <span>{it.name}</span>
-                  {(acNote(it) || it.wt !== undefined) && <span className="muted">
-                    {[acNote(it), it.wt !== undefined && lb(it.wt) + ' lb' + (it.qty > 1 ? ' each' : '')].filter(Boolean).join(' · ')}
+                  {(acNote(it) || it.wt !== undefined || it.count !== undefined) && <span className="muted">
+                    {[acNote(it), it.wt !== undefined && lb(it.wt) + ' lb' + (it.qty > 1 ? ' each' : ''),
+                      it.count !== undefined && (it.qty !== 1 ? '× ' + it.qty + ' · ' : '') + 'charges: ' + RECHARGE_NAMES[rechargeOf(it)] + (it.regain ? ' +' + it.regain : '')].filter(Boolean).join(' · ')}
                   </span>}
                 </>}
                 side={<div className="row gap-8" style={{ padding: '6px 0' }}>
@@ -176,11 +211,21 @@ export function InventoryTab() {
                     fontSize: 13, fontWeight: 600, cursor: 'pointer', minHeight: 44, minWidth: 92, padding: '0 10px', borderRadius: 22,
                     border: '1px solid ' + (it.eq ? 'var(--accent)' : 'var(--line-2)'), background: 'transparent', color: it.eq ? 'var(--accent)' : 'var(--muted)'
                   }}>{it.eq ? 'Equipped' : 'Carried'}</button>
-                  <div className="row gap-4">
-                    <button type="button" className="step" style={{ fontSize: 18 }} aria-label={'Decrease ' + it.name} onClick={() => patch(it.id, { qty: Math.max(0, it.qty - 1) })}>−</button>
-                    <span style={{ minWidth: 32, textAlign: 'center', fontWeight: 700 }}>{it.qty}</span>
-                    <button type="button" className="step" style={{ fontSize: 18 }} aria-label={'Increase ' + it.name} onClick={() => patch(it.id, { qty: it.qty + 1 })}>+</button>
-                  </div>
+                  {/* An item with charges counts its charges here instead of its quantity (charged items come one at a time). */}
+                  {it.count !== undefined ? (
+                    <div className="row gap-4">
+                      <button type="button" className="step" style={{ fontSize: 18 }} aria-label={'Use a charge of ' + it.name} onClick={() => patch(it.id, { count: Math.max(0, it.count! - 1) })}>−</button>
+                      <span style={{ minWidth: 44, textAlign: 'center', fontWeight: 700 }}>{it.count}{maxOf(c, it) !== null && <span className="muted"> / {maxOf(c, it)}</span>}</span>
+                      <button type="button" className="step" style={{ fontSize: 18 }} aria-label={'Restore a charge of ' + it.name}
+                        onClick={() => patch(it.id, { count: Math.min(maxOf(c, it) ?? Infinity, it.count! + 1) })}>+</button>
+                    </div>
+                  ) : (
+                    <div className="row gap-4">
+                      <button type="button" className="step" style={{ fontSize: 18 }} aria-label={'Decrease ' + it.name} onClick={() => patch(it.id, { qty: Math.max(0, it.qty - 1) })}>−</button>
+                      <span style={{ minWidth: 32, textAlign: 'center', fontWeight: 700 }}>{it.qty}</span>
+                      <button type="button" className="step" style={{ fontSize: 18 }} aria-label={'Increase ' + it.name} onClick={() => patch(it.id, { qty: it.qty + 1 })}>+</button>
+                    </div>
+                  )}
                 </div>}
                 body={it.desc ? <span>{it.desc}</span> : undefined}
                 onEdit={() => f.openEdit(it.id, itemDraft(c, it))}

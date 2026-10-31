@@ -14,7 +14,8 @@ import { InventoryTab } from './components/tabs/InventoryTab';
 import { NotesTab } from './components/tabs/NotesTab';
 import { SpellsTab } from './components/tabs/SpellsTab';
 import { useWide } from './layout';
-import { TABS, longRest, shortRest } from './logic';
+import { RestPrompt } from './components/RestPrompt';
+import { TABS, dawn, longRest, restRolls, shortRest, type RestEvent, type RollAsk } from './logic';
 import { Sheet, type FormState } from './sheet';
 import { useCharacters } from './storage';
 
@@ -26,6 +27,8 @@ export default function App() {
   const [form, setForm] = useState<FormState>(null);
   const [activeSec, setActiveSec] = useState('sec-hp');
   const [hdPrompt, setHdPrompt] = useState(false);
+  // A rest or Dawn waiting for die rolls (restRolls). UI state only, never saved.
+  const [restAsk, setRestAsk] = useState<{ event: RestEvent; asks: RollAsk[] } | null>(null);
   const wide = useWide();
 
   // After switching character: drop per-character UI state.
@@ -33,10 +36,17 @@ export default function App() {
     setEdit(editOn);
     setForm(null);
     setHdPrompt(false);
+    setRestAsk(null);
     if (!keepMenu) { setMenuOpen(false); setActiveSec('sec-hp'); }
   };
-  const onRest = (kind: 'short' | 'long') => {
-    update(kind === 'long' ? longRest : shortRest);
+  const runRest = (event: RestEvent, rolls?: Record<string, number>) => {
+    update((p) => (event === 'long' ? longRest(p) : event === 'short' ? shortRest(p, rolls) : dawn(p, rolls)));
+    setRestAsk(null);
+  };
+  // A counter that regains a die roll asks for the roll first; otherwise the rest runs at once.
+  const onRest = (event: RestEvent) => {
+    const asks = restRolls(c, event);
+    if (asks.length) setRestAsk({ event, asks }); else runRest(event);
     setHdPrompt(false);
     setMenuOpen(false);
     setActiveSec('sec-hp');
@@ -72,6 +82,7 @@ export default function App() {
                 <button type="button" className="btn" onClick={() => { store.makeCopy(); onSwitched(); }}>Make my copy</button>
               </div>
             )}
+            {restAsk && <RestPrompt event={restAsk.event} asks={restAsk.asks} onDone={(r) => runRest(restAsk.event, r)} onCancel={() => setRestAsk(null)} />}
             {edit && <EditDetails onReset={() => { store.resetCurrent(); onSwitched(true); }} />}
             <Vitals />
             {!wide && hitPoints}
