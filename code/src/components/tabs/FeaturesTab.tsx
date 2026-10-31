@@ -5,6 +5,7 @@ import { addGrants, grantChips, newId, normName, profList, removalSummary, remov
 import { removeEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { Character, Feature, FeatureGroup, SrcKind } from '../../types';
 import { GrantList, SourceChips } from '../Chips';
+import { FeaturePicker } from '../pickers/FeaturePicker';
 import { SourcePicker } from '../SourcePicker';
 import { AddButton, EntryForm, EntryRow, RemoveButton, TextField } from '../ui';
 
@@ -20,8 +21,9 @@ function removalNote(c: Character, id: string): ReactNode {
 }
 
 export function FeaturesTab() {
-  const { c, update } = useSheet();
-  const f = useEntryForm('feat', BLANK, 'feature', 'Add a feature or trait');
+  const { c, update, form: openForm, setForm } = useSheet();
+  const f = useEntryForm('feat', BLANK, 'feature', 'Add a custom feature or trait');
+  const picking = openForm?.kind === 'pick-feat';
   const titles: [FeatureGroup, string][] = [
     ['class', 'Class · ' + (c.ch.cls || 'Class') + ' ' + c.level], ['sub', 'Subclass · ' + (c.ch.sub || '')], ['background', 'Background'], ['feat', 'Feats'],
     ['species', 'Species · ' + (c.ch.species || '')], ['training', 'Training & proficiencies'], ['other', 'Other']
@@ -72,7 +74,7 @@ export function FeaturesTab() {
                 const link = linkOf('feature', x.id), src = sourceLabel(c, x);
                 const effect = hasActiveEffect(c, link), on = c.effectsOn.includes(link);
                 return (
-                  <EntryRow key={x.id} name={x.name}
+                  <EntryRow key={x.id} id={'feat-' + x.id} name={x.name}
                     head={<><strong>{x.name}</strong>{x.desc && <span className="muted">{x.desc}</span>}</>}
                     side={effect ? (
                       <button type="button" aria-pressed={on} aria-label={(on ? 'Switch off ' : 'Switch on ') + x.name} className="btn btn-sm"
@@ -91,7 +93,13 @@ export function FeaturesTab() {
           );
         })}
       </div>
-      {!f.isOpen && <AddButton onClick={f.openAdd}>+ Add feature or trait</AddButton>}
+      {!f.isOpen && !picking && (
+        <div className="row wrap gap-8">
+          <AddButton onClick={() => setForm({ kind: 'pick-feat', id: null })}>+ Add feature or trait</AddButton>
+          <AddButton onClick={f.openAdd}>Custom</AddButton>
+        </div>
+      )}
+      {picking && <FeaturePicker onClose={() => setForm(null)} onCustom={f.openAdd} />}
       {f.isOpen && !f.editingId && form}
     </div>
   );

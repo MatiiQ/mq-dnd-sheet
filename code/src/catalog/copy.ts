@@ -4,7 +4,7 @@ import { linkOf, srcKindOfLink } from '../links';
 import { ABILITIES, addGrants, detectArmor, effScore, hasProf, maxFields, maxOf, newId, normName, parseWeight, SKILLS, skillLevel, type GrantInput } from '../logic';
 import type { AcEffect, Ability, ArmorKind, Character, Feature, FeatureGroup, Item, Linked, Recharge, Size, Spell, SrcKind } from '../types';
 import type { Catalog } from './merge';
-import { slug, type ChoiceSpec, type Entry, type GrantSpec, type ItemEntry, type ProfEntry, type SpellEntry } from './schema';
+import { slug, type ChoiceSpec, type Entry, type FeatEntry, type FeatureEntry, type GrantSpec, type ItemEntry, type ProfEntry, type SpellEntry, type TraitEntry } from './schema';
 
 // Drops undefined values and empty strings, so a copied entry holds only what the catalog has.
 const compact = <T extends object>(x: T): T =>
@@ -662,4 +662,43 @@ export const isCountable = (s: Pick<GrantSpec, 'kind' | 'acMode'>) =>
 // sheet often holds it there). An item's grant always starts off: the player is getting the item now.
 export function countedDefault(c: Character, e: Entry, spec: Omit<GrantSpec, 'opt'>): boolean {
   return spec.kind === 'ac' && spec.acMode === 'bonus' && e.kind !== 'item' && c.acMods.length > 0;
+}
+
+// ---- The feature picker's lists ----
+
+export type FeatureType = 'class' | 'sub' | 'feat' | 'species' | 'background' | 'other';
+// The catalog entries of one feature type for this character. ok false: shown but marked (above the character's level,
+// or a feat's prerequisites unmet; note says which). taken: on the sheet already (a non-repeatable feat can't be added
+// again). Nothing is filtered out: higher-level features stay addable (not a levelling flow).
+export function featureCandidates(cat: Catalog, c: Character, t: FeatureType, featCat?: FeatEntry['cat']):
+  { entry: Entry; note?: string; ok: boolean; taken: boolean }[] {
+  const byLevel = <T extends { lvl: number; name: string }>(a: T, b: T) => a.lvl - b.lvl || a.name.localeCompare(b.name);
+  const leveled = (e: FeatureEntry | TraitEntry) => ({
+    entry: e as Entry, ok: e.lvl <= c.level, taken: hasFeature(c, e), ...(e.lvl > c.level ? { note: 'Level ' + e.lvl } : {})
+  });
+  switch (t) {
+    case 'class': {
+      const cls = classIdOf(cat, c).split('/')[1];
+      return entriesOfKind(cat, 'feature').filter((e) => cls && e.cls === cls && !e.sub).sort(byLevel).map(leveled);
+    }
+    case 'sub': {
+      const sub = subclassIdOf(cat, c).split('/');
+      return entriesOfKind(cat, 'feature').filter((e) => sub.length === 3 && e.cls === sub[1] && e.sub === sub[2]).sort(byLevel).map(leveled);
+    }
+    case 'feat': {
+      const rows = entriesOfKind(cat, 'feat').filter((e) => !featCat || e.cat === featCat).map((e) => {
+        const { ok, missing } = prereqMet(c, e.prereq);
+        return { entry: e as Entry, ok, taken: !e.repeat && hasFeature(c, e), ...(missing.length ? { note: missing.join(', ') } : {}) };
+      });
+      return [...rows.filter((x) => x.ok), ...rows.filter((x) => !x.ok)];
+    }
+    case 'species': {
+      const sp = matchId(cat, 'species', c.ch.species).split('/')[1];
+      return entriesOfKind(cat, 'trait').filter((e) => sp && e.species === sp && !e.of).sort(byLevel).map(leveled);
+    }
+    case 'background':
+      return entriesOfKind(cat, 'background').map((e) => ({ entry: e as Entry, ok: true, taken: hasFeature(c, e) }));
+    default:
+      return [];
+  }
 }

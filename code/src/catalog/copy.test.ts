@@ -8,7 +8,7 @@ import type { Character, Item, Spell } from '../types';
 import { mergeCatalog } from './merge';
 import type { Entry, FeatureEntry, ItemEntry, SpellEntry } from './schema';
 import {
-  addFromCatalog, draftFromItem, grantSpellName, withDetectedArmor, BLANK_ITEM, BLANK_SPELL, catForKind, countedDefault, draftFromSpell, spellFromForm, type SpellDraft, choicesOf, classIdOf, matchId, nestedEntries, subclassIdOf, type AddChoices, freeText, itemFromEntry, itemFromForm, missingPicks, needed, optionGroups, poolOptions, prereqMet, resolveChoices,
+  addFromCatalog, draftFromItem, featureCandidates, grantSpellName, withDetectedArmor, BLANK_ITEM, BLANK_SPELL, catForKind, countedDefault, draftFromSpell, spellFromForm, type SpellDraft, choicesOf, classIdOf, matchId, nestedEntries, subclassIdOf, type AddChoices, freeText, itemFromEntry, itemFromForm, missingPicks, needed, optionGroups, poolOptions, prereqMet, resolveChoices,
   spellFromEntry, spellSummary, validPicks, type ItemDraft
 } from './copy';
 
@@ -718,5 +718,48 @@ describe('withDetectedArmor', () => {
     expect(draftFromItem({ id: 'i1', ...it, eq: false }).kind).toBe('armor');
     expect(withDetectedArmor({ ...BLANK_ITEM, name: '+1 Shield' })).toMatchObject({ kind: 'armor', armor: 'shield', acBonus: '1', cat: 'shield' });
     expect(withDetectedArmor({ ...BLANK_ITEM, name: 'Rope' }).kind).toBe('none');
+  });
+});
+
+// ---- Task 8: feature candidates ----
+describe('featureCandidates', () => {
+  const r5 = (over: Partial<Character['ch']> = {}): Character => ({ ...blankCharacter(), level: 5, ch: { ...blankCharacter().ch, cls: 'Ranger', clsId: 'class/ranger', ...over } });
+  const find = (xs: ReturnType<typeof featureCandidates>, id: string) => xs.find((x) => x.entry.id === id);
+  it('lists the class’s features by level, marking those above the character’s', () => {
+    const xs = featureCandidates(cat, r5(), 'class');
+    expect(find(xs, 'feature/ranger/extra-attack')).toMatchObject({ ok: true });
+    expect(find(xs, 'feature/ranger/expertise')).toMatchObject({ ok: false, note: 'Level 9' });
+    expect(xs.some((x) => x.entry.id.startsWith('feature/ranger/hunter/'))).toBe(false);
+    const lv = xs.map((x) => (x.entry as FeatureEntry).lvl);
+    expect(lv).toEqual([...lv].sort((a, b) => a - b));
+    expect(featureCandidates(cat, r5({ clsId: '' }), 'class').map((x) => x.entry.id)).toEqual(xs.map((x) => x.entry.id));
+  });
+  it('lists the subclass’s features', () => {
+    const xs = featureCandidates(cat, r5({ sub: 'Hunter', subId: 'subclass/ranger/hunter' }), 'sub');
+    expect(xs.length).toBeGreaterThan(0);
+    expect(xs.every((x) => x.entry.id.startsWith('feature/ranger/hunter/'))).toBe(true);
+  });
+  it('marks feats whose prerequisites aren’t met, and taken ones', () => {
+    const weak = { ...r5(), abil: { str: 12, dex: 10, con: 10, int: 10, wis: 10, cha: 10 } };
+    const g = find(featureCandidates(cat, weak, 'feat', 'general'), 'feat/grappler')!;
+    expect(g.ok).toBe(false);
+    expect(g.note).toContain('Strength or Dexterity 13');
+    expect(find(featureCandidates(cat, sampleCharacter(), 'feat', 'general'), 'feat/grappler')!.ok).toBe(true);
+    expect(find(featureCandidates(cat, { ...r5(), level: 3 }, 'feat', 'general'), 'feat/ability-score-improvement')).toMatchObject({ ok: false, note: 'Level 4 or higher' });
+    const general = featureCandidates(cat, weak, 'feat', 'general');
+    const okFlags = general.map((x) => x.ok);
+    expect(okFlags).toEqual([...okFlags].sort((a, b) => Number(b) - Number(a)));
+    const alert = (feats: Character['feats']) => find(featureCandidates(cat, { ...blankCharacter(), feats }, 'feat', 'origin'), 'feat/alert')!;
+    expect(alert([{ id: 'x', g: 'feat', name: 'Alert', desc: '', cid: 'feat/alert' }])).toMatchObject({ taken: true, ok: true });
+    expect(alert([{ id: 'x', g: 'feat', name: 'Alert', desc: '' }]).taken).toBe(true);
+    expect(alert([]).taken).toBe(false);
+    const mi = find(featureCandidates(cat, { ...blankCharacter(), feats: [{ id: 'x', g: 'feat', name: 'Magic Initiate (Druid)', desc: '', cid: 'feat/magic-initiate' }] }, 'feat', 'origin'), 'feat/magic-initiate')!;
+    expect(mi.taken).toBe(false);
+  });
+  it('lists the traits of the character’s species, and every background', () => {
+    const elf = featureCandidates(cat, { ...blankCharacter(), ch: { ...blankCharacter().ch, species: 'Wood Elf' } }, 'species');
+    expect(elf.map((x) => x.entry.id)).toContain('trait/elf/keen-senses');
+    expect(elf.some((x) => x.entry.id === 'trait/elf/wood-elf')).toBe(false);
+    expect(featureCandidates(cat, blankCharacter(), 'background').map((x) => x.entry.id)).toContain('background/acolyte');
   });
 });
