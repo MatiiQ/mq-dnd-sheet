@@ -34,7 +34,7 @@ export interface ItemEntry extends EntryBase {
   cap?: number; capVol?: string; xdim?: boolean;
   rarity?: string; attune?: boolean; charges?: string; recharge?: Recharge4; regain?: string; regainOn?: 'short' | 'dawn';
   // A magic weapon or armor's base item: an item id ('item/dagger', whose weapon or armor fields the SRD builder copies
-  // in) or 'armor' / 'weapon' when the player chooses the base ("any Medium or Heavy armor").
+  // in) or 'armor' / 'weapon' / 'ammo' when the player chooses the base ("any Medium or Heavy armor", Ammunition +1).
   base?: string;
   // baseOf: the bases the player may choose from, a comma list of item ids, when the type line names fewer than "any".
   // Catalog-only: the picker reads it from the entry.
@@ -206,7 +206,7 @@ const ITEM: Record<string, [Check, boolean]> = {
   armor: [oneOf(...ARMOR_KINDS), false], acBase: [num, false], acBonus: [num, false], strReq: [num, false], stealthDis: [bool, false],
   cap: [num, false], capVol: [str, false], xdim: [bool, false],
   rarity: [str, false], attune: [bool, false], charges: [value, false], recharge: [RECHARGE, false], regain: [value, false], regainOn: [oneOf('short', 'dawn'), false],
-  base: [(v) => v === 'armor' || v === 'weapon' || (typeof v === 'string' && /^item\/[a-z0-9-]+$/.test(v)), false],
+  base: [(v) => v === 'armor' || v === 'weapon' || v === 'ammo' || (typeof v === 'string' && /^item\/[a-z0-9-]+$/.test(v)), false],
   baseOf: [(v) => typeof v === 'string' && v.split(',').every((x) => /^item\/[a-z0-9-]+$/.test(x)), false],
   magic: [whole(1, 3), false], magicPick: [oneOf(true), false]
 };

@@ -112,6 +112,11 @@ describe('validateEntry', () => {
     const sun = its.find((e) => e.id === 'item/sun-blade')!;
     expect(validateEntry({ ...sun, baseOf: 'item/longsword' })).not.toEqual([]);           // a fixed base takes no list
   });
+  it('takes base ammo with an ammunition baseOf (Ammunition +1, +2, or +3)', () => {
+    const ammoN = (items as unknown as ItemEntry[]).find((e) => e.id === 'item/ammunition-1-2-or-3')!;
+    expect(validateEntry({ ...ammoN, base: 'ammo', magicPick: true, baseOf: 'item/arrows,item/bolts' })).toEqual([]);
+    expect(validateEntry({ ...ammoN, base: 'arrows' })).not.toEqual([]);
+  });
   it('takes a damage type on an Unarmed Strike grant (Demon Armor)', () => {
     expect(validateEntry({ ...feature, grants: [{ id: 'g1', kind: 'unarmed', name: 'Claws', die: '1d8', abs: 'str', dtype: 'Slashing' }] })).toEqual([]);
     const demon = (items as unknown as ItemEntry[]).find((e) => e.id === 'item/demon-armor')!;

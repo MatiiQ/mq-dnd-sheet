@@ -140,7 +140,7 @@ describe('SRD items', () => {
     expect(it('mithral-armor').baseOf!.split(',')).not.toContain('item/hide-armor');
     expect(it('mithral-armor')).toMatchObject({ strReq: 0, stealthDis: false });
     expect(it('defender').baseOf!.split(',')).toHaveLength(28);
-    expect((items as ItemEntry[]).filter((e) => e.magicPick).map((e) => e.id).sort()).toEqual(['item/armor-1-2-or-3', 'item/shield-1-2-or-3', 'item/wand-of-the-war-mage-1-2-or-3', 'item/weapon-1-2-or-3']);
+    expect((items as ItemEntry[]).filter((e) => e.magicPick).map((e) => e.id).sort()).toEqual(['item/ammunition-1-2-or-3', 'item/armor-1-2-or-3', 'item/shield-1-2-or-3', 'item/wand-of-the-war-mage-1-2-or-3', 'item/weapon-1-2-or-3']);
   });
   it('give the items that raise spell attack or save DC their grants (plan 7, Task 9a)', () => {
     const g = (id: string) => (items as ItemEntry[]).find((e) => e.id === 'item/' + id)!.grants ?? [];

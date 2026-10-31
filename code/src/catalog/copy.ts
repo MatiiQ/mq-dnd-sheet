@@ -79,8 +79,9 @@ export function answeredName(e: ItemEntry, base?: ItemEntry, bonus?: number): { 
   if (e.magicPick && bonus) return { name: `${base ? base.name : e.name.replace(/, \+1, \+2, or \+3$/, '')} +${bonus}`, rarity };
   return { name: base ? `${e.name} (${base.name})` : e.name, rarity };
 }
-const BASE_LABEL: Record<string, string> = { weapon: 'Which weapon?', armor: 'Which armor?' };
-// The mundane items an entry's base may be: its baseOf list, else every weapon ('weapon') or armor ('armor', no Shield).
+const BASE_LABEL: Record<string, string> = { weapon: 'Which weapon?', armor: 'Which armor?', ammo: 'Which ammunition?' };
+// The mundane items an entry's base may be: its baseOf list, else every weapon ('weapon'), armor ('armor', no Shield) or
+// piece of ammunition ('ammo').
 function baseOptions(cat: Catalog, e: ItemEntry): ItemEntry[] {
   const kind = e.base as ItemEntry['cat'];
   const all = cat.list.filter((x): x is ItemEntry => x.kind === 'item' && x.cat === kind);
@@ -652,9 +653,11 @@ function addEntry(c: Character, cat: Catalog, e: Entry, ans: AddChoices): Charac
   }
   if (e.kind === 'item') {
     const id = newId();
-    // A base the player chose (checked by checkAnswers): its fields copied in, then named after it.
+    // A base the player chose (checked by checkAnswers): its fields copied in, then named after it. Ammunition has no
+    // fields to copy: only its id is kept, so the ammunition type follows it (ammoType).
     const b = ans.item?.base && BASE_LABEL[e.base ?? ''] ? cat.byId.get(ans.item.base) as ItemEntry : undefined;
-    const it: Item = { id, ...(b ? itemFromEntry(withBase(e, b), ans.item, b) : itemFromEntry(e, ans.item)) };
+    const based = b && (e.base === 'ammo' ? { ...e, base: b.id } : withBase(e, b));
+    const it: Item = { id, ...(b ? itemFromEntry(based!, ans.item, b) : itemFromEntry(e, ans.item)) };
     if (it.maxV !== undefined) it.count = maxOf(c, it) ?? 0;
     return addWithSpells({ ...c, inv: [...c.inv, it] }, cat, linkOf('item', id), inputsOf(cat, e, ans, r.specs));
   }

@@ -124,6 +124,12 @@ describe('a magic weapon or armor of the player’s choice (plan 7, Task 9)', ()
     expect(itemFromEntry(item('item/rope')).name).toBe('Rope');
     expect(answeredName(item('item/weapon-1-2-or-3'), item('item/longsword'), 2)).toEqual({ name: 'Longsword +2', rarity: 'Rare' });
   });
+  it('asks Ammunition +N for its ammunition, then its bonus, and copies no fields (Task 9b)', () => {
+    expect(ask('item/ammunition-1-2-or-3').map((q) => [q.key, q.label])).toEqual([['base', 'Which ammunition?'], ['bonus', '+1, +2 or +3']]);
+    expect(ask('item/ammunition-1-2-or-3')[0].options!.map((o) => o.value)).toEqual(['item/arrows', 'item/bolts', 'item/firearm-bullets', 'item/needles', 'item/sling-bullets']);
+    expect(added('item/ammunition-1-2-or-3', { base: 'item/arrows', bonus: 1 })).toMatchObject({ name: 'Arrows +1', base: 'item/arrows', magic: 1, rarity: 'Uncommon' });
+    expect(() => added('item/ammunition-1-2-or-3', { base: 'item/longbow', bonus: 1 })).toThrow(/ammunition/i);
+  });
   it('refuses a missing, foreign or magic base and a bonus outside 1–3 before anything changes', () => {
     expect(() => addFromCatalog(blank, cat, item('item/holy-avenger'), A())).toThrow(/weapon/i);
     expect(() => added('item/hammer-of-thunderbolts', { base: 'item/longsword' })).toThrow(/weapon/i);

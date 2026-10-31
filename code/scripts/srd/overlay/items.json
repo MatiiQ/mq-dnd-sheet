@@ -3,6 +3,11 @@
     "base": "armor",
     "baseOf": "item/breastplate,item/chain-mail,item/chain-shirt,item/half-plate-armor,item/plate-armor,item/ring-mail,item/scale-mail,item/splint-armor"
   },
+  "item/ammunition-1-2-or-3": {
+    "base": "ammo",
+    "magicPick": true,
+    "baseOf": "item/arrows,item/bolts,item/firearm-bullets,item/needles,item/sling-bullets"
+  },
   "item/amulet-of-health": {
     "grants": [
       {
