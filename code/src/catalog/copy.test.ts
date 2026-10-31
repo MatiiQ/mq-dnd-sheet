@@ -191,6 +191,12 @@ describe('poolOptions', () => {
     expect(opts.map((o) => o.value)).toContain('trait/elf/wood-elf');
     expect(opts.every((o) => (o.entry as { of?: string }).of === 'trait/elf/elven-lineage')).toBe(true);
   });
+  it('filters a spell pool by the Ritual tag', () => {
+    const rituals = poolOptions(cat, blank, 'spell:lvl=1;ritual=true', {});
+    expect(rituals.map((o) => o.value)).toContain('spell/detect-magic');
+    expect(rituals.map((o) => o.value)).not.toContain('spell/magic-missile');
+    expect(rituals.every((o) => (o.entry as { ritual?: boolean }).ritual === true)).toBe(true);
+  });
   it('lists the tools of a group, never the generic ones', () => {
     expect(poolOptions(cat, blank, 'tool:gaming-set', {}).map((o) => o.value).sort()).toEqual(['Dice', 'Dragonchess', 'Playing Cards', 'Three-Dragon Ante']);
     // The 17 Artisan's Tools (PHB p.220-221).

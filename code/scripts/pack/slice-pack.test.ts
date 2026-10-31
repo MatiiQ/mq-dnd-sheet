@@ -54,3 +54,72 @@ it.skipIf(!existsSync(PACK))('adds a PHB background with its ability picks, skil
   expect(c.feats.map((f) => f.name)).toEqual(expect.arrayContaining(['Guard', 'Alert']));
   expect(JSON.stringify(c)).toContain('Dice');
 });
+
+// A feat's Ability Score Increase, read from its own "ASI:" line: the abilities it names ("any one ability" = all six) and
+// its maximum ("(max N)", else 20, the reference's convention). The grants offer exactly those abilities with that cap,
+// as fixed `abil` grants, a choice of `abil` options, or an `abil` grant over an `ability:` pool choice.
+const ABIL_WORD: Record<string, string> = { Str: 'str', Dex: 'dex', Con: 'con', Int: 'int', Wis: 'wis', Cha: 'cha' };
+type G = Record<string, unknown> & { kind: string; options?: G[] };
+function offeredAbils(grants: G[]): { abs: string[]; caps: number[] } {
+  const abs: string[] = [], caps: number[] = [];
+  const pools = new Map(grants.filter((g) => g.kind === 'choice' && String(g.pool ?? '').startsWith('ability:')).map((g) => [g.id, String(g.pool).slice(8).split('|')]));
+  for (const g of grants.flatMap((x) => (x.kind === 'choice' ? x.options ?? [] : [x]))) {
+    if (g.kind !== 'abil') continue;
+    const ab = String(g.ab);
+    abs.push(...(ab.startsWith('$') ? pools.get(ab.slice(1)) ?? [] : [ab]));
+    caps.push(g.cap as number);
+  }
+  return { abs: [...new Set(abs)].sort(), caps: [...new Set(caps)] };
+}
+it.skipIf(!existsSync(PACK))('gives every PHB feat with an ASI line the abilities and maximum that line names', () => {
+  const cat = mergeCatalog(srdEntries, (JSON.parse(readFileSync(PACK, 'utf8')) as { entries: Entry[] }).entries);
+  const feats = cat.list.filter((e) => e.kind === 'feat' && e.src === 'phb') as (Entry & { grants: G[] })[];
+  let n = 0;
+  for (const f of feats) {
+    const line = /^ASI: (.+)$/m.exec(f.desc)?.[1];
+    if (!line || f.id === 'feat/resilient') continue;
+    n++;
+    const abs = /any one ability/.test(line) ? Object.values(ABIL_WORD) : [...line.matchAll(/\b(Str|Dex|Con|Int|Wis|Cha)\b/g)].map((m) => ABIL_WORD[m[1]]);
+    const cap = Number(/\(max (\d+)\)/.exec(line)?.[1] ?? 20);
+    expect([f.id, offeredAbils(f.grants)]).toEqual([f.id, { abs: [...abs].sort(), caps: [cap] }]);
+  }
+  expect(n).toBeGreaterThan(40);
+});
+
+// Resilient: one pick, each option pairs the ability's +1 with its saving throw proficiency under one `opt`.
+it.skipIf(!existsSync(PACK))('pairs Resilient’s ability increase with the same saving throw', () => {
+  const cat = mergeCatalog(srdEntries, (JSON.parse(readFileSync(PACK, 'utf8')) as { entries: Entry[] }).entries);
+  const r = cat.byId.get('feat/resilient') as Entry & { grants: G[] };
+  const ch = r.grants.find((g) => g.kind === 'choice')!;
+  expect(ch.pick).toBe(1);
+  const byOpt = new Map<string, string[]>();
+  for (const o of ch.options!) byOpt.set(String(o.opt), [...(byOpt.get(String(o.opt)) ?? []), o.kind === 'abil' ? `abil:${o.ab}:${o.cap}` : `${o.kind}:${o.cat}:${o.target}`]);
+  expect(byOpt.size).toBe(6);
+  for (const ab of Object.values(ABIL_WORD)) expect([...byOpt.values()]).toContainEqual([`abil:${ab}:20`, `prof:save:${ab}`]);
+});
+
+// The add flow of Resilient and of a spell feat: the answers land as one ability with its save, and as spells cast with
+// the increased ability, each with its free cast.
+it.skipIf(!existsSync(PACK))('adds Resilient and Fey-Touched with their picks', () => {
+  const cat = mergeCatalog(srdEntries, (JSON.parse(readFileSync(PACK, 'utf8')) as { entries: Entry[] }).entries);
+  const blank = { ...blankCharacter(), level: 4 }, none = { counted: {}, links: {} };
+  const res = cat.byId.get('feat/resilient')!;
+  expect(missingPicks(cat, blank, res, {})).toEqual(['c1']);
+  const c = addFromCatalog(blank, cat, res, { picks: { c1: ['o9'] }, ...none });
+  expect(effScore(c, 'wis') - effScore(blank, 'wis')).toBe(1);
+  expect(c.grants.filter((g) => g.kind === 'prof').map((g) => [g.cat, g.target])).toEqual([['save', 'wis']]);
+  const fey = cat.byId.get('feat/fey-touched')!;
+  expect(missingPicks(cat, blank, fey, {})).toEqual(['asi', 'sp']);
+  const f = addFromCatalog(blank, cat, fey, { picks: { asi: ['cha'], sp: ['spell/bless'] }, ...none });
+  expect(f.spells.map((s) => [s.name, s.castAb])).toEqual(expect.arrayContaining([['Misty Step', 'cha'], ['Bless', 'cha']]));
+  expect(f.res.map((r) => r.name)).toEqual(expect.arrayContaining(['Misty Step (free cast)', 'Bless (free cast)']));
+});
+
+// Speeds a feature gives only while its effect is on (an On/Off switch on the feature).
+it.skipIf(!existsSync(PACK))('gives Twinkling Constellations and Revelation in Flesh their Fly Speeds while active', () => {
+  const cat = mergeCatalog(srdEntries, (JSON.parse(readFileSync(PACK, 'utf8')) as { entries: Entry[] }).entries);
+  for (const [id, val] of [['feature/druid/circle-of-the-stars/twinkling-constellations', '20'], ['feature/sorcerer/aberrant-sorcery/revelation-in-flesh', 'walk']]) {
+    const fly = (cat.byId.get(id) as Entry & { grants: G[] }).grants.find((g) => g.kind === 'speed');
+    expect([id, fly?.mode, fly?.val, fly?.hover, fly?.when]).toEqual([id, 'fly', val, true, 'active']);
+  }
+});

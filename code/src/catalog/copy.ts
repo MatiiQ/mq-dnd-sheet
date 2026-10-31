@@ -260,7 +260,7 @@ export function poolOptions(cat: Catalog, c: Character, pool: string, picks: Rec
   const skill = (k: string): PoolOption => ({ value: k, label: SKILL_NAME[k], ...(skillLevel(c, k).level >= 1 ? { taken: true } : {}) });
   switch (kind) {
     case 'spell':
-      return filtered(entriesOfKind(cat, 'spell'), filter, ['list', 'lvl', 'school']).map((e) => ent(e, hasSpell(c, e))).sort(byName);
+      return filtered(entriesOfKind(cat, 'spell'), filter, ['list', 'lvl', 'school', 'ritual']).map((e) => ent(e, hasSpell(c, e))).sort(byName);
     case 'feat':
       return filtered(entriesOfKind(cat, 'feat'), filter, ['cat']).map((e) => {
         const { missing } = prereqMet(c, e.prereq, adding);
