@@ -12,11 +12,11 @@ const render = (c: Character) =>
 
 describe('ActionsTab', () => {
   it('renders Ilyra’s sections in order', () => {
-    const html = render({ ...sampleCharacter(), hands: ['i2', 'i2'] });
+    const html = render(sampleCharacter());
     const at = (s: string) => { const i = html.indexOf(s); expect(i, s).toBeGreaterThan(-1); return i; };
     const order = ['Weapon attacks', 'Attack</strong> · 2 attacks', 'Longbow', 'Unarmed Strike', 'Spells · damage', 'Spells · save', 'Spells · healing', 'Extra damage on a hit', 'Actions in combat', 'Opportunity Attack'];
     order.map(at).reduce((a, b) => { expect(b).toBeGreaterThan(a); return b; });
-    expect(html).toContain('Mastery: none chosen');
+    expect(html).toContain('Mastery: Longbow (Slow), Shortsword (Vex)');
   });
   it('disables two hands on Seren’s Quarterstaff while her Shield is on', () => {
     const html = render({ ...druidSample(), hands: ['i3'] });

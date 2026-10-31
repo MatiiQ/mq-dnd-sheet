@@ -316,3 +316,48 @@ describe('extra damage', () => {
     expect(twice.grants.filter((g) => g.kind === 'xdmg')).toHaveLength(1);
   });
 });
+
+describe('samples', () => {
+  const bowOf = (c: Character) => weaponAttacks(c, c.inv.find((i) => i.id === 'i2')!)[0];
+  it('Ilyra: Longbow with Archery, two attacks, Unarmed Strike, no typed attacks', () => {
+    const c = sampleCharacter();
+    expect(c.hands).toEqual(['i2', 'i2']);
+    expect(bowOf(c)).toMatchObject({ hit: 9, dmg: '1d8+4', held: true, mastery: 'slow' });
+    expect(bowOf(c).hitParts).toContainEqual({ label: 'Archery', value: 2 });
+    expect(attacksPerAction(c)).toBe(2);
+    expect(unarmedStrike(c).name).toBe('Unarmed Strike');
+    expect(c.attacks).toEqual([]);
+    expect(c.riders.map((r) => r.name)).toEqual(['Critical hit']);
+  });
+  it('Ilyra: Hunter’s Mark only while concentrating; Hail of Thorns and Cure Wounds', () => {
+    const c = sampleCharacter();
+    expect(extraDamage(c).some((x) => x.name === 'Hunter’s Mark')).toBe(false);
+    expect(extraDamage({ ...c, conc: { id: 'sp4', name: 'Hunter’s Mark' } }).map(extraText)).toContain('1d6 Force');
+    expect(spellActions(c).find((a) => a.name === 'Hail of Thorns')).toMatchObject({ group: 'save', dc: 13, dice: '1d10', dtype: 'Piercing' });
+    expect(spellActions(c).find((a) => a.name === 'Cure Wounds')!.dice).toBe('2d8 + WIS (+2)');
+    const withDagger = { ...c, inv: [...c.inv, dagger({ id: 'dg' })] };
+    const thrown = weaponAttacks(withDagger, withDagger.inv.find((i) => i.id === 'dg')!).find((a) => a.use === 'thrown')!;
+    expect(thrown.hitParts.some((p) => p.label === 'Archery')).toBe(false);
+  });
+  it('Ilyra: numbers follow DEX and level', () => {
+    const c = sampleCharacter();
+    expect(bowOf({ ...c, abil: { ...c.abil, dex: 20 } }).hit).toBe(10);
+    expect(bowOf({ ...c, level: 9 }).hit).toBe(10);
+  });
+  it('Seren: Shillelagh, Unarmed Strike, Thorn Whip, Produce Flame, Healing Word', () => {
+    const c = druidSample();
+    const qs = c.inv.find((i) => i.id === 'i3')!;
+    expect(c.hands).toEqual(['i3']);
+    expect(c.effectsOn).toEqual([]);
+    expect(weaponAttacks(c, qs)[0]).toMatchObject({ hit: 3, dmg: '1d6−1' });
+    expect(weaponAttacks({ ...c, effectsOn: ['spell:ds3'] }, qs)[0]).toMatchObject({ hit: 9, dmg: '1d12+5' });
+    const spells = spellActions(c);
+    expect(spells.find((a) => a.name === 'Shillelagh')).toMatchObject({ effect: true });
+    expect(unarmedStrike(c).name).toBe('Unarmed Strike');
+    expect(spells.find((a) => a.name === 'Thorn Whip')).toMatchObject({ group: 'damage', hit: 9, dice: '3d6', dtype: 'Piercing' });
+    expect(spells.find((a) => a.name === 'Produce Flame')).toMatchObject({ dice: '3d8', econ: 'action' });
+    expect(spells.find((a) => a.name === 'Healing Word')!.dice).toBe('2d4 + WIS (+5)');
+    expect(c.attacks).toEqual([expect.objectContaining({ name: 'Starry Form · Archer', econ: 'bonus', group: 'other' })]);
+    expect(c.riders.map((r) => r.id)).toEqual(['r2', 'r3']);
+  });
+});
