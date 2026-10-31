@@ -796,7 +796,9 @@ describe('sample numbers', () => {
     expect(numbers(migrate(oldIlyra()), Object.keys(ILYRA.res))).toEqual(ILYRA);
   });
   it('Seren, and an old save of her', () => {
-    expect(numbers(druidSample(), Object.keys(SEREN.res))).toEqual(SEREN);
+    // The one change the rebuild makes (approved by the owner): Primal Order · Magician now counts, adding her WIS
+    // modifier (+5) to Arcana and Nature checks (PHB p.80). Today's sheet could only hold it in the feature's text.
+    expect(numbers(druidSample(), Object.keys(SEREN.res))).toEqual({ ...SEREN, skills: { ...SEREN.skills, arcana: 10, nature: 6 } });
     expect(numbers(migrate(oldSeren()), Object.keys(SEREN.res))).toEqual(SEREN);
   });
 });
@@ -1236,8 +1238,9 @@ describe('adding grants', () => {
     const gift = n.res.at(-1)!;
     expect(gift).toMatchObject({ name: 'Gift', max: 2, count: 2, recharge: 'long', from: 'feature:fx' });
     expect(n.spells.at(-1)).toMatchObject({ name: 'Bless', lvl: 1, from: 'feature:fx', prep: false });
-    expect(n.grants.map((g) => [g.kind, g.from])).toEqual([['abil', 'feature:fx'], ['action', 'feature:fx']]);
-    expect(n.grants[1].res).toBe(gift.id);
+    const added = n.grants.slice(c.grants.length);
+    expect(added.map((g) => [g.kind, g.from])).toEqual([['abil', 'feature:fx'], ['action', 'feature:fx']]);
+    expect(added[1].res).toBe(gift.id);
     expect(effScore(n, 'wis')).toBe(15);
     const back = removeFeature(n, 'fx');
     for (const k of LISTS) expect(back[k]).toEqual(c[k]);
@@ -1301,29 +1304,24 @@ describe('adding grants', () => {
   });
   it('a second copy of a spell is still possible', () => {
     const c = custom(make());
-    expect(findUnlinked(c, 'spell', 'guidance')).toBe('sp2');
-    const n = addGrants(c, 'feature:fx', [{ spec: spec({ kind: 'spell', name: 'Guidance', spell: 'spell/guidance' }), spell: { name: 'Guidance', lvl: 0, time: 'Action', range: 'Touch' } }]);
-    expect(n.spells.filter((x) => x.name === 'Guidance')).toHaveLength(2);
+    expect(findUnlinked(c, 'spell', 'cure wounds')).toBe('sp5');
+    expect(findUnlinked(c, 'spell', 'guidance')).toBeNull(); // Magic Initiate's: already linked
+    const n = addGrants(c, 'feature:fx', [{ spec: spec({ kind: 'spell', name: 'Cure Wounds', spell: 'spell/cure-wounds' }), spell: { name: 'Cure Wounds', lvl: 1, time: 'Action', range: 'Touch' } }]);
+    expect(n.spells.filter((x) => x.name === 'Cure Wounds')).toHaveLength(2);
   });
 });
 
 describe('removal cascade', () => {
-  const guide = (): Character => {
-    const s = make({ conc: { id: 'sp2', name: 'Guidance' } });
-    return {
-      ...s,
-      feats: [...s.feats.map((f) => (f.id === 'f9' ? { ...f, from: 'feature:fg' } : f)), { id: 'fg', g: 'background', name: 'Guide', desc: '' }],
-      spells: s.spells.map((x) => (x.id === 'sp2' || x.id === 'sp8' ? { ...x, from: 'feature:f9' } : x))
-    };
-  };
+  // Ilyra: Guide (f20) → Magic Initiate (f9) → Guidance, Produce Flame, Goodberry and Goodberry's free cast.
   it('removes everything whose chain leads to the source, and ends Concentration on it', () => {
-    const c = guide();
-    const r = removeFeature(c, 'fg');
-    expect(r.feats.some((f) => f.id === 'fg' || f.id === 'f9')).toBe(false);
-    expect(r.spells.some((x) => x.id === 'sp2' || x.id === 'sp8')).toBe(false);
+    const c = make({ conc: { id: 'sp2', name: 'Guidance' } });
+    const r = removeFeature(c, 'f20');
+    expect(r.feats.some((f) => f.id === 'f20' || f.id === 'f9')).toBe(false);
+    expect(r.spells.some((x) => ['sp2', 'sp3', 'sp8'].includes(x.id))).toBe(false);
     expect(r.res.some((x) => x.id === 'fc8')).toBe(false);
+    expect(r.grants.some((g) => g.from === 'feature:f20')).toBe(false);
     expect(r.conc).toBeNull();
-    expect(removalSummary(c, { kind: 'feature', id: 'fg' }).goes).toEqual(['Magic Initiate (Druid)', 'Guidance', 'Goodberry', 'Goodberry']);
+    expect(removalSummary(c, { kind: 'feature', id: 'f20' }).goes).toEqual(['Magic Initiate (Druid)', 'Stealth', 'Survival', 'Cartographer’s Tools', 'Guidance', 'Produce Flame', 'Goodberry', 'Goodberry']);
   });
   it('removing a spell keeps a feature’s resource that casts it, without casts', () => {
     const c = make({ res: [{ id: 'favored', name: 'Favored Enemy', count: 2, max: 3, recharge: 'long', from: 'feature:f2', casts: 'sp4' }] });
@@ -1397,5 +1395,33 @@ describe('background migration', () => {
     expect(sampleCharacter().feats.find((f) => f.g === 'background')).toMatchObject({ id: 'f20', name: 'Guide' });
     expect(druidSample().feats.find((f) => f.g === 'background')).toMatchObject({ id: 'f26', name: 'Sage' });
     expect(migrate(oldIlyra()).feats.filter((f) => f.g === 'background').map((f) => f.name)).toEqual(['Guide']);
+  });
+});
+
+describe('rebuilt samples', () => {
+  it('link their entries to the features that give them', () => {
+    const i = sampleCharacter();
+    expect(grantChips(i, 'feature:f2').map((x) => x.label)).toEqual(['Hunter’s Mark', '3 × Favored Enemy / Long Rest']);
+    expect(i.feats.find((f) => f.id === 'f9')).toMatchObject({ from: 'feature:f20', cid: 'feat/magic-initiate' });
+    expect(i.feats.some((f) => f.g === 'training')).toBe(false);
+    expect(freeCastsOf(i, 'sp9')[0]).toMatchObject({ from: 'feature:f15', minLvl: 3 });
+    expect(i.spells.find((x) => x.id === 'sp12')).toMatchObject({ lvl: 2, minLvl: 5, from: 'feature:f15' });
+    expect(removalSummary(i, { kind: 'feature', id: 'f10' }).keep).toEqual(['DEX 18 still includes +2 from Ability Score Improvement; lower it by hand']);
+    const s = druidSample();
+    expect(s.res.find((r) => r.id === 'wild')).toMatchObject({ maxV: '2:2,6:3,17:4', regain: '1', regainOn: 'short', from: 'feature:f4' });
+    expect(maxOf(s, s.res.find((r) => r.id === 'wild')!)).toBe(3);
+    expect(s.feats.find((f) => f.id === 'f26')).toMatchObject({ g: 'background', name: 'Sage', cid: 'background/sage' });
+    expect(hasProf(s, 'language', 'Druidic')).toBe(true);
+    expect(s.profs.some((p) => p.name === 'Druidic')).toBe(false);
+    expect(s.spells.find((x) => x.id === 'ds7')).toMatchObject({ castAb: 'cha', from: 'feature:f19' });
+    expect(s.grants.find((g) => g.kind === 'atkAbil')).toMatchObject({ from: 'spell:ds3', when: 'active' });
+  });
+  it('load unchanged', () => {
+    expect(migrate(sampleCharacter())).toEqual(sampleCharacter());
+    expect(migrate(druidSample())).toEqual(druidSample());
+  });
+  it('the blank character holds none of their entries', () => {
+    const b = blankCharacter();
+    expect([b.grants, b.defenses, b.profs, b.effectsOn]).toEqual([[], [], [], []]);
   });
 });
