@@ -462,3 +462,19 @@ button.link-btn { background: none; border: none; padding: 0; cursor: pointer; t
 .pick-opt[aria-pressed="true"] .small { color: inherit; }
 /* The start of a long description in a closed row (two lines); the open row shows it whole. */
 .entry-clamp { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; white-space: pre-line; }
+
+/* ---------- actions tab (plan 5) ---------- */
+.filter-btn.tall { min-height: 44px; }
+.econ-tag { font: 700 11px var(--sans); letter-spacing: .02em; border-radius: 4px; padding: 1px 6px; border: 1px solid currentColor; white-space: nowrap; }
+.econ-action { color: var(--accent); }
+.econ-bonus { color: var(--blue); }
+.econ-reaction { color: var(--hp-mid); }
+.econ-free, .econ-other { color: var(--muted); }
+.act-nums { padding: 6px 0; align-items: center; }
+.act-dmg { font-size: 16px; font-weight: 600; }
+.act-dc { font: 700 15px var(--sans); color: var(--die); }
+.hand-btn, .toggle-btn { min-height: 44px; border: 1px solid var(--accent); color: var(--accent); }
+:is(.well, .dashed-box) .btn.hand-btn, :is(.well, .dashed-box) .btn.toggle-btn { background: transparent; }
+.hand-btn[aria-pressed="true"], .toggle-btn.on { background: var(--accent) !important; color: var(--on-accent); }
+.hand-btn[aria-disabled="true"] { border-color: var(--line-2); color: var(--off); cursor: not-allowed; }
+.toggle-btn.used { border-color: var(--line-2); color: var(--muted); }
