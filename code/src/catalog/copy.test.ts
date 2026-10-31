@@ -8,7 +8,7 @@ import type { Character, Item, Spell } from '../types';
 import { mergeCatalog } from './merge';
 import type { Entry, FeatureEntry, ItemEntry, SpellEntry } from './schema';
 import {
-  addFromCatalog, grantSpellName, BLANK_ITEM, BLANK_SPELL, catForKind, countedDefault, draftFromSpell, spellFromForm, type SpellDraft, choicesOf, classIdOf, matchId, nestedEntries, subclassIdOf, type AddChoices, freeText, itemFromEntry, itemFromForm, missingPicks, needed, optionGroups, poolOptions, prereqMet, resolveChoices,
+  addFromCatalog, draftFromItem, grantSpellName, withDetectedArmor, BLANK_ITEM, BLANK_SPELL, catForKind, countedDefault, draftFromSpell, spellFromForm, type SpellDraft, choicesOf, classIdOf, matchId, nestedEntries, subclassIdOf, type AddChoices, freeText, itemFromEntry, itemFromForm, missingPicks, needed, optionGroups, poolOptions, prereqMet, resolveChoices,
   spellFromEntry, spellSummary, validPicks, type ItemDraft
 } from './copy';
 
@@ -670,5 +670,53 @@ describe('grantSpellName', () => {
     expect(grantSpellName(cat, { name: 'Cantrips', spell: 'spell/guidance' })).toBe('Guidance');
     expect(grantSpellName(cat, { name: 'Cantrips', spell: 'Moonbeam Arrow' })).toBe('Moonbeam Arrow');
     expect(grantSpellName(cat, { name: 'Cantrips', spell: 'spell/not-loaded' })).toBe('Cantrips');
+  });
+});
+
+// ---- Task 7: the custom item form ----
+describe('draftFromItem', () => {
+  const round = (x: Omit<Item, 'id'>) => itemFromForm(draftFromItem({ id: 'i1', ...x }));
+  it('round-trips catalog items and keeps their catalog-only fields', () => {
+    for (const id of ['item/longsword', 'item/longbow', 'item/dagger', 'item/shield', 'item/bag-of-holding', 'item/wand-of-magic-missiles', 'item/dagger-of-venom']) {
+      const x = itemFromEntry(item(id));
+      expect([id, round(x)]).toEqual([id, without(x, 'eq')]);
+    }
+    expect(draftFromItem({ id: 'i1', ...itemFromEntry(item('item/dagger-of-venom')) })).toMatchObject({ kind: 'weapon', cat: 'magic', base: 'item/dagger' });
+    expect(draftFromItem({ id: 'i1', ...itemFromEntry(item('item/bag-of-holding')) }).kind).toBe('container');
+    expect(draftFromItem({ id: 'i1', ...itemFromEntry(item('item/shield')) }).kind).toBe('armor');
+  });
+  it('round-trips custom armor and a formula charges maximum', () => {
+    const mail = itemFromForm({ ...BLANK_ITEM, kind: 'armor', cat: 'armor', name: 'Chain Mail +1', armor: 'heavy', acBase: '16', acBonus: '1' });
+    expect(mail).toMatchObject({ armor: 'heavy', acBase: 16, acBonus: 1 });
+    expect(round({ ...mail, eq: false })).toEqual(mail);
+    const rod: Omit<Item, 'id'> = { name: 'Rod', qty: 1, eq: false, cat: 'gear', count: 2, maxV: 'pb', recharge: 'long' };
+    expect(draftFromItem({ id: 'i1', ...rod })).toMatchObject({ charges: true, chMaxKind: 'formula', chMaxText: 'pb' });
+    expect(round(rod)).toEqual(without(rod, 'eq'));
+  });
+  it('keeps the catalog fields and the charges left through an edit', () => {
+    const bag: Item = { id: 'i1', ...itemFromEntry(item('item/bag-of-holding')) };
+    const renamed = saveEntry<Item>([bag], itemFromForm({ ...draftFromItem(bag), name: 'My Bag' }), 'i1')[0];
+    expect(renamed).toMatchObject({ name: 'My Bag', cid: 'item/bag-of-holding', cost: bag.cost, rarity: 'Uncommon', cat: 'magic' });
+    const wand: Item = { id: 'i2', ...itemFromEntry(item('item/wand-of-magic-missiles')), count: 3 };
+    expect(saveEntry<Item>([wand], itemFromForm(draftFromItem(wand)), 'i2')[0].count).toBe(3);
+  });
+  it('lets the player set the base of armor of their choice', () => {
+    const plus = { id: 'i1', ...itemFromEntry(item('item/armor-1-2-or-3')) };
+    const d = draftFromItem(plus);
+    expect([d.kind, d.cat]).toEqual(['none', 'magic']);
+    const set = itemFromForm({ ...d, kind: 'armor', armor: 'medium', acBase: '14', acBonus: '1', cat: catForKind('armor', 'medium') });
+    expect(set).toMatchObject({ armor: 'medium', acBase: 14, acBonus: 1, cat: 'armor', cid: 'item/armor-1-2-or-3', rarity: plus.rarity, desc: plus.desc });
+  });
+});
+
+describe('withDetectedArmor', () => {
+  it('fills a new item named like armor', () => {
+    const d = withDetectedArmor({ ...BLANK_ITEM, name: 'Chain Mail' });
+    expect(d).toMatchObject({ kind: 'armor', armor: 'heavy', cat: 'armor' });
+    const it = itemFromForm(d);
+    expect(it).toMatchObject({ armor: 'heavy', acBase: 16, cat: 'armor' });
+    expect(draftFromItem({ id: 'i1', ...it, eq: false }).kind).toBe('armor');
+    expect(withDetectedArmor({ ...BLANK_ITEM, name: '+1 Shield' })).toMatchObject({ kind: 'armor', armor: 'shield', acBonus: '1', cat: 'shield' });
+    expect(withDetectedArmor({ ...BLANK_ITEM, name: 'Rope' }).kind).toBe('none');
   });
 });

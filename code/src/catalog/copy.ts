@@ -1,7 +1,7 @@
 // Copying catalog entries onto a character, and the custom forms that build the same fields by hand. Pure functions:
 // the pickers and forms call them, then save through update().
 import { linkOf, srcKindOfLink } from '../links';
-import { ABILITIES, addGrants, effScore, hasProf, maxFields, maxOf, newId, normName, parseWeight, SKILLS, skillLevel, type GrantInput } from '../logic';
+import { ABILITIES, addGrants, detectArmor, effScore, hasProf, maxFields, maxOf, newId, normName, parseWeight, SKILLS, skillLevel, type GrantInput } from '../logic';
 import type { AcEffect, Ability, ArmorKind, Character, Feature, FeatureGroup, Item, Linked, Recharge, Size, Spell, SrcKind } from '../types';
 import type { Catalog } from './merge';
 import { slug, type ChoiceSpec, type Entry, type GrantSpec, type ItemEntry, type ProfEntry, type SpellEntry } from './schema';
@@ -108,6 +108,35 @@ export function itemFromForm(d: ItemDraft): Omit<Item, 'id' | 'eq'> {
     count: d.charges ? d.chCount : undefined, max: max.max, maxV: max.maxV, recharge: d.charges ? d.chRecharge : undefined,
     regain, regainOn: regain ? regainOn : undefined
   };
+}
+
+// The form's kind for an item: weapon fields → weapon, armor → armor, a capacity → container, else none.
+const kindOfItem = (it: Item): ItemKind =>
+  it.wcat || it.wrange || it.dmg ? 'weapon' : it.armor ? 'armor' : it.xdim || it.cap !== undefined ? 'container' : 'none';
+const str = (v: number | string | undefined) => (v === undefined ? '' : String(v));
+// An item as the custom form's draft; itemFromForm of it gives the item back (minus eq, which the form doesn't own).
+export function draftFromItem(it: Item): ItemDraft {
+  const kind = kindOfItem(it);
+  const [ammoRange = '', ammoType = ''] = it.ammo ? it.ammo.split(';') : [];
+  const props = (it.props ? it.props.split(',') : []).filter((p): p is WeaponProp => (WEAPON_PROPS as readonly string[]).includes(p));
+  return {
+    ...BLANK_ITEM, kind, name: it.name, desc: it.desc ?? '', wt: str(it.wt), qty: it.qty, attune: !!it.attune,
+    wcat: it.wcat ?? 'simple', wrange: it.wrange ?? 'melee', dmg: it.dmg ?? '', dtype: it.dtype ?? '', props,
+    thrownRange: it.thrown ?? '', versDie: it.vers ?? '', ammoRange, ammoType, mastery: it.mastery ?? '', magic: str(it.magic),
+    armor: it.armor ?? 'light', acBase: str(it.acBase), acBonus: kind === 'armor' ? str(it.acBonus) : '', strReq: str(it.strReq), stealthDis: !!it.stealthDis,
+    xdim: !!it.xdim, cap: str(it.cap), capVol: it.capVol ?? '',
+    charges: it.count !== undefined, chMaxKind: it.maxV !== undefined ? 'formula' : it.max ? 'number' : 'none', chMaxText: it.maxV ?? str(it.max),
+    chCount: it.count ?? 0, chRecharge: it.recharge ?? 'dawn', chRegain: it.regain ?? '',
+    cat: it.cat ?? catForKind(kind, it.armor), cost: it.cost, rarity: it.rarity, cid: it.cid, base: it.base
+  };
+}
+
+// A new item named like armor ("Chain Mail", "+1 Shield") with its kind left at None becomes that armor, its category
+// with it, so the item's kind and cat agree.
+export function withDetectedArmor(d: ItemDraft): ItemDraft {
+  const det = d.kind === 'none' ? detectArmor(d.name) : null;
+  if (!det?.armor) return d;
+  return { ...d, kind: 'armor', armor: det.armor, acBase: str(det.acBase), acBonus: det.acBonus ? String(det.acBonus) : d.acBonus, cat: catForKind('armor', det.armor) };
 }
 
 // ---- Choices ----
