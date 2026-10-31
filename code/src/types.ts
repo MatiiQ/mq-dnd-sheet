@@ -1,3 +1,4 @@
+import type { ProfCat } from './catalog/names';
 import type { GrantSpec } from './catalog/schema';
 
 export type Ability = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
@@ -29,6 +30,8 @@ export interface Linked { from?: string; srcKind?: SrcKind; srcName?: string; wh
 // and the attack kinds. Same flat fields as the catalog's GrantSpec; the spec's `lvl` is stored as `minLvl`, the field
 // entries use. counted: "Already counted in my numbers", shown on its source but adding nothing.
 export type Grant = Omit<GrantSpec, 'opt' | 'lvl'> & { from: string; srcKind?: SrcKind; counted?: boolean; minLvl?: number };
+// A proficiency set by hand (armor, weapon, tool or language). Granted ones are grants (kind 'prof').
+export interface Prof { id: string; cat: ProfCat; name: string }
 export interface Sense extends Linked { id: string; name: string; range: string; desc?: string }
 // inv: legacy "Also list in Inventory" flag, kept only on resources with a max or a recharge (plan 3 moves them onto items).
 export interface Resource { id: string; name: string; note?: string; count: number; max?: number; recharge?: Recharge; refill?: boolean; inv?: boolean }
@@ -75,7 +78,7 @@ export interface Character {
   /** Attunement slots: 3 item ids, '' for an empty slot. */
   coins: Record<Coin, number>; attuneIds: string[]; notes: Record<NoteKey, string>;
   inv: Item[]; spells: Spell[]; feats: Feature[];
-  grants: Grant[];
+  grants: Grant[]; profs: Prof[];
   /** Effects switched on: 'feature:<id>', 'item:<id>' or a non-Concentration 'spell:<id>' (a Concentration spell's is on through conc). */
   effectsOn: string[];
 }

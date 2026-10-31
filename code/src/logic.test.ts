@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import {
-  ABILITIES, SKILLS, abilityParts, effScore, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, NEW_FIELDS, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, removeItem, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
+  ABILITIES, SKILLS, abilityParts, effScore, hasProf, profList, saveProficient, skillLevel, splitTraining, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, NEW_FIELDS, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, removeItem, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
   setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, toggleFreeCast, undoHp
 } from './logic';
 import { oldIlyra, oldSeren } from './test-fixtures';
@@ -595,6 +595,8 @@ describe('saves keep working', () => {
     for (const k of NEW_FIELDS) {
       const raw = { ...sampleCharacter() } as Record<string, unknown>;
       delete raw[k];
+      // A save without profs also has its Training features split (Training migration); leave none to split here.
+      if (k === 'profs') raw.feats = sampleCharacter().feats.filter((f) => f.g !== 'training');
       expect(migrate(raw)[k]).toEqual(blankCharacter()[k]);
       expect(migrate({ ...sampleCharacter(), [k]: 7 })[k]).toEqual(blankCharacter()[k]); // no new field is a number
     }
@@ -786,5 +788,78 @@ describe('ability score grants', () => {
   it('breaks a score into its base, grants and adjustment', () => {
     const c = withAbil(15, [g('a', 'dex', '2')], { abilAdj: { dex: -1 } });
     expect(abilityParts(c, 'dex').map((p) => [p.label, p.value])).toEqual([['Score', 15], ['Grant a', 2], ['Adjustment', -1]]);
+  });
+});
+
+describe('proficiencies', () => {
+  const pg = (id: string, cat: Grant['cat'], target?: string, p: Partial<Grant> = {}): Grant =>
+    ({ id, kind: 'prof', name: 'Prof ' + id, cat, ...(target ? { target } : {}), from: 'feature:f4', ...p });
+  it('takes the higher of the hand level and the grants, and names the grant that raised it', () => {
+    const c = make({ skillProf: { stealth: 1, survival: 2 }, grants: [pg('a', 'expertise', 'stealth'), pg('b', 'skill', 'survival')] });
+    expect(skillLevel(c, 'stealth')).toEqual({ level: 2, hand: 1, by: 'Class · Deft Explorer' });
+    expect(skillLevel(c, 'survival')).toEqual({ level: 2, hand: 2 });
+    expect(skillLevel({ ...c, grants: [] }, 'stealth')).toEqual({ level: 1, hand: 1 });
+    expect(skillMod(c, 'stealth', 'dex')).toBe(4 + 6);
+  });
+  it('adds half Proficiency Bonus, rounded down, to skills without proficiency (PHB p.60), not to Initiative', () => {
+    const bard = make({ level: 5, skillProf: { arcana: 1 }, grants: [pg('j', 'half')] });
+    expect(skillMod(bard, 'history', 'int')).toBe(0 + 1);
+    expect(skillMod(bard, 'arcana', 'int')).toBe(0 + 3);
+    expect(initiative(bard)).toBe(initiative(make({ level: 5 })));
+  });
+  it('adds check bonuses to a skill or to every skill of an ability', () => {
+    const cb = (target: string): Grant => ({ id: 'c' + target, kind: 'checkBonus', name: 'Magician', target, val: 'wis>=1', from: 'feature:f4' });
+    const low = make({ abil: { ...make().abil, wis: 8 }, skillProf: {} });
+    expect(skillMod({ ...low, grants: [cb('arcana')] }, 'arcana', 'int')).toBe(1);
+    expect(skillMod({ ...low, grants: [cb('arcana')] }, 'history', 'int')).toBe(0);
+    const intAll = { ...low, grants: [cb('int')] };
+    expect(['arcana', 'history', 'nature'].map((k) => skillMod(intAll, k, 'int'))).toEqual([1, 1, 1]);
+    expect(initiative({ ...low, grants: [cb('dex')] })).toBe(initiative(low) + 1); // Initiative is a Dexterity check (PHB p.23)
+  });
+  it('adds save bonuses and save proficiency grants', () => {
+    const aura: Grant = { id: 'au', kind: 'saveBonus', name: 'Aura', ab: 'all', val: 'cha>=1', from: 'feature:f4' };
+    const c = make({ grants: [aura] }); // CHA 8: at least +1
+    expect(ABILITIES.map(([k]) => saveMod(c, k) - saveMod(make(), k))).toEqual([1, 1, 1, 1, 1, 1]);
+    const s = make({ grants: [pg('s', 'save', 'con')] });
+    expect(saveProficient(s, 'con')).toEqual({ on: true, by: 'Class · Deft Explorer' });
+    expect(saveProficient(s, 'str')).toEqual({ on: true });
+    expect(saveMod(s, 'con')).toBe(2 + 3);
+  });
+  it('lists hand and granted proficiencies once per name', () => {
+    const c = make({ profs: [{ id: 'p1', cat: 'tool', name: 'Thieves’ Tools' }], grants: [pg('t', 'tool', "thieves' tools"), pg('l', 'language', 'Elvish')] });
+    expect(profList(c)).toEqual([{ cat: 'tool', name: 'Thieves’ Tools', id: 'p1', by: 'Class · Deft Explorer' }, { cat: 'language', name: 'Elvish', by: 'Class · Deft Explorer' }]);
+    expect(hasProf(c, 'language', 'elvish')).toBe(true);
+    expect(hasProf(c, 'weapon', 'club')).toBe(false);
+  });
+});
+
+describe('Training migration', () => {
+  const names = (c: Character) => c.profs.map((p) => p.name);
+  it('turns Ilyra\'s old Training features into proficiencies', () => {
+    const c = migrate(oldIlyra());
+    expect(names(c)).toEqual(['Light armor', 'Medium armor', 'Shields', 'Simple weapons', 'Martial weapons', 'Cartographer’s Tools', 'Common', 'Elvish', 'Sylvan', 'Draconic']);
+    expect(c.profs.map((p) => p.cat)).toEqual(['armor', 'armor', 'armor', 'weapon', 'weapon', 'tool', 'language', 'language', 'language', 'language']);
+    expect(c.feats.some((f) => f.g === 'training')).toBe(false);
+    expect(hasProf(c, 'weapon', 'martial weapons')).toBe(true);
+    expect(migrate(c)).toEqual(c);
+  });
+  it('converts all of Seren\'s, Druidic included', () => {
+    const c = migrate(oldSeren());
+    expect(names(c)).toEqual(['Light armor', 'Shields', 'Simple weapons', 'Herbalism Kit', 'Calligrapher’s Supplies', 'Common', 'Druidic', 'Elvish', 'Dwarvish']);
+    expect(c.feats.some((f) => f.g === 'training')).toBe(false);
+  });
+  it('matches only full names under another heading, and keeps what it can\'t match', () => {
+    const { feats, profs } = splitTraining([{ id: 'x', g: 'training', name: 'Proficiencies', desc: 'Light, Thieves’ Tools' },
+      { id: 'y', g: 'training', name: 'Tools', desc: 'Ox cart, Smith’s Tools' }, { id: 'z', g: 'class', name: 'Rage', desc: 'Angry' }]);
+    expect(profs.map((p) => [p.cat, p.name])).toEqual([['tool', 'Thieves’ Tools'], ['tool', 'Smith’s Tools']]);
+    expect(feats.map((f) => [f.id, f.desc])).toEqual([['x', 'Light'], ['y', 'Ox cart'], ['z', 'Angry']]);
+  });
+  it('runs only on saves without proficiencies', () => {
+    const raw = { ...oldIlyra(), profs: [], feats: [{ id: 't', g: 'training', name: 'Tools', desc: 'Thieves\' Tools' }] };
+    expect(migrate(raw).feats).toEqual([{ id: 't', g: 'training', name: 'Tools', desc: 'Thieves\' Tools' }]);
+    expect(migrate(raw).profs).toEqual([]);
+  });
+  it('drops a proficiency with an unknown category', () => {
+    expect(migrate({ ...sampleCharacter(), profs: [{ id: 'a', cat: 'vehicle', name: 'Boat' }, { id: 'b', cat: 'tool', name: 'Lute' }] }).profs).toEqual([{ id: 'b', cat: 'tool', name: 'Lute' }]);
   });
 });

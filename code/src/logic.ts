@@ -2,8 +2,9 @@
 import { blankCharacter, sampleCharacter } from './defaults';
 import { grantErrors } from './catalog/schema';
 import { valueAt, type ValueCtx } from './catalog/value';
-import { activeGrants, dropLinkOnly, fixLinks, hasActiveEffect, linkOf, parseLink, sourceOf, SRC_KINDS } from './links';
-import type { AcEffect, Ability, ArmorKind, CastAbility, Character, Concentration, Grant, HpSnapshot, Item, Linked, Resource, Size, Spell, SpellSort, Tab, Unarmored, When } from './types';
+import { PROF_NAMES, type ProfCat } from './catalog/names';
+import { activeGrants, dropLinkOnly, fixLinks, hasActiveEffect, linkOf, parseLink, sourceLabel, sourceOf, SRC_KINDS } from './links';
+import type { AcEffect, Ability, ArmorKind, CastAbility, Character, Concentration, Feature, Grant, HpSnapshot, Item, Prof, Linked, Resource, Size, Spell, SpellSort, Tab, Unarmored, When } from './types';
 
 export const ABILITIES: [Ability, string][] = [
   ['str', 'Strength'], ['dex', 'Dexterity'], ['con', 'Constitution'],
@@ -88,11 +89,38 @@ export function abilityParts(c: Character, k: Ability): AcPart[] {
 export const effScore = (c: Character, k: Ability) =>
   clamp(abilityParts(c, k).reduce((t, p) => t + (p.note === 'counted' ? 0 : p.value), 0), 1, 30);
 export const abilityMod = (c: Character, k: Ability) => mod(effScore(c, k));
-export const skillMod = (c: Character, key: string, ab: Ability) => abilityMod(c, ab) + profBonus(c.level) * (c.skillProf[key] || 0);
+// Skill proficiency level (0 none, 1 proficient, 2 Expertise): the higher of the hand value and the active grants.
+// `by` names the grant's source when a grant raises it above the hand value.
+export function skillLevel(c: Character, key: string): { level: number; hand: number; by?: string } {
+  const hand = c.skillProf[key] || 0;
+  let level = hand, by: string | undefined;
+  for (const g of activeGrants(c, 'prof', true)) {
+    const lv = g.target !== key ? 0 : g.cat === 'skill' ? 1 : g.cat === 'expertise' ? 2 : 0;
+    if (lv > level) { level = lv; by = sourceLabel(c, g); }
+  }
+  return by ? { level, hand, by } : { level, hand };
+}
+// Check bonus grants for a skill, or for every check of its ability (Magician: WIS modifier on Arcana and Nature).
+const checkBonus = (c: Character, targets: string[]) =>
+  activeGrants(c, 'checkBonus').filter((g) => targets.includes(g.target ?? '')).reduce((t, g) => t + num(c, g.val), 0);
+// Skill check: ability modifier + PB × level. Jack of All Trades adds half PB, rounded down, to a check with a skill
+// you aren't proficient in (PHB p.60).
+export function skillMod(c: Character, key: string, ab: Ability): number {
+  const pb = profBonus(c.level), lv = skillLevel(c, key).level;
+  const half = lv === 0 && activeGrants(c, 'prof', true).some((g) => g.cat === 'half') ? Math.floor(pb / 2) : 0;
+  return abilityMod(c, ab) + pb * lv + half + checkBonus(c, [key, ab]);
+}
 // Passive Perception = 10 + the Perception check bonus (PHB p.372). The sheet uses the same formula for Investigation and Insight, which the rules don't define.
 export const passiveScore = (c: Character, key: string) => 10 + skillMod(c, key, SKILLS.find(([k]) => k === key)![2]);
 // Saving throw: d20 + ability modifier, + Proficiency Bonus if proficient (PHB p.11).
-export const saveMod = (c: Character, k: Ability) => abilityMod(c, k) + (c.saveProf[k] ? profBonus(c.level) : 0);
+export function saveProficient(c: Character, k: Ability): { on: boolean; by?: string } {
+  if (c.saveProf[k]) return { on: true };
+  const g = activeGrants(c, 'prof', true).find((x) => x.cat === 'save' && x.target === k);
+  return g ? { on: true, by: sourceLabel(c, g) } : { on: false };
+}
+// Plus save bonus grants for this ability or for all saves (Aura of Protection).
+export const saveMod = (c: Character, k: Ability) => abilityMod(c, k) + (saveProficient(c, k).on ? profBonus(c.level) : 0) +
+  activeGrants(c, 'saveBonus').filter((g) => g.ab === k || g.ab === 'all').reduce((t, g) => t + num(c, g.val), 0);
 // Spell save DC = 8 + spellcasting ability modifier + PB; spell attack = modifier + PB (PHB p.41). null without a spellcasting ability.
 export const spellSaveDC = (c: Character) => (c.castAb === 'none' ? null : 8 + abilityMod(c, c.castAb) + profBonus(c.level));
 export const spellAttack = (c: Character) => (c.castAb === 'none' ? null : abilityMod(c, c.castAb) + profBonus(c.level));
@@ -105,8 +133,10 @@ export const spellDcParts = (c: Character): AcPart[] | null => {
   const parts = spellAttackParts(c);
   return parts && [{ label: 'Base', value: 8 }, ...parts];
 };
-// Initiative is a Dexterity check (PHB p.23); initMisc holds extra bonuses from features or items.
-export const initiative = (c: Character) => abilityMod(c, 'dex') + c.initMisc;
+// Initiative is a Dexterity check (PHB p.23), so Dexterity check bonus grants add; initMisc holds extra bonuses from
+// features or items. No half PB: Jack of All Trades needs a skill check you aren't proficient in (PHB p.60), and
+// Initiative uses no skill (the 2014 rule applied it to Initiative; the 2024 one doesn't).
+export const initiative = (c: Character) => abilityMod(c, 'dex') + c.initMisc + checkBonus(c, ['dex']);
 
 // Armor table: name, category, base AC; a Shield adds 2. One suit of armor and one Shield at a time (PHB p.219).
 export const ARMORS: [string, ArmorKind, number][] = [
@@ -511,7 +541,7 @@ const slots = (v: unknown[]) => Array.from({ length: 10 }, (_, i) => (typeof v[i
 // Records with fixed keys: a missing or damaged key falls back to the blank character's value.
 const FIXED_RECORDS = ['ch', 'abil', 'speeds', 'coins', 'notes', 'def'] as const;
 // Lists of entries: each needs a name and holds only plain values.
-const ENTRY_LISTS = ['senses', 'res', 'attacks', 'riders', 'inv', 'spells', 'feats', 'acMods', 'grants'] as const;
+const ENTRY_LISTS = ['senses', 'res', 'attacks', 'riders', 'inv', 'spells', 'feats', 'acMods', 'grants', 'profs'] as const;
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 export const isEntry = (x: unknown): x is Record<string, unknown> =>
   isObj(x) && typeof x.name === 'string' && Object.values(x).every((v) => v === null || typeof v !== 'object');
@@ -536,7 +566,7 @@ function cleanLinked<T extends Linked>(x: T): T {
 }
 const cleanCid = <T extends { cid?: string }>(x: T): T => { const { cid, ...rest } = x; return (typeof cid === 'string' ? { ...rest, cid } : rest) as T; };
 
-export const NEW_FIELDS: readonly (keyof Character)[] = ['spellSort', 'size', 'carryUp', 'attuneIds', 'grants', 'effectsOn'];
+export const NEW_FIELDS: readonly (keyof Character)[] = ['spellSort', 'size', 'carryUp', 'attuneIds', 'grants', 'effectsOn', 'profs'];
 // Resources the Inventory tab echoed before `inv` existed.
 const OLD_INVENTORY_RESOURCES = ['arrows', 'potions'];
 
@@ -567,6 +597,9 @@ export function migrate(data: unknown): Character {
   });
   c.feats = c.feats.map((x) => cleanCid(cleanLinked(x)));
   c.attacks = c.attacks.map(cleanLinked);
+  c.profs = c.profs.filter((p) => PROF_CATS.includes(p.cat));
+  // Saves from before proficiencies were data: their Training features become proficiencies, once.
+  if (data.profs === undefined) ({ feats: c.feats, profs: c.profs } = splitTraining(c.feats));
   // Grants: a link that doesn't parse goes first, so grantErrors knows the source kind; then the grant must be valid.
   c.grants = c.grants.filter((g) => parseLink(g.from) && !grantErrors(g, parseLink(g.from)!.kind).length).map(cleanLinked);
   c.inv = c.inv.map(cleanCid);
@@ -680,6 +713,42 @@ export function migrate(data: unknown): Character {
   const fixed = fixLinks(c);
   // A grant exists only through its source: one whose link fixLinks cleared goes.
   return { ...fixed, grants: fixed.grants.filter((g) => g.from) };
+}
+
+const PROF_CATS: ProfCat[] = ['armor', 'weapon', 'tool', 'language'];
+// Armor, weapon, tool and language proficiencies: the hand ones (with id), then the granted ones (with their source),
+// once per name within a category.
+export function profList(c: Character): { cat: ProfCat; name: string; id?: string; by?: string }[] {
+  const out: { cat: ProfCat; name: string; id?: string; by?: string }[] = c.profs.map((p) => ({ cat: p.cat, name: p.name, id: p.id }));
+  for (const g of activeGrants(c, 'prof', true)) {
+    if (!PROF_CATS.includes(g.cat as ProfCat)) continue;
+    const name = g.target ?? g.name, by = sourceLabel(c, g);
+    const same = out.find((p) => p.cat === g.cat && normName(p.name) === normName(name));
+    if (same) same.by ??= by;
+    else out.push({ cat: g.cat as ProfCat, name, ...(by ? { by } : {}) });
+  }
+  return out;
+}
+export const hasProf = (c: Character, cat: ProfCat, name: string) => profList(c).some((p) => p.cat === cat && normName(p.name) === normName(name));
+
+// Older saves kept proficiencies as Training features ("Armor: Light, Medium, Shields"). Each comma part that names a
+// proficiency becomes one; the rest stays in the feature, and a feature with nothing left goes. Under an Armor,
+// Weapons, Tools or Languages heading a short form matches too ("Light"); under any other heading only full names do.
+const TRAINING_CATS: Record<string, ProfCat> = { armor: 'armor', weapons: 'weapon', tools: 'tool', languages: 'language' };
+export function splitTraining(feats: Feature[]): { feats: Feature[]; profs: Prof[] } {
+  const profs: Prof[] = [];
+  const out = feats.flatMap((f) => {
+    if (f.g !== 'training') return [f];
+    const cat = TRAINING_CATS[normName(f.name)];
+    const left = f.desc.split(',').map((x) => x.trim()).filter(Boolean).filter((part) => {
+      const n = normName(part);
+      const hit = PROF_NAMES.find((p) => (cat ? p.cat === cat && (normName(p.name) === n || (p.short && normName(p.short) === n)) : normName(p.name) === n));
+      if (hit) profs.push({ id: newId(), cat: hit.cat, name: hit.name });
+      return !hit;
+    });
+    return left.length ? [{ ...f, desc: left.join(', ') }] : [];
+  });
+  return { feats: out, profs };
 }
 
 // Names match after trimming, ignoring case and treating ’ and ' as the same character.

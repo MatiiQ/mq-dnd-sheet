@@ -168,6 +168,11 @@ h1, h2, h3 { margin: 0; }
   font-size: 13px; font-weight: 600; cursor: pointer; min-height: 40px; padding: 0 12px; border-radius: 20px;
   border: none; background: var(--well); color: var(--text-2);
 }
+.prof-chip {
+  display: inline-flex; align-items: center; gap: 4px; min-height: 44px; padding: 0 4px 0 12px; border-radius: 22px;
+  background: var(--well); color: var(--text-2); font-size: 13px; font-weight: 600;
+}
+.prof-chip:not(:has(button)) { padding-right: 12px; }
 .filter-btn {
   font-size: 13px; font-weight: 600; cursor: pointer; border: none; min-height: 40px; padding: 0 14px; border-radius: 20px;
   background: var(--well); color: var(--text-2);

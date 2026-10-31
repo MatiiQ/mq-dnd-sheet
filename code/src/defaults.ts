@@ -79,7 +79,7 @@ export function sampleCharacter(): Character {
       { id: 'f18', g: 'training', name: 'Tools', desc: 'Cartographer’s Tools' },
       { id: 'f19', g: 'training', name: 'Languages', desc: 'Common, Elvish, Sylvan, Draconic' }
     ],
-    grants: [], effectsOn: []
+    grants: [], effectsOn: [], profs: []
   };
 }
 
@@ -206,7 +206,7 @@ export function druidSample(): Character {
       { id: 'f24', g: 'training', name: 'Languages', desc: 'Common, Druidic, Elvish, Dwarvish' },
       { id: 'f25', g: 'other', name: 'Wild Shape forms', desc: '8 known, up to CR 1, flying allowed: Brown Bear, Dire Wolf, Giant Spider, Giant Seahorse, Riding Horse, Hawk, Owl, Rat (PHB appendix B).' }
     ],
-    grants: [], effectsOn: []
+    grants: [], effectsOn: [], profs: []
   };
 }
 
@@ -221,6 +221,6 @@ export function blankCharacter(): Character {
     slotMax: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], slotUsed: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     def: { res: [], vul: [], imm: [], adv: [] }, senses: [], res: [], attacks: [], riders: [],
     coins: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 }, attuneIds: ['', '', ''], inv: [], spells: [], feats: [], prepMax: 0,
-    grants: [], effectsOn: []
+    grants: [], effectsOn: [], profs: []
   };
 }
