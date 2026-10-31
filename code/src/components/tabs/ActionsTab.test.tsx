@@ -40,6 +40,16 @@ describe('ActionsTab', () => {
     expect(html).toContain('Ice Knife · Burst');
     expect(html.match(/aria-label="Cast Ice Knife with/g)).toHaveLength(1);
   });
+  it('offers the Longbow the ammunition it can load, never Bolts (plan 7)', () => {
+    const s = sampleCharacter();
+    const extra = [{ id: 'a2', name: 'Arrows +2', qty: 20, eq: false, cat: 'magic' as const, cid: 'item/ammunition-1-2-or-3', base: 'item/arrows', magic: 2 },
+      { id: 'bo', name: 'Bolts', qty: 20, eq: false, cat: 'ammo' as const, cid: 'item/bolts' }];
+    const html = render({ ...s, inv: [...s.inv, ...extra] });
+    const sel = /<select[^>]*aria-label="Ammunition for Longbow"[^>]*>([\s\S]*?)<\/select>/.exec(html)?.[1] ?? '';
+    expect(sel).toContain('None');
+    expect(sel).toContain('Arrows +2');
+    expect(sel).not.toContain('Bolts');
+  });
   it('shows the Light extra attack with two Daggers in hand', () => {
     const c: Character = { ...sampleCharacter(), inv: [...sampleCharacter().inv, dagger({ id: 'dg', qty: 2 })], hands: ['dg', 'dg'] };
     expect(render(c)).toContain('Light extra attack · Dagger');

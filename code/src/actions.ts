@@ -127,7 +127,10 @@ function attackFor(c: Character, it: Item, use: Use): { attack: WeaponAttack; di
   const inHand = c.hands.filter((id) => id === it.id).length;
   const pb = profBonus(c.level), ctx = valueCtx(c);
   const ab = weaponAbility(c, it, use), mod = abilityMod(c, ab);
-  const magic = it.magic ? [{ label: 'Magic', value: it.magic }] : [];
+  // Loaded magic ammunition adds its own bonus on a ranged use, next to the weapon's (plan 7): the two come from different
+  // items and neither text limits the other (SRD 5.2.1 Ammunition, +1, +2, or +3; Ammunition property, PHB p.213).
+  const loaded = use === 'ranged' && it.load ? c.inv.find((x) => x.id === it.load)?.magic : undefined;
+  const magic = [...(it.magic ? [{ label: 'Magic', value: it.magic }] : []), ...(loaded ? [{ label: 'Ammunition', value: loaded }] : [])];
   const hitParts: AcPart[] = [{ label: abilityName(ab), value: mod }, ...(weaponProficient(c, it) ? [{ label: 'Proficiency Bonus', value: pb }] : []),
     ...magic, ...grantParts(c, 'atkBonus', it, use)].filter((p) => p.value !== 0);
   const dmgParts: AcPart[] = [{ label: abilityName(ab), value: mod }, ...magic, ...grantParts(c, 'dmgBonus', it, use)].filter((p) => p.value !== 0);

@@ -10,6 +10,18 @@ export const hasProp = (it: Item, p: string) => propsOf(it).includes(p);
 export const isWeapon = (it: Item) => it.cat === 'weapon' || !!it.wcat;
 export const twoHanded = (it: Item) => hasProp(it, 'two-handed');
 export const versatile = (it: Item) => hasProp(it, 'versatile');
+
+// Ammunition types (plan 7). A weapon's is the part of its Ammunition field after ';' ('150/600;arrow'; PHB p.213:
+// the ammunition type is listed with the range). An ammunition item's comes from its catalog id, or from its base for
+// Ammunition +N; Firearm Bullets fit no SRD weapon, and ammunition typed by hand has no type.
+const AMMO_TYPE: Record<string, string> = { 'item/arrows': 'arrow', 'item/bolts': 'bolt', 'item/sling-bullets': 'bullet', 'item/needles': 'needle' };
+export function ammoType(it: Item): string {
+  if (isWeapon(it)) return (it.ammo ?? '').split(';')[1] ?? '';
+  return AMMO_TYPE[it.cid ?? ''] ?? (it.cid === 'item/ammunition-1-2-or-3' ? AMMO_TYPE[it.base ?? ''] ?? '' : '');
+}
+// A weapon with the Ammunition property can be loaded with ammunition of its own type.
+export const canLoad = (weapon: Item, ammo: Item) =>
+  isWeapon(weapon) && hasProp(weapon, 'ammunition') && !isWeapon(ammo) && ammoType(weapon) !== '' && ammoType(weapon) === ammoType(ammo);
 // The kind of weapon: a magic weapon's base item ('item/dagger' for a Dagger of Venom), else the catalog id's last
 // segment ('item/longbow' → 'longbow'), else the name as a slug without a leading or trailing '+N' ("Longsword +1").
 export function weaponKind(it: Item): string {

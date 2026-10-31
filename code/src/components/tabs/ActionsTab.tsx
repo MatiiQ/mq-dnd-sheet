@@ -5,7 +5,7 @@ import {
 } from '../../actions';
 import { dtypeText } from '../../catalog/copy';
 import { entriesOf, useCatalog } from '../../catalog/useCatalog';
-import { isWeapon, putAway, putInHand, shieldOn as shieldOf, twoHanded, versatile, weaponKind, weaponsHeld } from '../../hands';
+import { canLoad, hasProp, isWeapon, putAway, putInHand, shieldOn as shieldOf, twoHanded, versatile, weaponKind, weaponsHeld } from '../../hands';
 import { linkOf, sourceLabel } from '../../links';
 import { castFree, castSpell, COMBAT_ACTIONS, fmt, freeCastsOf, removeRef, slotsLeft, spellUsable, toggleEffect, type AcPart } from '../../logic';
 import { patchEntry, removeEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
@@ -108,6 +108,21 @@ export function ActionsTab() {
       </div>
     );
   };
+  // The ammunition a weapon with the Ammunition property shoots (plan 7): the items in inv it can load, outside any
+  // container, or None. Its magic adds to the ranged attack.
+  const ammoPicker = (it: Item) => {
+    const fits = c.inv.filter((x) => !x.in && canLoad(it, x));
+    if (!hasProp(it, 'ammunition') || (!fits.length && !it.load)) return null;
+    return (
+      <label className="field">Ammunition
+        <select className="input" aria-label={'Ammunition for ' + it.name} value={it.load ?? ''}
+          onChange={(e) => act((p) => ({ ...p, inv: p.inv.map((x) => (x.id === it.id ? { ...x, load: e.target.value || undefined } : x)) }))}>
+          <option value="">None</option>
+          {fits.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+        </select>
+      </label>
+    );
+  };
   const weaponRow = (it: Item, a: WeaponAttack, controls: boolean) => shows(a.econ) && (
     <ActRow key={it.id + a.use} econ={a.econ}
       name={a.name + (USE_LABEL[a.use] ? ' · ' + USE_LABEL[a.use] : '')}
@@ -116,7 +131,7 @@ export function ActionsTab() {
         <span className="sr-only">To hit</span><DieBadge value={fmt(a.hit)} />
         <span className="sr-only">Damage</span><span className="act-dmg">{a.dmg} {a.dtype}</span>
       </div>}
-      extra={controls ? handButtons(it) : undefined}
+      extra={controls ? <>{handButtons(it)}{a.use === 'ranged' && ammoPicker(it)}</> : undefined}
       body={<>
         <Parts label="To hit" parts={a.hitParts} />
         <Parts label="Damage" parts={a.dmgParts} />

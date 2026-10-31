@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
-import { equipShield, putAway, putInHand, setHands, trimHands, weaponKind, weaponMatches, weaponsHeld } from './hands';
+import { ammoType, canLoad, equipShield, putAway, putInHand, setHands, trimHands, weaponKind, weaponMatches, weaponsHeld } from './hands';
 import { migrate, normalize, removeItem } from './logic';
 import { applyPatch } from './storage';
 import { dagger, longbow, longsword, quarterstaff, shield, shortsword } from './test-fixtures';
@@ -176,5 +176,35 @@ describe('items inside a container (plan 6)', () => {
   it('a Shield inside the bag takes no hand', () => {
     const c = make([bag, shield({ id: 'sh', in: 'bag' }), longbow({ id: 'bow' })], ['bow', 'bow']);
     expect(trimHands(c, ['bow', 'bow'])).toEqual(['bow', 'bow']);
+  });
+});
+
+describe('ammunition types (plan 7, Task 9b)', () => {
+  // A weapon's ammunition type is the part of its Ammunition field after ';' (PHB p.213: "Ammo type listed with the range").
+  const arrows: Item = { id: 'ar', name: 'Arrows', qty: 20, eq: false, cat: 'ammo', cid: 'item/arrows' };
+  const arrows1: Item = { id: 'a1', name: 'Arrows +1', qty: 20, eq: false, cat: 'magic', cid: 'item/ammunition-1-2-or-3', base: 'item/arrows', magic: 1 };
+  const bolts: Item = { id: 'bo', name: 'Bolts', qty: 20, eq: false, cat: 'ammo', cid: 'item/bolts' };
+  const firearm: Item = { id: 'fb', name: 'Firearm Bullets', qty: 10, eq: false, cat: 'ammo', cid: 'item/firearm-bullets' };
+  const typed: Item = { id: 'ty', name: 'Arrows', qty: 20, eq: false, cat: 'gear' };
+  it('reads a weapon’s type from its ammo field and an ammunition item’s from its catalog id or base', () => {
+    expect([ammoType(longbow({ id: 'lb' })), ammoType(arrows), ammoType(arrows1), ammoType(bolts), ammoType(firearm), ammoType(typed)]).toEqual(['arrow', 'arrow', 'arrow', 'bolt', '', '']);
+  });
+  it('keeps a weapon’s load only while it names ammunition in the inventory, out of any container, that fits', () => {
+    const bag: Item = { id: 'bag', name: 'Bag of Holding', qty: 1, eq: false, xdim: true, cap: 500 };
+    const c = make([{ ...longbow({ id: 'lb' }), load: 'a1' }, arrows1, arrows, bag, bolts]);
+    expect(normalize(c).inv[0].load).toBe('a1');
+    expect(migrate(raw(c)).inv[0].load).toBe('a1');
+    expect(removeItem(c, 'a1').inv[0].load).toBeUndefined();
+    expect(normalize({ ...c, inv: c.inv.map((i) => (i.id === 'a1' ? { ...i, in: 'bag' } : i)) }).inv[0].load).toBeUndefined();
+    expect(normalize({ ...c, inv: c.inv.map((i, k) => (k === 0 ? { ...i, load: 'bo' } : i)) }).inv[0].load).toBeUndefined();
+    expect(normalize({ ...c, inv: c.inv.map((i, k) => (k === 0 ? { ...i, load: 'nope' } : i)) }).inv[0].load).toBeUndefined();
+    // An edit that takes the Ammunition property off clears it; one that keeps it keeps the load.
+    expect(normalize({ ...c, inv: c.inv.map((i, k) => (k === 0 ? { ...i, props: 'heavy,two-handed' } : i)) }).inv[0].load).toBeUndefined();
+    expect(normalize({ ...c, inv: c.inv.map((i, k) => (k === 0 ? { ...i, name: 'My Bow' } : i)) }).inv[0].load).toBe('a1');
+  });
+  it('loads only ammunition of the weapon’s type into a weapon with the Ammunition property', () => {
+    expect([canLoad(longbow({ id: 'lb' }), arrows), canLoad(longbow({ id: 'lb' }), arrows1), canLoad(longbow({ id: 'lb' }), bolts), canLoad(longbow({ id: 'lb' }), typed), canLoad(longbow({ id: 'lb' }), firearm)]).toEqual([true, true, false, false, false]);
+    expect(canLoad(longsword({ id: 'ls' }), arrows)).toBe(false);
+    expect(canLoad({ ...longbow({ id: 'lb' }), props: 'heavy,two-handed' }, arrows)).toBe(false);
   });
 });

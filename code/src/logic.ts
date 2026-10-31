@@ -3,7 +3,7 @@ import { blankCharacter, sampleCharacter } from './defaults';
 import { DAMAGE_TYPES, grantErrors, isDtypes, ITEM_CATS, partErrors, type GrantSpec } from './catalog/schema';
 import { isValue, valueAt, type ValueCtx } from './catalog/value';
 import { PROF_NAMES, type ProfCat } from './catalog/names';
-import { setHands } from './hands';
+import { canLoad, setHands } from './hands';
 import { activeGrants, dropLinkOnly, fixLinks, hasActiveEffect, inactiveReason, isActive, isEquipped, LINKED_LISTS, srcKindOfLink, type SourceKind, linkOf, parseLink, sourceLabel, sourceOf, SRC_KINDS } from './links';
 import type { AcEffect, Ability, ArmorKind, CastAbility, Character, Coin, Concentration, Counter, DefenseKind, Feature, Grant, HpSnapshot, Item, Prof, Linked, Recharge, Resource, Size, Spell, SpeedKind, SpellSort, Tab, Unarmored, When } from './types';
 
@@ -578,10 +578,25 @@ export function maxFields(kind: 'none' | 'number' | 'formula', text: string): Pi
 
 // The single clamp, run by update() and migrate() after every change: resource counts at most their maximum, HP at
 // most max HP. Uses lost while a maximum is lower are not given back when it rises (spec). Returns c when nothing moves.
+// A weapon's loaded ammunition (plan 7) stays only while it names an item in inv, outside any container, that canLoad
+// accepts: so it clears when the ammunition goes, is packed away or doesn't fit, or an edit changes the weapon. Run
+// after fixContainers, which may change `in`. Returns c when nothing changes.
+function fixLoads(c: Character): Character {
+  let changed = false;
+  const inv = c.inv.map((it) => {
+    if (it.load === undefined) return it;
+    const a = c.inv.find((x) => x.id === it.load);
+    if (a && !a.in && canLoad(it, a)) return it;
+    changed = true;
+    return withoutKeys(it, ['load']);
+  });
+  return changed ? { ...c, inv } : c;
+}
+
 export function normalize(c0: Character): Character {
   // The container rules first (plan 6), then weapons in hand (plan 5): a quantity or equip change, or an item moved
-  // into a container, may take one out of hand, through setHands.
-  const f = fixContainers(c0);
+  // into a container, may take one out of hand, through setHands. Then loaded ammunition (plan 7).
+  const f = fixLoads(fixContainers(c0));
   const h = setHands(f, f.hands);
   // Weapon Mastery picks: strings, once each. The player may change them at any time; the rule says on a Long Rest
   // (PHB p.91, Weapon Mastery), which the app doesn't enforce.
@@ -786,7 +801,7 @@ const ITEM_FIELDS: Record<string, FieldCheck> = {
   cat: among(...ITEM_CATS), cost: isStr, wcat: among('simple', 'martial'), wrange: among('melee', 'ranged'), dmg: isStr, dtype: isStr, props: isStr,
   thrown: isStr, vers: isStr, ammo: isStr, mastery: isStr, magic: finite, strReq: finite, stealthDis: isBool, cap: finite, capVol: isStr, xdim: isBool,
   rarity: isStr, attune: isBool, base: (v) => typeof v === 'string' && v.startsWith('item/'), sec: nonEmpty,
-  in: nonEmpty, cp: wholeNonNeg, sp: wholeNonNeg, ep: wholeNonNeg, gp: wholeNonNeg, pp: wholeNonNeg
+  in: nonEmpty, load: nonEmpty, cp: wholeNonNeg, sp: wholeNonNeg, ep: wholeNonNeg, gp: wholeNonNeg, pp: wholeNonNeg
 };
 // A spell's parts on load: the good ones stay (partErrors, first of a repeated label), parts goes when none is left;
 // never the spell.
@@ -1213,6 +1228,8 @@ export function removeRef(c0: Character, ref: Ref): Character {
   const bagCoins = c.inv.filter((i) => items.includes(i.id));
   if (bagCoins.some((i) => COINS.some((k) => i[k]))) out.coins = Object.fromEntries(COINS.map((k) => [k, c.coins[k] + bagCoins.reduce((t, i) => t + (i[k] || 0), 0)])) as Character['coins'];
   out.attuneIds = c.attuneIds.map((x) => (items.includes(x) ? '' : x));
+  // A weapon loaded with removed ammunition is unloaded (fixLoads also runs in normalize()).
+  out.inv = fixLoads(out).inv;
   out.acOn = c.acOn.filter((id) => !spells.includes(id));
   out.effectsOn = c.effectsOn.filter((l) => !links.includes(l));
   out.res = out.res.map((r) => (r.casts !== undefined && spells.includes(r.casts) ? (({ casts: _, ...x }) => x)(r) : r));

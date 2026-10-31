@@ -38,6 +38,18 @@ describe('weapon mastery', () => {
     expect(melee.dmg).toMatch(/^1d8/);
     expect(melee.mastery).toBe('sap');
   });
+  it('adds loaded magic ammunition’s bonus to a ranged attack, next to the bow’s own (plan 7)', () => {
+    const arrows: Item = { id: 'ar', name: 'Arrows', qty: 20, eq: false, cat: 'ammo', cid: 'item/arrows' };
+    const arrows2: Item = { id: 'a2', name: 'Arrows +2', qty: 20, eq: false, cat: 'magic', cid: 'item/ammunition-1-2-or-3', base: 'item/arrows', magic: 2 };
+    const at = (bow: Item) => weaponAttacks({ ...ilyra(), inv: [bow, arrows, arrows2] }, bow)[0];
+    const bare = at(longbow({ id: 'lb' }));
+    expect(at(longbow({ id: 'lb', load: 'ar' })).hit).toBe(bare.hit);
+    const loaded = at(longbow({ id: 'lb', load: 'a2' }));
+    expect([loaded.hit - bare.hit, loaded.hitParts.find((p) => p.label === 'Ammunition')?.value, loaded.dmgParts.find((p) => p.label === 'Ammunition')?.value]).toEqual([2, 2, 2]);
+    const both = at(longbow({ id: 'lb', load: 'a2', magic: 1 }));
+    expect(both.hit - bare.hit).toBe(3);
+    expect(both.dmgParts.filter((p) => p.label === 'Magic' || p.label === 'Ammunition').map((p) => p.value)).toEqual([1, 2]);
+  });
   it('gives mastery of a weapon named by a grant', () => {
     const g: Grant = { id: 'gx', kind: 'prof', name: 'Hand Crossbow mastery', cat: 'mastery', target: 'Hand Crossbow', from: 'feature:f3' };
     expect(hasMastery(ilyra({ mastery: [], grants: [...sampleCharacter().grants, g] }), 'hand-crossbow')).toBe(true);

@@ -68,6 +68,9 @@ export interface Item extends Partial<Counter> {
   // in: the id of the extradimensional container it sits in (one level deep; it is then never equipped).
   // cp…pp: the coins inside a container (only on a container; fixContainers moves others to the purse).
   sec?: string; in?: string; cp?: number; sp?: number; ep?: number; gp?: number; pp?: number;
+  // load: on a weapon with the Ammunition property, the id of the ammunition item in inv it shoots (plan 7; canLoad).
+  // Not a form field: an edit keeps it, and normalize() clears it when it no longer fits.
+  load?: string;
 }
 // A section of the item list the player named (Weapons, Armour…), in display order.
 export interface Section { id: string; name: string }

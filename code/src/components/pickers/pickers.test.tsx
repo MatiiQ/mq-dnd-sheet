@@ -54,6 +54,12 @@ describe('ItemQuestions', () => {
     expect(html).toContain('Step 1 of 1');
     expect(html).toMatch(/aria-disabled="true"[^>]*>Add</);
   });
+  it('asks Ammunition +N’s ammunition first, then its bonus', () => {
+    const html = q('item/ammunition-1-2-or-3');
+    expect(html).toContain('Which ammunition?');
+    expect(html).toContain('Arrows');
+    expect(html).toContain('Step 1 of 2');
+  });
   it('asks Weapon +N’s weapon first, then its bonus', () => {
     const html = q('item/weapon-1-2-or-3');
     expect(html).toContain('Which weapon?');
