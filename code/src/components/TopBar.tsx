@@ -202,7 +202,7 @@ export function TopBar({ store, activeSec, setActiveSec, menuOpen, setMenuOpen, 
   );
 }
 
-const SEC_NAMES = { 'sec-hp': 'Hit Points', 'sec-vitals': 'Vitals', 'sec-senses': 'Senses', 'sec-resources': 'Resources' };
+const SEC_NAMES = { 'sec-hp': 'Hit Points', 'sec-vitals': 'Vitals', 'sec-abilities': 'Abilities', 'sec-senses': 'Senses', 'sec-defenses': 'Defenses', 'sec-conditions': 'Conditions', 'sec-resources': 'Resources' };
 const pillName = (v: PillView) => PILL_STATS.find(([k]) => k === v.key)?.[1] ?? v.label;
 const pillSpoken = (v: PillView) => pillName(v) + ' ' + v.value + (v.max ? ' of ' + v.max : '') + '.';
 

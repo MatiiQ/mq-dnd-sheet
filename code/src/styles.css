@@ -429,3 +429,17 @@ button.mod-token { border: none; color: inherit; cursor: pointer; padding: 0; }
 button.link-btn { background: none; border: none; padding: 0; cursor: pointer; text-align: left; color: inherit; min-height: 44px; display: inline-flex; align-items: center; }
 /* An entry whose source or condition doesn't count right now (inactiveReason). */
 .inactive { opacity: 0.55; }
+
+/* Remove with a confirm list (removalSummary) under the armed button. */
+.remove-wrap { position: relative; display: inline-flex; }
+.remove-confirm {
+  position: absolute; right: 0; top: 100%; z-index: 5; width: max-content; max-width: min(320px, 80vw); margin-top: 4px; padding: 8px 10px;
+  border-radius: 10px; background: var(--raised); color: var(--text); font-size: 13px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  display: flex; flex-direction: column; gap: 4px;
+}
+/* Chips: what a source gives. Tap jumps to where it lives; inactive ones are dimmed with their reason. */
+.grant-chip {
+  font-size: 13px; font-weight: 600; cursor: pointer; min-height: 44px; padding: 0 12px; border-radius: 22px;
+  border: 1px solid var(--line-2); background: transparent; color: var(--text-2); display: inline-flex; align-items: center; gap: 4px;
+}
+.grant-chip.inactive { border-style: dashed; }

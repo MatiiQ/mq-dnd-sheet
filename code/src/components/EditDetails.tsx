@@ -3,7 +3,7 @@ import { useSheet } from '../sheet';
 import type { CastAbility, Details, Size } from '../types';
 import { NumInput, TextField, TypeInNumber, useArmed } from './ui';
 
-const TEXT_FIELDS: [string, keyof Details][] = [['Name', 'name'], ['Species', 'species'], ['Class', 'cls'], ['Subclass', 'sub'], ['Background', 'bg'], ['Alignment', 'align']];
+const TEXT_FIELDS: [string, keyof Details][] = [['Name', 'name'], ['Species', 'species'], ['Class', 'cls'], ['Subclass', 'sub'], ['Alignment', 'align']];
 const NUM_FIELDS: [string, 'speedBase' | 'initMisc', number, number][] = [
   ['Base speed (ft)', 'speedBase', 0, 200], ['Initiative bonus (extra)', 'initMisc', -20, 20]
 ];

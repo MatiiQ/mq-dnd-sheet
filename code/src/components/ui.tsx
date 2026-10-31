@@ -34,22 +34,26 @@ export function useArmed(ms = 3000) {
   return [armed, tap] as const;
 }
 
-export function RemoveButton({ name, onRemove }: { name: string; onRemove: () => void }) {
-  const [armed, tap] = useArmed();
+// confirm: shown while armed, e.g. what else a removal takes with it (removalSummary).
+export function RemoveButton({ name, onRemove, confirm }: { name: string; onRemove: () => void; confirm?: ReactNode }) {
+  const [armed, tap] = useArmed(confirm ? 6000 : 3000);
   return (
-    <button type="button" className={armed ? 'remove-armed' : 'icon-btn faint'} onClick={() => tap(onRemove)}
-      aria-label={armed ? 'Tap again to remove ' + name : 'Remove ' + name}>
-      {armed ? 'Remove?' : <XIcon />}
-    </button>
+    <span className="remove-wrap">
+      <button type="button" className={armed ? 'remove-armed' : 'icon-btn faint'} onClick={() => tap(onRemove)}
+        aria-label={armed ? 'Tap again to remove ' + name : 'Remove ' + name}>
+        {armed ? 'Remove?' : <XIcon />}
+      </button>
+      {armed && confirm && <span role="status" className="remove-confirm">{confirm}</span>}
+    </span>
   );
 }
 
-export function EntryActions({ name, canEdit, onEdit, onRemove }: { name: string; canEdit: boolean; onEdit?: () => void; onRemove: () => void }) {
+export function EntryActions({ name, canEdit, onEdit, onRemove, confirm }: { name: string; canEdit: boolean; onEdit?: () => void; onRemove: () => void; confirm?: ReactNode }) {
   if (!canEdit) return null;
   return (
     <div className="row">
       {onEdit && <button type="button" className="icon-btn" aria-label={'Edit ' + name} onClick={onEdit}><PencilIcon /></button>}
-      <RemoveButton name={name} onRemove={onRemove} />
+      <RemoveButton name={name} onRemove={onRemove} confirm={confirm} />
     </div>
   );
 }
@@ -58,9 +62,9 @@ export function EntryActions({ name, canEdit, onEdit, onRemove }: { name: string
 // Tapping the head shows the body plus Edit / Remove, so entries change without Edit mode. In Edit mode the
 // buttons stay in the row, as before, and never repeat in the body. `before` and `side` sit outside the tap target;
 // `children` always show under the row (Edit-mode controls, warnings).
-export function EntryRow({ name, before, head, side, body, onEdit, onRemove, className = '', children }: {
+export function EntryRow({ name, before, head, side, body, onEdit, onRemove, removeConfirm, className = '', children }: {
   name: string; before?: ReactNode; head: ReactNode; side?: ReactNode; body?: ReactNode;
-  onEdit?: () => void; onRemove: () => void; className?: string; children?: ReactNode;
+  onEdit?: () => void; onRemove: () => void; removeConfirm?: ReactNode; className?: string; children?: ReactNode;
 }) {
   const { edit } = useSheet();
   const [open, setOpen] = useState(false);
@@ -70,13 +74,13 @@ export function EntryRow({ name, before, head, side, body, onEdit, onRemove, cla
         {before}
         <button type="button" className="entry-head" aria-expanded={open} onClick={() => setOpen(!open)}>{head}</button>
         {side}
-        {edit && <EntryActions name={name} canEdit onEdit={onEdit} onRemove={onRemove} />}
+        {edit && <EntryActions name={name} canEdit onEdit={onEdit} onRemove={onRemove} confirm={removeConfirm} />}
       </div>
       {children && <div className="entry-extra">{children}</div>}
       {open && (body || !edit) && (
         <div className="entry-body">
           {body}
-          {!edit && <EntryActions name={name} canEdit onEdit={onEdit} onRemove={onRemove} />}
+          {!edit && <EntryActions name={name} canEdit onEdit={onEdit} onRemove={onRemove} confirm={removeConfirm} />}
         </div>
       )}
     </div>

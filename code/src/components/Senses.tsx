@@ -1,9 +1,10 @@
-import { SRC_KINDS, mergedSenses, passiveScore, removeRef } from '../logic';
+import { SourcePicker } from './SourcePicker';
+import { mergedSenses, passiveScore, removeRef } from '../logic';
 import { saveEntry, useEntryForm, useSheet } from '../sheet';
 import type { Sense, SrcKind } from '../types';
 import { AddButton, EntryForm, EntryRow } from './ui';
 
-const BLANK = { name: '', range: '', desc: '', srcKind: '' as SrcKind | '', srcName: '' };
+const BLANK = { name: '', range: '', desc: '', from: undefined as string | undefined, srcKind: undefined as SrcKind | undefined, srcName: undefined as string | undefined };
 
 export function Senses() {
   const { c, update } = useSheet();
@@ -18,7 +19,7 @@ export function Senses() {
     // Empty optional fields are cleared (undefined), so editing can remove them.
     const built = {
       name, range: r ? (/^\d+$/.test(r) ? r + ' ft' : r) : '—', desc: f.draft.desc.trim() || undefined,
-      srcKind: f.draft.srcKind || undefined, srcName: f.draft.srcName.trim() || undefined
+      from: f.draft.from, srcKind: f.draft.srcKind, srcName: f.draft.srcName?.trim() || undefined
     };
     update((p) => ({ senses: saveEntry<Sense>(p.senses, built, f.editingId) }));
     f.close();
@@ -38,13 +39,7 @@ export function Senses() {
           value={f.draft.range} onChange={(e) => f.set({ range: e.target.value })} />
         <input type="text" className="input" style={{ flex: '1 1 100%', padding: '0 10px' }} aria-label="Sense description" placeholder="Description"
           value={f.draft.desc} onChange={(e) => f.set({ desc: e.target.value })} />
-        <select className="input" style={{ flex: '1 1 120px', width: 120 }} aria-label="Source kind" value={f.draft.srcKind}
-          onChange={(e) => f.set({ srcKind: e.target.value as SrcKind | '' })}>
-          <option value="">—</option>
-          {SRC_KINDS.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
-        </select>
-        <input type="text" className="input" style={{ flex: '2 1 160px', width: 160, padding: '0 10px' }} aria-label="Source name" placeholder="Source, e.g. Wood Elf"
-          value={f.draft.srcName} onChange={(e) => f.set({ srcName: e.target.value })} />
+        <SourcePicker value={f.draft} onChange={(v) => f.set(v)} />
       </div>
     </EntryForm>
   );
@@ -67,7 +62,7 @@ export function Senses() {
               {sources.length > 0 && <span className="muted">Source: {sources.join(', ')}</span>}
             </>}
             onEdit={() => f.openEdit(se.id, {
-              name: se.name, range: se.range === '—' ? '' : se.range, desc: se.desc || '', srcKind: se.srcKind || '', srcName: se.srcName || ''
+              name: se.name, range: se.range === '—' ? '' : se.range, desc: se.desc || '', from: se.from, srcKind: se.srcKind, srcName: se.srcName
             })}
             onRemove={() => update((p) => (hand.length ? hand : all).reduce((x, y) => removeRef(x, { kind: 'sense', id: y.id }), p))} />
         )))}

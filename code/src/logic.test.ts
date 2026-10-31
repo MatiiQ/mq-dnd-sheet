@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import {
-  ABILITIES, SKILLS, addGrants, findUnlinked, removalChain, removalSummary, removeFeature, removeResource, castFree, freeCastsOf, spellAttackFor, spellSaveDcFor, toggleEffect, dawn, restRolls, maxFields, maxOf, normalize, resourceGroups, itemAcGrants, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, splitTraining, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, NEW_FIELDS, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, removeItem, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
+  ABILITIES, SKILLS, grantChips, addGrants, findUnlinked, removalChain, removalSummary, removeFeature, removeResource, castFree, freeCastsOf, spellAttackFor, spellSaveDcFor, toggleEffect, dawn, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, splitTraining, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, NEW_FIELDS, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, removeItem, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
   setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, undoHp
 } from './logic';
 import { grantErrors, type GrantSpec } from './catalog/schema';
@@ -906,7 +906,7 @@ describe('Training migration', () => {
   });
   it('runs only on saves without proficiencies', () => {
     const raw = { ...oldIlyra(), profs: [], feats: [{ id: 't', g: 'training', name: 'Tools', desc: 'Thieves\' Tools' }] };
-    expect(migrate(raw).feats).toEqual([{ id: 't', g: 'training', name: 'Tools', desc: 'Thieves\' Tools' }]);
+    expect(migrate(raw).feats.filter((f) => f.g === 'training')).toEqual([{ id: 't', g: 'training', name: 'Tools', desc: 'Thieves\' Tools' }]);
     expect(migrate(raw).profs).toEqual([]);
   });
   it('drops a proficiency with an unknown category', () => {
@@ -1000,15 +1000,6 @@ describe('AC grants', () => {
   });
   it('no longer counts acBonus on an item that is not armor', () => {
     expect(ac({ inv: [it_({ name: 'Cloak', acBonus: 1 })] }).total).toBe(14);
-  });
-  it('the item form writes, updates or removes the item\'s single AC bonus grant', () => {
-    const c = make({ inv: [ringItem], grants: [] });
-    const one = itemAcGrants(c, 'r', 1, true);
-    expect(one).toEqual([{ id: expect.any(String), kind: 'ac', name: '+1 AC', acMode: 'bonus', val: '1', from: 'item:r', srcKind: 'item', needEq: true, needAtt: true }]);
-    const two = itemAcGrants({ ...c, grants: one }, 'r', 2, false);
-    expect(two).toEqual([{ id: one[0].id, kind: 'ac', name: '+2 AC', acMode: 'bonus', val: '2', from: 'item:r', srcKind: 'item', needEq: true }]);
-    expect(itemAcGrants({ ...c, grants: two }, 'r', 0, false)).toEqual([]);
-    expect(itemAcGrants(c, 'r', 0, false)).toBe(c.grants);
   });
   it('removing the item removes its grants', () => {
     expect(removeItem(make({ inv: [ringItem], grants: [ringAc] }), 'r').grants).toEqual([]);
@@ -1364,5 +1355,47 @@ describe('removal cascade', () => {
     const r = removeItem(s, 'i9');
     expect(r.attuneIds).toEqual(['', '', '']);
     expect(r.grants).toEqual([]);
+  });
+});
+
+describe('grantChips', () => {
+  it('lists what a feature gives, with labels and where each lives', () => {
+    const s = make();
+    const c = { ...s, spells: s.spells.map((x) => (x.id === 'sp4' ? { ...x, from: 'feature:f2' } : x)),
+      res: s.res.map((r) => (r.id === 'favored' ? { ...r, max: undefined, maxV: '1:2,5:3,9:4,13:5,17:6', from: 'feature:f2', casts: 'sp4' } : r)) };
+    const chips = grantChips(c, 'feature:f2');
+    expect(chips.map((x) => x.label)).toEqual(['Hunter’s Mark', '3 × Favored Enemy / Long Rest']);
+    expect(chips.map((x) => x.target)).toEqual([{ tab: 'spells' }, { sec: 'sec-resources' }]);
+    expect(chips.every((x) => x.active)).toBe(true);
+  });
+  it('labels every grant kind and marks counted and inactive ones', () => {
+    const g = (p: Partial<Grant> & Pick<Grant, 'kind'>): Grant => ({ id: 'g' + p.kind, name: 'N ' + p.kind, from: 'item:i9', ...p } as Grant);
+    const c = make({ senses: [{ id: 's', name: 'Darkvision', range: '60 ft', from: 'item:i9' }],
+      defenses: [{ id: 'd', kind: 'res', name: 'Cold', from: 'item:i9' }, { id: 'e', kind: 'adv', name: 'vs Charmed', from: 'item:i9' }],
+      grants: [g({ kind: 'abil', ab: 'wis', val: '1', cap: 20 }), g({ kind: 'prof', cat: 'skill', target: 'stealth' }),
+        g({ kind: 'prof', name: 'Weapon Mastery: 2 kinds of weapons', cat: 'mastery', val: '2' }), g({ kind: 'speed', mode: 'walk', val: '5', counted: true }),
+        g({ kind: 'speed', id: 'gc', mode: 'climb', val: 'walk' }), g({ kind: 'ac', acMode: 'bonus', val: '1', needEq: true }), g({ kind: 'init', val: '3' }),
+        g({ kind: 'hpLvl', val: '2' }), g({ kind: 'xdmg', dice: '1d8', on: 'hit' })] });
+    expect(grantChips(c, 'item:i9').map((x) => x.label)).toEqual(['Darkvision 60 ft', 'Resistance · Cold', 'Advantage · vs Charmed', '+1 WIS', 'Stealth',
+      'Weapon Mastery: 2 kinds of weapons', 'Speed +5 ft (counted)', 'Climb = Speed', '+1 AC', 'Initiative +3', '+2 HP per level', 'N xdmg']);
+    const off = { ...c, inv: c.inv.map((i) => (i.id === 'i9' ? { ...i, eq: false } : i)) };
+    expect(grantChips(off, 'item:i9').find((x) => x.label === '+1 AC')).toMatchObject({ active: false, why: 'not equipped' });
+  });
+});
+
+describe('background migration', () => {
+  it('turns the old Background text into a background feature, once', () => {
+    const c = migrate({ ...blankCharacter(), ch: { ...blankCharacter().ch, bg: 'Sage' }, feats: [] });
+    expect(c.feats).toEqual([{ id: expect.any(String), g: 'background', name: 'Sage', desc: '' }]);
+    expect(c.ch).not.toHaveProperty('bg');
+    expect(migrate(c)).toEqual(c);
+    expect(migrate({ ...blankCharacter(), ch: { ...blankCharacter().ch, bg: '  ' }, feats: [] }).feats).toEqual([]);
+    const has = migrate({ ...blankCharacter(), ch: { ...blankCharacter().ch, bg: 'Sage' }, feats: [{ id: 'b', g: 'background', name: 'Sage', desc: 'x' }] });
+    expect(has.feats).toHaveLength(1);
+  });
+  it('keeps the samples\' backgrounds as features', () => {
+    expect(sampleCharacter().feats.find((f) => f.g === 'background')).toMatchObject({ id: 'f20', name: 'Guide' });
+    expect(druidSample().feats.find((f) => f.g === 'background')).toMatchObject({ id: 'f26', name: 'Sage' });
+    expect(migrate(oldIlyra()).feats.filter((f) => f.g === 'background').map((f) => f.name)).toEqual(['Guide']);
   });
 });

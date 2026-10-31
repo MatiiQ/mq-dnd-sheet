@@ -4,12 +4,13 @@ import { inactiveReason, sourceLabel } from '../links';
 import { SRC_KINDS, maxFields, maxOf, rechargeOf, removeResource, resourceGroups } from '../logic';
 import { patchEntry, saveEntry, useEntryForm, useSheet } from '../sheet';
 import type { Recharge, Resource, SrcKind } from '../types';
+import { SourcePicker } from './SourcePicker';
 import { AddButton, EntryForm, EntryRow, NumInput, StarIcon, Step, TextField } from './ui';
 
 type MaxKind = 'none' | 'number' | 'formula';
 const BLANK = {
   name: '', note: '', type: '' as SrcKind | 'custom' | '', typeName: '', count: 0, maxKind: 'none' as MaxKind, maxText: '',
-  recharge: 'long' as Recharge, regain: '', casts: ''
+  recharge: 'long' as Recharge, regain: '', casts: '', from: undefined as string | undefined, srcName: undefined as string | undefined
 };
 type Draft = typeof BLANK;
 const RECHARGE_TEXT: Record<Recharge, string> = { none: 'Manual only', short: 'Refills on Short or Long Rest', long: 'Refills on Long Rest', dawn: 'Refills at dawn' };
@@ -17,7 +18,7 @@ const RECHARGE_TEXT: Record<Recharge, string> = { none: 'Manual only', short: 'R
 const toDraft = (r: Resource): Draft => ({
   name: r.name, note: r.note || '', type: r.typeName ? 'custom' : r.srcKind || '', typeName: r.typeName || '', count: r.count,
   maxKind: r.maxV !== undefined ? 'formula' : r.max ? 'number' : 'none', maxText: r.maxV ?? (r.max ? String(r.max) : ''),
-  recharge: rechargeOf(r), regain: r.regain || '', casts: r.casts || ''
+  recharge: rechargeOf(r), regain: r.regain || '', casts: r.casts || '', from: r.from, srcName: r.srcName
 });
 
 export function Resources() {
@@ -43,7 +44,8 @@ export function Resources() {
       name, note: d.note.trim() || undefined, count: d.count,
       srcKind: d.type && d.type !== 'custom' ? d.type : undefined, typeName: d.type === 'custom' ? d.typeName.trim() || undefined : undefined,
       max: maxNow.max, maxV: maxNow.maxV, recharge: d.recharge,
-      regain: regain || undefined, regainOn: regain ? regainOn! : undefined, casts: d.casts || undefined
+      regain: regain || undefined, regainOn: regain ? regainOn! : undefined, casts: d.casts || undefined,
+      from: d.from, srcName: d.srcName?.trim() || undefined
     };
     update((p) => ({ res: saveEntry<Resource>(p.res, built, f.editingId, { count: 0 }) }));
     f.close();
@@ -91,6 +93,9 @@ export function Resources() {
             {!regainOk && <span className="small" style={{ color: 'var(--danger)' }}>A number or dice, e.g. 1 or 1d6+1</span>}
           </label>
         )}
+        {/* Type sets the kind; the picker links a source or names one. A linked source's kind wins unless Type is set. */}
+        <SourcePicker noKind value={{ from: d.from, srcKind: d.type && d.type !== 'custom' ? d.type : undefined, srcName: d.srcName }}
+          onChange={(v) => f.set({ from: v.from, srcName: v.srcName, ...(v.from && v.srcKind ? { type: v.srcKind } : {}) })} />
         <label className="field">Casts
           <select className="input" value={d.casts} onChange={(e) => f.set({ casts: e.target.value })}>
             <option value="">—</option>

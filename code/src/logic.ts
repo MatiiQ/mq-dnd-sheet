@@ -3,7 +3,7 @@ import { blankCharacter, sampleCharacter } from './defaults';
 import { grantErrors, type GrantSpec } from './catalog/schema';
 import { isValue, valueAt, type ValueCtx } from './catalog/value';
 import { PROF_NAMES, type ProfCat } from './catalog/names';
-import { activeGrants, dropLinkOnly, fixLinks, hasActiveEffect, isActive, LINKED_LISTS, srcKindOfLink, type SourceKind, linkOf, parseLink, sourceLabel, sourceOf, SRC_KINDS } from './links';
+import { activeGrants, dropLinkOnly, fixLinks, hasActiveEffect, inactiveReason, isActive, LINKED_LISTS, srcKindOfLink, type SourceKind, linkOf, parseLink, sourceLabel, sourceOf, SRC_KINDS } from './links';
 import type { AcEffect, Ability, ArmorKind, CastAbility, Character, Concentration, Counter, DefenseKind, Feature, Grant, HpSnapshot, Item, Prof, Linked, Recharge, Resource, Size, Spell, SpeedKind, SpellSort, Tab, Unarmored, When } from './types';
 
 export const ABILITIES: [Ability, string][] = [
@@ -897,6 +897,11 @@ export function migrate(data: unknown): Character {
   c.pills = sanitizePills(data.pills).map((k) => (converted.some((id) => k === resPill(id)) ? '' : k));
   // Effects switched on: links to something there, once each. A Concentration spell's effect follows c.conc instead.
   c.effectsOn = strings(c.effectsOn).filter((l, i, all) => all.indexOf(l) === i && sourceOf(c, l) && !(parseLink(l)!.kind === 'spell' && (sourceOf(c, l) as Spell).c));
+  // The background was a text field in Edit details; it becomes a background feature (from the raw save, once).
+  const oldBg = isObj(data.ch) && typeof data.ch.bg === 'string' ? data.ch.bg.trim() : '';
+  if (oldBg && !c.feats.some((f) => f.g === 'background' && normName(f.name) === normName(oldBg))) {
+    c.feats = [...c.feats, { id: newId(), g: 'background', name: oldBg, desc: '' }];
+  }
   // An action grant that spends a resource that is gone no longer spends anything.
   c.grants = c.grants.map((g) => (g.kind === 'action' && g.res !== undefined && !c.res.some((r) => r.id === g.res) ? (({ res: _, ...x }) => x)(g) : g));
   const fixed = fixLinks(c);
@@ -968,15 +973,6 @@ export function splitTraining(feats: Feature[]): { feats: Feature[]; profs: Prof
 
 // Names match after trimming, ignoring case and treating ’ and ' as the same character.
 export const normName = (s: string) => s.trim().toLowerCase().replace(/’/g, "'");
-
-// The item form's "AC bonus while equipped": the item's single AC bonus grant is written, updated or (at 0) removed.
-export function itemAcGrants(c: Character, itemId: string, v: number, needAtt: boolean): Grant[] {
-  const from = linkOf('item', itemId);
-  const old = c.grants.find((g) => g.from === from && g.kind === 'ac' && g.acMode === 'bonus');
-  if (!v) return old ? c.grants.filter((g) => g !== old) : c.grants;
-  const g: Grant = { id: old?.id ?? newId(), kind: 'ac', name: fmt(v) + ' AC', acMode: 'bonus', val: String(v), from, srcKind: 'item', needEq: true, ...(needAtt ? { needAtt } : {}) };
-  return old ? c.grants.map((x) => (x === old ? g : x)) : [...c.grants, g];
-}
 
 // ---------- adding grants and removing sources (plan 3) ----------
 
@@ -1125,6 +1121,55 @@ export function removalSummary(c: Character, ref: Ref): { goes: string[]; keep: 
   return { goes, keep };
 }
 
+// One thing a source gives, as a chip on the source: what it reads, where it lives and whether it counts now.
+export interface Chip { label: string; ref: Ref; target: PillTarget; active: boolean; why?: string; counted?: boolean }
+const DEF_NAMES: Record<DefenseKind, string> = { res: 'Resistance', vul: 'Vulnerability', imm: 'Immunity', adv: 'Advantage' };
+const RECHARGE_LABEL: Record<Recharge, string> = { none: '', short: 'Short Rest', long: 'Long Rest', dawn: 'Dawn' };
+const cap1 = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+function grantLabel(c: Character, g: Grant): string {
+  const v = num(c, g.val);
+  switch (g.kind) {
+    case 'abil': return fmt(v) + ' ' + (g.ab ?? '').toUpperCase();
+    case 'prof': return g.target ? SKILLS.find(([k]) => k === g.target)?.[1] ?? ABILITIES.find(([k]) => k === g.target)?.[1] ?? g.target : g.name;
+    case 'speed': return g.mode === 'walk' ? 'Speed ' + fmt(v) + ' ft' : cap1(g.mode ?? '') + (g.val === 'walk' ? ' = Speed' : ' ' + v + ' ft');
+    case 'ac': return g.acMode === 'bonus' ? fmt(v) + ' AC' : g.name;
+    case 'init': return 'Initiative ' + fmt(v);
+    case 'hpLvl': return fmt(v) + ' HP per level';
+    default: return g.name;
+  }
+}
+const ABILITY_GRANTS: string[] = ['abil', 'abilSet', 'saveBonus', 'checkBonus'];
+const VITAL_GRANTS: string[] = ['speed', 'ac', 'init', 'size', 'carryUp'];
+function grantTarget(g: Grant): PillTarget {
+  if (ABILITY_GRANTS.includes(g.kind) || (g.kind === 'prof' && ['skill', 'save', 'expertise', 'half'].includes(g.cat ?? ''))) return { sec: 'sec-abilities' };
+  if (g.kind === 'prof') return { tab: 'features' };
+  if (VITAL_GRANTS.includes(g.kind)) return { sec: 'sec-vitals' };
+  if (g.kind === 'hpLvl') return { sec: 'sec-hp' };
+  if (g.kind === 'casting' || g.kind === 'spell') return { tab: 'spells' };
+  return { tab: 'actions' };
+}
+// Everything whose `from` is this link, linked entries included: senses, defenses, spells, features, attacks, grants,
+// resources, in that order. Resource labels use the computed maximum.
+export function grantChips(c: Character, link: string): Chip[] {
+  const out: Chip[] = [];
+  const add = (x: Linked & { id: string }, kind: RefKind, label: string, target: PillTarget, counted?: boolean) => {
+    const why = inactiveReason(c, x);
+    out.push({ label: label + (counted ? ' (counted)' : ''), ref: { kind, id: x.id }, target, active: why === null, ...(why ? { why } : {}), ...(counted ? { counted } : {}) });
+  };
+  const mine = <T extends Linked>(list: T[]) => list.filter((x) => x.from === link);
+  for (const x of mine(c.senses)) add(x, 'sense', x.name + ' ' + x.range, { sec: 'sec-senses' });
+  for (const x of mine(c.defenses)) add(x, 'defense', DEF_NAMES[x.kind] + ' · ' + x.name, { sec: 'sec-defenses' });
+  for (const x of mine(c.spells)) add(x, 'spell', x.name, { tab: 'spells' });
+  for (const x of mine(c.feats)) add(x, 'feature', x.name, { tab: 'features' });
+  for (const x of mine(c.attacks)) add(x, 'attack', x.name, { tab: 'actions' });
+  for (const g of mine(c.grants)) add(g, 'grant', grantLabel(c, g), grantTarget(g), g.counted);
+  for (const r of mine(c.res)) {
+    const m = maxOf(c, r), rc = RECHARGE_LABEL[rechargeOf(r)];
+    add(r, 'res', m === null ? r.name : m + ' × ' + r.name + (rc ? ' / ' + rc : ''), { sec: 'sec-resources' });
+  }
+  return out;
+}
+
 export const removeSpell = (c: Character, id: string) => removeRef(c, { kind: 'spell', id });
 // The one way to remove an item: its attunement slot empties with it, and its grants go.
 export const removeItem = (c: Character, id: string) => removeRef(c, { kind: 'item', id });
@@ -1138,7 +1183,7 @@ export const PILL_STATS: [PillStat, string, string][] = [
   ['init', 'Initiative', 'Init'], ['atk', 'Spell attack', 'Atk'], ['hd', 'Hit Dice left', 'HD'], ['insp', 'Inspiration', 'Insp']
 ];
 export const resPill = (id: string) => 'res:' + id;
-export type PillTarget = { sec: 'sec-hp' | 'sec-vitals' | 'sec-senses' | 'sec-resources' } | { tab: Tab };
+export type PillTarget = { sec: 'sec-hp' | 'sec-vitals' | 'sec-abilities' | 'sec-senses' | 'sec-defenses' | 'sec-conditions' | 'sec-resources' } | { tab: Tab };
 export interface PillView { key: string; label: string; value: string; max?: string; target: PillTarget }
 
 // What a slot shows. Null for an empty slot, an unknown key, or a resource that was deleted.

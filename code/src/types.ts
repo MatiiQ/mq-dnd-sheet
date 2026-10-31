@@ -22,7 +22,8 @@ export type SpellSort = 'az' | 'prep' | 'time';
 export type Size = 'tiny' | 'small' | 'medium' | 'large' | 'huge' | 'gargantuan';
 export type SrcKind = 'species' | 'background' | 'class' | 'subclass' | 'feat' | 'item' | 'spell' | 'other';
 
-export interface Details { name: string; species: string; cls: string; sub: string; bg: string; align: string }
+// The background is a feature (group 'background'), not a detail.
+export interface Details { name: string; species: string; cls: string; sub: string; align: string }
 // What an entry came from and when it counts. from: 'feature:<id>' | 'item:<id>' | 'spell:<id>' in this character.
 // srcKind + srcName: a source named by hand ("Species · Wood Elf"), kept when a link goes. No srcKind means no kind given.
 // minLvl: counts from this character level (never `lvl`, which is the spell level on Spell). needEq / needAtt: the

@@ -1,15 +1,18 @@
 import { useState, type CSSProperties } from 'react';
 import { isValue } from '../../catalog/value';
-import { ARMORS, CARRY_MULT, SIZES, maxOf, rechargeOf, carriedWeight, carryCapacity, carryUpOf, sizeOf, detectArmor, effScore, fmt, itemAcGrants, newId, num, parseWeight, removeItem } from '../../logic';
+import { ARMORS, CARRY_MULT, SIZES, maxOf, rechargeOf, carriedWeight, carryCapacity, carryUpOf, sizeOf, detectArmor, effScore, fmt, addGrants, grantChips, newId, parseWeight, removeItem, type GrantInput } from '../../logic';
+import { linkOf } from '../../links';
+import { GrantList, SourceChips } from '../Chips';
 import { patchEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { Character, Coin, Item, Recharge } from '../../types';
 import { AddButton, EntryForm, EntryRow, NumInput, TextField } from '../ui';
 
 const COINS: [Coin, string, string][] = [['cp', 'CP', 'var(--coin-cp)'], ['sp', 'SP', 'var(--coin-sp)'], ['ep', 'EP', 'var(--coin-ep)'], ['gp', 'GP', 'var(--accent)'], ['pp', 'PP', 'var(--coin-pp)']];
-// armor: an ARMORS name or '' for None. bonus: armor's magic bonus. itemAc / needAtt: another item's AC bonus grant.
+// armor: an ARMORS name or '' for None. bonus: armor's magic bonus (any other item's AC bonus is a grant).
+// oldBonus: an acBonus left on an item that isn't armor (not counted; saving clears it). pending: grants of a new item.
 // wt: the weight as typed.
 const BLANK = {
-  name: '', armor: '', bonus: 0, itemAc: 0, needAtt: false, wt: '', desc: '',
+  name: '', armor: '', bonus: 0, oldBonus: 0, pending: [] as GrantInput[], wt: '', desc: '',
   // Charges: on/off, maximum (0 = none), charges left, recharge and a partial regain (a number or die).
   charges: false, chMax: 0, chCount: 0, chRecharge: 'dawn' as Recharge, chRegain: ''
 };
@@ -24,13 +27,10 @@ const armorName = (it: Item) => {
   return (rows.find(([n]) => it.name.toLowerCase().includes(n.toLowerCase().replace(/ armor$/, ''))) ?? rows[0])?.[0] ?? '';
 };
 
-// An item's draft. A non-armor item shows its AC bonus grant, or an old acBonus that didn't convert (not counted
-// until saved here).
-function itemDraft(c: Character, it: Item): typeof BLANK {
-  const g = c.grants.find((x) => x.from === 'item:' + it.id && x.kind === 'ac' && x.acMode === 'bonus');
+// An item's draft. Its grants are edited live in the form (GrantList).
+function itemDraft(it: Item): typeof BLANK {
   return {
-    name: it.name, armor: armorName(it), bonus: it.armor ? it.acBonus || 0 : 0,
-    itemAc: it.armor ? 0 : g ? num(c, g.val) : Math.round(it.acBonus || 0), needAtt: !!g?.needAtt,
+    name: it.name, armor: armorName(it), bonus: it.armor ? it.acBonus || 0 : 0, oldBonus: it.armor ? 0 : it.acBonus || 0, pending: [],
     wt: it.wt === undefined ? '' : String(it.wt), desc: it.desc || '',
     charges: it.count !== undefined, chMax: it.max || 0, chCount: it.count || 0, chRecharge: rechargeOf(it), chRegain: it.regain || ''
   };
@@ -69,10 +69,10 @@ export function InventoryTab() {
       recharge: d.charges ? d.chRecharge : undefined, regain, regainOn: regain ? regainOn : undefined
     };
     const id = f.editingId ?? newId();
-    update((p) => ({
-      inv: saveEntry<Item>(p.inv, built, f.editingId, { qty: 1, eq: false, id }),
-      grants: itemAcGrants(p, id, armor ? 0 : f.draft.itemAc, f.draft.needAtt)
-    }));
+    update((p) => {
+      const next: Character = { ...p, inv: saveEntry<Item>(p.inv, built, f.editingId, { qty: 1, eq: false, id }) };
+      return !f.editingId && d.pending.length ? addGrants(next, linkOf('item', id), d.pending) : next;
+    });
     f.close();
   };
   const form = f.isOpen && (
@@ -89,15 +89,12 @@ export function InventoryTab() {
           <label className="field" style={{ flex: '1 1 80px' }}>AC bonus
             <NumInput className="input" value={f.draft.bonus} min={-5} max={10} onCommit={(bonus) => f.set({ bonus })} />
           </label>
-        ) : (
-          <>
-            <label className="field" style={{ flex: '1 1 80px' }}>AC bonus while equipped
-              <NumInput className="input" value={f.draft.itemAc} min={-5} max={10} onCommit={(itemAc) => f.set({ itemAc })} />
-            </label>
-            <label className="check" style={{ flex: '1 1 140px' }}><input type="checkbox" checked={f.draft.needAtt} onChange={(e) => f.set({ needAtt: e.target.checked })} />Needs attunement</label>
-          </>
-        )}
+        ) : f.draft.oldBonus ? (
+          <span className="small" style={{ flex: '1 1 200px', color: 'var(--danger)' }}>An old AC bonus of {f.draft.oldBonus} isn’t counted. Add an Armor Class grant below; saving clears the old value.</span>
+        ) : null}
       </div>
+      {/* An AC bonus, resistance, sense or charge-based spell of a magic item: grants that follow equip and attunement. */}
+      <GrantList link={f.editingId ? linkOf('item', f.editingId) : null} fromKind="item" pending={f.draft.pending} setPending={(pending) => f.set({ pending })} />
       <div className="row wrap gap-6">
         <label className="field" style={{ flex: '1 1 100px' }}>Weight (lb each)
           <input type="text" inputMode="decimal" className="input" value={f.draft.wt} placeholder="e.g. 0.5" onChange={(e) => f.set({ wt: e.target.value })} />
@@ -228,8 +225,10 @@ export function InventoryTab() {
                   )}
                 </div>}
                 body={it.desc ? <span>{it.desc}</span> : undefined}
-                onEdit={() => f.openEdit(it.id, itemDraft(c, it))}
-                onRemove={() => update((p) => removeItem(p, it.id))} />
+                onEdit={() => f.openEdit(it.id, itemDraft(it))}
+                onRemove={() => update((p) => removeItem(p, it.id))}>
+                {grantChips(c, linkOf('item', it.id)).length > 0 && <SourceChips link={linkOf('item', it.id)} />}
+              </EntryRow>
             )}
           </li>
         ))}

@@ -3,7 +3,7 @@ import type { Character } from './types';
 // Sample character: Ilyra Moonbrook, Wood Elf Ranger 5 (Hunter).
 export function sampleCharacter(): Character {
   return {
-    ch: { name: 'Ilyra Moonbrook', species: 'Wood Elf', cls: 'Ranger', sub: 'Hunter', bg: 'Guide', align: 'Neutral Good' },
+    ch: { name: 'Ilyra Moonbrook', species: 'Wood Elf', cls: 'Ranger', sub: 'Hunter', align: 'Neutral Good' },
     speeds: { climb: 0, swim: 0, fly: 0, burrow: 0 }, speedOpen: false,
     acOpen: false, acUnarm: 'none', acOn: [], acMods: [],
     size: 'medium', carryUp: false,
@@ -81,7 +81,8 @@ export function sampleCharacter(): Character {
       { id: 'f16', g: 'training', name: 'Armor', desc: 'Light, Medium, Shields' },
       { id: 'f17', g: 'training', name: 'Weapons', desc: 'Simple, Martial' },
       { id: 'f18', g: 'training', name: 'Tools', desc: 'Cartographer’s Tools' },
-      { id: 'f19', g: 'training', name: 'Languages', desc: 'Common, Elvish, Sylvan, Draconic' }
+      { id: 'f19', g: 'training', name: 'Languages', desc: 'Common, Elvish, Sylvan, Draconic' },
+      { id: 'f20', g: 'background', name: 'Guide', desc: 'Stealth and Survival, Cartographer’s Tools and the Magic Initiate (Druid) feat.' }
     ],
     grants: [], effectsOn: [], profs: []
   };
@@ -92,7 +93,7 @@ export function sampleCharacter(): Character {
 // HP uses fixed values: 8 + 11 × 5, plus CON +3 per level = 99 (PHB p.42). No attuned items.
 export function druidSample(): Character {
   return {
-    ch: { name: 'Seren Vale', species: 'Aasimar', cls: 'Druid', sub: 'Circle of the Stars', bg: 'Sage', align: 'Neutral' },
+    ch: { name: 'Seren Vale', species: 'Aasimar', cls: 'Druid', sub: 'Circle of the Stars', align: 'Neutral' },
     speeds: { climb: 0, swim: 0, fly: 0, burrow: 0 }, speedOpen: false,
     acOpen: false, acUnarm: 'none', acOn: [], acMods: [],
     size: 'medium', carryUp: false,
@@ -210,7 +211,8 @@ export function druidSample(): Character {
       { id: 'f22', g: 'training', name: 'Weapons', desc: 'Simple' },
       { id: 'f23', g: 'training', name: 'Tools', desc: 'Herbalism Kit, Calligrapher’s Supplies' },
       { id: 'f24', g: 'training', name: 'Languages', desc: 'Common, Druidic, Elvish, Dwarvish' },
-      { id: 'f25', g: 'other', name: 'Wild Shape forms', desc: '8 known, up to CR 1, flying allowed: Brown Bear, Dire Wolf, Giant Spider, Giant Seahorse, Riding Horse, Hawk, Owl, Rat (PHB appendix B).' }
+      { id: 'f25', g: 'other', name: 'Wild Shape forms', desc: '8 known, up to CR 1, flying allowed: Brown Bear, Dire Wolf, Giant Spider, Giant Seahorse, Riding Horse, Hawk, Owl, Rat (PHB appendix B).' },
+      { id: 'f26', g: 'background', name: 'Sage', desc: 'Arcana and History, Calligrapher’s Supplies and the Magic Initiate (Wizard) feat.' }
     ],
     grants: [], effectsOn: [], profs: []
   };
@@ -219,7 +221,7 @@ export function druidSample(): Character {
 export function blankCharacter(): Character {
   return {
     ...sampleCharacter(),
-    ch: { name: 'New character', species: '', cls: '', sub: '', bg: '', align: '' },
+    ch: { name: 'New character', species: '', cls: '', sub: '', align: '' },
     size: 'medium', carryUp: false,
     level: 1, speedBase: 30, initMisc: 0, hdDie: 8, castAb: 'none', insp: 0, pills: ['hp', 'ac', ''], spellSort: 'az',
     abil: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 }, abilAdj: {}, saveProf: {}, skillProf: {},

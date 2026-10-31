@@ -1,7 +1,8 @@
 import { useState, type CSSProperties } from 'react';
 import { ABILITIES, CONDITION_OPTIONS, DAMAGE_TYPES, mergedDefenses, newId, normName, removeRef } from '../logic';
-import { useSheet } from '../sheet';
-import type { Character, DefenseKind } from '../types';
+import { patchEntry, useSheet } from '../sheet';
+import { SourcePicker } from './SourcePicker';
+import type { Character, Defense, DefenseKind } from '../types';
 import { RemoveButton, XIcon, useArmed } from './ui';
 
 // Choices for Advantage on saves; free text can be added too.
@@ -56,7 +57,8 @@ function DefenseGroup({ kind, title, noun, color, addLabel, options, placeholder
       <div className="row wrap gap-6" style={{ minHeight: 44 }}>
         {list.map((r) => edit
           ? <DefenseChip key={r.key} name={r.name} noun={noun} color={color} onRemove={() => remove(r.ids)} />
-          : <OpenChip key={r.key} name={r.name} noun={noun} color={color} sources={r.sources} onRemove={() => remove(r.ids)} />)}
+          : <OpenChip key={r.key} name={r.name} noun={noun} color={color} sources={r.sources} onRemove={() => remove(r.ids)}
+            entry={c.defenses.find((x) => r.ids.includes(x.id) && !x.from) ?? c.defenses.find((x) => x.id === r.ids[0])} />)}
         {list.length === 0 && <span className="muted">None</span>}
       </div>
       <select className="input" aria-label={addLabel} value="" onChange={(e) => { if (e.target.value) add(e.target.value); }}>
@@ -79,14 +81,20 @@ const chipStyle = (color: string): CSSProperties => ({
   border: '1px solid ' + color, background: 'transparent', color
 });
 
-// Outside Edit mode: tapping the chip shows its sources and its Remove button.
-function OpenChip({ name, noun, color, sources, onRemove }: { name: string; noun: string; color: string; sources: string[]; onRemove: () => void }) {
+// Outside Edit mode: tapping the chip shows its sources, a source picker for its own entry and its Remove button.
+function OpenChip({ name, noun, color, sources, onRemove, entry }: { name: string; noun: string; color: string; sources: string[]; onRemove: () => void; entry?: Defense }) {
   const [open, setOpen] = useState(false);
+  const { update } = useSheet();
   return (
     <span className="row wrap gap-4">
       <button type="button" aria-expanded={open} aria-label={name + ' ' + noun} onClick={() => setOpen(!open)} style={chipStyle(color)}>{name}</button>
       {open && sources.length > 0 && <span className="small">From {sources.join(', ')}</span>}
       {open && <RemoveButton name={name + ' ' + noun} onRemove={onRemove} />}
+      {open && entry && (
+        <span className="col gap-4" style={{ flex: '1 1 100%' }}>
+          <SourcePicker value={entry} onChange={(v) => update((p) => ({ defenses: patchEntry(p.defenses, entry.id, v) }))} />
+        </span>
+      )}
     </span>
   );
 }
