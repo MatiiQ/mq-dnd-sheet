@@ -17,6 +17,8 @@ it('parses SRD spell blocks into catalog entries', () => {
     conc: false, fx: 'healing', dice: '2d8', scale: '2d8/slot', higher: 'The healing increases by 2d8 for each spell slot level above 1.'
   });
   expect(cure.save).toBeUndefined();
+  expect(cure.healMod).toBe(true);
+  expect(mark.healMod).toBeUndefined();
   expect(mark).toMatchObject({
     id: 'spell/hunters-mark', name: 'Hunter’s Mark', lvl: 1, school: 'Divination', classes: 'ranger', time: 'Bonus Action', range: '90 feet',
     comp: 'V', dur: 'Concentration, up to 1 hour', conc: true, ritual: false, fx: 'damage', dice: '1d6', dtype: 'Force'

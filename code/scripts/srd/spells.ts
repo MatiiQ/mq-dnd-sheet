@@ -61,6 +61,8 @@ export function parseSpells(text: string): SpellEntry[] {
     if (fx === 'damage') e.dtype = dmg![2];
     if (scale) e.scale = scale;
     if (higher) e.higher = higher;
+    // Healing that adds the modifier: "regains Hit Points equal to 2d8 plus your spellcasting ability modifier".
+    if (fx === 'healing' && /Hit Points equal to [^.]*?plus your spellcasting ability modifier/.test(body)) e.healMod = true;
     return e;
   });
 }

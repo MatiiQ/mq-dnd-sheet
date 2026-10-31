@@ -641,7 +641,8 @@ describe('spellFromForm', () => {
     expect(spellFromForm(sd({ name: 'X', always: false })).always).toBeUndefined();
   });
   it('round-trips catalog spells through the draft', () => {
-    for (const id of ['spell/fire-bolt', 'spell/fireball', 'spell/shield-of-faith']) {
+    expect(spellFromEntry(spell('spell/cure-wounds')).healMod).toBe(true);
+    for (const id of ['spell/fire-bolt', 'spell/fireball', 'spell/shield-of-faith', 'spell/cure-wounds']) {
       const x = spellFromEntry(spell(id));
       expect([id, spellFromForm(draftFromSpell({ id: 's1', ...x }))]).toEqual([id, without(x, 'prep')]);
     }

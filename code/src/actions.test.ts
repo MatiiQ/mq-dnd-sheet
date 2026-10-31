@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import srdEntries from './data/srd/index';
 import { mergeCatalog } from './catalog/merge';
-import type { ItemEntry } from './catalog/schema';
-import { itemFromEntry } from './catalog/copy';
+import type { Entry, ItemEntry, SpellEntry } from './catalog/schema';
+import { addFromCatalog, itemFromEntry, spellFromEntry, type AddChoices } from './catalog/copy';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
-import { attacksPerAction, hasMastery, lightExtra, masterySlots, unarmedStrike, weaponAbility, weaponAttacks, weaponProficient, type Use } from './actions';
+import { attacksPerAction, cantripDice, econOf, extraDamage, extraText, featureActions, hasMastery, lightExtra, masterySlots, spellActions, unarmedStrike, weaponAbility, weaponAttacks, weaponProficient, type Use } from './actions';
 import { weaponKind } from './hands';
 import { addGrants, migrate, normalize } from './logic';
 import { applyPatch } from './storage';
 import { dagger, dart, handaxe, handCrossbow, longbow, longsword, quarterstaff, rapier, shield, shortsword, spear } from './test-fixtures';
-import type { Character, Grant, Item, Prof } from './types';
+import type { Character, Grant, Item, Prof, Spell } from './types';
 
 const cat = mergeCatalog(srdEntries, null);
 const catItem = (id: string, p: Partial<Item> = {}): Item => ({ ...itemFromEntry(cat.byId.get(id) as ItemEntry), id: id.split('/').pop()!, eq: true, ...p });
@@ -54,7 +54,7 @@ const fighter = (abil: Partial<Character['abil']>, inv: Item[], profs: string[] 
   profs: profs.map((name, i): Prof => ({ id: 'pw' + i, cat: 'weapon', name })), ...p
 });
 const use = (c: Character, it: Item, u: Use) => weaponAttacks(c, it).find((a) => a.use === u)!;
-const grant = (g: Omit<Grant, 'id' | 'from'> & { id?: string }): Grant => ({ id: 'gt', from: 'feature:fx', ...g } as Grant);
+const grant = (g: Omit<Grant, 'id' | 'from'> & { id?: string; from?: string }): Grant => ({ id: 'gt', from: 'feature:fx', ...g } as Grant);
 const withGrants = (c: Character, ...gs: Grant[]): Character => ({ ...c, feats: [...c.feats, { id: 'fx', g: 'class', name: 'Test feature', desc: '' }], grants: [...c.grants, ...gs] });
 const dueling = grant({ id: 'gd', kind: 'dmgBonus', name: 'Dueling', val: '2', wrange: 'melee', oneHand: true });
 
@@ -220,5 +220,99 @@ describe('the Light extra attack (PHB p.213)', () => {
     expect(nick).toMatchObject({ nick: true, econ: 'action', note: 'part of the Attack action, once per turn' });
     expect(lightExtra(duo([dagger({ id: 'd' }), shortsword({ id: 'ss' })], ['d', 'ss'], ['dagger']))).toMatchObject({ itemId: 'd', nick: true });
     expect(lightExtra(duo([dagger({ id: 'd' }), shortsword({ id: 'ss' })], ['d', 'ss'], []))).toMatchObject({ itemId: 'ss', nick: false });
+  });
+});
+
+const catSpell = (id: string, p: Partial<Spell> = {}): Spell => ({ ...spellFromEntry(cat.byId.get(id) as SpellEntry), id: id.split('/').pop()!, ...p });
+const actionOf = (c: Character, id: string) => spellActions(c).find((a) => a.spellId === id);
+// A level 5 Wizard, INT 16 (+3), PB 3.
+const wizard = (spells: Spell[], p: Partial<Character> = {}): Character =>
+  ({ ...blankCharacter(), level: 5, castAb: 'int', abil: { ...blankCharacter().abil, int: 16 }, spells, ...p });
+
+describe('spell actions', () => {
+  it('puts a spell with a save under save, even when it deals damage (Fireball)', () => {
+    const a = actionOf(wizard([catSpell('spell/fireball')]), 'fireball')!;
+    expect(a).toMatchObject({ group: 'save', dc: 14, save: 'dex', dice: '8d6', dtype: 'Fire', econ: 'action' });
+    expect(a.upcast).toMatch(/increases by 1d6/);
+  });
+  it('scales cantrip dice at levels 5, 11 and 17 (PHB p.239, Fire Bolt p.274)', () => {
+    expect(actionOf(wizard([catSpell('spell/fire-bolt')]), 'fire-bolt')).toMatchObject({ group: 'damage', hit: 6, dice: '2d10' });
+    expect(actionOf(wizard([catSpell('spell/fire-bolt')], { level: 11 }), 'fire-bolt')!.dice).toBe('3d10');
+    expect(actionOf(wizard([catSpell('spell/eldritch-blast')]), 'eldritch-blast')!.dice).toBe('2 beams × 1d10');
+    expect([cantripDice('1d8', 1), cantripDice('1d8', 4), cantripDice('1d8', 5), cantripDice('1d8', 11), cantripDice('1d8', 17), cantripDice('2d6', 5)])
+      .toEqual(['1d8', '1d8', '2d8', '3d8', '4d8', '4d6']);
+  });
+  it('adds the spellcasting modifier to healing that says so (Cure Wounds, PHB p.259)', () => {
+    const cure = (wis: number, healMod?: boolean) => actionOf(ilyra({ abil: { ...sampleCharacter().abil, wis }, spells: [catSpell('spell/cure-wounds', { healMod })] }), 'cure-wounds')!;
+    expect(cure(14, true)).toMatchObject({ group: 'healing', dice: '2d8 + WIS (+2)' });
+    expect(cure(8, true).dice).toBe('2d8 + WIS (−1)');
+    expect(cure(14).dice).toBe('2d8');
+  });
+  it('adds a cantrip damage bonus to the feature’s class cantrips only', () => {
+    const bonus = (from: string) => grant({ id: 'gp', kind: 'dmgBonus', name: 'Potent Spellcasting', val: 'wis', cantrip: true, from });
+    const c = { ...druidSample(), grants: [...druidSample().grants, bonus('feature:f7')] };
+    expect(actionOf(c, 'ds2')!.dice).toBe('3d8+5');
+    expect(actionOf(c, 'ds8')!.dice).toBe('3d10');
+    const noCid = { ...druidSample(), grants: [...druidSample().grants, bonus('feature:f16')] };
+    expect(actionOf(noCid, 'ds2')!.dice).toBe('3d8');
+  });
+  it('hurls Produce Flame with a Magic action (PHB p.308)', () => {
+    expect(actionOf(druidSample(), 'ds2')).toMatchObject({ econ: 'action', note: 'Cast as a Bonus Action; hurl as a Magic action' });
+    expect([econOf('Bonus Action'), econOf('Reaction, which you take when…'), econOf('Action'), econOf('1 minute')]).toEqual(['bonus', 'reaction', 'action', 'other']);
+  });
+  it('shows Shillelagh as an effect row and leaves out spells that do nothing here', () => {
+    expect(actionOf(druidSample(), 'ds3')).toMatchObject({ group: 'damage', effect: true, dice: '' });
+    expect(actionOf(druidSample(), 'ds1')).toBeUndefined();
+  });
+  it('lists only spells castable now', () => {
+    const hm = catSpell('spell/healing-word');
+    const c = wizard([{ ...hm, id: 'np', prep: false }, { ...hm, id: 'al', prep: false, always: true }, catSpell('spell/fire-bolt', { prep: false })]);
+    expect(spellActions(c).map((a) => a.spellId).sort()).toEqual(['al', 'fire-bolt']);
+    const granted = (level: number) => ({ ...sampleCharacter(), level, spells: [...sampleCharacter().spells.filter((x) => x.id !== 'sp5'), { ...sampleCharacter().spells.find((x) => x.id === 'sp5')!, from: 'feature:f2', minLvl: 5 }] });
+    expect(actionOf(granted(4), 'sp5')).toBeUndefined();
+    expect(actionOf(granted(5), 'sp5')).toBeDefined();
+  });
+  it('puts damage without an attack or save under damage (Hunter’s Mark, Magic Missile)', () => {
+    expect(actionOf(ilyra(), 'sp4')).toMatchObject({ group: 'damage', note: 'Extra damage on your hits while it lasts' });
+    expect(actionOf(wizard([catSpell('spell/magic-missile')]), 'magic-missile')).toMatchObject({ group: 'damage', dice: '1d4+1' });
+  });
+});
+
+describe('feature actions', () => {
+  it('lists action grants with their timing and resource', () => {
+    const acts = featureActions(druidSample());
+    expect(acts.find((a) => a.name === 'Wild Shape')).toMatchObject({ econ: 'bonus', resId: 'wild', source: 'Class · Wild Shape' });
+    expect(acts.find((a) => a.name === 'Healing Hands')!.dice).toBe('4d4');
+  });
+});
+
+describe('extra damage', () => {
+  const hmGrant: Grant = { id: 'g-hm', kind: 'xdmg', name: 'Hunter’s Mark', dice: '1d6', dtype: 'Force', on: 'the marked target', when: 'active', from: 'spell:sp4', srcKind: 'spell' };
+  it('counts Hunter’s Mark only while concentrating on it', () => {
+    const c = ilyra({ riders: [], grants: [...sampleCharacter().grants, hmGrant] });
+    const on = extraDamage({ ...c, conc: { id: 'sp4', name: 'Hunter’s Mark' } });
+    expect(on.map(extraText)).toContain('1d6 Force');
+    expect(extraDamage(c).some((x) => x.name === 'Hunter’s Mark')).toBe(false);
+  });
+  it('reads dice at the level and says when they apply', () => {
+    const sneak = grant({ id: 'gs', kind: 'xdmg', name: 'Sneak Attack', dice: '1:1d6,3:2d6,5:3d6', on: 'Finesse or Ranged hit', perTurn: true });
+    const c = withGrants(ilyra(), sneak);
+    const list = extraDamage(c);
+    expect(list.find((x) => x.name === 'Sneak Attack')!.dice).toBe('3d6');
+    expect(list.find((x) => x.name === 'Colossus Slayer')!.when).toMatch(/once per turn/);
+    expect(list.find((x) => x.name === 'Critical hit')).toMatchObject({ manual: true, dice: 'Roll weapon dice twice' });
+  });
+  const A = (more: Partial<AddChoices> = {}): AddChoices => ({ picks: {}, counted: {}, links: {}, ...more });
+  const E = (id: string) => cat.byId.get(id) as Entry;
+  it('comes with Hunter’s Mark when Favored Enemy grants it', () => {
+    const c = addFromCatalog(blankCharacter(), cat, E('feature/ranger/favored-enemy'), A());
+    const hm = c.spells.find((x) => x.cid === 'spell/hunters-mark')!;
+    expect(c.grants.filter((g) => g.kind === 'xdmg')).toEqual([expect.objectContaining({ from: 'spell:' + hm.id, dtype: 'Force', when: 'active' })]);
+    const hand: Character = { ...blankCharacter(), spells: [{ id: 'h1', name: 'Hunter’s Mark', lvl: 1, time: 'Bonus Action', range: '90 feet', c: true }] };
+    const linked = addFromCatalog(hand, cat, E('feature/ranger/favored-enemy'), A({ links: { g1: 'h1' } }));
+    expect(linked.grants.filter((g) => g.kind === 'xdmg')).toEqual([expect.objectContaining({ from: 'spell:h1' })]);
+    const picked = addFromCatalog(blankCharacter(), cat, E('spell/hunters-mark'), A());
+    const twice = addFromCatalog(picked, cat, E('feature/ranger/favored-enemy'), A({ links: { g1: picked.spells[0].id } }));
+    expect(twice.grants.filter((g) => g.kind === 'xdmg')).toHaveLength(1);
   });
 });

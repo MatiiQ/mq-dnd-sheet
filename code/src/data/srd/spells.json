@@ -1130,7 +1130,8 @@
     "save": "dex",
     "dice": "4d12",
     "scale": "1d12/slot",
-    "higher": "The healing and damage increase by 1d12 for each spell slot level above 7."
+    "higher": "The healing and damage increase by 1d12 for each spell slot level above 7.",
+    "healMod": true
   },
   {
     "id": "spell/conjure-elemental",
@@ -1447,7 +1448,8 @@
     "fx": "healing",
     "dice": "2d8",
     "scale": "2d8/slot",
-    "higher": "The healing increases by 2d8 for each spell slot level above 1."
+    "higher": "The healing increases by 2d8 for each spell slot level above 1.",
+    "healMod": true
   },
   {
     "id": "spell/dancing-lights",
@@ -3162,7 +3164,8 @@
     "fx": "healing",
     "dice": "2d4",
     "scale": "2d4/slot",
-    "higher": "The healing increases by 2d4 for each spell slot level above 1."
+    "higher": "The healing increases by 2d4 for each spell slot level above 1.",
+    "healMod": true
   },
   {
     "id": "spell/heat-metal",
@@ -3366,7 +3369,18 @@
     "fx": "damage",
     "dice": "1d6",
     "dtype": "Force",
-    "higher": "Your Concentration can last longer with a spell slot of level 3–4 (up to 8 hours) or 5+ (up to 24 hours)."
+    "higher": "Your Concentration can last longer with a spell slot of level 3–4 (up to 8 hours) or 5+ (up to 24 hours).",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "xdmg",
+        "name": "Hunter’s Mark",
+        "dice": "1d6",
+        "dtype": "Force",
+        "on": "the marked target",
+        "when": "active"
+      }
+    ]
   },
   {
     "id": "spell/hypnotic-pattern",
@@ -4008,7 +4022,8 @@
     "fx": "healing",
     "dice": "5d8",
     "scale": "1d8/slot",
-    "higher": "The healing increases by 1d8 for each spell slot level above 5."
+    "higher": "The healing increases by 1d8 for each spell slot level above 5.",
+    "healMod": true
   },
   {
     "id": "spell/mass-heal",
@@ -4047,7 +4062,8 @@
     "fx": "healing",
     "dice": "2d4",
     "scale": "1d4/slot",
-    "higher": "The healing increases by 1d4 for each spell slot level above 3."
+    "higher": "The healing increases by 1d4 for each spell slot level above 3.",
+    "healMod": true
   },
   {
     "id": "spell/mass-suggestion",

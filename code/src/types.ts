@@ -73,6 +73,8 @@ export interface Spell extends Linked {
   // Catalog fields: dice stays the free-text summary shown in the row; dmg/dtype are the damage dice and type.
   desc?: string; school?: string; classes?: string; ritual?: boolean; atk?: 'melee' | 'ranged'; save?: Ability;
   fx?: 'damage' | 'healing' | 'other'; dmg?: string; dtype?: string; scale?: string; higher?: string;
+  // healMod: the healing adds the spellcasting ability modifier (Cure Wounds), shown on its Actions row.
+  healMod?: boolean;
 }
 export interface Feature extends Linked { id: string; g: FeatureGroup; name: string; desc: string; cid?: string }
 export interface Concentration { id: string; name: string }

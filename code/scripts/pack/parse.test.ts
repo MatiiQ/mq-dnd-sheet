@@ -17,6 +17,12 @@ describe('spells', () => {
     expect(list[2].desc).toBe('A pulse of light washes over a 10-foot cube; each creature in it makes a Con save or takes 1d8 Radiant damage.\nCantrip Upgrade: Damage +1d8 at levels 5, 11 and 17.');
     for (const e of list) expect(validateEntry(e)).toEqual([]);
   });
+  it('flags healing that adds the spellcasting ability modifier', () => {
+    const md = (effect: string) => `### Mend Light (PHB p.904)\n- **Level/School:** 1 Abjuration\n- **Classes:** Cleric\n- **Casting Time:** Action\n- **Range:** Touch\n- **Components:** V\n- **Duration:** Instantaneous\n- **Effect:** ${effect}\n`;
+    expect(parseSpellsMd(md('A creature you touch regains 2d8 + your spellcasting ability modifier Hit Points.'))[0]).toMatchObject({ fx: 'healing', healMod: true });
+    expect(parseSpellsMd(md('A creature you touch regains 2d8 Hit Points.'))[0].healMod).toBeUndefined();
+    expect(parseSpellsMd(md('Make a melee spell attack: 1d8 + your spellcasting ability modifier Force damage.'))[0].healMod).toBeUndefined();
+  });
   it('reads a ritual marked on the level line', () => {
     const [bell] = parseSpellsMd('### Quiet Bell (PHB p.904)\n- **Level/School:** 1 Divination (Ritual)\n- **Classes:** Wizard\n- **Casting Time:** 1 minute\n' +
       '- **Range:** Self\n- **Components:** V\n- **Duration:** 1 hour\n- **Effect:** A soundless chime rings.\n');

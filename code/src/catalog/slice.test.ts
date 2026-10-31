@@ -78,6 +78,9 @@ describe('vertical slice (SRD)', () => {
 });
 
 describe('spell grants in the slice', () => {
+  it('Hunter’s Mark adds 1d6 Force to hits on the marked target while it lasts (PHB p.287)', () => {
+    expect(grants('spell/hunters-mark')).toEqual([{ id: 'g1', kind: 'xdmg', name: 'Hunter’s Mark', dice: '1d6', dtype: 'Force', on: 'the marked target', when: 'active' }]);
+  });
   it('Shillelagh overrides the attack ability of a club or quarterstaff while on (PHB p.316)', () => {
     expect(grants('spell/shillelagh')).toEqual([{ id: 'g1', kind: 'atkAbil', name: 'Shillelagh', ab: 'cast', weapons: 'club,quarterstaff', amode: 'melee', die: '1:1d8,5:1d10,11:1d12,17:2d6', when: 'active' }]);
   });

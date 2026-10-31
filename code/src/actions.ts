@@ -3,9 +3,9 @@
 import { slug } from './catalog/schema';
 import { valueAt } from './catalog/value';
 import { hasProp, twoHanded, versatile, weaponKind, weaponMatches, weaponsHeld } from './hands';
-import { activeGrants, sourceOf } from './links';
-import { ABILITIES, abilityMod, normName, num, profBonus, profList, hasProf, valueCtx, type AcPart } from './logic';
-import type { Ability, Character, Econ, Grant, Item, Spell } from './types';
+import { activeGrants, isActive, linkOf, sourceLabel, sourceOf } from './links';
+import { ABILITIES, abilityMod, fmt, normName, num, profBonus, profList, hasProf, spellAttackFor, spellSaveDcFor, spellUsable, valueCtx, type AcPart } from './logic';
+import type { Ability, Character, Econ, Feature, Grant, Item, Spell } from './types';
 
 // Weapon Mastery: the number of weapon kinds whose mastery properties the character can use, from the active
 // prof 'mastery' grants without a target (Fighter 3, 4 from level 4, PHB p.91; Ranger 2 …).
@@ -200,3 +200,112 @@ export function lightExtra(c: Character): (WeaponAttack & { nick: boolean }) | n
     ...(nick ? { note: 'part of the Attack action, once per turn' } : { note: 'Bonus Action, after the Attack action' })
   };
 }
+
+// ---------- spells ----------
+
+// The timing of a casting time: Bonus Action before Action, since one starts with the other's word.
+export const econOf = (time: string): Econ => {
+  const t = time.trim().toLowerCase();
+  return t.startsWith('bonus action') ? 'bonus' : t.startsWith('reaction') ? 'reaction' : t.startsWith('action') ? 'action' : 'other';
+};
+// Spells whose attack takes another action than their casting: Produce Flame is cast as a Bonus Action and hurled with a
+// Magic action (PHB p.308). Keyed by catalog slug, with the name as a fallback.
+const SPELL_ECON: Record<string, [Econ, string]> = { 'produce-flame': ['action', 'Cast as a Bonus Action; hurl as a Magic action'] };
+// Hunter's Mark deals no damage on casting: its damage comes on later hits (PHB p.287), listed under Extra damage.
+const SPELL_NOTES: Record<string, string> = { 'hunters-mark': 'Extra damage on your hits while it lasts' };
+const spellKey = (sp: Spell) => (sp.cid ? sp.cid.split('/').pop()! : slug(sp.name));
+
+// Cantrip dice at the character level: the count × 1, 2, 3 or 4 from levels 1, 5, 11 and 17 ("Cantrip Upgrade", PHB
+// p.239; Fire Bolt p.274, Thorn Whip p.333). Only the leading 'NdM' term scales.
+const cantripTier = (level: number) => (level >= 17 ? 4 : level >= 11 ? 3 : level >= 5 ? 2 : 1);
+export function cantripDice(dice: string, level: number): string {
+  const k = cantripTier(level);
+  return dice.replace(/^(\d*)d(\d+)/, (_, n: string, m: string) => `${Number(n || 1) * k}d${m}`);
+}
+
+export interface SpellAction {
+  spellId: string; name: string; group: 'damage' | 'save' | 'healing'; econ: Econ; hit?: number; dc?: number; save?: Ability;
+  dice: string; dtype?: string; upcast?: string; range: string; source?: string; effect?: boolean; note?: string;
+}
+const ABBR = (a: Ability) => a.toUpperCase();
+// An On/Off effect of the spell: an atkAbil grant from it that counts while its effect is on (Shillelagh).
+const effectOf = (c: Character, sp: Spell) => c.grants.some((g) => g.kind === 'atkAbil' && g.from === linkOf('spell', sp.id) && g.when === 'active');
+// Cantrip damage bonus grants (Potent Spellcasting) add to cantrips of the class of the grant's source feature, read from
+// its catalog id ('feature/druid/…' → druid); a source without one adds nothing.
+function cantripBonus(c: Character, sp: Spell): number {
+  if (sp.lvl !== 0) return 0;
+  const classes = (sp.classes ?? '').split(',');
+  return activeGrants(c, 'dmgBonus').filter((g) => {
+    if (!g.cantrip) return false;
+    const cls = (sourceOf(c, g.from) as Feature | null)?.cid?.split('/')[1];
+    return g.from.startsWith('feature:') && !!cls && classes.includes(cls);
+  }).reduce((t, g) => t + num(c, g.val), 0);
+}
+
+// Spells castable now — cantrips always (as in the Spells tab), others when usable (prepared or always prepared) — that
+// count now (isActive: a granted spell's level and item conditions), with an attack, a save, damage, healing, or an
+// On/Off effect (Shillelagh, shown with its switch and no dice). A save puts a spell under save even when it deals
+// damage (Fireball); otherwise an attack or damage puts it under damage, healing under healing. To-hit and DC follow
+// the spell's own casting ability (PHB p.41).
+export function spellActions(c: Character): SpellAction[] {
+  const out: SpellAction[] = [];
+  for (const sp of c.spells) {
+    if (!(sp.lvl === 0 || spellUsable(c, sp)) || !isActive(c, sp)) continue;
+    const effect = effectOf(c, sp);
+    if (!sp.atk && !sp.save && sp.fx !== 'damage' && sp.fx !== 'healing' && !effect) continue;
+    const key = spellKey(sp);
+    const group: SpellAction['group'] = sp.save ? 'save' : sp.atk || sp.fx === 'damage' ? 'damage' : sp.fx === 'healing' ? 'healing' : 'damage';
+    let dice = sp.dmg ?? '';
+    if (dice && (sp.cid === 'spell/eldritch-blast' || (!sp.cid && normName(sp.name) === 'eldritch blast'))) {
+      // Eldritch Blast adds beams instead of dice (PHB p.267).
+      dice = `${cantripTier(c.level)} beams × ${dice}`;
+    } else if (dice && sp.scale === 'cantrip') {
+      dice = diceText(cantripDice(dice, c.level), cantripBonus(c, sp));
+    } else if (dice && sp.fx === 'healing' && sp.healMod) {
+      // Cure Wounds, Healing Word, Mass Cure Wounds: "+ your spellcasting ability modifier" (PHB pp.259, 284, 296).
+      const ab = sp.castAb ?? (c.castAb === 'none' ? null : c.castAb);
+      if (ab) dice = `${dice} + ${ABBR(ab)} (${fmt(abilityMod(c, ab))})`;
+    }
+    const [econ, econNote] = SPELL_ECON[key] ?? [econOf(sp.time), undefined];
+    const note = econNote ?? SPELL_NOTES[key];
+    const hit = sp.atk ? spellAttackFor(c, sp) : null, dc = sp.save ? spellSaveDcFor(c, sp) : null, source = sourceLabel(c, sp);
+    out.push({
+      spellId: sp.id, name: sp.name, group, econ, dice, range: sp.range,
+      ...(hit !== null ? { hit } : {}), ...(dc !== null ? { dc } : {}), ...(sp.save ? { save: sp.save } : {}),
+      ...(sp.dtype ? { dtype: sp.dtype } : {}), ...(sp.higher ? { upcast: sp.higher } : {}), ...(source ? { source } : {}),
+      ...(effect ? { effect: true } : {}), ...(note ? { note } : {})
+    });
+  }
+  return out;
+}
+
+// ---------- features and extra damage ----------
+
+// Dice or numbers from a grant, at the level (valueAt: num reads dice as 0), with a real minus.
+const valueText = (c: Character, v: string) => String(valueAt(v, valueCtx(c))).replace(/-/g, '−');
+
+export interface FeatureAction { grantId: string; name: string; econ: Econ; dice?: string; resId?: string; source?: string; note?: string }
+// Active action grants (Second Wind, Wild Shape, Channel Divinity). `dice` is not always dice: Rage's damage bonus or a
+// count evaluates to a number, shown as it comes.
+export const featureActions = (c: Character): FeatureAction[] => activeGrants(c, 'action').map((g) => {
+  const source = sourceLabel(c, g);
+  return {
+    grantId: g.id, name: g.name, econ: g.econ ?? 'other', ...(g.dice ? { dice: valueText(c, g.dice) } : {}), ...(g.res ? { resId: g.res } : {}),
+    ...(source ? { source } : {}), ...(g.note ? { note: g.note } : {})
+  };
+});
+
+export interface ExtraDamage { key: string; name: string; dice: string; dtype?: string; when: string; source?: string; manual?: boolean }
+// Extra damage on a hit: active xdmg grants (Sneak Attack's dice at the level, Hunter's Mark while concentrating on
+// it), each saying when it applies, then the manual riders as typed.
+export function extraDamage(c: Character): ExtraDamage[] {
+  const granted = activeGrants(c, 'xdmg').map((g): ExtraDamage => {
+    const source = sourceLabel(c, g);
+    return {
+      key: 'grant:' + g.id, name: g.name, dice: valueText(c, g.dice ?? ''), ...(g.dtype ? { dtype: g.dtype } : {}),
+      when: [g.on, g.perTurn ? 'once per turn' : ''].filter(Boolean).join(', '), ...(source ? { source } : {})
+    };
+  });
+  return [...granted, ...c.riders.map((r): ExtraDamage => ({ key: 'rider:' + r.id, name: r.name, dice: r.dice, when: '', manual: true }))];
+}
+export const extraText = (x: ExtraDamage) => (x.dtype ? x.dice + ' ' + x.dtype : x.dice);

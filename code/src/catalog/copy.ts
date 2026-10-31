@@ -27,7 +27,7 @@ export function spellFromEntry(e: SpellEntry): Omit<Spell, 'id'> {
   return compact({
     name: e.name, lvl: e.lvl, time: e.time, range: e.range, dur: e.dur, comp: e.comp, cid: e.id, c: e.conc, ritual: e.ritual,
     school: e.school, classes: e.classes, desc: e.desc, atk: e.atk, save: e.save, fx: e.fx, dmg: e.dice, dtype: e.dtype, scale: e.scale,
-    higher: e.higher, acFx: e.acFx, acVal: e.acVal, prep: true, dice: spellSummary(e)
+    higher: e.higher, acFx: e.acFx, acVal: e.acVal, healMod: e.healMod, prep: true, dice: spellSummary(e)
   });
 }
 
@@ -622,7 +622,7 @@ function addEntry(c: Character, cat: Catalog, e: Entry, ans: AddChoices): Charac
 // ---- The custom spell form ----
 
 // The spell form as typed. Linked fields (from, srcKind, srcName) ride along for the SourcePicker; the save handler
-// writes them. Catalog-only fields (cid, school, classes, scale, ritual) have no input; the draft carries them so an
+// writes them. Catalog-only fields (cid, school, classes, scale, ritual, healMod) have no input; the draft carries them so an
 // edit keeps them. freeCast: "Give it a free cast" (a resource the save handler adds or removes).
 export interface SpellDraft {
   name: string; lvl: string; time: string; range: string; dice: string; conc: boolean; dur: string; comp: string; always: boolean;
@@ -630,7 +630,7 @@ export interface SpellDraft {
   desc: string; atk: '' | 'melee' | 'ranged'; save: '' | Ability; fx: '' | 'damage' | 'healing' | 'other'; dmg: string; dtype: string; higher: string;
   freeCast: boolean;
   from?: string; srcKind?: SrcKind; srcName?: string;
-  cid?: string; school?: string; classes?: string; scale?: string; ritual?: boolean;
+  cid?: string; school?: string; classes?: string; scale?: string; ritual?: boolean; healMod?: boolean;
 }
 export const BLANK_SPELL: SpellDraft = {
   name: '', lvl: '1', time: 'Action', range: '', dice: '', conc: false, dur: '', comp: '', always: false, acFx: '', acVal: 0,
@@ -646,7 +646,7 @@ export function spellFromForm(d: SpellDraft): Omit<Spell, 'id'> {
     dur: text(d.dur), comp: text(d.comp), always: d.always || undefined,
     acFx: d.acFx || undefined, acVal: d.acFx ? d.acVal : undefined,
     desc: text(d.desc), atk: d.atk || undefined, save: d.save || undefined, fx: d.fx || undefined, dmg: text(d.dmg), dtype: text(d.dtype),
-    higher: text(d.higher), cid: d.cid, school: d.school, classes: d.classes, scale: d.scale, ritual: d.ritual
+    higher: text(d.higher), cid: d.cid, school: d.school, classes: d.classes, scale: d.scale, ritual: d.ritual, healMod: d.healMod
   };
 }
 export function draftFromSpell(sp: Spell): SpellDraft {
@@ -655,7 +655,7 @@ export function draftFromSpell(sp: Spell): SpellDraft {
     dur: sp.dur || '', comp: sp.comp || '', always: !!sp.always, acFx: sp.acFx || '', acVal: sp.acVal ?? 0,
     desc: sp.desc || '', atk: sp.atk || '', save: sp.save || '', fx: sp.fx || '', dmg: sp.dmg || '', dtype: sp.dtype || '', higher: sp.higher || '',
     freeCast: false, from: sp.from, srcKind: sp.srcKind, srcName: sp.srcName,
-    cid: sp.cid, school: sp.school, classes: sp.classes, scale: sp.scale, ritual: sp.ritual
+    cid: sp.cid, school: sp.school, classes: sp.classes, scale: sp.scale, ritual: sp.ritual, healMod: sp.healMod
   };
 }
 

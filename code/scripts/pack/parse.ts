@@ -74,6 +74,8 @@ export function parseSpellsMd(md: string): SpellEntry[] {
     if (lvl === 0 && upgrade && /\b5\b/.test(upgrade)) e.scale = 'cantrip';
     else if (slotDice) e.scale = `${slotDice}/slot`;
     if (higher) e.higher = clean(higher);
+    // Healing that adds the modifier ("regains 2d8 + your spellcasting ability modifier Hit Points"). Sets a flag only.
+    if (fx === 'healing' && /(?:\+|plus) (?:your )?spellcasting ability modifier/.test(effect)) e.healMod = true;
     return e;
   }));
 }

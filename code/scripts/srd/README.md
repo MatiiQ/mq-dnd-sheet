@@ -133,6 +133,24 @@ and effects no kind describes, such as Advantage on Initiative (Feral Instinct),
 Effects that stay text: changes to another feature's numbers or recharge (Font of Inspiration, Improved Warding Flare),
 rerolls and minimum rolls (Supreme Healing), damage that adds half a level (Divine Fury's dice carry only the 1d6).
 
+## Vocabulary changes found by the Actions tab (plan 5)
+
+- `dtype` on `unarmed`: the damage type when it isn't Bludgeoning (Demon Armor's Slashing).
+- `healMod` on spells: the healing adds the spellcasting ability modifier. Both builders set it from the description
+  ("plus your spellcasting ability modifier" in the SRD, "+ your spellcasting ability modifier" in `reference/`): Cure
+  Wounds, Healing Word, Mass Cure Wounds, Mass Healing Word, and Conjure Celestial (its healing light).
+- Hunter's Mark's overlay grant: an `xdmg` of 1d6 Force on the marked target while the spell is on.
+
+Data gaps left for a later data pass (the Actions tab shows what the data has):
+
+- Heal is `fx 'other'`, so it isn't under Spells · healing.
+- Beacon of Hope, Find Steed, Power Word Heal and Wish are `fx 'healing'` with no dice: their healing rows show no dice.
+- Conjure Celestial is `fx 'healing'` with `dice '4d12'`, so it lands under Spells · healing although it also deals
+  damage.
+- "Weapon, +1, +2, or +3" has `base: 'weapon'` (the player chooses the weapon), which `itemFromEntry` doesn't copy, and
+  the catalog has no `magic` field, so added from the catalog it has no weapon fields and no bonus; `magic` only comes
+  from the custom item form.
+
 ## What check-phb does not catch
 
 `npm run check-phb` and the pre-push hook look for phrases taken from the condensed `reference/` descriptions, which

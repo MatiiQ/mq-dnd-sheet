@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { ABILITIES, AC_EFFECTS as APP_AC_EFFECTS, ARMORS, isEntry, SIZES } from '../logic';
 import items from '../data/srd/items.json';
-import { ABILITY_KEYS, AC_EFFECTS, ARMOR_KINDS, catalogId, grantErrors, PHB_TO_SRD, SIZE_KEYS, slug, validateEntry, type ItemEntry } from './schema';
+import srdSpells from '../data/srd/spells.json';
+import { ABILITY_KEYS, AC_EFFECTS, ARMOR_KINDS, catalogId, grantErrors, PHB_TO_SRD, SIZE_KEYS, slug, validateEntry, type ItemEntry, type SpellEntry } from './schema';
 
 describe('catalog ids', () => {
   it('slugs names: lower case, apostrophes dropped, other runs become -', () => {
@@ -59,6 +60,15 @@ describe('validateEntry', () => {
       { id: 'o3', kind: 'checkBonus', name: 'Arcana', target: 'arcana', val: 'wis>=1', opt: 'Magician' }] }] };
     expect(validateEntry(order)).toEqual([]);
     expect(validateEntry({ ...order, grants: [{ ...order.grants[0].options[0] }] })).not.toEqual([]); // opt only inside a choice
+  });
+  it('flags healing that adds the spellcasting ability modifier', () => {
+    const spells = (srdSpells as unknown as SpellEntry[]);
+    const cure = spells.find((e) => e.id === 'spell/cure-wounds')!;
+    expect(validateEntry({ ...cure, healMod: true })).toEqual([]);
+    expect(validateEntry({ ...cure, healMod: 'yes' })).not.toEqual([]);
+    const flagged = (id: string) => spells.find((e) => e.id === id)!.healMod;
+    for (const id of ['spell/cure-wounds', 'spell/healing-word', 'spell/mass-cure-wounds', 'spell/mass-healing-word']) expect([id, flagged(id)]).toEqual([id, true]);
+    for (const id of ['spell/heal', 'spell/prayer-of-healing']) expect([id, flagged(id)]).toEqual([id, undefined]);
   });
   it('takes a damage type on an Unarmed Strike grant (Demon Armor)', () => {
     expect(validateEntry({ ...feature, grants: [{ id: 'g1', kind: 'unarmed', name: 'Claws', die: '1d8', abs: 'str', dtype: 'Slashing' }] })).toEqual([]);

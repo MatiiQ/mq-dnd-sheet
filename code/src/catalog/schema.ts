@@ -14,6 +14,7 @@ export interface SpellEntry extends EntryBase {
   kind: 'spell'; lvl: number; school: string; classes: string; time: string; range: string;
   comp: string; dur: string; conc: boolean; ritual: boolean; atk?: 'melee' | 'ranged'; save?: Ability; fx: 'damage' | 'healing' | 'other';
   dice?: string; dtype?: string; scale?: string; higher?: string; acFx?: AcEffect; acVal?: number;
+  healMod?: boolean;   // the healing adds the spellcasting ability modifier (Cure Wounds); data only, no rules text
   grants?: Spec[];   // effects while the spell is on (Shillelagh), read when it is added to a character
 }
 export interface ItemEntry extends EntryBase {
@@ -162,7 +163,8 @@ const COMMON: Record<string, [Check, boolean]> = { id: [str, true], kind: [str, 
 const SPELL: Record<string, [Check, boolean]> = {
   lvl: [whole(0, 9), true], school: [str, true], classes: [str, true], time: [str, true], range: [str, true], comp: [str, true], dur: [str, true],
   conc: [bool, true], ritual: [bool, true], atk: [RANGE_KIND, false], save: [ability, false], fx: [oneOf('damage', 'healing', 'other'), true],
-  dice: [str, false], dtype: [str, false], scale: [str, false], higher: [str, false], acFx: [oneOf(...AC_EFFECTS), false], acVal: [num, false]
+  dice: [str, false], dtype: [str, false], scale: [str, false], higher: [str, false], acFx: [oneOf(...AC_EFFECTS), false], acVal: [num, false],
+  healMod: [oneOf(true), false]
 };
 const ITEM: Record<string, [Check, boolean]> = {
   cat: [oneOf(...ITEM_CATS), true], cost: [str, false], wt: [num, false],
