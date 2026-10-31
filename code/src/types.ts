@@ -45,6 +45,8 @@ export interface Sense extends Linked { id: string; name: string; range: string;
 export interface Counter { count: number; max?: number; maxV?: string; recharge?: Recharge; regain?: string; regainOn?: RegainOn }
 // typeName: a custom group name (else the source kind groups it). casts: the id of the spell this resource casts.
 export interface Resource extends Linked, Counter { id: string; name: string; note?: string; typeName?: string; casts?: string }
+// When an action happens in a turn (plan 5's timing tags): an action, a Bonus Action, a Reaction, free, or other.
+export type Econ = 'action' | 'bonus' | 'reaction' | 'free' | 'other';
 export interface Attack extends Linked { id: string; name: string; hit: string; dmg: string; info: string; mastery: string }
 export interface Rider { id: string; name: string; dice: string }
 // armor/acBase: a suit of armor or a Shield and its table base. acBonus: a magic or other bonus, counted while equipped.

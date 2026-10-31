@@ -134,6 +134,7 @@ describe('letting go ends Shillelagh (PHB p.316)', () => {
 describe('weapon kinds', () => {
   it('reads the kind from the catalog id or the name', () => {
     expect(weaponKind(longbow({ id: 'x' }))).toBe('longbow');
+    expect(weaponKind({ id: 'x', name: 'Dagger of Venom', qty: 1, eq: true, cid: 'item/dagger-of-venom', base: 'item/dagger' })).toBe('dagger');
     expect(weaponKind({ id: 'x', name: 'Longsword +1', qty: 1, eq: true })).toBe('longsword');
     expect(weaponKind({ id: 'x', name: '+1 Longsword', qty: 1, eq: true })).toBe('longsword');
   });

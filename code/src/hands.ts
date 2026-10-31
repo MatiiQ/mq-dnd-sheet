@@ -10,10 +10,11 @@ export const hasProp = (it: Item, p: string) => propsOf(it).includes(p);
 export const isWeapon = (it: Item) => it.cat === 'weapon' || !!it.wcat;
 export const twoHanded = (it: Item) => hasProp(it, 'two-handed');
 export const versatile = (it: Item) => hasProp(it, 'versatile');
-// The kind of weapon: the catalog id's last segment ('item/longbow' → 'longbow'), else the name as a slug without a
-// leading or trailing '+N' ("Longsword +1" → 'longsword').
+// The kind of weapon: a magic weapon's base item ('item/dagger' for a Dagger of Venom), else the catalog id's last
+// segment ('item/longbow' → 'longbow'), else the name as a slug without a leading or trailing '+N' ("Longsword +1").
 export function weaponKind(it: Item): string {
-  if (it.cid) return it.cid.split('/').pop()!;
+  const id = it.base ?? it.cid;
+  if (id) return id.split('/').pop()!;
   return slug(it.name.trim().replace(/^\+\d+\s+/, '').replace(/\s+\+\d+$/, ''));
 }
 // A comma list of weapon kinds ('club,quarterstaff') and categories: 'simple', 'martial-melee', 'simple-ranged', and
