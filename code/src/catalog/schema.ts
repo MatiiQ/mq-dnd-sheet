@@ -292,3 +292,16 @@ export function validateEntry(x: unknown): string[] {
   }
   return errs;
 }
+
+// checkGrant for one grant stored on a character (Grant in types.ts). The character-only fields go first (checkGrant
+// reports every field it doesn't know), minLvl is checked as the spec's lvl, and a '$<choice>' left unresolved fails.
+export function grantErrors(g: unknown, from: Kind): string[] {
+  if (!isObj(g)) return ['grant: not an object'];
+  const { from: _f, srcKind: _k, counted, minLvl, ...spec } = g;
+  const errs: string[] = [];
+  if (counted !== undefined && typeof counted !== 'boolean') errs.push('grant: bad counted');
+  if ('lvl' in spec) errs.push('grant: stores its level as minLvl');
+  checkGrant(minLvl === undefined ? spec : { ...spec, lvl: minLvl }, { kind: from }, 'grant', errs);
+  for (const [k, v] of Object.entries(spec)) if (ref(v)) errs.push(`grant: ${k} is an unresolved choice`);
+  return errs;
+}

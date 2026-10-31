@@ -1,6 +1,7 @@
 // D&D 2024 rules used by the sheet. Pure functions: each takes a character and returns the next one.
 import { blankCharacter, sampleCharacter } from './defaults';
-import { dropLinkOnly, fixLinks, SRC_KINDS } from './links';
+import { grantErrors } from './catalog/schema';
+import { dropLinkOnly, fixLinks, hasActiveEffect, linkOf, parseLink, sourceOf, SRC_KINDS } from './links';
 import type { AcEffect, Ability, ArmorKind, CastAbility, Character, Concentration, HpSnapshot, Item, Linked, Resource, Size, Spell, SpellSort, Tab, Unarmored, When } from './types';
 
 export const ABILITIES: [Ability, string][] = [
@@ -187,16 +188,33 @@ export const setConc = (conc: Concentration | null) => ({ conc, concCheck: null 
 const acOnCast = (c: Character, sp: Spell): Partial<Character> =>
   (sp.acFx && !sp.c && !c.acOn.includes(sp.id) ? { acOn: [...c.acOn, sp.id] } : {});
 
+// Casting a non-Concentration spell whose grants need it switched on switches it on (once). A Concentration spell's
+// effect is on through c.conc.
+const effectOnCast = (c: Character, sp: Spell): Partial<Character> => {
+  const link = linkOf('spell', sp.id);
+  return !sp.c && !c.effectsOn.includes(link) && hasActiveEffect(c, link) ? { effectsOn: [...c.effectsOn, link] } : {};
+};
+
 // Casting with a slot uses one slot of that level. A Concentration spell starts Concentration, which ends any other (PHB p.363).
 export function castSpell(c: Character, sp: Spell, level: number): Partial<Character> {
   if (!slotsLeft(c, level)) return {};
-  return { ...setSlotUsed(c, level, c.slotUsed[level] + 1), ...(sp.c ? setConc({ id: sp.id, name: sp.name }) : {}), ...acOnCast(c, sp) };
+  return { ...setSlotUsed(c, level, c.slotUsed[level] + 1), ...(sp.c ? setConc({ id: sp.id, name: sp.name }) : {}), ...acOnCast(c, sp), ...effectOnCast(c, sp) };
+}
+
+// Switches a source's effect on or off (Rage, Starry Form, Shillelagh), without casting or using anything.
+export const toggleEffect = (c: Character, link: string): Partial<Character> =>
+  ({ effectsOn: c.effectsOn.includes(link) ? c.effectsOn.filter((x) => x !== link) : [...c.effectsOn, link] });
+
+// After editing a spell: one that is now Concentration leaves effectsOn (its effect follows c.conc from now on).
+export function effectsAfterEdit(c: Character, sp: Pick<Spell, 'id' | 'c'>): Partial<Character> {
+  const link = linkOf('spell', sp.id);
+  return sp.c && c.effectsOn.includes(link) ? { effectsOn: c.effectsOn.filter((x) => x !== link) } : {};
 }
 
 // Using a free cast works like casting; tapping it again restores the cast but leaves the effects alone.
 export function toggleFreeCast(c: Character, sp: Spell): Partial<Character> {
   const used = !c.free[sp.id];
-  return { free: { ...c.free, [sp.id]: used }, ...(used && sp.c ? setConc({ id: sp.id, name: sp.name }) : {}), ...(used ? acOnCast(c, sp) : {}) };
+  return { free: { ...c.free, [sp.id]: used }, ...(used && sp.c ? setConc({ id: sp.id, name: sp.name }) : {}), ...(used ? { ...acOnCast(c, sp), ...effectOnCast(c, sp) } : {}) };
 }
 
 // Switches a non-Concentration spell's AC effect on or off, without casting it.
@@ -426,7 +444,7 @@ export function longRest(c: Character): Character {
     Object.values(c.abilAdj).some((v) => (v || 0) < 0) ? ', reduced ability scores restored' : ''
   ].join('');
   return {
-    ...c, maxHp, abilAdj, hp: maxHp, temp: 0, slotUsed: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], hdUsed: 0, ds: 0, df: 0, free: {}, acOn: [],
+    ...c, maxHp, abilAdj, hp: maxHp, temp: 0, slotUsed: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], hdUsed: 0, ds: 0, df: 0, free: {}, acOn: [], effectsOn: [],
     hpUndo: null, concCheck: null, res, exh: Math.max(0, c.exh - 1),
     restMsg: {
       title: 'Long Rest complete',
@@ -460,7 +478,7 @@ const slots = (v: unknown[]) => Array.from({ length: 10 }, (_, i) => (typeof v[i
 // Records with fixed keys: a missing or damaged key falls back to the blank character's value.
 const FIXED_RECORDS = ['ch', 'abil', 'speeds', 'coins', 'notes', 'def'] as const;
 // Lists of entries: each needs a name and holds only plain values.
-const ENTRY_LISTS = ['senses', 'res', 'attacks', 'riders', 'inv', 'spells', 'feats', 'acMods'] as const;
+const ENTRY_LISTS = ['senses', 'res', 'attacks', 'riders', 'inv', 'spells', 'feats', 'acMods', 'grants'] as const;
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 export const isEntry = (x: unknown): x is Record<string, unknown> =>
   isObj(x) && typeof x.name === 'string' && Object.values(x).every((v) => v === null || typeof v !== 'object');
@@ -485,7 +503,7 @@ function cleanLinked<T extends Linked>(x: T): T {
 }
 const cleanCid = <T extends { cid?: string }>(x: T): T => { const { cid, ...rest } = x; return (typeof cid === 'string' ? { ...rest, cid } : rest) as T; };
 
-export const NEW_FIELDS: readonly (keyof Character)[] = ['spellSort', 'size', 'carryUp', 'attuneIds'];
+export const NEW_FIELDS: readonly (keyof Character)[] = ['spellSort', 'size', 'carryUp', 'attuneIds', 'grants', 'effectsOn'];
 // Resources the Inventory tab echoed before `inv` existed.
 const OLD_INVENTORY_RESOURCES = ['arrows', 'potions'];
 
@@ -516,6 +534,8 @@ export function migrate(data: unknown): Character {
   });
   c.feats = c.feats.map((x) => cleanCid(cleanLinked(x)));
   c.attacks = c.attacks.map(cleanLinked);
+  // Grants: a link that doesn't parse goes first, so grantErrors knows the source kind; then the grant must be valid.
+  c.grants = c.grants.filter((g) => parseLink(g.from) && !grantErrors(g, parseLink(g.from)!.kind).length).map(cleanLinked);
   c.inv = c.inv.map(cleanCid);
   c.def = { res: strings(c.def.res), vul: strings(c.def.vul), imm: strings(c.def.imm), adv: strings(c.def.adv) };
   // Resistance and Vulnerability apply to damage types only; Immunity to damage types and conditions (PHB p.28).
@@ -622,7 +642,11 @@ export function migrate(data: unknown): Character {
   // From the raw save, not the sample-merged copy: old saves get today's bar (HP and AC), not the sample's picks.
   // Pills don't show items, so a pill of a resource that became an item empties.
   c.pills = sanitizePills(data.pills).map((k) => (converted.some((id) => k === resPill(id)) ? '' : k));
-  return fixLinks(c);
+  // Effects switched on: links to something there, once each. A Concentration spell's effect follows c.conc instead.
+  c.effectsOn = strings(c.effectsOn).filter((l, i, all) => all.indexOf(l) === i && sourceOf(c, l) && !(parseLink(l)!.kind === 'spell' && (sourceOf(c, l) as Spell).c));
+  const fixed = fixLinks(c);
+  // A grant exists only through its source: one whose link fixLinks cleared goes.
+  return { ...fixed, grants: fixed.grants.filter((g) => g.from) };
 }
 
 // Names match after trimming, ignoring case and treating ’ and ' as the same character.

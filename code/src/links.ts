@@ -1,6 +1,7 @@
 // Links between entries (plan 3): what an entry came from, how its source reads, and keeping links free of loops.
 // Imports types only, so logic.ts can use it without a cycle.
-import type { Character, Feature, FeatureGroup, Item, Linked, Spell, SrcKind } from './types';
+import type { GrantKind } from './catalog/schema';
+import type { Character, Feature, FeatureGroup, Grant, Item, Linked, Spell, SrcKind } from './types';
 
 // Kinds of source an entry can name (roadmap, "Source kinds"), with their labels.
 export const SRC_KINDS: [SrcKind, string][] = [
@@ -60,7 +61,7 @@ export function wouldLoop(c: Character, self: string, candidate: string): boolea
 }
 
 // Lists whose entries can carry a `from`. Later steps of plan 3 add theirs.
-export const LINKED_LISTS = ['senses', 'spells', 'feats', 'attacks'] as const;
+export const LINKED_LISTS = ['senses', 'spells', 'feats', 'attacks', 'grants'] as const;
 type LinkedList = (typeof LINKED_LISTS)[number];
 
 // The fields that mean something only with a link: the item checks and "while its effect is on".
@@ -86,3 +87,49 @@ export function fixLinks(c: Character): Character {
   }
   return out;
 }
+
+// Whether a source's effect is switched on. A Concentration spell's is on exactly while concentrating on it; any other
+// source's while its link is in effectsOn.
+export function isOn(c: Character, link: string): boolean {
+  const p = parseLink(link);
+  const sp = p?.kind === 'spell' ? c.spells.find((x) => x.id === p.id) : undefined;
+  return sp?.c ? c.conc?.id === sp.id : c.effectsOn.includes(link);
+}
+
+// Why an entry or grant doesn't count right now, or null when it counts. Level and armor conditions apply to every
+// entry; the item checks, "while its effect is on" and the source's own state need a link. The visited set stops loops.
+export function inactiveReason(c: Character, x: Linked, seen: Set<string> = new Set()): string | null {
+  if (x.minLvl && x.minLvl > c.level) return 'from level ' + x.minLvl;
+  const p = parseLink(x.from);
+  if (p?.kind === 'item') {
+    const item = c.inv.find((i) => i.id === p.id);
+    if (x.needEq && !item?.eq) return 'not equipped';
+    if (x.needAtt && !c.attuneIds.includes(p.id)) return 'not attuned';
+  }
+  if (x.when) {
+    const eq = c.inv.filter((i) => i.eq);
+    const armor = eq.some((i) => i.armor && i.armor !== 'shield'), shield = eq.some((i) => i.armor === 'shield');
+    const why = {
+      armor: armor ? null : 'needs armor',
+      noHeavy: eq.some((i) => i.armor === 'heavy') ? 'not with Heavy armor' : null,
+      noArmor: armor ? 'not with armor' : null,
+      noShield: shield ? 'not with a Shield' : null,
+      noArmorNoShield: armor || shield ? 'not with armor or a Shield' : null,
+      active: x.from && !isOn(c, x.from) ? 'not switched on' : null
+    }[x.when];
+    if (why) return why;
+  }
+  if (!x.from || p?.kind === 'item' || seen.has(x.from)) return null;
+  seen.add(x.from);
+  const src = sourceOf(c, x.from) as Linked | null;
+  return src ? inactiveReason(c, src, seen) : null;
+}
+export const isActive = (c: Character, x: Linked) => inactiveReason(c, x) === null;
+
+// The grants of one kind that count now. Counted grants ("Already counted in my numbers") only when asked.
+export const activeGrants = (c: Character, kind: GrantKind, withCounted = false): Grant[] =>
+  c.grants.filter((g) => g.kind === kind && (withCounted || !g.counted) && isActive(c, g));
+
+// True when something from this link counts only while its effect is on (it then gets an On/Off switch).
+export const hasActiveEffect = (c: Character, link: string) =>
+  LINKED_LISTS.some((k) => (c[k] as Linked[]).some((x) => x.from === link && x.when === 'active'));

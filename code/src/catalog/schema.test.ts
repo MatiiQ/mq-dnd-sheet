@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ABILITIES, AC_EFFECTS as APP_AC_EFFECTS, ARMORS, isEntry, SIZES } from '../logic';
-import { ABILITY_KEYS, AC_EFFECTS, ARMOR_KINDS, catalogId, PHB_TO_SRD, SIZE_KEYS, slug, validateEntry } from './schema';
+import { ABILITY_KEYS, AC_EFFECTS, ARMOR_KINDS, catalogId, grantErrors, PHB_TO_SRD, SIZE_KEYS, slug, validateEntry } from './schema';
 
 describe('catalog ids', () => {
   it('slugs names: lower case, apostrophes dropped, other runs become -', () => {
@@ -101,5 +101,21 @@ describe('enum lists', () => {
     expect(new Set(ARMOR_KINDS)).toEqual(new Set(ARMORS.map(([, k]) => k)));
     expect(new Set(AC_EFFECTS)).toEqual(new Set(APP_AC_EFFECTS));
     expect(new Set(SIZE_KEYS)).toEqual(new Set(SIZES.map(([k]) => k)));
+  });
+});
+
+describe('grantErrors (a grant stored on a character)', () => {
+  const g = { id: 'g', kind: 'abil', name: 'x', ab: 'wis', val: '1', cap: 20 };
+  it('accepts a grant with or without the character-only fields', () => {
+    expect(grantErrors(g, 'feature')).toEqual([]);
+    expect(grantErrors({ ...g, from: 'feature:f1', srcKind: 'feat', counted: true }, 'feature')).toEqual([]);
+  });
+  it('rejects an unresolved choice, item fields from a feature, and a bad level', () => {
+    expect(grantErrors({ ...g, val: '$c1' }, 'feature')).toHaveLength(1);
+    expect(grantErrors({ ...g, needEq: true }, 'feature')).toHaveLength(1);
+    expect(grantErrors({ ...g, needEq: true }, 'item')).toEqual([]);
+    expect(grantErrors({ ...g, minLvl: 3 }, 'feature')).toEqual([]);
+    expect(grantErrors({ ...g, minLvl: 0 }, 'feature')).toHaveLength(1);
+    expect(grantErrors({ ...g, counted: 'yes' }, 'feature')).toHaveLength(1);
   });
 });

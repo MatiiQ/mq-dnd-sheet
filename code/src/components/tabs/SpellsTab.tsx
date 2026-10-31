@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  AC_SPELLS, CAST_NAMES, SPELL_SORTS, acAfterEdit, castSpell, concAfterEdit, detectAcSpell, fmt, preparedCount, removeSpell, setConc, setSlotUsed,
+  AC_SPELLS, CAST_NAMES, SPELL_SORTS, acAfterEdit, castSpell, concAfterEdit, detectAcSpell, effectsAfterEdit, fmt, preparedCount, removeSpell, setConc, setSlotUsed,
   slotsLeft, sortSpells, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, toggleFreeCast, type AcPart
 } from '../../logic';
 import { sourceLabel } from '../../links';
@@ -44,7 +44,7 @@ export function SpellsTab() {
     };
     update((p) => ({
       spells: saveEntry<Spell>(p.spells, built, id, { prep: true }),
-      ...(id ? { ...concAfterEdit(p, { ...built, id }), ...acAfterEdit(p, { ...built, id }) } : {})
+      ...(id ? { ...concAfterEdit(p, { ...built, id }), ...acAfterEdit(p, { ...built, id }), ...effectsAfterEdit(p, { ...built, id }) } : {})
     }));
     f.close();
   };
