@@ -18,6 +18,7 @@ function table(md: string): Record<string, string>[] {
 }
 
 describe.skipIf(!existsSync(REF))('SRD classes against reference/classes', () => {
+  if (!existsSync(REF)) return; // a skipped describe still runs its body, which reads the files
   for (const c of CLASSES) {
     describe(c.name, () => {
       const rows = table(readFileSync(new URL(`${c.name.toLowerCase()}.md`, REF), 'utf8'));
