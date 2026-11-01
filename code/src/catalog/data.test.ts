@@ -251,3 +251,67 @@ describe('SRD classes', () => {
     expect(list.filter((c) => c.pact).map((c) => c.name)).toEqual(['Warlock']);
   });
 });
+
+// The audit's pattern checks (plan 7, Task 12): a rebuild can't bring a fixed problem back. Each allow-list names the
+// entries that are right by design, with the reason.
+describe('SRD data patterns (plan 7)', () => {
+  const sps = spells as SpellEntry[], its = items as ItemEntry[];
+  const T = 'Acid|Bludgeoning|Cold|Fire|Force|Lightning|Necrotic|Piercing|Poison|Psychic|Radiant|Slashing|Thunder';
+  const ABIL = ['Strength', 'Dexterity', 'Constitution', 'Intelligence', 'Wisdom', 'Charisma'];
+  it('give every weapon whose text gives "+N bonus to attack and damage rolls" its magic', () => {
+    for (const e of its) {
+      const m = /\+(\d) bonus to attack (?:rolls )?and damage rolls/.exec(e.desc);
+      if (m) expect([e.id, e.magic]).toEqual([e.id, Number(m[1])]);
+    }
+  });
+  it('never take a save the spell gives Advantage or Disadvantage on as its save', () => {
+    for (const e of sps.filter((x) => x.save)) {
+      const name = ABIL[['str', 'dex', 'con', 'int', 'wis', 'cha'].indexOf(e.save!)];
+      const own = [...e.desc.matchAll(new RegExp(`${name} saving throw`, 'g'))].some((m) => !/(?:Advantage|Disadvantage) on (?:the )?$/.test(e.desc.slice(0, m.index)));
+      expect([e.id, own]).toEqual([e.id, true]);
+    }
+  });
+  it('give a part to a spell whose text has "NdM <Type> damage and (another) NdM <Type> damage"', () => {
+    const re = new RegExp(`(\\d+d\\d+) (${T}) damage and (?:another )?(\\d+d\\d+) (${T}) damage`);
+    for (const e of sps) {
+      const m = re.exec(e.desc);
+      if (m) expect([e.id, e.parts?.some((p) => p.dice === m[3] && p.dtype === m[4])]).toEqual([e.id, true]);
+    }
+  });
+  it('give every spell with two damage rolls of different dice or type a part or a type list, or name it here', () => {
+    const ALLOW: Record<string, string> = {
+      'spell/weird': 'repeated damage each turn, text by design',
+      'spell/tsunami': 'damage that drops each round, text by design',
+      'spell/storm-of-vengeance': 'a different effect each round, text by design'
+    };
+    for (const e of sps) {
+      const effect = e.desc.split(/\n(?:Using a Higher-Level Spell Slot|Cantrip Upgrade)\./)[0];
+      const rolls = new Set([...effect.matchAll(new RegExp(`(\\d+d\\d+) (${T}) damage`, 'g'))].map((m) => m[1] + ' ' + m[2]));
+      if (rolls.size > 1) expect([e.id, !!e.parts?.length || !!e.dtypes || e.id in ALLOW]).toEqual([e.id, true]);
+    }
+  });
+  it('give dtypes to a spell whose text has "NdM <Type> damage (…) or NdM <Type> damage"', () => {
+    const re = new RegExp(`(\\d+d\\d+) (${T}) damage \\([^)]*\\) or \\1 (${T}) damage`);
+    for (const e of sps) {
+      const m = re.exec(e.desc);
+      if (m) expect([e.id, e.dtypes]).toEqual([e.id, `${m[2]},${m[3]}`]);
+    }
+  });
+  it('give a base of the player’s choice a baseOf list, unless its type line allows any', () => {
+    // "Weapon (Any Simple or Martial)" and "Armor (Any Light, Medium, or Heavy)": every weapon or armor is a base.
+    const ANY = ['item/dragon-slayer', 'item/giant-slayer', 'item/holy-avenger', 'item/nine-lives-stealer', 'item/vicious-weapon', 'item/weapon-of-warning',
+      'item/weapon-1-2-or-3', 'item/armor-1-2-or-3', 'item/armor-of-resistance', 'item/armor-of-vulnerability'];
+    for (const e of its.filter((x) => x.base === 'weapon' || x.base === 'armor')) expect([e.id, !!e.baseOf || ANY.includes(e.id)]).toEqual([e.id, true]);
+  });
+  it('point every base and baseOf at a mundane item of the kind the entry allows', () => {
+    const byId = new Map(its.map((e) => [e.id, e]));
+    for (const e of its) {
+      if (e.base?.startsWith('item/')) expect([e.id, ['weapon', 'armor', 'shield'].includes(byId.get(e.base)?.cat ?? '')]).toEqual([e.id, true]);
+      for (const id of e.baseOf?.split(',') ?? []) expect([e.id, id, byId.get(id)?.cat]).toEqual([e.id, id, e.base]);
+    }
+  });
+  it('make only a staff "wielded as a magic Quarterstaff" one', () => {
+    for (const e of its.filter((x) => x.name.startsWith('Staff')))
+      expect([e.id, e.base === 'item/quarterstaff']).toEqual([e.id, /wielded as a magic Quarterstaff/.test(e.desc)]);
+  });
+});

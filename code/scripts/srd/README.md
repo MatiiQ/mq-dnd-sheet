@@ -23,7 +23,8 @@ The same statement covers the SRD text in the parser fixtures under `code/script
 
 ## Items checked against the SRD
 
-Items the sample characters or later plans name, looked up in `code/src/data/srd/items.json` (2026-10-30):
+Items the sample characters or later plans name, looked up in `code/src/data/srd/items.json` (2026-10-30; rechecked
+after plan 7, 2026-11-01):
 
 - In SRD 5.2.1: Studded Leather Armor, Leather Armor, Shield, Longbow, Shortsword, Quarterstaff, Sickle, Arrows,
   Explorer’s Pack, Traveler’s Clothes (the table lists it as "Clothes, Traveler’s"; the builder uses the name players
@@ -44,8 +45,33 @@ Weapons: all 38 rows match `reference/06-equipment.md` (PHB p.215) in category, 
 cost.
 
 Magic item grants cover lasting effects of worn or held items (AC, saving throws, resistances, senses, speeds,
-proficiencies, score settings). Effects that are conditional (only against ranged attacks, only in Dim Light), Advantage
-on ability checks or Initiative, spells cast from an item and a magic weapon's own attack bonus stay as text.
+proficiencies, score settings, spell attack and spell save DC). Effects that are conditional (only against ranged
+attacks, only in Dim Light), Advantage on ability checks or Initiative and spells cast from an item stay as text. Text
+by design: Defender (moving part of its bonus to AC until your next turn), Rod of Alertness (+1 AC and saves inside its
+light), Arrow-Catching Shield (+2 only against ranged attacks), Ioun Stone (a choice option must be a grant and only
+Protection has one: add its +1 AC as a custom AC bonus), and Rod of Lordly Might's other forms and buttons (it is a Mace
+with its +3; switch the form in Edit).
+
+A magic weapon's "+N bonus to attack and damage rolls" is its `magic`, read by the builder (22 items, Rod of Lordly
+Might included). A staff that "can be wielded as a magic Quarterstaff" gets `base: 'item/quarterstaff'` from that
+phrase (Power, Striking, the Magi, the Woodlands, Thunder and Lightning, Withering); no other staff is a weapon.
+
+Charges: "has 7 charges", rolled ones ("has 1d3 charges", Luck Blade; "1d8 + 1", Nine Lives Stealer), "starts with 10
+charges" (Cube of Force) and "1 of its 3 charges" (Ring of Three Wishes) are read, and so is a singular "regains 1
+expended charge". Charges the text never gives back get `recharge: 'none'` (the player resets them). Rolled starting
+charges are asked when the item is added.
+
+Spell attack and DC bonuses (`spellAtk`, `spellDc` grants, `needEq` and `needAtt`): Wand of the War Mage (its chosen +N,
+`val: 'magic'`), Robe of the Archmagi (+2 to both), Staffs of Power, the Magi and the Woodlands, and the Talismans of
+Pure Good and Ultimate Evil (+2 spell attack). "While holding" is read as equipped: `c.hands` tracks weapons only.
+
+Mundane containers hold a volume or a count, not pounds: Chest, Barrel, Bucket, Quiver, Crossbow Bolt Case, Map or
+Scroll Case, Flask, Jug, Iron Pot, Glass Bottle, Vial and Waterskin get it as `capVol` ("12 cubic feet of contents", "20
+Arrows"). Nothing is tracked inside them (they aren't extradimensional). The Glass Bottle's extracted "11/2 pints" is
+read as 1½ pints (`text.ts`, that pattern only). Both Spell Scrolls take the gear chapter's Spell Scroll text (its
+heading spans two lines). Weapons and armor have no SRD prose, so the picker and the inventory show a line built from
+their fields; the ammunition rows (Arrows, Bolts, Firearm Bullets, Needles, Sling Bullets) have none either and stay
+empty.
 
 Magic weapons and armor (`base`, set in `overlay/items.json`, read off each item's SRD type line). The builder copies
 the base item's weapon fields (category, range kind, damage, properties, ranges, mastery) or armor fields (kind, base
@@ -63,9 +89,25 @@ AC, Strength, Stealth), and its weight when the magic item has none; the magic i
   Flame Tongue, Frost Brand, Giant Slayer, Hammer of Thunderbolts, Holy Avenger, Luck Blade, Nine Lives Stealer,
   Oathbow, Sword of Life Stealing, Sword of Sharpness, Sword of Wounding, Vicious Weapon, Vorpal Sword, Weapon of
   Warning.
+- `ammo` (the player chooses): Ammunition +1/+2/+3, from Arrows, Bolts, Firearm Bullets, Needles or Sling Bullets. It
+  copies no fields; its base id gives its ammunition type, so a weapon of that type can load it.
 - No `base`: items that already carry their armor fields in the overlay (Demon Armor, Dragon Scale Mail, Dwarven Plate,
-  Elven Chain, Glamoured Studded Leather and the Shields with `armor: 'shield'`), ammunition (Ammunition +1/+2/+3,
-  Ammunition of Slaying: not a weapon the sheet attacks with), and items only used like a weapon (staffs).
+  Elven Chain, Glamoured Studded Leather and the Shields with `armor: 'shield'`) and Ammunition of Slaying (text).
+
+A base of the player's choice is asked when the item is added ("Which weapon?", "Which armor?", "Which ammunition?"),
+from the catalog's mundane items of that kind, narrowed by `baseOf` where the type line names fewer than "any" (read off
+SRD 5.2.1: Berserker Axe, Dancing Sword, Defender and Flame Tongue (any Melee weapon), Energy Bow, Oathbow, Frost
+Brand, Hammer of Thunderbolts, Luck Blade, the Swords of Life Stealing, Sharpness and Wounding, Vorpal Sword,
+Adamantine and Mithral Armor (Medium or Heavy, not Hide)). "Any Simple or Martial" and "Any Light, Medium, or Heavy"
+items have no list. The build fails on a `baseOf` id that names no item of the right kind. The base's fields come in
+through `withBase` (`src/catalog/base.ts`, shared with the builder); Mithral Armor's overlay writes its removals as
+values (`strReq: 0`, `stealthDis: false`), which `withBase` drops. The +1/+2/+3 items (`magicPick`) ask the bonus too,
+which sets `magic` (weapon, ammunition, wand) or `acBonus` (armor, Shield). The item is named after the answers
+("Longsword +2", "Holy Avenger (Longsword)") with the rarity of its bonus.
+
+Ammunition: a weapon's `load` names the ammunition it shoots (picked on its Actions row), and a ranged attack adds that
+ammunition's `magic` next to the weapon's own. Only ammunition with a type (from the catalog) can be loaded: ammunition
+typed by hand is never offered; add it from the catalog.
 
 Source text cut short: SRD 5.2.1 itself stops mid-sentence in Telekinesis (after "a simple tool,"), and Greater
 Restoration and Guards and Wards end without a full stop. The builder can't recover the missing words; the data keeps
@@ -142,11 +184,50 @@ rerolls and minimum rolls (Supreme Healing), damage that adds half a level (Divi
 - `dtype` on `unarmed`: the damage type when it isn't Bludgeoning (Demon Armor's Slashing).
 - `healMod` on spells: the healing adds the spellcasting ability modifier. Both builders set it from the description
   ("plus your spellcasting ability modifier" in the SRD, "+ your spellcasting ability modifier" in `reference/`): Cure
-  Wounds, Healing Word, Mass Cure Wounds, Mass Healing Word, and Conjure Celestial (its healing light).
+  Wounds, Healing Word, Mass Cure Wounds, Mass Healing Word, and Conjure Celestial's Healing Light part.
 - Hunter's Mark's overlay grant: an `xdmg` of 1d6 Force on the marked target while the spell is on.
 
-Data gaps found after plan 5 and by the 2026-10-31 data audit (spells, items, PHB pack backgrounds and feats) are
-listed, with their fixes, in `docs/superpowers/plans/2026-10-31-07-catalog-data-fixes.md`.
+## Vocabulary and data changes from the data audit (plan 7)
+
+- An overlay field set to `null` removes the parsed field (both builders).
+- `dmgMod` on spells and parts: "damage equal to NdM plus your spellcasting ability modifier" (Spiritual Weapon, Flame
+  Blade, Arcane Sword, Conjure Fey, Arcane Hand's Grasping Hand).
+- `dtypes` on spells and parts: a damage type chosen from a list, `dtype` left out (Chromatic Orb, Dragon's Breath,
+  Sorcerous Burst, Conjure Elemental, Forbiddance, Glyph of Warding, Spirit Guardians, Fire Shield, the prismatic rays,
+  Destructive Wave's second damage). The row shows `Acid/Cold/Fire`. A type typed in the custom form replaces the list.
+- `parts` on spells: more damage or healing rows, each `<spell> · <label>` on the Actions tab with numbers only (the
+  spell's own row casts). A part inherits nothing from the spell. The SRD builder reads a second "and (another) NdM
+  <Type> damage" of the same sentence as a part; an overlay's `parts` replaces that list whole, so an overlay that
+  changes one part writes them all. Parts: Conjure Celestial, Ice Knife, Wall of Ice, Flame Strike, Ice Storm, Meteor
+  Swarm, Acid Arrow, Arcane Hand, Vitriolic Sphere, Wall of Thorns; in the pack Toll the Dead, Destructive Wave,
+  Lightning Arrow, Hunger of Hadar (its upcast die applies to one of the two damages, the player's choice), Jallarzi's
+  Storm of Radiance, Witch Bolt. Text by design: Weird (damage repeated each turn), Tsunami (damage that drops each
+  round), Storm of Vengeance (a different effect each round).
+- Fixed healing is its amount as dice text: Heal `70`, Mass Heal `700`, Power Word Heal `all HP` ("heals 70 HP").
+- No damage from a mishap, a stat block or one glyph of many: Teleport, Dimension Door, Meld into Stone, Giant Insect,
+  Symbol, Animate Objects. Wish and Find Steed aren't healing rows; Beacon of Hope is no healing row and has no save.
+- Saves: both builders skip an ability, or a list of them, after "Advantage on" / "Disadvantage on" (Conjure Animals
+  saves on Dexterity; Haste and Gaseous Form have no save). Prismatic Wall's damage save is Dexterity.
+- Upcast data (`scale`, not shown yet): "for every slot level above" is read (Spiritual Weapon). SRD 5.2.1 prints 1d8,
+  1d12 and 1d8 per slot for Conjure Elemental, Conjure Fey and Conjure Minor Elementals where the PHB prints 2d8, 2d12
+  and 2d8 (PHB pp.254-255); the SRD data keeps what the SRD prints.
+- Conjure Minor Elementals and Elemental Weapon (pack) add damage to your attacks as `xdmg` grants while the spell is on,
+  with no Actions row of their own. Elemental Weapon is simplified to the lowest slot: 1d4 and +1 to attack rolls with
+  any weapon; the chosen weapon, the chosen type and a higher slot's bonus are the player's to apply.
+- Items: `magic` (1–3), `magicPick`, `baseOf`, `base: 'ammo'` (see above).
+- Grants: `spellAtk` and `spellDc` (`val`), and the grant-only value term `magic` (the +N of the item the grant comes
+  from; 0 without one; a counter's maximum never reads it).
+- Pools: `spell:…;ritual=true` (Ritual Caster) and `tool:artisan` (the 17 Artisan's Tools).
+- PHB pack (`reference/authored/`, local): the 11 backgrounds' ability, skill and tool grants; the feats' ability score
+  increases (cap from each feat's own ASI line), armor and weapon training, senses, speeds, spells with free casts and
+  resources; Resilient pairs each ability with its saving throw. Text by design there: Keen Mind's, Observant's and
+  Skill Expert's Expertise when already proficient (the grant gives the proficiency), Boon of Fortitude's +40 HP (no
+  flat HP grant), Unarmed Fighting's d8 with no weapon or Shield (a 1d6 grant), Healer, Interception, Protection, Heavy
+  and Medium Armor Master, Revelation in Flesh's swim speed, War God's Blessing and Bewitching Magic (their spells are
+  already prepared), Blessing of the Trickster and Bastion of Law (no uses per rest).
+
+Source text cut short and other notes stay under "Items checked" above; the audit itself is
+`docs/superpowers/plans/2026-10-31-07-catalog-data-fixes.md` (local).
 
 ## What check-phb does not catch
 
@@ -155,7 +236,7 @@ are what the pack holds. Wording pasted straight from the PDF or `reference/sour
 detected. Never paste from those files into tracked files. Pushes from a clone without `reference/` (another machine,
 a cloud session) are not checked at all; the hook says so.
 
-## Entry counts (2026-10-30)
+## Entry counts (2026-11-01, unchanged by plan 7)
 
 | Kind | SRD 5.2.1 (committed) | PHB pack (local) |
 |---|---|---|

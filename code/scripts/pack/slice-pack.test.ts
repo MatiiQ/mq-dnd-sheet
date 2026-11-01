@@ -159,3 +159,21 @@ it.skipIf(!existsSync(PACK))('gives Blade Ward and Friends no cantrip scaling', 
   const cat = mergeCatalog(srdEntries, (JSON.parse(readFileSync(PACK, 'utf8')) as { entries: Entry[] }).entries);
   for (const id of ['spell/blade-ward', 'spell/friends']) expect([id, (cat.byId.get(id) as { scale?: string }).scale]).toEqual([id, undefined]);
 });
+
+// The audit's multi-damage scan over the pack (plan 7, Task 12): a PHB spell whose effect text names two damage rolls of
+// different dice or type has a part, a damage type list, or a place on the allow-list (text by design).
+it.skipIf(!existsSync(PACK))('gives every PHB spell with two damage rolls a part or a type list', () => {
+  const cat = mergeCatalog(srdEntries, (JSON.parse(readFileSync(PACK, 'utf8')) as { entries: Entry[] }).entries);
+  const T = 'Acid|Bludgeoning|Cold|Fire|Force|Lightning|Necrotic|Piercing|Poison|Psychic|Radiant|Slashing|Thunder';
+  const ALLOW: string[] = [];   // none yet: Weird, Tsunami and Storm of Vengeance are SRD spells (covered there)
+  const pack = cat.list.filter((e) => e.kind === 'spell' && e.src === 'phb') as (Entry & { parts?: unknown[]; dtypes?: string })[];
+  let n = 0;
+  for (const e of pack) {
+    const effect = e.desc.split(/\n(?:Cantrip Upgrade|Higher Levels):/)[0];
+    const rolls = new Set([...effect.matchAll(new RegExp(`(\\d+d\\d+) (${T}) damage`, 'g'))].map((m) => m[1] + ' ' + m[2]));
+    if (rolls.size < 2) continue;
+    n++;
+    expect([e.id, !!e.parts?.length || !!e.dtypes || ALLOW.includes(e.id)]).toEqual([e.id, true]);
+  }
+  expect(n).toBeGreaterThan(0);
+});
