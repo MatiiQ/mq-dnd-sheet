@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { itemQuestions, type AddChoices } from '../../catalog/copy';
 import type { Catalog } from '../../catalog/merge';
 import type { ItemEntry } from '../../catalog/schema';
@@ -26,8 +26,9 @@ export function ItemPicker({ onClose, sec }: { onClose: () => void; sec?: string
   // The ChoiceFlow answers waiting for the item questions, and where ChoiceFlow stood.
   const [asked, setAsked] = useState<{ ans: AddChoices; flow: FlowState } | null>(null);
   const [back, setBack] = useState<FlowState | undefined>();
-  // A new flow (or one the catalog swap closed) starts with no answers waiting.
-  useEffect(() => { setAsked(null); setBack(undefined); }, [pf.flow]);
+  // A new flow starts with no answers waiting. Reset here, not in an effect on pf.flow: ChoiceFlow hands its answers
+  // on from its own mount effect when it has nothing to ask, and a parent effect would then wipe them.
+  const start = (e: ItemEntry) => { setAsked(null); setBack(undefined); pf.start(e); };
   const cancel = () => { setAsked(null); setBack(undefined); pf.cancel(); };
   const add = (cat: Catalog, ans: AddChoices) => {
     setAsked(null); setBack(undefined);
@@ -48,7 +49,7 @@ export function ItemPicker({ onClose, sec }: { onClose: () => void; sec?: string
         {pf.flow && asked && <ItemQuestions entry={pf.flow.entry} cat={cat} onCancel={cancel} onDone={(item) => add(cat, { ...asked.ans, item })}
           onBack={() => { if (!asked.flow.total) cancel(); else { setBack(asked.flow); setAsked(null); } }} />}
         {/* Kept mounted while a flow is open, so Cancel returns to the same category and search. */}
-        <div hidden={!!pf.flow}><ItemList cat={cat} onAdd={(e) => pf.start(e)} /></div>
+        <div hidden={!!pf.flow}><ItemList cat={cat} onAdd={start} /></div>
       </>}
     </PickerFrame>
   );
