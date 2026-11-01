@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AC_SPELLS, ARMORS, SKILLS } from '../logic';
+import { druidSample, sampleCharacter } from '../defaults';
 import classes from '../data/srd/classes.json';
 import items from '../data/srd/items.json';
 import origins from '../data/srd/origins.json';
@@ -314,4 +315,31 @@ describe('SRD data patterns (plan 7)', () => {
     for (const e of its.filter((x) => x.name.startsWith('Staff')))
       expect([e.id, e.base === 'item/quarterstaff']).toEqual([e.id, /wielded as a magic Quarterstaff/.test(e.desc)]);
   });
+});
+
+// The examples are rebuilt from defaults.ts on every open, so their copied catalog fields don't follow a rebuild
+// (plan 7, Task 13). The entry's dice is the spell's dmg; an item's charges are its max (or maxV). The spell's `dice`
+// is a hand-written row summary in the examples, left out.
+describe('the examples match the catalog in the fields plan 7 changed', () => {
+  const byId = new Map(all.map((e) => [e.id, e]));
+  const SPELL_KEYS = ['fx', 'save', 'dtype', 'dtypes', 'dmgMod', 'parts'] as const;
+  const ITEM_KEYS = ['magic', 'recharge', 'cap', 'capVol'] as const;
+  for (const [who, c] of [['Ilyra', sampleCharacter()], ['Seren', druidSample()]] as const) {
+    it(`keeps ${who}'s catalog spells and items in step`, () => {
+      for (const sp of c.spells.filter((x) => x.cid)) {
+        const e = byId.get(sp.cid!) as SpellEntry | undefined;
+        if (!e) continue;
+        const want = Object.fromEntries([...SPELL_KEYS.map((k) => [k, e[k]]), ['dmg', e.dice]]);
+        const got = Object.fromEntries([...SPELL_KEYS.map((k) => [k, sp[k]]), ['dmg', sp.dmg]]);
+        expect([sp.cid, got]).toEqual([sp.cid, want]);
+      }
+      for (const it of c.inv.filter((x) => x.cid)) {
+        const e = byId.get(it.cid!) as ItemEntry | undefined;
+        if (!e || e.base === 'weapon' || e.base === 'armor' || e.base === 'ammo' || e.magicPick) continue;
+        const want = Object.fromEntries([...ITEM_KEYS.map((k) => [k, e[k]]), ['charges', e.charges]]);
+        const got = Object.fromEntries([...ITEM_KEYS.map((k) => [k, it[k]]), ['charges', it.maxV ?? (it.max === undefined ? undefined : String(it.max))]]);
+        expect([it.cid, got]).toEqual([it.cid, want]);
+      }
+    });
+  }
 });
