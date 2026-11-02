@@ -649,6 +649,8 @@ const counters = (c: Character): ['res' | 'item', Counted][] =>
   [...c.res.map((r) => ['res', r] as ['res', Counted]), ...c.inv.filter((i) => i.count !== undefined).map((i) => ['item', i] as ['item', Counted])];
 // The counters whose regain for this event is a die roll, below their maximum: the app asks for each roll first.
 export function restRolls(c: Character, e: RestEvent): RollAsk[] {
+  // A refused rest asks for nothing: App then runs it, which shows the refusal. Dawn isn't a rest, so it needs no HP.
+  if (e !== 'dawn' && (c.hp === 0 || isDead(c))) return [];
   return counters(c).flatMap(([kind, x]) => {
     const g = regainFor(x, e), m = maxOf(c, x);
     const dice = g && g !== 'all' ? valueAt(g, valueCtx(c)) : 0;
@@ -689,19 +691,22 @@ const restBlocked = (c: Character, title: string): Character | null =>
 export function longRest(c: Character): Character {
   const blocked = restBlocked(c, 'No Long Rest');
   if (blocked) return blocked;
-  const { res, inv, names: refilled } = refillFor(c, 'long');
   const dawnNames = counters(c).filter(([, x]) => rechargeOf(x) === 'dawn').map(([, x]) => x.name);
   const maxHp = c.origOn && c.maxHp < c.origHp ? c.origHp : c.maxHp;
   const abilAdj = Object.fromEntries(Object.entries(c.abilAdj).map(([k, v]) => [k, Math.max(0, v || 0)]));
+  // After the scores are restored: a maximum that reads a lowered score refills to its restored value.
+  const { res, inv, names: refilled } = refillFor({ ...c, abilAdj }, 'long');
   // Shield lasts a round, Mage Armor 8 hours, Barkskin 1 hour (PHB p.316, p.293, p.245): none outlasts a Long Rest.
-  const ended = c.acOn.map((id) => c.spells.find((x) => x.id === id)?.name).filter((n): n is string => !!n);
+  // Sleep gives the Unconscious condition (PHB p.370) and being Incapacitated ends Concentration (PHB p.363), so it ends here.
+  // Simplified: a character in Trance stays conscious (PHB p.189-190) but loses it too; a rare spell that outlasts the rest is turned on again by hand.
+  const ended = [...c.acOn.map((id) => c.spells.find((x) => x.id === id)?.name), c.conc?.name].filter((n): n is string => !!n);
   const restored = [
     maxHp > c.maxHp ? ', HP maximum back to ' + maxHp : '',
     Object.values(c.abilAdj).some((v) => (v || 0) < 0) ? ', reduced ability scores restored' : ''
   ].join('');
   return {
     ...c, maxHp, abilAdj, hp: maxHpOf({ ...c, maxHp, abilAdj }), temp: 0, slotUsed: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], hdUsed: 0, ds: 0, df: 0, acOn: [], effectsOn: [],
-    hpUndo: null, concCheck: null, res, inv, exh: Math.max(0, c.exh - 1),
+    hpUndo: null, ...setConc(null), res, inv, exh: Math.max(0, c.exh - 1),
     restMsg: {
       title: 'Long Rest complete',
       body: 'HP set to max, temp HP cleared, all spell slots and Hit Dice restored' + restored +

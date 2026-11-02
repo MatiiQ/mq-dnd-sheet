@@ -1736,3 +1736,27 @@ describe('damaged saves', () => {
     expect(c.inv[0].eq).toBe(true);
   });
 });
+
+describe('rests', () => {
+  const sp = { id: 's', name: 'Bless', lvl: 1, time: 'Action', range: '30 ft', c: true } as Spell;
+  it('refills a Long Rest counter to the restored maximum', () => {
+    const b = blankCharacter();
+    const c: Character = { ...b, hp: 5, maxHp: 10, abil: { ...b.abil, wis: 14 }, abilAdj: { wis: -4 }, res: [{ id: 'r', name: 'R', count: 0, maxV: 'wis', recharge: 'long' }] };
+    expect(longRest(c).res[0].count).toBe(2);
+  });
+  it('ends Concentration on a Long Rest and says so', () => {
+    const after = longRest(make({ spells: [sp], conc: { id: 's', name: 'Bless' }, acOn: [], hp: 5 }));
+    expect(after.conc).toBeNull();
+    expect(after.restMsg!.body).toContain('Bless ended');
+  });
+  it('keeps Concentration when the rest is refused at 0 HP', () => {
+    expect(longRest(make({ spells: [sp], conc: { id: 's', name: 'Bless' }, hp: 0 })).conc).not.toBeNull();
+  });
+  it('asks for no rolls when the rest would be refused, but still for Dawn', () => {
+    const inv = [{ id: 'w', name: 'Wand', qty: 1, eq: false, count: 0, max: 7, recharge: 'dawn' as const, regain: '1d6+1', regainOn: 'dawn' as const }];
+    const res = [{ id: 'r', name: 'R', count: 0, max: 4, recharge: 'long' as const, regain: '1d4', regainOn: 'short' as const }];
+    expect(restRolls(make({ hp: 0, res, inv }), 'short')).toEqual([]);
+    expect(restRolls(make({ hp: 0, res, inv }), 'dawn')).toHaveLength(1);
+    expect(restRolls(make({ hp: 5, res, inv }), 'short')).toHaveLength(1);
+  });
+});
