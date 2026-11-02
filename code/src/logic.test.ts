@@ -1762,7 +1762,7 @@ describe('rests', () => {
 });
 
 describe('slotsOnShort', () => {
-  it('restores slots on a Short Rest only when the sheet says so (PHB p.153)', () => {
+  it('restores slots on a Short Rest only when the sheet says so (PHB p.154)', () => {
     const used = [0, 2, 0, 0, 0, 0, 0, 0, 0, 0];
     const on = shortRest(make({ slotsOnShort: true, slotUsed: used, hp: 5 }));
     expect(on.slotUsed).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);

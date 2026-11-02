@@ -721,7 +721,7 @@ export function shortRest(c: Character, rolls?: Record<string, number>): Charact
   if (blocked) return blocked;
   const { res, inv, names: refilled } = refillFor(c, 'short', rolls);
   const left = c.level - hdSpent(c);
-  // Pact Magic slots come back on a Short Rest too (PHB p.153-154).
+  // Pact Magic slots come back on a Short Rest too (PHB p.154).
   // shortcut: clears every slot level, because slotUsed doesn't separate Pact Magic slots from others, so a multiclass Warlock regains too many; upgrade if the sheet ever tracks them apart.
   const slotsBack = c.slotsOnShort && c.slotUsed.some((n) => n > 0);
   return {
