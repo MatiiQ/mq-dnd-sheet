@@ -54,7 +54,7 @@ export function PickerFrame({ title, state, msg, onClose, children }: {
       {msg && <div role="status" className="notice notice-blue">{msg}</div>}
       {state.status === 'ready' ? children(state.cat) : state.status === 'error' ? (
         <div role="status" className="row wrap gap-8">
-          <span className="muted">The rules data couldn’t be loaded. Custom entries still work.</span>
+          <span className="muted">The rules data couldn’t be loaded. If Retry fails, close and reopen the app. Custom entries still work.</span>
           <button type="button" className="btn btn-sm" onClick={state.retry}>Retry</button>
         </div>
       ) : <span className="muted">Loading the rules…</span>}
