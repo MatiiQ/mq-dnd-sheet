@@ -8,6 +8,11 @@ import type { Character } from './types';
 export type FormKind = 'attack' | 'rider' | 'res' | 'spell' | 'item' | 'feat' | 'sense' | 'acmod' | 'pick-spell' | 'pick-item' | 'pick-feat';
 export type FormState = { kind: FormKind; id: string | null } | null;
 
+// A tab's draft goes when its tab unmounts, so its form closes too: reopened, it would be blank and saving would overwrite the entry.
+// Left-column forms stay mounted and keep their text.
+export const formAfterTabChange = (form: FormState): FormState =>
+  form && ['res', 'sense', 'acmod'].includes(form.kind) ? form : null;
+
 export interface SheetCtx {
   c: Character;
   update: (p: Patch) => void;

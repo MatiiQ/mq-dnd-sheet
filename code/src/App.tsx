@@ -16,7 +16,7 @@ import { SpellsTab } from './components/tabs/SpellsTab';
 import { useWide } from './layout';
 import { RestPrompt } from './components/RestPrompt';
 import { TABS, dawn, longRest, restRolls, shortRest, type RestEvent, type RollAsk } from './logic';
-import { Sheet, type FormState } from './sheet';
+import { formAfterTabChange, Sheet, type FormState } from './sheet';
 import { useCharacters } from './storage';
 
 export default function App() {
@@ -30,6 +30,8 @@ export default function App() {
   // A rest or Dawn waiting for die rolls (restRolls). UI state only, never saved.
   const [restAsk, setRestAsk] = useState<{ event: RestEvent; asks: RollAsk[] } | null>(null);
   const wide = useWide();
+
+  useEffect(() => setForm(formAfterTabChange), [c.tab]);
 
   // After switching character: drop per-character UI state.
   const onSwitched = (editOn = false, keepMenu = false) => {
