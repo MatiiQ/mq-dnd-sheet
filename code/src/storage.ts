@@ -76,6 +76,11 @@ export function initialStore(): Store {
   return { id, list: saved, c: load(id) };
 }
 
+// From the crash screen: the next launch opens an example instead of the character that won't render. Only the index changes.
+export function openExampleOnNextLoad(): void {
+  writeJSON(INDEX_KEY, { ...(readJSON(INDEX_KEY) as object | null), active: EXAMPLES[0].id });
+}
+
 // Saves the open character (not an example) and the index. Returns false when the browser refused.
 export function persistStore(s: Store): boolean {
   return (isExample(s.id) || writeJSON(sheetKey(s.id), s.c)) && writeJSON(INDEX_KEY, { active: s.id, list: freshList(s) });

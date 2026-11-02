@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import { isActive } from './links';
 import { longRest } from './logic';
-import { addToStore, applyPatch, deleteFromStore, exportStore, freshList, initialStore, load, persistStore, switchStore, writeBackup, type Store } from './storage';
+import { addToStore, applyPatch, deleteFromStore, exportStore, freshList, initialStore, load, openExampleOnNextLoad, persistStore, switchStore, writeBackup, type Store } from './storage';
 
 const renamed = (): Store => ({
   id: 'a', list: [{ id: 'a', name: 'Ilyra Moonbrook' }, { id: 'b', name: 'Other' }],
@@ -143,5 +143,20 @@ describe('one clamp after every change', () => {
     expect(off.res[0].count).toBe(1);
     expect(isActive(off, off.res[0])).toBe(false);
     expect(applyPatch(off, { inv: c.inv }).res[0].count).toBe(1);
+  });
+});
+
+describe('openExampleOnNextLoad', () => {
+  afterEach(() => { vi.unstubAllGlobals(); });
+  it('opens the example next and keeps the saved character listed', () => {
+    const m = stubStorage();
+    const c = { ...blankCharacter(), ch: { ...blankCharacter().ch, name: 'Bob' } };
+    persistStore({ id: 'a', list: [{ id: 'a', name: 'Bob' }], c });
+    const saved = m.get('dnd-sheet-v3:a');
+    openExampleOnNextLoad();
+    const s = initialStore();
+    expect(s.id).toBe('example:ilyra');
+    expect(s.list.map((x) => x.id)).toContain('a');
+    expect(m.get('dnd-sheet-v3:a')).toBe(saved);
   });
 });

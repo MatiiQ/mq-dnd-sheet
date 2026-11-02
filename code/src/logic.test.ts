@@ -4,6 +4,7 @@ import {
   ABILITIES, SKILLS, grantChips, addGrants, findUnlinked, removalChain, removalSummary, removeFeature, removeResource, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, toggleEffect, dawn, refillFor, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, splitTraining, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, NEW_FIELDS, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, removeItem, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
   num, setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, undoHp
 } from './logic';
+import { spellActions } from './actions';
 import { grantErrors, type GrantSpec } from './catalog/schema';
 import { addFromCatalog, type ItemAnswers } from './catalog/copy';
 import { mergeCatalog } from './catalog/merge';
@@ -1705,5 +1706,33 @@ describe('dex in a formula', () => {
     expect(restRolls(c('1d4+dex'), 'short')[0].dice).toBe('1d4+3');
     expect(restRolls(c('1:1d4,5:1d6'), 'short')[0].dice).toBe('1d6');
     expect(restRolls(c('5:1d6', 1), 'short')).toEqual([]); // below the table's first level it regains nothing
+  });
+});
+
+describe('damaged saves', () => {
+  it('fills fields the sheet reads when they are missing or the wrong type', () => {
+    const c = migrate({ ...blankCharacter(),
+      spells: [{ id: 's', name: 'S', lvl: 1 }, { id: 't', name: 'T', lvl: 'x', time: 5, range: null }],
+      inv: [{ id: 'i', name: 'I' }, { id: 'j', name: 'J', qty: '2', eq: 'yes' }],
+      attacks: [{ id: 'a', name: 'A' }], senses: [{ id: 'n', name: 'N' }], riders: [{ id: 'r', name: 'R' }],
+      feats: [{ id: 'f', name: 'F', g: 'nope' }] });
+    expect(c.spells[1]).toMatchObject({ lvl: 0, time: '', range: '' });
+    expect(c.inv[0]).toMatchObject({ qty: 1, eq: false });
+    expect(c.inv[1]).toMatchObject({ qty: 1, eq: false });
+    expect(c.attacks[0]).toMatchObject({ hit: '', dmg: '', info: '', mastery: '' });
+    expect(c.senses[0].range).toBe('');
+    expect(c.riders[0].dice).toBe('');
+    expect(c.feats[0]).toMatchObject({ g: 'other', desc: '' });
+    expect(() => spellActions(c)).not.toThrow();
+    expect(carriedWeight(c)).not.toBeNaN();
+  });
+  it('keeps good values while repairing', () => {
+    const c = migrate({ ...blankCharacter(),
+      spells: [{ id: 's', name: 'S', lvl: 3, time: 'Action', range: '30 ft' }, { id: 't', name: 'T', lvl: 1.5, time: 'x', range: 'y' }, { id: 'u', name: 'U', lvl: 10, time: 'x', range: 'y' }],
+      inv: [{ id: 'i', name: 'I', qty: 2.7, eq: true }, { id: 'j', name: 'J', qty: 0, eq: false }, { id: 'k', name: 'K', qty: -1, eq: false }] });
+    expect(c.spells.map((x) => x.lvl)).toEqual([3, 0, 0]);
+    expect(c.spells[0]).toMatchObject({ time: 'Action', range: '30 ft' });
+    expect(c.inv.map((x) => x.qty)).toEqual([2, 0, 1]);
+    expect(c.inv[0].eq).toBe(true);
   });
 });

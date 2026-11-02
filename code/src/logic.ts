@@ -4,7 +4,7 @@ import { DAMAGE_TYPES, grantErrors, isDtypes, ITEM_CATS, partErrors, type GrantS
 import { hasDice, isValue, valueAt, type ValueCtx } from './catalog/value';
 import { PROF_NAMES, type ProfCat } from './catalog/names';
 import { canLoad, setHands } from './hands';
-import { activeGrants, dropLinkOnly, fixLinks, hasActiveEffect, inactiveReason, isActive, isEquipped, LINKED_LISTS, srcKindOfLink, type SourceKind, linkOf, parseLink, sourceLabel, sourceOf, SRC_KINDS } from './links';
+import { activeGrants, dropLinkOnly, fixLinks, GROUP_SRC, hasActiveEffect, inactiveReason, isActive, isEquipped, LINKED_LISTS, srcKindOfLink, type SourceKind, linkOf, parseLink, sourceLabel, sourceOf, SRC_KINDS } from './links';
 import type { AcEffect, Ability, ArmorKind, CastAbility, Character, Coin, Concentration, Counter, DefenseKind, Feature, Grant, HpSnapshot, Item, Prof, Linked, Recharge, Resource, Size, Spell, SpeedKind, SpellSort, Tab, Unarmored, When } from './types';
 
 export const ABILITIES: [Ability, string][] = [
@@ -844,6 +844,14 @@ export function migrate(data: unknown): Character {
     d[k] = (d[k] as unknown[]).filter(ok).map((x) => (typeof (x as Record<string, unknown>).id === 'string' ? x : { ...(x as object), id: newId() }));
   }
   const c = d as unknown as Character;
+  // The fields rendering relies on, repaired before anything below reads them: a bad text becomes '', so damaged data can't crash the sheet.
+  const texts = <T extends object>(x: T, keys: (keyof T)[]): T => ({ ...x, ...Object.fromEntries(keys.map((k) => [k, typeof x[k] === 'string' ? x[k] : ''])) });
+  c.spells = c.spells.map((x) => ({ ...texts(x, ['time', 'range']), lvl: Number.isInteger(x.lvl) && x.lvl >= 0 && x.lvl <= 9 ? x.lvl : 0 }));
+  c.inv = c.inv.map((i) => ({ ...i, qty: finite(i.qty) && i.qty >= 0 ? Math.floor(i.qty) : 1, eq: i.eq === true }));
+  c.attacks = c.attacks.map((a) => texts(a, ['hit', 'dmg', 'info', 'mastery']));
+  c.senses = c.senses.map((x) => texts(x, ['range']));
+  c.riders = c.riders.map((x) => texts(x, ['dice']));
+  c.feats = c.feats.map((x) => ({ ...texts(x, ['desc']), g: Object.hasOwn(GROUP_SRC, x.g) ? x.g : 'other' }));
   c.senses = c.senses.map(({ desc, ...se }) => cleanLinked({ ...se, ...(typeof desc === 'string' ? { desc } : {}) }));
   // Spells named their source in a `source` text before links; it becomes srcName unless one is set.
   c.spells = c.spells.map((x) => {
