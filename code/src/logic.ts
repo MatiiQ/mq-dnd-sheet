@@ -1,7 +1,7 @@
 // D&D 2024 rules used by the sheet. Pure functions: each takes a character and returns the next one.
 import { blankCharacter, sampleCharacter } from './defaults';
 import { DAMAGE_TYPES, grantErrors, isDtypes, ITEM_CATS, partErrors, type GrantSpec } from './catalog/schema';
-import { isValue, valueAt, type ValueCtx } from './catalog/value';
+import { hasDice, isValue, valueAt, type ValueCtx } from './catalog/value';
 import { PROF_NAMES, type ProfCat } from './catalog/names';
 import { canLoad, setHands } from './hands';
 import { activeGrants, dropLinkOnly, fixLinks, hasActiveEffect, inactiveReason, isActive, isEquipped, LINKED_LISTS, srcKindOfLink, type SourceKind, linkOf, parseLink, sourceLabel, sourceOf, SRC_KINDS } from './links';
@@ -573,7 +573,7 @@ export function maxFields(kind: 'none' | 'number' | 'formula', text: string): Pi
   if (kind === 'none') return {};
   if (kind === 'number') return /^\d+$/.test(t) && Number(t) >= 1 ? { max: Number(t) } : null;
   // `magic` is a grant-only term: a counter's maximum never reads it.
-  return isValue(t) && !/d/.test(t) && !/magic/.test(t) ? { maxV: t } : null;
+  return isValue(t) && !hasDice(t) && !/magic/.test(t) ? { maxV: t } : null;
 }
 
 // The single clamp, run by update() and migrate() after every change: resource counts at most their maximum, HP at
@@ -651,7 +651,8 @@ const counters = (c: Character): ['res' | 'item', Counted][] =>
 export function restRolls(c: Character, e: RestEvent): RollAsk[] {
   return counters(c).flatMap(([kind, x]) => {
     const g = regainFor(x, e), m = maxOf(c, x);
-    return g && g !== 'all' && /d/.test(g) && m !== null && (x.count ?? 0) < m ? [{ key: counterKey(kind, x.id), name: x.name, dice: g }] : [];
+    const dice = g && g !== 'all' ? valueAt(g, valueCtx(c)) : 0;
+    return typeof dice === 'string' && m !== null && (x.count ?? 0) < m ? [{ key: counterKey(kind, x.id), name: x.name, dice }] : [];
   });
 }
 // Refills resources and item charges for an event, up to their maximum; a counter with no maximum is never refilled.
@@ -661,7 +662,7 @@ export function refillFor(c: Character, e: RestEvent, rolls: Record<string, numb
   const fill = <T extends Counted>(kind: 'res' | 'item', x: T): T => {
     const g = regainFor(x, e), m = maxOf(c, x), n = x.count ?? 0;
     if (!g || m === null) return x;
-    const add = g === 'all' ? m : /d/.test(g) ? rolls[counterKey(kind, x.id)] ?? 0 : num(c, g);
+    const add = g === 'all' ? m : hasDice(g) ? rolls[counterKey(kind, x.id)] ?? 0 : num(c, g);
     const next = Math.max(n, Math.min(m, n + add));
     if (next > n) names.push(x.name + ' +' + (next - n));
     return next === n ? x : { ...x, count: next };
@@ -765,7 +766,7 @@ function cleanCounter({ count, max, maxV, recharge, regain, regainOn }: Partial<
   const rc = recharge === undefined ? undefined : RECHARGES.includes(recharge as Recharge) ? (recharge as Recharge) : 'none';
   const pair = typeof regain === 'string' && isValue(regain) && ((regainOn === 'short' && rc === 'long') || (regainOn === 'dawn' && rc === 'dawn'));
   return {
-    count: count as number, ...(finite(max) && max >= 1 ? { max } : {}), ...(typeof maxV === 'string' && isValue(maxV) && !/d|magic/.test(maxV) ? { maxV } : {}),
+    count: count as number, ...(finite(max) && max >= 1 ? { max } : {}), ...(typeof maxV === 'string' && isValue(maxV) && !hasDice(maxV) && !/magic/.test(maxV) ? { maxV } : {}),
     ...(rc ? { recharge: rc } : {}), ...(pair ? { regain, regainOn: regainOn as Counter['regainOn'] } : {})
   };
 }
@@ -778,7 +779,7 @@ function cleanResource(r: Resource): Resource {
   return cleanLinked({
     ...rest, count: finite(count) ? count : 0,
     ...(finite(max) && max >= 1 ? { max } : {}),
-    ...(typeof maxV === 'string' && isValue(maxV) && !/d|magic/.test(maxV) ? { maxV } : {}),
+    ...(typeof maxV === 'string' && isValue(maxV) && !hasDice(maxV) && !/magic/.test(maxV) ? { maxV } : {}),
     recharge: rc, ...(pair ? { regain, regainOn } : {}),
     ...(typeof typeName === 'string' ? { typeName } : {}), ...(typeof note === 'string' ? { note } : {}), ...(typeof casts === 'string' ? { casts } : {})
   } as Resource);

@@ -12,7 +12,7 @@ export function RestPrompt({ event, asks, onDone, onCancel }: { event: RestEvent
       <strong>{TITLES[event]}: roll first</strong>
       {asks.map((a) => (
         <label key={a.key} className="row gap-8">
-          <span className="grow">Rolled {a.dice} for {a.name}</span>
+          <span className="grow">Rolled {a.dice.replaceAll('-', '−')} for {a.name}</span>
           <NumInput className="input input-num" value={rolls[a.key] ?? 0} min={0} max={99} onCommit={(v) => setRolls((r) => ({ ...r, [a.key]: v }))} />
         </label>
       ))}

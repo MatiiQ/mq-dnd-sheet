@@ -9,7 +9,8 @@ const INT = '\\d+', DIE = '\\d*d\\d+';
 const TERM = `(?:${DIE}|${INT}|pb|lvl|magic|str|dex|con|int|wis|cha)`;
 const EXPR = new RegExp(`^-?${TERM}(?:[+-]${TERM})*(?:>=${INT})?$`);
 const STEP = new RegExp(`^(${INT}):(${DIE}|${INT})$`);
-const isDie = (s: string) => /d/.test(s);
+// No other term has a "d" followed by a digit (dex has none).
+export const hasDice = (v: string): boolean => /d\d/.test(v);
 
 // Level-table steps, or null when v is not a well-formed table.
 function steps(v: string): [number, string][] | null {
@@ -20,7 +21,7 @@ function steps(v: string): [number, string][] | null {
     if (!m || (out.length && Number(m[1]) <= out[out.length - 1][0])) return null;
     out.push([Number(m[1]), m[2]]);
   }
-  return out.every(([, a]) => isDie(a) === isDie(out[0][1])) ? out : null;
+  return out.every(([, a]) => hasDice(a) === hasDice(out[0][1])) ? out : null;
 }
 
 export function isValue(v: string): boolean {
@@ -33,14 +34,14 @@ export function valueAt(v: string, ctx: ValueCtx): number | string {
   if (table) {
     const hit = table.filter(([l]) => l <= ctx.level).pop();
     if (!hit) return 0;
-    return isDie(hit[1]) ? hit[1] : Number(hit[1]);
+    return hasDice(hit[1]) ? hit[1] : Number(hit[1]);
   }
   const [body, min] = v.split('>=');
   let sum = 0;
   const dice: string[] = [];
   for (const [, sign, term] of body.matchAll(/([+-]?)([^+-]+)/g)) {
     const neg = sign === '-';
-    if (isDie(term)) { dice.push((neg ? '-' : dice.length ? '+' : '') + term); continue; }
+    if (hasDice(term)) { dice.push((neg ? '-' : dice.length ? '+' : '') + term); continue; }
     const n = term === 'pb' ? ctx.pb : term === 'lvl' ? ctx.level : term === 'magic' ? ctx.magic ?? 0 : /^\d+$/.test(term) ? Number(term) : ctx.mod(term as Ability);
     sum += neg ? -n : n;
   }

@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import {
-  ABILITIES, SKILLS, grantChips, addGrants, findUnlinked, removalChain, removalSummary, removeFeature, removeResource, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, toggleEffect, dawn, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, splitTraining, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, NEW_FIELDS, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, removeItem, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
+  ABILITIES, SKILLS, grantChips, addGrants, findUnlinked, removalChain, removalSummary, removeFeature, removeResource, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, toggleEffect, dawn, refillFor, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, splitTraining, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, NEW_FIELDS, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, removeItem, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
   num, setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, undoHp
 } from './logic';
 import { grantErrors, type GrantSpec } from './catalog/schema';
 import { addFromCatalog, type ItemAnswers } from './catalog/copy';
 import { mergeCatalog } from './catalog/merge';
+import { valueAt } from './catalog/value';
 import srdEntries from './data/srd/index';
 import { activeGrants, isActive } from './links';
 import { inventoryGroups } from './inventory';
@@ -1674,5 +1675,35 @@ describe('spell attack and save DC bonus grants (plan 7, Task 9a)', () => {
     expect(spellAttack(c)! - spellAttack(base)!).toBe(2);
     expect(spellDcParts(c)!.filter((p) => p.label === 'Robe of the Archmagi')).toEqual([{ label: 'Robe of the Archmagi', value: 2 }]);
     expect(spellDcParts(c)!.reduce((t, p) => t + p.value, 0)).toBe(spellSaveDC(c));
+  });
+});
+
+describe('dex in a formula', () => {
+  const ctx = { level: 5, pb: 3, mod: () => 2 };
+  it('reads dex as a modifier', () => {
+    expect(valueAt('dex', ctx)).toBe(2);
+    expect(valueAt('dex>=1', ctx)).toBe(2);
+    expect(valueAt('1+dex', ctx)).toBe(3);
+    expect(valueAt('1d4+dex', ctx)).toBe('1d4+2');
+    expect(valueAt('1:1d8,5:1d10', ctx)).toBe('1d10');
+  });
+  it('accepts a dex formula as a maximum and keeps it on load', () => {
+    expect(maxFields('formula', 'dex>=1')).toEqual({ maxV: 'dex>=1' });
+    expect(maxFields('formula', '1d4')).toBeNull();
+    const c = migrate({ ...blankCharacter(), res: [{ id: 'r', name: 'R', count: 1, maxV: 'dex>=1', recharge: 'long' }] });
+    expect(c.res[0].maxV).toBe('dex>=1');
+  });
+  it('adds a dex regain without asking for a roll', () => {
+    const b = blankCharacter(); // no grants, so the score is exactly what the test sets
+    const c: Character = { ...b, hp: 5, maxHp: 10, abil: { ...b.abil, dex: 16 }, res: [{ id: 'r', name: 'R', count: 0, max: 9, recharge: 'long', regain: 'dex', regainOn: 'short' }] };
+    expect(restRolls(c, 'short')).toEqual([]);
+    expect(refillFor(c, 'short').res[0].count).toBe(3);
+  });
+  it('shows a rolled regain with its modifier and level step', () => {
+    const b = blankCharacter();
+    const c = (regain: string, level = 5): Character => ({ ...b, hp: 5, maxHp: 10, level, abil: { ...b.abil, dex: 16 }, res: [{ id: 'r', name: 'R', count: 0, max: 9, recharge: 'long', regain, regainOn: 'short' }] });
+    expect(restRolls(c('1d4+dex'), 'short')[0].dice).toBe('1d4+3');
+    expect(restRolls(c('1:1d4,5:1d6'), 'short')[0].dice).toBe('1d6');
+    expect(restRolls(c('5:1d6', 1), 'short')).toEqual([]); // below the table's first level it regains nothing
   });
 });
