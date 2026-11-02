@@ -4,7 +4,7 @@ import { slug, type SpellPart } from './catalog/schema';
 import { valueAt } from './catalog/value';
 import { hasProp, isWeapon, twoHanded, versatile, weaponKind, weaponMatches, weaponsHeld } from './hands';
 import { activeGrants, isActive, linkOf, sourceLabel, sourceOf } from './links';
-import { ABILITIES, abilityMod, fmt, normName, num, profBonus, profList, hasProf, spellAttackFor, spellSaveDcFor, spellUsable, valueCtx, type AcPart } from './logic';
+import { ABILITIES, abilityMod, castAbOf, fmt, normName, num, partsTotal, profBonus, profList, hasProf, spellAttackFor, spellSaveDcFor, spellUsable, valueCtx, type AcPart } from './logic';
 import type { Ability, Character, Econ, Feature, Grant, Item, Spell } from './types';
 
 // The "Other weapons" list: weapons not in hand, equipped first. A weapon inside a container is left out: the player
@@ -100,7 +100,6 @@ function grantFits(c: Character, g: Grant, it: Item, use: Use): boolean {
 }
 const grantParts = (c: Character, kind: 'atkBonus' | 'dmgBonus', it: Item, use: Use): AcPart[] =>
   activeGrants(c, kind).filter((g) => grantFits(c, g, it, use)).map((g) => ({ label: g.name, value: num(c, g.val, g) }));
-const sum = (parts: AcPart[]) => parts.reduce((t, p) => t + p.value, 0);
 
 const USE_NOTE: Record<Use, string | undefined> = { melee: undefined, thrown: 'Thrown', ranged: undefined, 'two-handed': 'Two hands' };
 function rangeOf(it: Item, use: Use): string {
@@ -155,7 +154,7 @@ function attackFor(c: Character, it: Item, use: Use): { attack: WeaponAttack; di
   const held = use === 'two-handed' ? inHand >= 2 : inHand >= 1;
   const crit = critText(c);
   const attack: WeaponAttack = {
-    itemId: it.id, name: it.name, use, econ: 'action', hit: sum(hitParts), hitParts, dmg: diceText(die, sum(dmgParts)), dmgParts, dtype,
+    itemId: it.id, name: it.name, use, econ: 'action', hit: partsTotal(hitParts), hitParts, dmg: diceText(die, partsTotal(dmgParts)), dmgParts, dtype,
     range: rangeOf(it, use), props: it.props ?? '', ...(it.mastery && hasMastery(c, weaponKind(it)) ? { mastery: it.mastery } : {}), held,
     ...(USE_NOTE[use] ? { note: USE_NOTE[use] } : {}), ...(crit ? { crit } : {})
   };
@@ -182,9 +181,9 @@ export function unarmedStrike(c: Character): WeaponAttack & { dc: number } {
   const bonus = (kind: 'atkBonus' | 'dmgBonus') => activeGrants(c, kind).filter(fits).map((g) => ({ label: g.name, value: num(c, g.val, g) }));
   const hitParts = [{ label: abilityName(ab), value: mod }, { label: 'Proficiency Bonus', value: pb }, ...bonus('atkBonus')].filter((p) => p.value !== 0);
   const dmgParts = [...(die ? [] : [{ label: 'Unarmed Strike', value: 1 }]), { label: abilityName(ab), value: mod }, ...bonus('dmgBonus')].filter((p) => p.value !== 0);
-  const total = sum(dmgParts), crit = critText(c);
+  const total = partsTotal(dmgParts), crit = critText(c);
   return {
-    ...(crit ? { crit } : {}), itemId: '', name: 'Unarmed Strike', use: 'melee', econ: 'action', hit: sum(hitParts), hitParts,
+    ...(crit ? { crit } : {}), itemId: '', name: 'Unarmed Strike', use: 'melee', econ: 'action', hit: partsTotal(hitParts), hitParts,
     dmg: die ? diceText(die, total) : String(Math.max(0, total)), dmgParts, dtype, range: 'Melee 5 ft', props: '', held: true, dc: 8 + mod + pb
   };
 }
@@ -215,7 +214,7 @@ export function lightExtra(c: Character): (WeaponAttack & { nick: boolean }) | n
   const dmgParts = abilityPart && mod > 0 && !addMod ? attack.dmgParts.slice(1) : attack.dmgParts;
   const nick = nickOf(it);
   return {
-    ...attack, dmgParts, dmg: diceText(die, sum(dmgParts)), econ: nick ? 'action' : 'bonus', nick,
+    ...attack, dmgParts, dmg: diceText(die, partsTotal(dmgParts)), econ: nick ? 'action' : 'bonus', nick,
     ...(nick ? { note: 'part of the Attack action, once per turn' } : { note: 'Bonus Action, after the Attack action' })
   };
 }
@@ -305,7 +304,7 @@ function spellRow(c: Character, sp: Spell, r: RowFields): Omit<SpellAction, 'nam
   } else if (/\d+d\d+/.test(dice) && ((r.fx === 'healing' && r.healMod) || (r.fx === 'damage' && r.dmgMod))) {
     // Cure Wounds, Healing Word, Mass Cure Wounds: "+ your spellcasting ability modifier" (PHB pp.259, 284, 296);
     // damage that says the same: Spiritual Weapon, Flame Blade (PHB pp.319, 275).
-    const ab = sp.castAb ?? (c.castAb === 'none' ? null : c.castAb);
+    const ab = castAbOf(c, sp);
     if (ab) dice = `${dice} + ${ABBR(ab)} (${fmt(abilityMod(c, ab))})`;
   }
   const hit = r.atk ? spellAttackFor(c, sp) : null, dc = r.save ? spellSaveDcFor(c, sp) : null;

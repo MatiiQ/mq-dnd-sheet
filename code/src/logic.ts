@@ -132,11 +132,11 @@ export const saveMod = (c: Character, k: Ability) => abilityMod(c, k) + (savePro
 const castGrantParts = (c: Character, kind: 'spellAtk' | 'spellDc'): AcPart[] =>
   activeGrants(c, kind).map((g) => ({ label: sourceOf(c, g.from)?.name ?? g.name, value: num(c, g.val, g) })).filter((p) => p.value !== 0);
 const castBase = (c: Character, ab: Ability): AcPart[] => [{ label: CAST_NAMES[ab as CastAbility] + ' modifier', value: abilityMod(c, ab) }, { label: 'Proficiency Bonus', value: profBonus(c.level) }];
-const total = (parts: AcPart[]) => parts.reduce((t, p) => t + p.value, 0);
+export const partsTotal = (parts: AcPart[]): number => parts.reduce((t, p) => t + p.value, 0);
 // The same for one spell, which may cast with its own ability (Light Bearer: Light with CHA).
-const castAbOf = (c: Character, sp: Spell): Ability | null => sp.castAb ?? (c.castAb === 'none' ? null : c.castAb);
-export const spellSaveDcFor = (c: Character, sp: Spell) => { const ab = castAbOf(c, sp); return ab ? 8 + total([...castBase(c, ab), ...castGrantParts(c, 'spellDc')]) : null; };
-export const spellAttackFor = (c: Character, sp: Spell) => { const ab = castAbOf(c, sp); return ab ? total([...castBase(c, ab), ...castGrantParts(c, 'spellAtk')]) : null; };
+export const castAbOf = (c: Character, sp: Spell): Ability | null => sp.castAb ?? (c.castAb === 'none' ? null : c.castAb);
+export const spellSaveDcFor = (c: Character, sp: Spell) => { const ab = castAbOf(c, sp); return ab ? 8 + partsTotal([...castBase(c, ab), ...castGrantParts(c, 'spellDc')]) : null; };
+export const spellAttackFor = (c: Character, sp: Spell) => { const ab = castAbOf(c, sp); return ab ? partsTotal([...castBase(c, ab), ...castGrantParts(c, 'spellAtk')]) : null; };
 // The same two numbers as parts, for the breakdown under each badge (PHB p.41): a shared base (modifier, PB), then each
 // number's own grants, one part per grant labelled by its source. Their sums equal the values below.
 export function spellAttackParts(c: Character): AcPart[] | null {
@@ -144,8 +144,8 @@ export function spellAttackParts(c: Character): AcPart[] | null {
 }
 export const spellDcParts = (c: Character): AcPart[] | null =>
   c.castAb === 'none' ? null : [{ label: 'Base', value: 8 }, ...castBase(c, c.castAb), ...castGrantParts(c, 'spellDc')];
-export const spellSaveDC = (c: Character) => { const p = spellDcParts(c); return p && total(p); };
-export const spellAttack = (c: Character) => { const p = spellAttackParts(c); return p && total(p); };
+export const spellSaveDC = (c: Character) => { const p = spellDcParts(c); return p && partsTotal(p); };
+export const spellAttack = (c: Character) => { const p = spellAttackParts(c); return p && partsTotal(p); };
 // Initiative is a Dexterity check (PHB p.23), so Dexterity check bonus grants add; initMisc holds extra bonuses from
 // features or items. No half PB: Jack of All Trades needs a skill check you aren't proficient in (PHB p.60), and
 // Initiative uses no skill (the 2014 rule applied it to Initiative; the 2024 one doesn't).
@@ -193,7 +193,6 @@ export function detectAcSpell(name: string): Pick<Spell, 'acFx' | 'acVal'> | nul
 export interface AcPart { label: string; value: number; note?: string; active?: boolean }
 // A Concentration spell's AC effect is on exactly while concentrating on it; any other is on while in acOn.
 export const acSpellActive = (c: Character, sp: Spell) => !!sp.acFx && (sp.c ? c.conc?.id === sp.id : c.acOn.includes(sp.id));
-const partsSum = (parts: AcPart[]) => parts.reduce((t, p) => t + p.value, 0);
 
 // Armor Class and the parts it is made of. Base AC is 10 + DEX; armor, spells and features give other base
 // calculations, and only one applies (PHB p.12, p.361). The sheet picks the highest legal one.
@@ -226,7 +225,7 @@ export function armorClass(c: Character): { total: number; parts: AcPart[] } {
     candidates.push([unarmored, dexPart(Infinity)]);
   }
   // Highest sum wins; on a tie the earlier candidate stays.
-  const base = candidates.reduce((b, p) => (partsSum(p) > partsSum(b) ? p : b));
+  const base = candidates.reduce((b, p) => (partsTotal(p) > partsTotal(b) ? p : b));
   const parts: AcPart[] = [
     ...base,
     ...(shield ? [{ label: shield.name, value: (shield.acBase || 0) + (shield.acBonus || 0), note: 'shield' }] : []),
@@ -239,9 +238,9 @@ export function armorClass(c: Character): { total: number; parts: AcPart[] } {
   // Barkskin: AC can't be lower than its value, so it comes last and adds only what is missing (PHB p.245).
   const floor = Math.max(0, ...spells.filter((sp) => sp.acFx === 'floor').map((sp) => sp.acVal || 0));
   const fl = spells.find((sp) => sp.acFx === 'floor' && sp.acVal === floor);
-  const below = floor - partsSum(parts);
+  const below = floor - partsTotal(parts);
   if (fl && below > 0) parts.push({ label: fl.name, value: below, note: 'AC at least ' + floor, active: true });
-  return { total: partsSum(parts), parts };
+  return { total: partsTotal(parts), parts };
 }
 // A levelled spell can be cast when it is prepared or always prepared; always-prepared spells don't count
 // toward the prepared limit (PHB p.235). With tracking off (classes that know their spells), every spell can be cast.
@@ -783,13 +782,9 @@ function cleanCounter({ count, max, maxV, recharge, regain, regainOn }: Partial<
 // recharge it goes with (on a Short Rest for Long Rest, at dawn for Dawn), text fields as strings.
 function cleanResource(r: Resource): Resource {
   const { count, max, maxV, recharge, regain, regainOn, typeName, note, casts, inv: _inv, ...rest } = r as Resource & Record<string, unknown>;
-  const rc = RECHARGES.includes(recharge as Recharge) ? (recharge as Recharge) : 'none';
-  const pair = typeof regain === 'string' && isValue(regain) && ((regainOn === 'short' && rc === 'long') || (regainOn === 'dawn' && rc === 'dawn'));
   return cleanLinked({
-    ...rest, count: finite(count) ? count : 0,
-    ...(finite(max) && max >= 1 ? { max } : {}),
-    ...(typeof maxV === 'string' && isValue(maxV) && !hasDice(maxV) && !/magic/.test(maxV) ? { maxV } : {}),
-    recharge: rc, ...(pair ? { regain, regainOn } : {}),
+    ...rest,
+    ...cleanCounter({ count: finite(count) ? count : 0, max, maxV, recharge: RECHARGES.includes(recharge as Recharge) ? recharge : 'none', regain, regainOn }),
     ...(typeof typeName === 'string' ? { typeName } : {}), ...(typeof note === 'string' ? { note } : {}), ...(typeof casts === 'string' ? { casts } : {})
   } as Resource);
 }
