@@ -13,7 +13,7 @@ export function sampleCharacter(): Character {
     skillProf: { stealth: 1, nature: 1, animal: 1, insight: 1, perception: 1, survival: 2 },
     hp: 31, maxHp: 44, origHp: 44, origOn: false, temp: 0, amount: 5, insp: 1, pills: ['hp', 'ac', 'res:favored'], tab: 'actions', prepMax: 6, spellFilter: 'all', spellSort: 'az', usePrep: true,
     hdUsed: 1, ds: 0, df: 0, exh: 0, conds: {}, conc: null, hpUndo: null, concCheck: null, restMsg: null,
-    slotMax: [0, 4, 2, 0, 0, 0, 0, 0, 0, 0], slotUsed: [0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+    slotMax: [0, 4, 2, 0, 0, 0, 0, 0, 0, 0], slotUsed: [0, 1, 0, 0, 0, 0, 0, 0, 0, 0], slotsOnShort: false,
     defenses: [{ id: 'd1', kind: 'adv', name: 'vs Charmed', from: 'feature:f12', srcKind: 'species' }], // Fey Ancestry (PHB p.190)
     senses: [{ id: 'se1', name: 'Darkvision', range: '60 ft', from: 'feature:f11', srcKind: 'species' }],
     res: [
@@ -119,7 +119,7 @@ export function druidSample(): Character {
     hp: 71, maxHp: 99, origHp: 99, origOn: false, temp: 12, amount: 8, insp: 1, pills: ['hp', 'ac', 'res:wild'], tab: 'actions', prepMax: 16, spellFilter: 'all', spellSort: 'az', usePrep: true,
     hdUsed: 3, ds: 0, df: 0, exh: 1, conds: { Poisoned: true }, conc: { id: 'ds9', name: 'Moonbeam' },
     hpUndo: null, concCheck: null, restMsg: null,
-    slotMax: [0, 4, 3, 3, 3, 2, 1, 0, 0, 0], slotUsed: [0, 2, 1, 1, 0, 1, 0, 0, 0, 0],
+    slotMax: [0, 4, 3, 3, 3, 2, 1, 0, 0, 0], slotUsed: [0, 2, 1, 1, 0, 1, 0, 0, 0, 0], slotsOnShort: false,
     // Celestial Resistance; War Caster
     defenses: [{ id: 'd1', kind: 'res', name: 'Necrotic', from: 'feature:f16', srcKind: 'species' }, { id: 'd2', kind: 'res', name: 'Radiant', from: 'feature:f16', srcKind: 'species' },
       { id: 'd3', kind: 'adv', name: 'Concentration saves', from: 'feature:f15', srcKind: 'feat' }],
@@ -264,7 +264,7 @@ export function blankCharacter(): Character {
     level: 1, speedBase: 30, initMisc: 0, hdDie: 8, castAb: 'none', insp: 0, pills: ['hp', 'ac', ''], spellSort: 'az',
     abil: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 }, abilAdj: {}, saveProf: {}, skillProf: {},
     hp: 8, maxHp: 8, origHp: 8, hdUsed: 0,
-    slotMax: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], slotUsed: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    slotMax: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], slotUsed: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], slotsOnShort: false,
     defenses: [], senses: [], res: [], attacks: [], riders: [],
     coins: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 }, attuneIds: ['', '', ''], inv: [], spells: [], feats: [], prepMax: 0,
     grants: [], effectsOn: [], profs: [], hands: [], mastery: [], sections: []

@@ -115,6 +115,8 @@ export interface Character {
   conds: Record<string, boolean>; conc: Concentration | null;
   hpUndo: { prev: HpSnapshot; text: string } | null; concCheck: string | null; restMsg: { title: string; body: string } | null;
   slotMax: number[]; slotUsed: number[];
+  // Pact Magic: every slot refills on a Short Rest too.
+  slotsOnShort: boolean;
   defenses: Defense[];
   senses: Sense[]; res: Resource[]; attacks: Attack[]; riders: Rider[];
   /** Attunement slots: 3 item ids, '' for an empty slot. */

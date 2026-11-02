@@ -209,6 +209,7 @@ export function SpellsTab() {
           );
         })}
         {slotLevels.length === 0 && <span className="muted" style={{ padding: '8px 0' }}>No spell slots. Turn on Edit to set them.</span>}
+        {edit && <label className="check" style={{ alignSelf: 'start' }}><input type="checkbox" checked={c.slotsOnShort} onChange={(e) => update({ slotsOnShort: e.target.checked })} />All slots refill on a Short Rest (Pact Magic)</label>}
       </div>
 
       <div className="row wrap between" style={{ gap: '8px 14px' }}>

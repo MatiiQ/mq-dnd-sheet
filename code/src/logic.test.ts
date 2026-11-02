@@ -1760,3 +1760,24 @@ describe('rests', () => {
     expect(restRolls(make({ hp: 5, res, inv }), 'short')).toHaveLength(1);
   });
 });
+
+describe('slotsOnShort', () => {
+  it('restores slots on a Short Rest only when the sheet says so (PHB p.153)', () => {
+    const used = [0, 2, 0, 0, 0, 0, 0, 0, 0, 0];
+    const on = shortRest(make({ slotsOnShort: true, slotUsed: used, hp: 5 }));
+    expect(on.slotUsed).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+    expect(on.restMsg!.body).toContain('Spell slots restored');
+    const bare = { slotUsed: used, hp: 5, res: [], inv: [] };
+    expect(shortRest(make({ ...bare, slotsOnShort: true })).restMsg!.body).not.toContain('No resources recharge');
+    expect(shortRest(make({ ...bare, slotsOnShort: false })).restMsg!.body).toContain('No resources recharge');
+    const off = shortRest(make({ slotsOnShort: false, slotUsed: used, hp: 5 }));
+    expect(off.slotUsed).toEqual(used);
+    expect(off.restMsg!.body).not.toContain('Spell slots restored');
+    expect(shortRest(make({ slotsOnShort: true, slotUsed: used, hp: 0 })).slotUsed).toEqual(used);
+  });
+  it('loads an old save with the setting off', () => {
+    const { slotsOnShort: _, ...old } = sampleCharacter();
+    expect(migrate(old).slotsOnShort).toBe(false);
+    expect(migrate({ ...old, slotsOnShort: true }).slotsOnShort).toBe(true);
+  });
+});

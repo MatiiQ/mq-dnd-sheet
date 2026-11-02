@@ -722,11 +722,15 @@ export function shortRest(c: Character, rolls?: Record<string, number>): Charact
   if (blocked) return blocked;
   const { res, inv, names: refilled } = refillFor(c, 'short', rolls);
   const left = c.level - hdSpent(c);
+  // Pact Magic slots come back on a Short Rest too (PHB p.153-154).
+  // shortcut: clears every slot level, because slotUsed doesn't separate Pact Magic slots from others, so a multiclass Warlock regains too many; upgrade if the sheet ever tracks them apart.
+  const slotsBack = c.slotsOnShort && c.slotUsed.some((n) => n > 0);
   return {
-    ...c, res, inv,
+    ...c, res, inv, ...(slotsBack ? { slotUsed: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0] } : {}),
     restMsg: {
       title: 'Short Rest',
-      body: (refilled.length ? 'Refilled: ' + refilled.join(', ') + '. ' : 'No resources recharge on a Short Rest. ') +
+      body: (slotsBack ? 'Spell slots restored. ' : '') +
+        (refilled.length ? 'Refilled: ' + refilled.join(', ') + '. ' : slotsBack ? '' : 'No resources recharge on a Short Rest. ') +
         'Spend Hit Dice below: roll ' + hitDieRoll(c) + ' each (minimum 1), then Heal (' + left + ' left).'
     }
   };
@@ -825,7 +829,7 @@ function cleanParts(sp: Spell): Spell {
 const cleanFields = <T extends object>(x: T, fields: Record<string, FieldCheck>): T =>
   Object.fromEntries(Object.entries(x).filter(([k, v]) => !Object.hasOwn(fields, k) || fields[k](v))) as T;
 
-export const NEW_FIELDS: readonly (keyof Character)[] = ['spellSort', 'size', 'carryUp', 'attuneIds', 'grants', 'effectsOn', 'profs', 'defenses', 'hands', 'mastery', 'sections'];
+export const NEW_FIELDS: readonly (keyof Character)[] = ['spellSort', 'size', 'carryUp', 'attuneIds', 'grants', 'effectsOn', 'profs', 'defenses', 'hands', 'mastery', 'sections', 'slotsOnShort'];
 // Resources the Inventory tab echoed before `inv` existed.
 const OLD_INVENTORY_RESOURCES = ['arrows', 'potions'];
 
