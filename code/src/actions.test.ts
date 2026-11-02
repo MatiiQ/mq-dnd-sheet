@@ -267,6 +267,10 @@ describe('spell actions', () => {
     expect(a).toMatchObject({ group: 'save', dc: 14, save: 'dex', dice: '8d6', dtype: 'Fire', econ: 'action' });
     expect(a.upcast).toMatch(/increases by 1d6/);
   });
+  it('says which dice a higher slot adds when a spell has no printed text, and nothing for a cantrip', () => {
+    expect(actionOf(wizard([{ ...catSpell('spell/fireball'), higher: undefined }]), 'fireball')!.upcast).toBe('+1d6 for each slot level above 3');
+    expect(actionOf(wizard([catSpell('spell/fire-bolt')]), 'fire-bolt')!.upcast).toBeUndefined();
+  });
   it('scales cantrip dice at levels 5, 11 and 17 (PHB p.239, Fire Bolt p.274)', () => {
     expect(actionOf(wizard([catSpell('spell/fire-bolt')]), 'fire-bolt')).toMatchObject({ group: 'damage', hit: 6, dice: '2d10' });
     expect(actionOf(wizard([catSpell('spell/fire-bolt')], { level: 11 }), 'fire-bolt')!.dice).toBe('3d10');
@@ -466,5 +470,34 @@ describe('other weapons (plan 6)', () => {
     const c = { ...blankCharacter(), inv: [bag, dagger({ id: 'dg', eq: false }), shortsword({ id: 'sw', in: 'bag' }), longsword({ id: 'ls' }), longbow({ id: 'bow' })], hands: ['bow', 'bow'] };
     expect(otherWeapons(c).map((i) => i.id)).toEqual(['ls', 'dg']);
     expect(otherWeapons(takeOut(c, 'sw')).map((i) => i.id)).toEqual(['sw', 'ls', 'dg']);
+  });
+});
+
+describe('critical hit range', () => {
+  const crit = (id: string, val: string, p: Partial<Grant> = {}) => ({ id, kind: 'crit', name: 'Critical', val, ...p }) as Grant;
+  const fighter = (grants: Grant[], p: Partial<Character> = {}): Character => ilyra({ grants, inv: [longsword({ id: 'ls' })], hands: ['ls'], ...p });
+  const sword = (c: Character) => weaponAttacks(c, c.inv[0])[0];
+
+  it('stays silent at the usual 20', () => {
+    const c = fighter([]);
+    expect(sword(c).crit).toBeUndefined();
+    expect(unarmedStrike(c).crit).toBeUndefined();
+  });
+  it('shows on weapon attacks and Unarmed Strike (PHB p.96), and the lowest grant wins', () => {
+    const c = fighter([crit('a', '19'), crit('b', '18')]);
+    expect(sword(c).crit).toBe('Critical Hit on 18–20');
+    expect(unarmedStrike(c).crit).toBe('Critical Hit on 18–20');
+  });
+  it('reaches the Light extra attack, built from a weapon attack', () => {
+    const c = fighter([crit('a', '19')], { inv: [shortsword({ id: 's1' }), dagger({ id: 'd1' })], hands: ['s1', 'd1'] });
+    expect(lightExtra(c)?.crit).toBe('Critical Hit on 19–20');
+  });
+  it('waits for the grant’s level and ignores a value below 2', () => {
+    expect(sword(fighter([crit('a', '18', { minLvl: 15 })])).crit).toBeUndefined();
+    expect(sword(fighter([crit('a', '0')])).crit).toBeUndefined();
+  });
+  it('comes through from the catalog’s Improved Critical', () => {
+    const c = addFromCatalog(fighter([]), cat, cat.byId.get('feature/fighter/champion/improved-critical')!, { picks: {}, counted: {}, links: {} });
+    expect(sword(c).crit).toBe('Critical Hit on 19–20');
   });
 });

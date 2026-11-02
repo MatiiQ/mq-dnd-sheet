@@ -36,7 +36,7 @@ const abilityName = (a: Ability) => ABILITIES.find(([k]) => k === a)![1];
 export type Use = 'melee' | 'thrown' | 'ranged' | 'two-handed';
 export interface WeaponAttack {
   itemId: string; name: string; use: Use; econ: Econ; hit: number; hitParts: AcPart[];
-  dmg: string; dmgParts: AcPart[]; dtype: string; range: string; props: string; mastery?: string; held: boolean; note?: string;
+  dmg: string; dmgParts: AcPart[]; dtype: string; range: string; props: string; mastery?: string; held: boolean; note?: string; crit?: string;
 }
 
 // Proficiency with a weapon (PHB p.12): by category — the class lists' 'Simple weapons', 'Martial weapons' and the Monk's
@@ -113,6 +113,14 @@ const isShillelagh = (c: Character, g: Grant) => {
   return !!src && g.from.startsWith('spell:') && (src.cid ? src.cid === 'spell/shillelagh' : normName(src.name) === 'shillelagh');
 };
 
+// A wider Critical Hit range, for attacks with weapons and Unarmed Strikes only (Improved Critical 19-20, Superior
+// Critical 18-20, PHB p.96): the lowest active grant wins, since each replaces the one before. A 1 always misses
+// (PHB p.12), so a value below 2 is ignored. Undefined at the usual 20.
+function critText(c: Character): string | undefined {
+  const low = Math.min(20, ...activeGrants(c, 'crit').map((g) => num(c, g.val, g)).filter((n) => n >= 2));
+  return low < 20 ? `Critical Hit on ${low}–20` : undefined;
+}
+
 // One attack per use of a weapon. A Melee weapon: melee, plus thrown with Thrown, plus two-handed when Versatile. A
 // Ranged weapon: ranged only, with Ammunition or Thrown (a Dart). To-hit = ability modifier + PB if proficient + magic
 // bonus + matching attack bonus grants (PHB p.12); damage = the die for the grip (Versatile two hands: its larger die,
@@ -145,10 +153,11 @@ function attackFor(c: Character, it: Item, use: Use): { attack: WeaponAttack; di
   // Shillelagh: "Force damage or the weapon's normal damage type (your choice)" (PHB p.316).
   const dtype = overs.some((g) => isShillelagh(c, g)) ? [it.dtype, 'Force'].filter(Boolean).join(' or ') : it.dtype ?? '';
   const held = use === 'two-handed' ? inHand >= 2 : inHand >= 1;
+  const crit = critText(c);
   const attack: WeaponAttack = {
     itemId: it.id, name: it.name, use, econ: 'action', hit: sum(hitParts), hitParts, dmg: diceText(die, sum(dmgParts)), dmgParts, dtype,
     range: rangeOf(it, use), props: it.props ?? '', ...(it.mastery && hasMastery(c, weaponKind(it)) ? { mastery: it.mastery } : {}), held,
-    ...(USE_NOTE[use] ? { note: USE_NOTE[use] } : {})
+    ...(USE_NOTE[use] ? { note: USE_NOTE[use] } : {}), ...(crit ? { crit } : {})
   };
   return { attack, die, abilityPart: mod !== 0 };
 }
@@ -173,9 +182,9 @@ export function unarmedStrike(c: Character): WeaponAttack & { dc: number } {
   const bonus = (kind: 'atkBonus' | 'dmgBonus') => activeGrants(c, kind).filter(fits).map((g) => ({ label: g.name, value: num(c, g.val, g) }));
   const hitParts = [{ label: abilityName(ab), value: mod }, { label: 'Proficiency Bonus', value: pb }, ...bonus('atkBonus')].filter((p) => p.value !== 0);
   const dmgParts = [...(die ? [] : [{ label: 'Unarmed Strike', value: 1 }]), { label: abilityName(ab), value: mod }, ...bonus('dmgBonus')].filter((p) => p.value !== 0);
-  const total = sum(dmgParts);
+  const total = sum(dmgParts), crit = critText(c);
   return {
-    itemId: '', name: 'Unarmed Strike', use: 'melee', econ: 'action', hit: sum(hitParts), hitParts,
+    ...(crit ? { crit } : {}), itemId: '', name: 'Unarmed Strike', use: 'melee', econ: 'action', hit: sum(hitParts), hitParts,
     dmg: die ? diceText(die, total) : String(Math.max(0, total)), dmgParts, dtype, range: 'Melee 5 ft', props: '', held: true, dc: 8 + mod + pb
   };
 }
@@ -267,10 +276,13 @@ export function spellActions(c: Character): SpellAction[] {
     const [econ, econNote] = SPELL_ECON[key] ?? [econOf(sp.time), undefined];
     const note = econNote ?? SPELL_NOTES[key];
     const source = sourceLabel(c, sp);
+    // Spells without the printed text (the examples, older saves) still say which dice a higher slot adds.
+    const slotDie = /^(\d+d\d+)\/slot$/.exec(sp.scale ?? '')?.[1];
+    const upcast = sp.higher || (slotDie && `+${slotDie} for each slot level above ${sp.lvl}`);
     if (sp.atk || sp.save || sp.fx === 'damage' || sp.fx === 'healing' || effect) {
       out.push({
         ...spellRow(c, sp, { fx: sp.fx, dice: sp.dmg, dtype: sp.dtype, dtypes: sp.dtypes, save: sp.save, atk: sp.atk, dmgMod: sp.dmgMod, healMod: sp.healMod, scale: sp.scale }),
-        name: sp.name, econ, ...(sp.higher ? { upcast: sp.higher } : {}), ...(source ? { source } : {}), ...(effect ? { effect: true } : {}), ...(note ? { note } : {})
+        name: sp.name, econ, ...(upcast ? { upcast } : {}), ...(source ? { source } : {}), ...(effect ? { effect: true } : {}), ...(note ? { note } : {})
       });
     }
     // Each part is its own row with numbers only: no upcast, source, or effect (the spell's own row has them).

@@ -126,7 +126,7 @@ export function ActionsTab() {
   const weaponRow = (it: Item, a: WeaponAttack, controls: boolean) => shows(a.econ) && (
     <ActRow key={it.id + a.use} econ={a.econ}
       name={a.name + (USE_LABEL[a.use] ? ' · ' + USE_LABEL[a.use] : '')}
-      sub={[a.range, propsText(a.props), a.mastery && 'Mastery: ' + title(a.mastery)].filter(Boolean).join(' · ')}
+      sub={[a.range, propsText(a.props), a.mastery && 'Mastery: ' + title(a.mastery), a.crit].filter(Boolean).join(' · ')}
       side={<div className="row wrap gap-10 act-nums">
         <span className="sr-only">To hit</span><DieBadge value={fmt(a.hit)} />
         <span className="sr-only">Damage</span><span className="act-dmg">{a.dmg} {a.dtype}</span>
@@ -301,7 +301,7 @@ export function ActionsTab() {
       </>}>
         {[...heldRows,
           shows('action') && (
-            <ActRow key="unarmed" econ="action" name="Unarmed Strike" sub={unarmed.range}
+            <ActRow key="unarmed" econ="action" name="Unarmed Strike" sub={[unarmed.range, unarmed.crit].filter(Boolean).join(' · ')}
               side={<div className="row wrap gap-10 act-nums">
                 <span className="sr-only">To hit</span><DieBadge value={fmt(unarmed.hit)} />
                 <span className="act-dmg">{unarmed.dmg} {unarmed.dtype}</span>
@@ -313,7 +313,7 @@ export function ActionsTab() {
               </>} />
           ),
           extra && shows(extra.econ) && (
-            <ActRow key="light" econ={extra.econ} name={'Light extra attack · ' + extra.name} sub={extra.note}
+            <ActRow key="light" econ={extra.econ} name={'Light extra attack · ' + extra.name} sub={[extra.note, extra.crit].filter(Boolean).join(' · ')}
               side={<div className="row wrap gap-10 act-nums">
                 <span className="sr-only">To hit</span><DieBadge value={fmt(extra.hit)} />
                 <span className="act-dmg">{extra.dmg} {extra.dtype}</span>

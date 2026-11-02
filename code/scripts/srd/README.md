@@ -146,12 +146,12 @@ options (the same one twice gives `+2`), a background picks three (`+2`/`+1` or 
 
 - `TraitEntry.of` (Task 6): a lineage or ancestry option (Wood Elf, Forest Gnome, Cloud’s Jaunt) is a trait of its own,
   because one option carries several grants; `of` names the trait that offers it, and that trait holds a choice with
-  the pool `trait:of=<its id>`. Plan 3 follow-up: apply the chosen option's grants as the trait's.
+  the pool `trait:of=<its id>`. Adding the option adds its grants.
 
 ## Vocabulary changes found by the slice
 
 Authoring every entry the sample characters use (Task 10) added three optional fields; existing kinds keep their shape.
-Each needs a small plan 3 follow-up to apply it.
+The app applies all three.
 
 - `opt` on a grant inside a choice's `options`: grants with the same `opt` are one pick. Primal Order's Warden gives
   Martial weapons and Medium armor training together.
@@ -162,15 +162,16 @@ Each needs a small plan 3 follow-up to apply it.
 
 ## Vocabulary changes found by the class batches
 
-Each needs a small plan 3 follow-up to apply it.
+The app applies all of these except `casting`.
 
 - `when: 'active'` (Task 14): the grant counts only while the entry's effect is switched on, like an AC spell in
   `acOn`: Rage's resistances, Frenzy, Rage of the Gods' flight. A new value of the existing condition field.
 - `cap: 25` on `abil` (Task 14): Primal Champion raises STR and CON by 4 to a maximum of 25.
 - New kind `casting` (Task 15): a subclass that casts from a class list with its own table (Eldritch Knight, Arcane
   Trickster): `ab`, `list`, `cantrips`, `prepared` and the slots of each spell level `s1`…`s5`, each a level-table Value
-  by class level.
-- New kind `crit` (Task 15): Critical Hit on a d20 roll of `val` or higher with weapons and Unarmed Strikes (Champion).
+  by class level. Not applied yet: the grant can be stored and edited, but nothing reads its tables.
+- New kind `crit` (Task 15): Critical Hit on a d20 roll of `val` or higher with weapons and Unarmed Strikes (Champion),
+  shown on those rows of the Actions tab.
 - `atkAbil.weapons` may name categories as well as weapons: `simple-melee`, `martial-melee-light` (Monk weapons).
 
 Features without grants: the class Spellcasting and Pact Magic features (the class entry holds the slots and counts)
@@ -208,7 +209,8 @@ rerolls and minimum rolls (Supreme Healing), damage that adds half a level (Divi
   Symbol, Animate Objects. Wish and Find Steed aren't healing rows; Beacon of Hope is no healing row and has no save.
 - Saves: both builders skip an ability, or a list of them, after "Advantage on" / "Disadvantage on" (Conjure Animals
   saves on Dexterity; Haste and Gaseous Form have no save). Prismatic Wall's damage save is Dexterity.
-- Upcast data (`scale`, not shown yet): "for every slot level above" is read (Spiritual Weapon). SRD 5.2.1 prints 1d8,
+- Upcast data (`scale`), closed: the Actions tab states the dice a higher slot adds (the printed text, or from `scale` when a
+  spell has none) and doesn't compute a total, by choice. "for every slot level above" is read (Spiritual Weapon). SRD 5.2.1 prints 1d8,
   1d12 and 1d8 per slot for Conjure Elemental, Conjure Fey and Conjure Minor Elementals where the PHB prints 2d8, 2d12
   and 2d8 (PHB pp.254-255); the SRD data keeps what the SRD prints.
 - Conjure Minor Elementals and Elemental Weapon (pack) add damage to your attacks as `xdmg` grants while the spell is on,
@@ -226,8 +228,8 @@ rerolls and minimum rolls (Supreme Healing), damage that adds half a level (Divi
   and Medium Armor Master, Revelation in Flesh's swim speed, War God's Blessing and Bewitching Magic (their spells are
   already prepared), Blessing of the Trickster and Bastion of Law (no uses per rest).
 
-Source text cut short and other notes stay under "Items checked" above; the audit itself is
-`docs/superpowers/plans/2026-10-31-07-catalog-data-fixes.md` (local).
+Source text cut short and other notes stay under "Items checked" above. The audit's plan was a local working note
+(`docs/superpowers/plans/2026-10-31-07-catalog-data-fixes.md`, gitignored), so it isn't in the repo or on every machine.
 
 ## What check-phb does not catch
 
