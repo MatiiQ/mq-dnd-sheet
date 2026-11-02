@@ -162,6 +162,8 @@ export function catForKind(kind: ItemKind, armor?: ArmorKind): ItemEntry['cat'] 
 
 const text = (s: string) => s.trim() || undefined;
 const number = (s: string) => { const t = s.trim(); return t !== '' && Number.isFinite(Number(t)) ? Number(t) : undefined; };
+// Armor can't be saved without a base AC (a Shield left blank is +2, PHB p.219): migrate() would drop the armor data on reload.
+export const armorBaseMissing = (d: ItemDraft): boolean => d.kind === 'armor' && d.armor !== 'shield' && number(d.acBase) === undefined;
 // Zero means "none" for a bonus or requirement.
 const nonZero = (s: string) => number(s) || undefined;
 
@@ -187,7 +189,7 @@ export function itemFromForm(d: ItemDraft): Omit<Item, 'id' | 'eq'> {
     ammo: has('ammunition') && (range || slug(d.ammoType)) ? `${range ?? ''};${slug(d.ammoType)}` : undefined,
     // magic: a weapon's input; on any other kind it has no input and passes through from the draft (a wand's +2).
     mastery: w ? text(d.mastery) : undefined, magic: nonZero(d.magic),
-    armor: a ? d.armor : undefined, acBase: a ? number(d.acBase) : undefined, acBonus: a ? nonZero(d.acBonus) : undefined,
+    armor: a ? d.armor : undefined, acBase: a ? number(d.acBase) ?? (d.armor === 'shield' ? 2 : undefined) : undefined, acBonus: a ? nonZero(d.acBonus) : undefined,
     strReq: a ? nonZero(d.strReq) : undefined, stealthDis: (a && d.stealthDis) || undefined,
     xdim: (box && d.xdim) || undefined, cap: box ? number(d.cap) : undefined, capVol: box ? text(d.capVol) : undefined,
     count: d.charges ? d.chCount : undefined, max: max.max, maxV: max.maxV, recharge: d.charges ? d.chRecharge : undefined,

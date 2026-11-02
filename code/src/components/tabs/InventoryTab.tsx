@@ -1,5 +1,5 @@
 import { useState, type CSSProperties } from 'react';
-import { BLANK_ITEM, catForKind, draftFromItem, itemFromForm, itemStats, withDetectedArmor, WEAPON_PROPS, type ItemDraft, type ItemKind, type WeaponProp } from '../../catalog/copy';
+import { armorBaseMissing, BLANK_ITEM, catForKind, draftFromItem, itemFromForm, itemStats, withDetectedArmor, WEAPON_PROPS, type ItemDraft, type ItemKind, type WeaponProp } from '../../catalog/copy';
 import { isValue } from '../../catalog/value';
 import { CARRY_MULT, DAMAGE_TYPES, SIZES, maxFields, maxOf, rechargeOf, carriedWeight, carryCapacity, carryUpOf, sizeOf, effScore, fmt, addGrants, grantChips, isContainer, newId, removeItem, type GrantInput } from '../../logic';
 import {
@@ -84,7 +84,7 @@ export function InventoryTab() {
   const maxErr = d.charges && d.chMaxKind !== 'none' && maxFields(d.chMaxKind, d.chMaxText) === null;
   const regainErr = d.charges && !!d.chRegain.trim() && !isValue(d.chRegain.trim());
   const save = () => {
-    if (!d.name.trim() || maxErr || regainErr) return;
+    if (!d.name.trim() || maxErr || regainErr || armorBaseMissing(d)) return;
     // A new item named like armor (e.g. "+1 Chain Mail") fills itself in. Editing never re-detects, so None sticks.
     const built = itemFromForm(f.editingId ? d : withDetectedArmor(d));
     const id = f.editingId ?? newId();
@@ -339,6 +339,7 @@ export function InventoryTab() {
           {text('Magic bonus', 'acBonus', 'e.g. 1', '1 1 90px')}
           {d.armor !== 'shield' && text('Strength needed', 'strReq', 'e.g. 13', '1 1 100px')}
           {d.armor !== 'shield' && <label className="check"><input type="checkbox" checked={d.stealthDis} onChange={(e) => f.set({ stealthDis: e.target.checked })} />Disadvantage on Stealth</label>}
+          {armorBaseMissing(d) && <span className="small" style={{ flex: '1 1 100%', color: 'var(--danger)' }}>Armor needs a base AC, such as 14.</span>}
         </div>
       )}
       {d.kind === 'container' && (

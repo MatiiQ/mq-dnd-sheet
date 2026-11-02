@@ -8,7 +8,7 @@ import type { Character, Item, Spell } from '../types';
 import { mergeCatalog } from './merge';
 import type { Entry, FeatureEntry, ItemEntry, SpellEntry } from './schema';
 import {
-  addFromCatalog, draftFromItem, featureCandidates, grantSpellName, withDetectedArmor, BLANK_ITEM, BLANK_SPELL, catForKind, countedDefault, draftFromSpell, spellFromForm, type SpellDraft, choicesOf, classIdOf, matchId, nestedEntries, subclassIdOf, type AddChoices, freeText, itemFromEntry, itemFromForm, missingPicks, needed, optionGroups, poolOptions, prereqMet, resolveChoices,
+  addFromCatalog, armorBaseMissing, draftFromItem, featureCandidates, grantSpellName, withDetectedArmor, BLANK_ITEM, BLANK_SPELL, catForKind, countedDefault, draftFromSpell, spellFromForm, type SpellDraft, choicesOf, classIdOf, matchId, nestedEntries, subclassIdOf, type AddChoices, freeText, itemFromEntry, itemFromForm, missingPicks, needed, optionGroups, poolOptions, prereqMet, resolveChoices,
   spellFromEntry, spellSummary, validPicks, itemQuestions, itemStats, answeredName, type ItemAnswers, type ItemDraft
 } from './copy';
 
@@ -906,5 +906,20 @@ describe('featureCandidates', () => {
     expect(elf.map((x) => x.entry.id)).toContain('trait/elf/keen-senses');
     expect(elf.some((x) => x.entry.id === 'trait/elf/wood-elf')).toBe(false);
     expect(featureCandidates(cat, blankCharacter(), 'background').map((x) => x.entry.id)).toContain('background/acolyte');
+  });
+});
+
+describe('armor base AC in the custom item form', () => {
+  const armorDraft = (p: Partial<ItemDraft>): ItemDraft => ({ ...BLANK_ITEM, kind: 'armor', name: 'X', ...p });
+  it('gives a Shield left blank its usual +2 (PHB p.219)', () => {
+    expect(itemFromForm(armorDraft({ armor: 'shield' })).acBase).toBe(2);
+    expect(itemFromForm(armorDraft({ armor: 'shield', acBase: '3' })).acBase).toBe(3);
+  });
+  it('flags armor without a numeric base', () => {
+    expect(armorBaseMissing(armorDraft({ armor: 'heavy' }))).toBe(true);
+    expect(armorBaseMissing(armorDraft({ armor: 'heavy', acBase: 'abc' }))).toBe(true);
+    expect(armorBaseMissing(armorDraft({ armor: 'heavy', acBase: '18' }))).toBe(false);
+    expect(armorBaseMissing(armorDraft({ armor: 'shield' }))).toBe(false);
+    expect(armorBaseMissing({ ...BLANK_ITEM, name: 'Rope' })).toBe(false);
   });
 });
