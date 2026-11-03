@@ -1,13 +1,12 @@
 import type { CSSProperties } from 'react';
 import { isValue } from '../catalog/value';
-import { inactiveReason, sourceLabel } from '../links';
-import { SRC_KINDS, maxFields, maxOf, rechargeOf, removeResource, resourceGroups } from '../logic';
+import { inactiveReason, SRC_KINDS, sourceLabel } from '../links';
+import { maxFields, maxKindOf, maxOf, rechargeOf, regainEvent, removeResource, resourceGroups, type MaxKind } from '../logic';
 import { patchEntry, saveEntry, useEntryForm, useSheet } from '../sheet';
 import type { Recharge, Resource, SrcKind } from '../types';
 import { SourcePicker } from './SourcePicker';
 import { AddButton, EntryForm, EntryRow, NumInput, StarIcon, Step, TextField } from './ui';
 
-type MaxKind = 'none' | 'number' | 'formula';
 const BLANK = {
   name: '', note: '', type: '' as SrcKind | 'custom' | '', typeName: '', count: 0, maxKind: 'none' as MaxKind, maxText: '',
   recharge: 'long' as Recharge, regain: '', casts: '', from: undefined as string | undefined, srcName: undefined as string | undefined
@@ -17,7 +16,7 @@ const RECHARGE_TEXT: Record<Recharge, string> = { none: 'Manual only', short: 'R
 
 const toDraft = (r: Resource): Draft => ({
   name: r.name, note: r.note || '', type: r.typeName ? 'custom' : r.srcKind || '', typeName: r.typeName || '', count: r.count,
-  maxKind: r.maxV !== undefined ? 'formula' : r.max ? 'number' : 'none', maxText: r.maxV ?? (r.max ? String(r.max) : ''),
+  maxKind: maxKindOf(r), maxText: r.maxV ?? (r.max ? String(r.max) : ''),
   recharge: rechargeOf(r), regain: r.regain || '', casts: r.casts || '', from: r.from, srcName: r.srcName
 });
 
@@ -27,13 +26,10 @@ export function Resources() {
   const d = f.draft;
   const patch = (id: string, p: Partial<Resource> | ((r: Resource) => Partial<Resource>)) =>
     update((s) => ({ res: patchEntry(s.res, id, p) }));
-  const bump = (id: string, by: number) => patch(id, (r) => {
-    const m = maxOf(c, r), n = Math.max(0, r.count + by);
-    return { count: m === null ? n : Math.min(m, n) };
-  });
+  const bump = (id: string, by: number) => patch(id, (r) => ({ count: Math.max(0, r.count + by) }));
   const maxNow = maxFields(d.maxKind, d.maxText);
   // Regain is a Value (number or die): on a Short Rest for a Long Rest counter, at dawn for a Dawn counter.
-  const regainOn = d.recharge === 'long' ? 'short' as const : d.recharge === 'dawn' ? 'dawn' as const : null;
+  const regainOn = regainEvent(d.recharge);
   const regainOk = !d.regain.trim() || isValue(d.regain.trim());
   const save = () => {
     const name = d.name.trim();
@@ -44,7 +40,7 @@ export function Resources() {
       name, note: d.note.trim() || undefined, count: d.count,
       srcKind: d.type && d.type !== 'custom' ? d.type : undefined, typeName: d.type === 'custom' ? d.typeName.trim() || undefined : undefined,
       max: maxNow.max, maxV: maxNow.maxV, recharge: d.recharge,
-      regain: regain || undefined, regainOn: regain ? regainOn! : undefined, casts: d.casts || undefined,
+      regain: regain || undefined, regainOn: regain ? regainOn : undefined, casts: d.casts || undefined,
       from: d.from, srcName: d.srcName?.trim() || undefined
     };
     update((p) => ({ res: saveEntry<Resource>(p.res, built, f.editingId, { count: 0 }) }));

@@ -1,6 +1,6 @@
 // D&D 2024 rules used by the sheet. Pure functions: each takes a character and returns the next one.
 import { blankCharacter, sampleCharacter } from './defaults';
-import { DAMAGE_TYPES, grantErrors, isDtypes, ITEM_CATS, partErrors, type GrantSpec } from './catalog/schema';
+import { grantErrors, isDtypes, ITEM_CATS, partErrors, type GrantSpec } from './catalog/schema';
 import { hasDice, isValue, valueAt, type ValueCtx } from './catalog/value';
 import { PROF_NAMES, type ProfCat } from './catalog/names';
 import { canLoad, setHands } from './hands';
@@ -25,8 +25,6 @@ export const COMBAT_ACTIONS = ['Attack', 'Dash', 'Disengage', 'Dodge', 'Help', '
 
 export const TABS: [Tab, string][] = [['actions', 'Actions'], ['spells', 'Spells'], ['inventory', 'Inventory'], ['features', 'Features & Traits'], ['notes', 'Notes']];
 
-export { SRC_KINDS };
-
 export const CAST_NAMES: Record<CastAbility, string> = { none: 'None', int: 'Intelligence', wis: 'Wisdom', cha: 'Charisma' };
 
 export const CONDITION_RULES: Record<string, string> = {
@@ -46,12 +44,16 @@ export const CONDITION_RULES: Record<string, string> = {
   Unconscious: 'Incapacitated and Prone; you drop what you hold. Speed 0. Auto-fail STR and DEX saves. Attacks against you have Advantage; hits within 5 ft are critical hits.'
 };
 export const CONDITIONS = Object.keys(CONDITION_RULES);
-export { DAMAGE_TYPES };
 // Conditions a defense can name: the list above plus Exhaustion, which the sheet tracks as a level.
 export const CONDITION_OPTIONS = [...CONDITIONS.slice(0, 3), 'Exhaustion', ...CONDITIONS.slice(3)];
 const INCAPACITATING = ['Incapacitated', 'Paralyzed', 'Petrified', 'Stunned', 'Unconscious'];
 const ZERO_SPEED = ['Grappled', 'Restrained', 'Paralyzed', 'Petrified', 'Unconscious'];
 
+export const abilityName = (a: Ability) => ABILITIES.find(([k]) => k === a)![1];
+export const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+// Slot levels as the Cast buttons name them.
+export const ORDINAL = ['Cantrip', '1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th'];
+export const toggled = <T,>(list: T[], x: T): T[] => (list.includes(x) ? list.filter((y) => y !== x) : [...list, x]);
 export const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
 export const fmt = (m: number) => (m >= 0 ? '+' + m : '−' + Math.abs(m));
 export const mod = (score: number) => Math.floor((score - 10) / 2);
@@ -87,7 +89,8 @@ export function abilityParts(c: Character, k: Ability): AcPart[] {
   }
   const sets = activeGrants(c, 'abilSet').filter((g) => g.ab === k);
   const top = sets.reduce<Grant | null>((b, g) => (!b || numIn(ctx, g.val) > numIn(ctx, b.val) ? g : b), null);
-  if (top && numIn(ctx, top.val) > s) { parts.push({ label: top.name, value: numIn(ctx, top.val) - s, note: 'sets ' + numIn(ctx, top.val) }); s = numIn(ctx, top.val); }
+  const set = top ? numIn(ctx, top.val) : 0;
+  if (top && set > s) { parts.push({ label: top.name, value: set - s, note: 'sets ' + set }); s = set; }
   if (c.abilAdj[k]) parts.push({ label: 'Adjustment', value: c.abilAdj[k]! });
   return parts;
 }
@@ -135,15 +138,14 @@ const castBase = (c: Character, ab: Ability): AcPart[] => [{ label: CAST_NAMES[a
 export const partsTotal = (parts: AcPart[]): number => parts.reduce((t, p) => t + p.value, 0);
 // The same for one spell, which may cast with its own ability (Light Bearer: Light with CHA).
 export const castAbOf = (c: Character, sp: Spell): Ability | null => sp.castAb ?? (c.castAb === 'none' ? null : c.castAb);
-export const spellSaveDcFor = (c: Character, sp: Spell) => { const ab = castAbOf(c, sp); return ab ? 8 + partsTotal([...castBase(c, ab), ...castGrantParts(c, 'spellDc')]) : null; };
-export const spellAttackFor = (c: Character, sp: Spell) => { const ab = castAbOf(c, sp); return ab ? partsTotal([...castBase(c, ab), ...castGrantParts(c, 'spellAtk')]) : null; };
+const atkParts = (c: Character, ab: Ability): AcPart[] => [...castBase(c, ab), ...castGrantParts(c, 'spellAtk')];
+const dcParts = (c: Character, ab: Ability): AcPart[] => [{ label: 'Base', value: 8 }, ...castBase(c, ab), ...castGrantParts(c, 'spellDc')];
+export const spellSaveDcFor = (c: Character, sp: Spell) => { const ab = castAbOf(c, sp); return ab && partsTotal(dcParts(c, ab)); };
+export const spellAttackFor = (c: Character, sp: Spell) => { const ab = castAbOf(c, sp); return ab && partsTotal(atkParts(c, ab)); };
 // The same two numbers as parts, for the breakdown under each badge (PHB p.41): a shared base (modifier, PB), then each
 // number's own grants, one part per grant labelled by its source. Their sums equal the values below.
-export function spellAttackParts(c: Character): AcPart[] | null {
-  return c.castAb === 'none' ? null : [...castBase(c, c.castAb), ...castGrantParts(c, 'spellAtk')];
-}
-export const spellDcParts = (c: Character): AcPart[] | null =>
-  c.castAb === 'none' ? null : [{ label: 'Base', value: 8 }, ...castBase(c, c.castAb), ...castGrantParts(c, 'spellDc')];
+export const spellAttackParts = (c: Character): AcPart[] | null => (c.castAb === 'none' ? null : atkParts(c, c.castAb));
+export const spellDcParts = (c: Character): AcPart[] | null => (c.castAb === 'none' ? null : dcParts(c, c.castAb));
 export const spellSaveDC = (c: Character) => { const p = spellDcParts(c); return p && partsTotal(p); };
 export const spellAttack = (c: Character) => { const p = spellAttackParts(c); return p && partsTotal(p); };
 // Initiative is a Dexterity check (PHB p.23), so Dexterity check bonus grants add; initMisc holds extra bonuses from
@@ -197,38 +199,39 @@ export const acSpellActive = (c: Character, sp: Spell) => !!sp.acFx && (sp.c ? c
 // Armor Class and the parts it is made of. Base AC is 10 + DEX; armor, spells and features give other base
 // calculations, and only one applies (PHB p.12, p.361). The sheet picks the highest legal one.
 // Light armor adds DEX, medium at most +2, heavy none (PHB p.219). Parts worth 0 are left out.
+const armorValue = (i: Item) => (i.acBase || 0) + (i.acBonus || 0);
 export function armorClass(c: Character): { total: number; parts: AcPart[] } {
   const dex = abilityMod(c, 'dex');
   const dexPart = (cap: number): AcPart => (dex > cap ? { label: 'Dexterity', value: cap, note: 'max +' + cap } : { label: 'Dexterity', value: dex });
   const armorParts = (it: Item): AcPart[] => [
-    { label: it.name, value: (it.acBase || 0) + (it.acBonus || 0), note: it.armor + ' armor' },
+    { label: it.name, value: armorValue(it), note: it.armor + ' armor' },
     ...(it.armor === 'heavy' ? [] : [dexPart(it.armor === 'medium' ? 2 : Infinity)])
   ];
   const shields = c.inv.filter((i) => isEquipped(i) && i.armor === 'shield');
-  const shield = shields.reduce<Item | null>((b, i) => (!b || (i.acBase || 0) + (i.acBonus || 0) > (b.acBase || 0) + (b.acBonus || 0) ? i : b), null);
+  const shield = shields.reduce<Item | null>((b, i) => (!b || armorValue(i) > armorValue(b) ? i : b), null);
   const worn = c.inv.filter((i) => isEquipped(i) && i.armor && i.armor !== 'shield');
   const spells = c.spells.filter((sp) => acSpellActive(c, sp));
   const spellPart = (sp: Spell): AcPart => ({ label: sp.name, value: sp.acVal || 0, note: 'spell', active: true });
-  const unarmored: AcPart = { label: 'Unarmored', value: 10 };
+  const bare: AcPart[] = [{ label: 'Unarmored', value: 10 }, dexPart(Infinity)];
   const candidates: AcPart[][] = worn.map(armorParts);
   if (!worn.length) {
     const [note, ab, shieldOk] = UNARMORED[c.acUnarm];
     if (ab && (shieldOk || !shield)) {
-      candidates.push([unarmored, dexPart(Infinity), { label: ABILITIES.find(([k]) => k === ab)![1], value: abilityMod(c, ab), note }]);
+      candidates.push([...bare, { label: abilityName(ab), value: abilityMod(c, ab), note }]);
     }
     // Unarmored base grants work like UNARMORED: 10 + DEX + an ability, lost with a Shield unless shieldOk.
     for (const g of activeGrants(c, 'ac').filter((x) => x.acMode === 'unarmored' && x.ab && (x.shieldOk !== false || !shield))) {
-      candidates.push([unarmored, dexPart(Infinity), { label: ABILITIES.find(([k]) => k === g.ab)?.[1] ?? g.ab!, value: abilityMod(c, g.ab as Ability), note: g.name }]);
+      candidates.push([...bare, { label: ABILITIES.find(([k]) => k === g.ab)?.[1] ?? g.ab!, value: abilityMod(c, g.ab as Ability), note: g.name }]);
     }
     // Mage Armor sets a base AC on a creature not wearing armor (PHB p.293).
     for (const sp of spells.filter((x) => x.acFx === 'base')) candidates.push([spellPart(sp), dexPart(Infinity)]);
-    candidates.push([unarmored, dexPart(Infinity)]);
+    candidates.push(bare);
   }
   // Highest sum wins; on a tie the earlier candidate stays.
   const base = candidates.reduce((b, p) => (partsTotal(p) > partsTotal(b) ? p : b));
   const parts: AcPart[] = [
     ...base,
-    ...(shield ? [{ label: shield.name, value: (shield.acBase || 0) + (shield.acBonus || 0), note: 'shield' }] : []),
+    ...(shield ? [{ label: shield.name, value: armorValue(shield), note: 'shield' }] : []),
     // AC bonus grants (Ring of Protection, Defense): they follow equip, attunement and armor conditions through
     // activeGrants. acBonus counts only on armor and Shields, inside their own part above.
     ...activeGrants(c, 'ac').filter((g) => g.acMode === 'bonus').map((g) => ({ label: g.name, value: num(c, g.val, g), ...(sourceLabel(c, g) ? { note: sourceLabel(c, g) } : {}) })),
@@ -277,15 +280,18 @@ const effectOnCast = (c: Character, sp: Spell): Partial<Character> => {
   return !sp.c && !c.effectsOn.includes(link) && hasActiveEffect(c, link) ? { effectsOn: [...c.effectsOn, link] } : {};
 };
 
+const castEffects = (c: Character, sp: Spell): Partial<Character> =>
+  ({ ...(sp.c ? setConc({ id: sp.id, name: sp.name }) : {}), ...acOnCast(c, sp), ...effectOnCast(c, sp) });
+
 // Casting with a slot uses one slot of that level. A Concentration spell starts Concentration, which ends any other (PHB p.363).
 export function castSpell(c: Character, sp: Spell, level: number): Partial<Character> {
   if (!slotsLeft(c, level)) return {};
-  return { ...setSlotUsed(c, level, c.slotUsed[level] + 1), ...(sp.c ? setConc({ id: sp.id, name: sp.name }) : {}), ...acOnCast(c, sp), ...effectOnCast(c, sp) };
+  return { ...setSlotUsed(c, level, c.slotUsed[level] + 1), ...castEffects(c, sp) };
 }
 
 // Switches a source's effect on or off (Rage, Starry Form, Shillelagh), without casting or using anything.
 export const toggleEffect = (c: Character, link: string): Partial<Character> =>
-  ({ effectsOn: c.effectsOn.includes(link) ? c.effectsOn.filter((x) => x !== link) : [...c.effectsOn, link] });
+  ({ effectsOn: toggled(c.effectsOn, link) });
 
 // After editing a spell: one that is now Concentration leaves effectsOn (its effect follows c.conc from now on).
 export function effectsAfterEdit(c: Character, sp: Pick<Spell, 'id' | 'c'>): Partial<Character> {
@@ -301,7 +307,7 @@ export function castFree(c: Character, sp: Spell, resId: string): Partial<Charac
   if (!r) return {};
   const res = c.res.map((x) => (x.id === resId ? { ...x, count: x.count > 0 ? x.count - 1 : 1 } : x));
   if (r.count <= 0) return { res };
-  return { res, ...(sp.c ? setConc({ id: sp.id, name: sp.name }) : {}), ...acOnCast(c, sp), ...effectOnCast(c, sp) };
+  return { res, ...castEffects(c, sp) };
 }
 // The resources that cast this spell: its own free casts and a feature's (Favored Enemy's Hunter's Mark).
 export const freeCastsOf = (c: Character, spellId: string) => c.res.filter((r) => r.casts === spellId);
@@ -322,7 +328,7 @@ export function setOwnFreeCast(c: Character, spellId: string, on: boolean, oldNa
 
 // Switches a non-Concentration spell's AC effect on or off, without casting it.
 export const toggleAcSpell = (c: Character, id: string): Partial<Character> =>
-  ({ acOn: c.acOn.includes(id) ? c.acOn.filter((x) => x !== id) : [...c.acOn, id] });
+  ({ acOn: toggled(c.acOn, id) });
 
 // After editing a spell: one that is now Concentration, or has no AC effect, leaves the list of active AC spells.
 export function acAfterEdit(c: Character, sp: Pick<Spell, 'id' | 'c' | 'acFx'>): Partial<Character> {
@@ -357,15 +363,16 @@ export function carryCapacity(c: Character): { carry: number; push: number; size
 // Items count weight × quantity; fifty coins weigh a pound (PHB p.213). Items inside an extradimensional container and
 // its coins don't count: only the container's own weight does (plan 6).
 export function carriedWeight(c: Character): number {
-  const coins = Object.values(c.coins).reduce((t, n) => t + n, 0);
-  return c.inv.reduce((t, i) => t + (i.in ? 0 : (i.wt || 0) * i.qty), 0) + coins / 50;
+  return c.inv.reduce((t, i) => t + (i.in ? 0 : (i.wt || 0) * i.qty), 0) + coinWeight(c.coins);
 }
 
 // Containers (plan 6). Only an extradimensional container (Bag of Holding, Handy Haversack, Portable Hole) holds items
 // and coins; a plain one such as a Backpack is an ordinary item.
 export const isContainer = (it: Item) => !!it.xdim;
 export const COINS: Coin[] = ['cp', 'sp', 'ep', 'gp', 'pp'];
-const withoutKeys = <T extends object>(x: T, keys: string[]): T => Object.fromEntries(Object.entries(x).filter(([k]) => !keys.includes(k))) as T;
+// Fifty coins weigh a pound (PHB p.213): a purse, or a container's own coins.
+export const coinWeight = (x: Partial<Record<Coin, number>>) => COINS.reduce((t, k) => t + (x[k] || 0), 0) / 50;
+export const withoutKeys = <T extends object>(x: T, keys: string[]): T => Object.fromEntries(Object.entries(x).filter(([k]) => !keys.includes(k))) as T;
 // The container rules, run by migrate() and normalize() (the item form can switch a bag's kind at any time): an `in`
 // naming a missing item, a non-container or the item itself, or set on a container, clears (so contents are one level
 // deep); an item inside is not equipped; coins on an item that is not a container go to the purse. Returns c itself
@@ -442,6 +449,8 @@ export function setExhaustion(c: Character, n: number): Partial<Character> {
 }
 
 const snapshot = (c: Character): HpSnapshot => ({ hp: c.hp, temp: c.temp, ds: c.ds, df: c.df, conds: c.conds, conc: c.conc });
+// The undo for an HP action: the state before and after, so Undo can leave alone what changed since (see undoHp).
+const undoOf = (before: Character, after: Character, text: string) => ({ prev: snapshot(before), post: snapshot(after), text });
 
 export function applyDamage(c: Character): Character {
   if (!c.amount) return c;
@@ -478,7 +487,7 @@ export function applyDamage(c: Character): Character {
     next.conds = { ...c.conds, Unconscious: true };
     text += ' Dropped to 0 HP: Unconscious.';
   }
-  next.hpUndo = { prev: snapshot(c), text };
+  next.hpUndo = undoOf(c, next, text);
   return next;
 }
 
@@ -489,16 +498,18 @@ export function applyHeal(c: Character): Character {
   // Healing can't bring back a dead character; clear the failures first (e.g. after Revivify).
   if (!c.amount || isDead(c)) return c;
   const hp = Math.min(maxHpOf(c), c.hp + c.amount);
-  const next: Character = { ...c, hp, hpUndo: { prev: snapshot(c), text: 'Healed ' + (hp - c.hp) + ' HP.' } };
+  const next: Character = { ...c, hp, hpUndo: null };
+  let text = 'Healed ' + (hp - c.hp) + ' HP.';
   if (c.hp === 0 && hp > 0) {
     next.ds = 0;
     next.df = 0;
     // Unconscious ends when you regain HP, but you stay Prone (PHB p.377).
     if (c.conds.Unconscious) {
       next.conds = { ...c.conds, Unconscious: false, Prone: true };
-      next.hpUndo!.text += ' No longer Unconscious, still Prone.';
+      text += ' No longer Unconscious, still Prone.';
     }
   }
+  next.hpUndo = undoOf(c, next, text);
   return next;
 }
 
@@ -508,7 +519,8 @@ export function applySetTemp(c: Character): Character {
   const text = 'Temp HP set to ' + c.amount + (c.temp && c.temp !== c.amount
     ? ' (replaced ' + c.temp + '; temp HP don’t stack, tap Undo to keep ' + c.temp + ').'
     : '.');
-  return { ...c, temp: c.amount, hpUndo: { prev: snapshot(c), text } };
+  const next = { ...c, temp: c.amount };
+  return { ...next, hpUndo: undoOf(c, next, text) };
 }
 
 // Typing a new current HP is a correction, not damage or healing: no concentration check, no conditions change.
@@ -516,12 +528,18 @@ export function applySetTemp(c: Character): Character {
 export function setHp(c: Character, n: number): Character {
   const hp = clamp(n, 0, maxHpOf(c));
   if (hp === c.hp) return c;
-  return { ...c, hp, ...(c.hp === 0 ? { ds: 0, df: 0 } : {}), hpUndo: { prev: snapshot(c), text: 'HP set to ' + hp + ' (was ' + c.hp + ').' } };
+  const next = { ...c, hp, ...(c.hp === 0 ? { ds: 0, df: 0 } : {}) };
+  return { ...next, hpUndo: undoOf(c, next, 'HP set to ' + hp + ' (was ' + c.hp + ').') };
 }
 
 export function undoHp(c: Character): Character {
   if (!c.hpUndo) return c;
-  return { ...c, ...c.hpUndo.prev, hpUndo: null, concCheck: null };
+  // HP, temp HP and Hit Dice always go back. Death saves, conditions and Concentration go back only if they still
+  // read as the action left them: a change made by hand since then (Prone, ending Concentration) stays.
+  const { prev, post } = c.hpUndo;
+  const back = (['ds', 'df', 'conds', 'conc'] as const).filter((k) => post && JSON.stringify(c[k]) === JSON.stringify(post[k]));
+  const kept = Object.fromEntries(back.map((k) => [k, prev[k]]));
+  return { ...c, hp: prev.hp, temp: prev.temp, ...(prev.hdUsed === undefined ? {} : { hdUsed: prev.hdUsed }), ...kept, hpUndo: null, concCheck: null };
 }
 
 // Hides the undo row, unless a newer HP action has replaced it since `shown`.
@@ -558,6 +576,8 @@ export function healHitDie(c: Character): Character {
 }
 
 export const rechargeOf = (r: Partial<Counter>) => r.recharge || 'none';
+// When a counter's partial regain comes: on a Short Rest for a Long Rest counter, at dawn for a Dawn counter.
+export const regainEvent = (rc: Recharge | undefined): Counter['regainOn'] => (rc === 'long' ? 'short' : rc === 'dawn' ? 'dawn' : undefined);
 
 // A counter's maximum now: a formula (maxV, never below 0), else a fixed max of at least 1, else none (null). It
 // ignores whether the counter's source is active, so an inactive resource keeps its count (spec).
@@ -565,14 +585,17 @@ export function maxOf(c: Character, x: Partial<Counter>): number | null {
   if (x.maxV !== undefined) return Math.max(0, num(c, x.maxV));
   return x.max && x.max >= 1 ? x.max : null;
 }
+export type MaxKind = 'none' | 'number' | 'formula';
+export const maxKindOf = (x: Partial<Counter>): MaxKind => (x.maxV !== undefined ? 'formula' : x.max ? 'number' : 'none');
+// `magic` is a grant-only term: a counter's maximum never reads it.
+const isMaxFormula = (t: string) => isValue(t) && !hasDice(t) && !/magic/.test(t);
 // The resource form's Maximum: None, a Number (whole, 1 or more) or a Formula (a Value without dice; '0' is a real
 // maximum of 0). null = refused.
-export function maxFields(kind: 'none' | 'number' | 'formula', text: string): Pick<Counter, 'max' | 'maxV'> | null {
+export function maxFields(kind: MaxKind, text: string): Pick<Counter, 'max' | 'maxV'> | null {
   const t = text.trim();
   if (kind === 'none') return {};
   if (kind === 'number') return /^\d+$/.test(t) && Number(t) >= 1 ? { max: Number(t) } : null;
-  // `magic` is a grant-only term: a counter's maximum never reads it.
-  return isValue(t) && !hasDice(t) && !/magic/.test(t) ? { maxV: t } : null;
+  return isMaxFormula(t) ? { maxV: t } : null;
 }
 
 // The single clamp, run by update() and migrate() after every change: resource counts at most their maximum, HP at
@@ -602,18 +625,14 @@ export function normalize(c0: Character): Character {
   const mastery = uniqueStrings(h.mastery);
   const c = mastery.length === h.mastery.length ? h : { ...h, mastery };
   let changed = c !== c0;
-  const res = c.res.map((r) => {
-    const m = maxOf(c, r);
-    if (m === null || r.count <= m) return r;
+  const capped = <T extends Partial<Counter>>(x: T): T => {
+    const m = x.count === undefined ? null : maxOf(c, x);
+    if (m === null || x.count! <= m) return x;
     changed = true;
-    return { ...r, count: m };
-  });
-  const inv = c.inv.map((i) => {
-    const m = i.count === undefined ? null : maxOf(c, i);
-    if (m === null || i.count! <= m) return i;
-    changed = true;
-    return { ...i, count: m };
-  });
+    return { ...x, count: m };
+  };
+  const res = c.res.map(capped);
+  const inv = c.inv.map(capped);
   const top = maxHpOf(c);
   if (c.hp > top) changed = true;
   return changed ? { ...c, res, inv, hp: Math.min(c.hp, top) } : c;
@@ -704,7 +723,7 @@ export function longRest(c: Character): Character {
     Object.values(c.abilAdj).some((v) => (v || 0) < 0) ? ', reduced ability scores restored' : ''
   ].join('');
   return {
-    ...c, maxHp, abilAdj, hp: maxHpOf({ ...c, maxHp, abilAdj }), temp: 0, slotUsed: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], hdUsed: 0, ds: 0, df: 0, acOn: [], effectsOn: [],
+    ...c, maxHp, abilAdj, hp: maxHpOf({ ...c, maxHp, abilAdj }), temp: 0, slotUsed: slots([]), hdUsed: 0, ds: 0, df: 0, acOn: [], effectsOn: [],
     hpUndo: null, ...setConc(null), res, inv, exh: Math.max(0, c.exh - 1),
     restMsg: {
       title: 'Long Rest complete',
@@ -725,7 +744,7 @@ export function shortRest(c: Character, rolls?: Record<string, number>): Charact
   // shortcut: clears every slot level, because slotUsed doesn't separate Pact Magic slots from others, so a multiclass Warlock regains too many; upgrade if the sheet ever tracks them apart.
   const slotsBack = c.slotsOnShort && c.slotUsed.some((n) => n > 0);
   return {
-    ...c, res, inv, ...(slotsBack ? { slotUsed: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0] } : {}),
+    ...c, res, inv, ...(slotsBack ? { slotUsed: slots([]) } : {}),
     restMsg: {
       title: 'Short Rest',
       body: (slotsBack ? 'Spell slots restored. ' : '') +
@@ -772,9 +791,9 @@ const RECHARGES: Recharge[] = ['none', 'short', 'long', 'dawn'];
 // Counter fields of an item on load (resources: cleanResource). A recharge it didn't have stays unset.
 function cleanCounter({ count, max, maxV, recharge, regain, regainOn }: Partial<Record<keyof Counter, unknown>>): Partial<Counter> {
   const rc = recharge === undefined ? undefined : RECHARGES.includes(recharge as Recharge) ? (recharge as Recharge) : 'none';
-  const pair = typeof regain === 'string' && isValue(regain) && ((regainOn === 'short' && rc === 'long') || (regainOn === 'dawn' && rc === 'dawn'));
+  const pair = typeof regain === 'string' && isValue(regain) && !!regainOn && regainOn === regainEvent(rc);
   return {
-    count: count as number, ...(finite(max) && max >= 1 ? { max } : {}), ...(typeof maxV === 'string' && isValue(maxV) && !hasDice(maxV) && !/magic/.test(maxV) ? { maxV } : {}),
+    count: count as number, ...(finite(max) && max >= 1 ? { max } : {}), ...(typeof maxV === 'string' && isMaxFormula(maxV) ? { maxV } : {}),
     ...(rc ? { recharge: rc } : {}), ...(pair ? { regain, regainOn: regainOn as Counter['regainOn'] } : {})
   };
 }
@@ -784,7 +803,7 @@ function cleanResource(r: Resource): Resource {
   const { count, max, maxV, recharge, regain, regainOn, typeName, note, casts, inv: _inv, ...rest } = r as Resource & Record<string, unknown>;
   return cleanLinked({
     ...rest,
-    ...cleanCounter({ count: finite(count) ? count : 0, max, maxV, recharge: RECHARGES.includes(recharge as Recharge) ? recharge : 'none', regain, regainOn }),
+    ...cleanCounter({ count: finite(count) ? count : 0, max, maxV, recharge: recharge ?? 'none', regain, regainOn }),
     ...(typeof typeName === 'string' ? { typeName } : {}), ...(typeof note === 'string' ? { note } : {}), ...(typeof casts === 'string' ? { casts } : {})
   } as Resource);
 }
@@ -853,17 +872,15 @@ export function migrate(data: unknown): Character {
   c.spells = c.spells.map((x) => ({ ...texts(x, ['time', 'range']), lvl: Number.isInteger(x.lvl) && x.lvl >= 0 && x.lvl <= 9 ? x.lvl : 0 }));
   c.inv = c.inv.map((i) => ({ ...i, qty: finite(i.qty) && i.qty >= 0 ? Math.floor(i.qty) : 1, eq: i.eq === true }));
   c.attacks = c.attacks.map((a) => texts(a, ['hit', 'dmg', 'info', 'mastery']));
-  c.senses = c.senses.map((x) => texts(x, ['range']));
   c.riders = c.riders.map((x) => texts(x, ['dice']));
-  c.feats = c.feats.map((x) => ({ ...texts(x, ['desc']), g: Object.hasOwn(GROUP_SRC, x.g) ? x.g : 'other' }));
-  c.senses = c.senses.map(({ desc, ...se }) => cleanLinked({ ...se, ...(typeof desc === 'string' ? { desc } : {}) }));
+  c.feats = c.feats.map((x) => cleanCid(cleanLinked({ ...texts(x, ['desc']), g: Object.hasOwn(GROUP_SRC, x.g) ? x.g : 'other' })));
+  c.senses = c.senses.map(({ desc, ...se }) => cleanLinked({ ...texts(se, ['range']), ...(typeof desc === 'string' ? { desc } : {}) }));
   // Spells named their source in a `source` text before links; it becomes srcName unless one is set.
   c.spells = c.spells.map((x) => {
     const { source, castAb, ...sp } = x as Spell & { source?: unknown };
     const named = typeof source === 'string' && source.trim() && sp.srcName === undefined ? { srcName: source } : {};
     return cleanCid(cleanLinked({ ...sp, ...named, ...(ABILITIES.some(([k]) => k === castAb) ? { castAb } : {}) }));
   });
-  c.feats = c.feats.map((x) => cleanCid(cleanLinked(x)));
   // Typed attacks are manual actions (plan 5): their numbers stay as typed; a bad timing or section goes.
   c.attacks = c.attacks.map((a) => cleanFields(cleanLinked(a), ATTACK_FIELDS));
   // Every character now has a computed Unarmed Strike (plan 5), and saves copied from the old samples hold a typed one.
@@ -882,9 +899,9 @@ export function migrate(data: unknown): Character {
   // Item sections (plan 6): a named section once per id (the first stays); then an item's section that is gone clears,
   // so the item shows in the default list.
   c.sections = c.sections.filter((x, i, all) => typeof x.name === 'string' && x.name.trim() !== '' && all.findIndex((y) => y.id === x.id) === i);
-  c.inv = c.inv.map((i) => (i.sec === undefined || c.sections.some((x) => x.id === i.sec) ? i : (({ sec: _, ...x }) => x)(i)));
+  c.inv = c.inv.map((i) => (i.sec === undefined || c.sections.some((x) => x.id === i.sec) ? i : withoutKeys(i, ['sec'])));
   // A typed damage type wins over a chosen one's list (spellFromForm), so dtypes never stays next to it.
-  c.spells = c.spells.map((x) => cleanFields(x, SPELL_FIELDS)).map((x) => (x.dtype && x.dtypes !== undefined ? (({ dtypes: _d, ...r }) => r)(x) : x)).map(cleanParts);
+  c.spells = c.spells.map((x) => cleanFields(x, SPELL_FIELDS)).map((x) => (x.dtype && x.dtypes !== undefined ? withoutKeys(x, ['dtypes']) : x)).map(cleanParts);
   // Saves from before defenses were entries kept string lists in `def` (no longer a field, so read from the raw save).
   if (data.defenses === undefined) {
     const raw = isObj(data.def) ? data.def : {};
@@ -902,7 +919,16 @@ export function migrate(data: unknown): Character {
   c.slotMax = slots(c.slotMax);
   c.slotUsed = slots(c.slotUsed);
   // These values size lists of buttons, so an out-of-range number could freeze the sheet. Limits match the UI.
-  c.level = clamp(c.level, 1, 20);
+  const whole = (v: unknown, min: number, max: number, dflt: number) => (finite(v) ? clamp(Math.floor(v), min, max) : dflt);
+  c.level = whole(c.level, 1, 20, 1);
+  // Whole numbers in a sane range, so a damaged or hand-edited backup can't give fractional Hit Dice or NaN bars.
+  c.maxHp = whole(c.maxHp, 1, 9999, 1);
+  c.hp = whole(c.hp, 0, 9999, 0);
+  c.temp = whole(c.temp, 0, 9999, 0);
+  for (const [k] of ABILITIES) {
+    c.abil[k] = whole(c.abil[k], 1, 30, 10);
+    if (c.abilAdj[k] !== undefined) c.abilAdj[k] = whole(c.abilAdj[k], -30, 30, 0);
+  }
   c.slotMax = c.slotMax.map((n) => clamp(n, 0, 9));
   c.slotUsed = c.slotUsed.map((n, i) => clamp(n, 0, c.slotMax[i]));
   c.exh = clamp(c.exh, 0, 6);
@@ -1026,7 +1052,7 @@ export function migrate(data: unknown): Character {
     if (free === true) c.res = [...c.res, { id: newId(), name: sp.name, note: 'Free cast', count: usedFree[sp.id] === true ? 0 : 1, max: 1, recharge: 'long', from: linkOf('spell', sp.id), srcKind: 'spell', casts: sp.id }];
     return free === undefined ? sp : x;
   });
-  c.res = c.res.map((r) => (r.casts !== undefined && !c.spells.some((sp) => sp.id === r.casts) ? (({ casts: _, ...x }) => x)(r) : r));
+  c.res = c.res.map((r) => (r.casts !== undefined && !c.spells.some((sp) => sp.id === r.casts) ? withoutKeys(r, ['casts']) : r));
   // Three slots, each an existing item id or ''. Checked slot by slot, so a bad slot never shifts the ones after it.
   const ids: unknown[] = c.attuneIds;
   c.attuneIds = [];
@@ -1045,11 +1071,10 @@ export function migrate(data: unknown): Character {
     c.feats = [...c.feats, { id: newId(), g: 'background', name: oldBg, desc: '' }];
   }
   // An action grant that spends a resource that is gone no longer spends anything.
-  c.grants = c.grants.map((g) => (g.kind === 'action' && g.res !== undefined && !c.res.some((r) => r.id === g.res) ? (({ res: _, ...x }) => x)(g) : g));
-  // Containers (plan 6) after the coin and `in` checks above, before the hands check (setHands in normalize). normalize()
-  // runs fixContainers too; the call here keeps the order plain.
-  const fixed = fixContainers(fixLinks(c));
-  // A grant exists only through its source: one whose link fixLinks cleared goes.
+  c.grants = c.grants.map((g) => (g.kind === 'action' && g.res !== undefined && !c.res.some((r) => r.id === g.res) ? withoutKeys(g, ['res']) : g));
+  const fixed = fixLinks(c);
+  // A grant exists only through its source: one whose link fixLinks cleared goes. normalize() then runs the container
+  // rules (plan 6) and the hands check.
   return normalize({ ...fixed, grants: fixed.grants.filter((g) => g.from) });
 }
 
@@ -1220,11 +1245,10 @@ export function removeRef(c0: Character, ref: Ref): Character {
   const chain = removalChain(c0, ref);
   // Removed items leave hands first, while they are still in inv: setHands reads the kind of each weapon that left
   // (Shillelagh's Quarterstaff), which it can't once the item is gone.
-  const goneItems = chain.filter((r) => r.kind === 'item').map((r) => r.id);
-  const c = goneItems.length ? setHands(c0, c0.hands.filter((id) => !goneItems.includes(id))) : c0;
   const gone = (kind: RefKind) => chain.filter((r) => r.kind === kind).map((r) => r.id);
-  const links = chain.map(refLink).filter((l): l is string => !!l);
   const spells = gone('spell'), res = gone('res'), items = gone('item');
+  const c = items.length ? setHands(c0, c0.hands.filter((id) => !items.includes(id))) : c0;
+  const links = chain.map(refLink).filter((l): l is string => !!l);
   const unlinkIt = <T extends Entry>(x: T): T => {
     if (!x.linked || !links.includes(x.from!)) return x;
     const { from: _f, linked: _l, srcKind: _k, ...rest } = x;
@@ -1245,8 +1269,8 @@ export function removeRef(c0: Character, ref: Ref): Character {
   out.inv = fixLoads(out).inv;
   out.acOn = c.acOn.filter((id) => !spells.includes(id));
   out.effectsOn = c.effectsOn.filter((l) => !links.includes(l));
-  out.res = out.res.map((r) => (r.casts !== undefined && spells.includes(r.casts) ? (({ casts: _, ...x }) => x)(r) : r));
-  out.grants = out.grants.map((g) => (g.kind === 'action' && g.res !== undefined && res.includes(g.res) ? (({ res: _, ...x }) => x)(g) : g));
+  out.res = out.res.map((r) => (r.casts !== undefined && spells.includes(r.casts) ? withoutKeys(r, ['casts']) : r));
+  out.grants = out.grants.map((g) => (g.kind === 'action' && g.res !== undefined && res.includes(g.res) ? withoutKeys(g, ['res']) : g));
   out.pills = c.pills.map((k) => (res.some((id) => k === resPill(id)) ? '' : k));
   return { ...out, ...(c.conc && spells.includes(c.conc.id) ? setConc(null) : {}) };
 }
@@ -1281,13 +1305,12 @@ export function removalSummary(c: Character, ref: Ref): { goes: string[]; keep: 
 export interface Chip { label: string; ref: Ref; target: PillTarget; active: boolean; why?: string; counted?: boolean }
 const DEF_NAMES: Record<DefenseKind, string> = { res: 'Resistance', vul: 'Vulnerability', imm: 'Immunity', adv: 'Advantage' };
 const RECHARGE_LABEL: Record<Recharge, string> = { none: '', short: 'Short Rest', long: 'Long Rest', dawn: 'Dawn' };
-const cap1 = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 function grantLabel(c: Character, g: Grant): string {
   const v = num(c, g.val, g);
   switch (g.kind) {
     case 'abil': return fmt(v) + ' ' + (g.ab ?? '').toUpperCase();
     case 'prof': return g.target ? SKILLS.find(([k]) => k === g.target)?.[1] ?? ABILITIES.find(([k]) => k === g.target)?.[1] ?? g.target : g.name;
-    case 'speed': return g.mode === 'walk' ? 'Speed ' + fmt(v) + ' ft' : cap1(g.mode ?? '') + (g.val === 'walk' ? ' = Speed' : ' ' + v + ' ft');
+    case 'speed': return g.mode === 'walk' ? 'Speed ' + fmt(v) + ' ft' : capital(g.mode ?? '') + (g.val === 'walk' ? ' = Speed' : ' ' + v + ' ft');
     case 'ac': return g.acMode === 'bonus' ? fmt(v) + ' AC' : g.name;
     case 'init': return 'Initiative ' + fmt(v);
     case 'hpLvl': return fmt(v) + ' HP per level';
@@ -1385,4 +1408,6 @@ export function sanitizePills(v: unknown): string[] {
   return out;
 }
 
-export const newId = () => 'n' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+// Time, a counter (so ids made in one millisecond differ) and random characters (so two devices' ids differ).
+let idSeq = 0;
+export const newId = () => 'n' + Date.now().toString(36) + (idSeq++).toString(36) + Math.random().toString(36).slice(2, 6);

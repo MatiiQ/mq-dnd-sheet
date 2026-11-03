@@ -2,10 +2,9 @@
 import { catalogId, slug, type BackgroundEntry, type FeatEntry, type SpeciesEntry, type TraitEntry } from '../../src/catalog/schema.ts';
 import { skillKey } from '../lib/skills.ts';
 import { ABILITY_NAMES } from './spells.ts';
-import { paragraphs, RUN_IN, srdLines } from './text.ts';
+import { norm, paragraphs, RUN_IN, srdLines, unbalanced } from './text.ts';
 
 const nextText = (lines: string[], i: number) => { for (let j = i + 1; j < lines.length; j++) if (lines[j].trim()) return j; return -1; };
-const unbalanced = (s: string) => (s.match(/\(/g) ?? []).length > (s.match(/\)/g) ?? []).length;
 const abilityKey = (n: string) => ABILITY_NAMES[n.trim()];
 
 const FEAT_CAT: Record<string, FeatEntry['cat']> = { Origin: 'origin', General: 'general', 'Fighting Style': 'style', 'Epic Boon': 'boon' };
@@ -69,7 +68,6 @@ export function parseBackgrounds(text: string): BackgroundEntry[] {
 }
 
 const TABLE_TITLES = ['Draconic Ancestors', 'Elven Lineages', 'Fiendish Legacies'];
-const norm = (s: string) => s.replace(/​/g, '').replace(/\s+/g, ' ').trim();
 // Tables in the species pages, from the -layout text: title → [the block's text, its rows of Level 1/3/5 columns].
 function speciesTables(layout: string) {
   const lines = layout.replace(/\f/g, '').split('\n');

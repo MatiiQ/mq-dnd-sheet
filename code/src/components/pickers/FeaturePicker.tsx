@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { classIdOf, featureCandidates, matchId, subclassIdOf, type FeatureType } from '../../catalog/copy';
-import type { Catalog } from '../../catalog/merge';
+import { entriesOf, type Catalog } from '../../catalog/merge';
 import type { Entry, FeatEntry } from '../../catalog/schema';
-import { entriesOf, useCatalog } from '../../catalog/useCatalog';
+import { useCatalog } from '../../catalog/useCatalog';
 import { useSheet } from '../../sheet';
 import type { Character } from '../../types';
 import { ChoiceFlow } from './ChoiceFlow';
 import { PickerResult } from './PickerResult';
-import { PickerFrame, scrollToEntry, usePickerFlow } from './usePicker';
+import { firstNew, PickerFrame, scrollToEntry, usePickerFlow } from './usePicker';
 
 const TYPES: [FeatureType, string][] = [['class', 'Class'], ['sub', 'Subclass'], ['feat', 'Feat'], ['species', 'Species'], ['background', 'Background'], ['other', 'Custom']];
 const FEAT_CATS: [FeatEntry['cat'], string][] = [['origin', 'Origin'], ['general', 'General'], ['style', 'Fighting Style'], ['boon', 'Epic Boon']];
@@ -23,12 +23,12 @@ export function FeaturePicker({ onClose, onCustom }: { onClose: () => void; onCu
         {pf.flow && <ChoiceFlow entry={pf.flow.entry} cat={cat} onCancel={pf.cancel} onDone={(ans) => {
           const r = pf.finish(cat, ans);
           if (!r) return;
-          const added = r.next.feats.find((x) => !r.before.feats.some((b) => b.id === x.id));
+          const added = firstNew(r.before.feats, r.next.feats);
           onClose();
           if (added) scrollToEntry('feat-' + added.id);
         }} />}
         {/* Kept mounted while a flow is open, so Cancel returns to the same type, category and choices. */}
-        <div hidden={!!pf.flow}><FeatureList cat={cat} onAdd={(e) => pf.start(e)} onCustom={onCustom} /></div>
+        <div hidden={!!pf.flow}><FeatureList cat={cat} onAdd={pf.start} onCustom={onCustom} /></div>
       </>}
     </PickerFrame>
   );

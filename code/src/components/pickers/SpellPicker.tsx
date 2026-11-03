@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { classIdOf, hasSpell } from '../../catalog/copy';
-import type { Catalog } from '../../catalog/merge';
+import { entriesOf, type Catalog } from '../../catalog/merge';
 import type { SpellEntry } from '../../catalog/schema';
-import { entriesOf, useCatalog } from '../../catalog/useCatalog';
+import { useCatalog } from '../../catalog/useCatalog';
 import { normName } from '../../logic';
 import { useSheet } from '../../sheet';
 import { ChoiceFlow } from './ChoiceFlow';
 import { PickerResult } from './PickerResult';
-import { PickerFrame, scrollToEntry, usePickerFlow } from './usePicker';
+import { firstNew, PickerFrame, scrollToEntry, usePickerFlow } from './usePicker';
 
 const LEVELS = ['Cantrip', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
@@ -21,12 +21,12 @@ export function SpellPicker({ onClose }: { onClose: () => void }) {
         {pf.flow && <ChoiceFlow entry={pf.flow.entry} cat={cat} onCancel={pf.cancel} onDone={(ans) => {
           const r = pf.finish(cat, ans);
           if (!r) return;
-          const added = r.next.spells.find((x) => !r.before.spells.some((b) => b.id === x.id));
+          const added = firstNew(r.before.spells, r.next.spells);
           onClose();
           if (added) scrollToEntry('spell-' + added.id);
         }} />}
         {/* Kept mounted while a flow is open, so Cancel returns to the same list, level and search. */}
-        <div hidden={!!pf.flow}><SpellList cat={cat} onAdd={(e) => pf.start(e)} /></div>
+        <div hidden={!!pf.flow}><SpellList cat={cat} onAdd={pf.start} /></div>
       </>}
     </PickerFrame>
   );

@@ -1,11 +1,12 @@
 import { useState, type CSSProperties } from 'react';
-import { catalogId, grantErrors, type GrantKind, type GrantSpec } from '../catalog/schema';
+import { isCountable } from '../catalog/copy';
+import { catalogId, DAMAGE_TYPES, grantErrors, type GrantKind, type GrantSpec } from '../catalog/schema';
 import type { SourceKind } from '../links';
-import { ABILITIES, DAMAGE_TYPES, SIZES, SKILLS, findUnlinked, newId, type GrantInput } from '../logic';
+import { ABILITIES, SIZES, SKILLS, findUnlinked, newId, type GrantInput } from '../logic';
 import { useSheet } from '../sheet';
 
 interface FieldDef { key: string; label: string; type: 'text' | 'value' | 'bool' | 'select'; options?: [string, string][] }
-const ABIL: [string, string][] = ABILITIES.map(([k, n]) => [k, n]);
+const ABIL: [string, string][] = ABILITIES;
 const SKILL_OPTS: [string, string][] = SKILLS.map(([k, n]) => [k, n]);
 const ABIL_CHECKS: [string, string][] = ABILITIES.map(([k, n]) => [k, n + ' (every check)']);
 const RANGE: [string, string][] = [['', '—'], ['melee', 'Melee'], ['ranged', 'Ranged']];
@@ -42,7 +43,7 @@ export const GRANT_FIELDS: Record<GrantKind, FieldDef[]> = {
   ac: [sel('acMode', 'Kind', [['bonus', 'Bonus'], ['unarmored', 'Unarmored base (10 + DEX + ability)']]), v('val', 'Bonus'), sel('ab', 'Ability (unarmored)', [['', '—'], ...ABIL]), b('shieldOk', 'Works with a Shield')],
   init: [v('val', 'Bonus')],
   hpLvl: [v('val', 'HP per level')],
-  size: [sel('size', 'Size', SIZES.map(([k, n]) => [k, n]))],
+  size: [sel('size', 'Size', SIZES)],
   carryUp: [],
   action: [sel('econ', 'Takes', [['action', 'Action'], ['bonus', 'Bonus Action'], ['reaction', 'Reaction'], ['free', 'Free'], ['other', 'Other']]), t('note', 'Note'), v('dice', 'Dice')],
   xdmg: [v('dice', 'Dice'), sel('dtype', 'Type', [['', '—'], ...DAMAGE_TYPES.map((d): [string, string] => [d, d])]), t('on', 'When (e.g. a hit, target missing HP)'), b('perTurn', 'Once per turn')],
@@ -57,8 +58,7 @@ export const GRANT_FIELDS: Record<GrantKind, FieldDef[]> = {
   spellAtk: [v('val', 'Bonus')],
   spellDc: [v('val', 'Bonus')]
 };
-const COUNTABLE: GrantKind[] = ['abil', 'speed', 'init', 'hpLvl', 'ac'];
-const LINKABLE: Partial<Record<GrantKind, 'resource' | 'spell' | 'action'>> = { resource: 'resource', spell: 'spell', action: 'action' };
+export const LINKABLE: Partial<Record<GrantKind, 'resource' | 'spell' | 'action'>> = { resource: 'resource', spell: 'spell', action: 'action' };
 const WHEN: [string, string][] = [['', 'Always'], ['armor', 'While wearing armor'], ['noHeavy', 'Not in Heavy armor'], ['noArmor', 'Without armor'],
   ['noShield', 'Without a Shield'], ['noArmorNoShield', 'Without armor or a Shield'], ['active', 'While switched on']];
 const DEFAULTS: Record<string, string | boolean> = { shieldOk: true, recharge: 'long', def: 'res', ab: 'str', cap: '20', cat: 'skill', mode: 'walk', acMode: 'bonus', size: 'medium', econ: 'action', spellLvl: '0' };
@@ -98,7 +98,7 @@ export function GrantEditor({ fromKind, onAdd, onCancel }: { fromKind: SourceKin
   if (fromKind === 'item' && d.needAtt) spec.needAtt = true;
   for (const k of Object.keys(spec)) if (spec[k] === undefined) delete spec[k];
 
-  const countable = COUNTABLE.includes(kind) && (kind !== 'ac' || d.acMode === 'bonus');
+  const countable = isCountable({ kind, acMode: d.acMode as GrantSpec['acMode'] });
   // "Already counted" starts on for an AC bonus when custom AC bonuses exist (an older sheet often holds it there).
   const countedNow = countable && (counted ?? (kind === 'ac' && c.acMods.length > 0));
   const linkKind = LINKABLE[kind];

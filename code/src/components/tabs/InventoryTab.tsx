@@ -1,7 +1,7 @@
 import { useState, type CSSProperties } from 'react';
 import { armorBaseMissing, BLANK_ITEM, catForKind, draftFromItem, itemFromForm, itemStats, withDetectedArmor, WEAPON_PROPS, type ItemDraft, type ItemKind, type WeaponProp } from '../../catalog/copy';
 import { isValue } from '../../catalog/value';
-import { CARRY_MULT, DAMAGE_TYPES, SIZES, maxFields, maxOf, rechargeOf, carriedWeight, carryCapacity, carryUpOf, sizeOf, effScore, fmt, addGrants, grantChips, isContainer, newId, removeItem, type GrantInput } from '../../logic';
+import { CARRY_MULT, SIZES, capital, coinWeight, maxFields, maxOf, rechargeOf, regainEvent, carriedWeight, carryCapacity, carryUpOf, sizeOf, effScore, fmt, addGrants, grantChips, isContainer, newId, removeItem, type GrantInput } from '../../logic';
 import {
   addSection, containerLoad, DEFAULT_SECTION, inventoryGroups, moveInto, moveSection, removeContainer, removeContainerSummary, removeSection, renameSection,
   setItemSection, takeOut
@@ -13,7 +13,7 @@ import { ItemPicker } from '../pickers/ItemPicker';
 import { scrollToEntry } from '../pickers/usePicker';
 import { patchEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { ArmorKind, Character, Coin, Item, Recharge, Section } from '../../types';
-import { AddButton, EntryForm, EntryRow, MenuIcon, NumInput, TextField, useArmed, useNoteUntilChange } from '../ui';
+import { AddButton, DamageTypeField, EntryForm, EntryRow, MenuIcon, NumInput, TextField, useArmed, useNoteUntilChange } from '../ui';
 
 const COINS: [Coin, string, string][] = [['cp', 'CP', 'var(--coin-cp)'], ['sp', 'SP', 'var(--coin-sp)'], ['ep', 'EP', 'var(--coin-ep)'], ['gp', 'GP', 'var(--accent)'], ['pp', 'PP', 'var(--coin-pp)']];
 // The item form's draft (catalog/copy.ts) plus the grants of a new item (pending), added once it exists.
@@ -26,10 +26,27 @@ const PROP_NAMES: Record<WeaponProp, string> = {
   finesse: 'Finesse', light: 'Light', thrown: 'Thrown', versatile: 'Versatile', ammunition: 'Ammunition', loading: 'Loading', reach: 'Reach', 'two-handed': 'Two-Handed', heavy: 'Heavy'
 };
 const MASTERIES = ['cleave', 'graze', 'nick', 'push', 'sap', 'slow', 'topple', 'vex'];
-const title = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 // Weights show to one decimal place.
 const lb = (n: number) => String(Math.round(n * 10) / 10);
 const sizeName = (s: string) => SIZES.find(([k]) => k === s)?.[1] ?? s;
+
+const LoadBar = ({ used, cap, over }: { used: number; cap: number; over: boolean }) => (
+  <span className="carry-track" aria-hidden="true">
+    <span className={'carry-fill' + (over ? ' over' : '')} style={{ width: Math.min(100, cap ? (used / cap) * 100 : 100) + '%' }} />
+  </span>
+);
+// of: the container these coins are in, for screen readers; the purse has none.
+function CoinGrid({ coins, of, onChange }: { coins: Partial<Record<Coin, number>>; of?: string; onChange: (k: Coin, v: number) => void }) {
+  return (
+    <div className="coin-grid">
+      {COINS.map(([k, label, color]) => (
+        <label key={k} className="well col gap-4 coin-cell" style={{ color }}>{label}
+          <NumInput className="input" aria-label={of && label + ' in ' + of} value={coins[k] ?? 0} min={0} max={999999} onCommit={(v) => onChange(k, v)} />
+        </label>
+      ))}
+    </div>
+  );
+}
 
 const acNote = (it: Item) => {
   const bonus = it.acBonus ? fmt(it.acBonus) : '';
@@ -72,7 +89,7 @@ export function InventoryTab() {
     if (!it.eq && it.armor === 'shield') {
       const r = equipShield(c, it.id);
       if (r.away.length) setAwayMsg({ id: it.id, names: r.away });
-      update(() => r.c);
+      update((p) => equipShield(p, it.id).c);
       return;
     }
     update((s) => { const next = { ...s, inv: patchEntry(s.inv, it.id, { eq: !it.eq }) }; return it.eq ? setHands(next, next.hands) : next; });
@@ -181,7 +198,9 @@ export function InventoryTab() {
       <span>{mode === 'out' ? 'Contents and coins go to your items and purse' : 'Contents and the bag’s coins are removed too'}</span>
     </>;
   };
-  const row = (it: Item) => (
+  const row = (it: Item) => {
+    const info = it.desc || itemStats(it), moves = moveControls(it), gives = grantChips(c, linkOf('item', it.id)).length > 0, away = awayMsg?.id === it.id;
+    return (
     <li key={it.id}>
       {f.editingId === it.id ? form : (
         <EntryRow id={'item-' + it.id} name={it.name}
@@ -214,18 +233,19 @@ export function InventoryTab() {
               </div>
             )}
           </div>}
-          body={(it.desc || itemStats(it) || moveControls(it)) ? <>{(it.desc || itemStats(it)) && <span className="entry-desc">{it.desc || itemStats(it)}</span>}{moveControls(it)}</> : undefined}
+          body={info || moves ? <>{info && <span className="entry-desc">{info}</span>}{moves}</> : undefined}
           onEdit={() => f.openEdit(it.id, { ...draftFromItem(it), pending: [] })}
           onRemove={() => update((p) => (isContainer(it) ? removeContainer(p, it.id, removeMode(it)) : removeItem(p, it.id)))}
           removeConfirm={isContainer(it) && holds(it) ? bagConfirm(it) : undefined}>
-          {(grantChips(c, linkOf('item', it.id)).length > 0 || awayMsg?.id === it.id) && <>
-            {grantChips(c, linkOf('item', it.id)).length > 0 && <SourceChips link={linkOf('item', it.id)} />}
-            {awayMsg?.id === it.id && <span role="status" className="small muted">Put away: {awayMsg.names.join(', ')}</span>}
+          {(gives || away) && <>
+            {gives && <SourceChips link={linkOf('item', it.id)} />}
+            {away && <span role="status" className="small muted">Put away: {awayMsg.names.join(', ')}</span>}
           </>}
         </EntryRow>
       )}
     </li>
-  );
+    );
+  };
 
   // ---- containers ----
   // One block per extradimensional container: its load against its capacity, its own coins and its contents.
@@ -242,22 +262,11 @@ export function InventoryTab() {
             <strong>Holds</strong>
             <span><strong style={full ? { color: 'var(--danger)' } : undefined}>{lb(load.total)}</strong>{load.cap !== null && ' / ' + lb(load.cap)} lb</span>
           </span>
-          {load.cap !== null && (
-            <span className="carry-track" aria-hidden="true">
-              <span className={'carry-fill' + (full ? ' over' : '')} style={{ width: Math.min(100, load.cap ? (load.total / load.cap) * 100 : 100) + '%' }} />
-            </span>
-          )}
+          {load.cap !== null && <LoadBar used={load.total} cap={load.cap} over={full} />}
           {bag.capVol && <span className="small muted">{bag.capVol}</span>}
           <span className="small muted">Its contents and coins don’t count toward your load; the {bag.name} itself does.</span>
         </div>
-        <div className="coin-grid">
-          {COINS.map(([k, label, color]) => (
-            <label key={k} className="well col gap-4 coin-cell" style={{ color }}>{label}
-              <NumInput className="input" aria-label={label + ' in ' + bag.name} value={bag[k] ?? 0} min={0} max={999999}
-                onCommit={(v) => update((p) => ({ inv: patchEntry(p.inv, bag.id, { [k]: v } as Partial<Item>) }))} />
-            </label>
-          ))}
-        </div>
+        <CoinGrid coins={bag} of={bag.name} onChange={(k, v) => update((p) => ({ inv: patchEntry(p.inv, bag.id, { [k]: v } as Partial<Item>) }))} />
         {holds(bag) && (
           <div role="group" aria-label={'If ' + bag.name + ' is removed'} className="row wrap gap-4">
             <span className="label" style={{ flex: '1 1 100%' }}>If this bag is removed</span>
@@ -301,14 +310,10 @@ export function InventoryTab() {
               </select>
             </label>
             {text('Damage die', 'dmg', 'e.g. 1d8', '1 1 90px')}
-            <label className="field" style={{ flex: '1 1 130px' }}>Damage type
-              <select className="input" value={d.dtype} onChange={(e) => f.set({ dtype: e.target.value })}>
-                {['', ...DAMAGE_TYPES, ...(d.dtype && !DAMAGE_TYPES.includes(d.dtype) ? [d.dtype] : [])].map((t) => <option key={t} value={t}>{t || '—'}</option>)}
-              </select>
-            </label>
+            <DamageTypeField value={d.dtype} style={{ flex: '1 1 130px' }} onChange={(dtype) => f.set({ dtype })} />
             <label className="field" style={{ flex: '1 1 110px' }}>Mastery
               <select className="input" value={d.mastery} onChange={(e) => f.set({ mastery: e.target.value })}>
-                {['', ...MASTERIES].map((m) => <option key={m} value={m}>{m ? title(m) : '—'}</option>)}
+                {['', ...MASTERIES].map((m) => <option key={m} value={m}>{m ? capital(m) : '—'}</option>)}
               </select>
             </label>
             {text('Magic bonus', 'magic', 'e.g. 1', '1 1 90px')}
@@ -378,7 +383,7 @@ export function InventoryTab() {
               {(['dawn', 'long', 'short', 'none'] as Recharge[]).map((k) => <option key={k} value={k}>{RECHARGE_NAMES[k]}</option>)}
             </select>
           </label>
-          {(d.chRecharge === 'dawn' || d.chRecharge === 'long') && (
+          {regainEvent(d.chRecharge) && (
             <label className="field" style={{ flex: '1 1 120px' }}>{d.chRecharge === 'dawn' ? 'Regain at dawn' : 'Regain on a Short Rest'}
               <input type="text" className="input" value={d.chRegain} placeholder={d.chRecharge === 'dawn' ? 'e.g. 1d6+1 (empty = all)' : 'e.g. 1'}
                 onChange={(e) => f.set({ chRegain: e.target.value })} />
@@ -414,14 +419,7 @@ export function InventoryTab() {
         </div>
       </div>
 
-      <div className="coin-grid">
-        {COINS.map(([k, label, color]) => (
-          <label key={k} className="well col gap-4 coin-cell" style={{ color }}>{label}
-            <NumInput className="input" value={c.coins[k]} min={0} max={999999}
-              onCommit={(v) => update((p) => ({ coins: { ...p.coins, [k]: v } }))} />
-          </label>
-        ))}
-      </div>
+      <CoinGrid coins={c.coins} onChange={(k, v) => update((p) => ({ coins: { ...p.coins, [k]: v } }))} />
 
       <div className="block">
         <button type="button" className="well carry" aria-expanded={carryOpen} onClick={() => setCarryOpen(!carryOpen)}>
@@ -429,9 +427,7 @@ export function InventoryTab() {
             <strong>Carried</strong>
             <span><strong style={over ? { color: 'var(--danger)' } : undefined}>{lb(carried)}</strong> / {lb(cap.carry)} lb</span>
           </span>
-          <span className="carry-track" aria-hidden="true">
-            <span className={'carry-fill' + (over ? ' over' : '')} style={{ width: Math.min(100, cap.carry ? (carried / cap.carry) * 100 : 100) + '%' }} />
-          </span>
+          <LoadBar used={carried} cap={cap.carry} over={over} />
         </button>
         {carryOpen && (
           <div className="grid speed-grid">
@@ -441,7 +437,7 @@ export function InventoryTab() {
               <span className="muted">Size {sizeName(sizeOf(c))}</span></div>}
             <div className="tile"><span className="muted">Drag, lift or push</span><span className="speed-value">{lb(cap.push)} lb</span>
               <span className="muted">Twice the carry limit</span></div>
-            <div className="tile"><span className="muted">Coins</span><span className="speed-value">{lb(Object.values(c.coins).reduce((t, n) => t + n, 0) / 50)} lb</span>
+            <div className="tile"><span className="muted">Coins</span><span className="speed-value">{lb(coinWeight(c.coins))} lb</span>
               <span className="muted">50 coins weigh 1 lb</span></div>
           </div>
         )}

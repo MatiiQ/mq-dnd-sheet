@@ -3,7 +3,7 @@ import { ABILITIES, SKILLS, abilityMod, abilityParts, clamp, effScore, fmt, save
 import { useWide } from '../layout';
 import { useSheet } from '../sheet';
 import type { Ability } from '../types';
-import { ProfDot, Step, TypeInNumber } from './ui';
+import { PartTiles, ProfDot, Step, TypeInNumber } from './ui';
 
 const LEVEL_NAMES = ['Not proficient', 'Proficient', 'Expertise'];
 
@@ -65,17 +65,7 @@ function AbilityCard({ k, name }: { k: Ability; name: string }) {
           {fmt(abilityMod(c, k))}<span className="score-coin" style={{ color: scoreColor }}>{cur}</span>
         </button>
       </div>
-      {open && (
-        <div className="grid speed-grid" style={{ paddingBottom: 6 }}>
-          {abilityParts(c, k).map((p, i) => (
-            <div key={i} className="tile">
-              <span className="muted">{p.label}</span>
-              <span className="speed-value">{i === 0 ? p.value : fmt(p.value)}</span>
-              {p.note && <span className="muted">{p.note}</span>}
-            </div>
-          ))}
-        </div>
-      )}
+      {open && <PartTiles parts={abilityParts(c, k)} style={{ paddingBottom: 6 }} />}
 
       {edit && (
         <div className="row wrap gap-6" style={{ paddingBottom: 6 }}>

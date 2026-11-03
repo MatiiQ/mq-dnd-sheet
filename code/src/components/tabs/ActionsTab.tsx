@@ -3,22 +3,22 @@ import {
   attacksPerAction, extraDamage, extraText, featureActions, lightExtra, masterySlots, otherWeapons, spellActions, unarmedStrike, weaponAttacks,
   type SpellAction, type WeaponAttack
 } from '../../actions';
-import { dtypeText } from '../../catalog/copy';
-import { entriesOf, useCatalog } from '../../catalog/useCatalog';
+import { capWords, dtypeText } from '../../catalog/copy';
+import { entriesOf } from '../../catalog/merge';
+import { useCatalog } from '../../catalog/useCatalog';
 import { canLoad, hasProp, isWeapon, putAway, putInHand, shieldOn as shieldOf, twoHanded, versatile, weaponKind, weaponsHeld } from '../../hands';
 import { linkOf, sourceLabel } from '../../links';
-import { castFree, castSpell, COMBAT_ACTIONS, fmt, freeCastsOf, removeRef, slotsLeft, spellUsable, toggleEffect, type AcPart } from '../../logic';
+import { castSpell, COMBAT_ACTIONS, fmt, freeCastsOf, ORDINAL, removeRef, slotsLeft, spellUsable, toggled, type AcPart } from '../../logic';
 import { patchEntry, removeEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { Attack, Character, Econ, Item, Rider, Spell } from '../../types';
-import { AddButton, ChevronDown, DieBadge, EntryForm, EntryRow, Step, TextField, useNoteUntilChange } from '../ui';
+import { AddButton, Caret, DieBadge, EffectSwitch, EntryForm, EntryRow, FreeCastButton, Step, TextField, useNoteUntilChange } from '../ui';
 
 const ECON: Record<Econ, string> = { action: 'Action', bonus: 'Bonus Action', reaction: 'Reaction', free: 'Free', other: 'Other' };
 type Filter = 'all' | 'action' | 'bonus' | 'reaction';
 const FILTERS: [Filter, string][] = [['all', 'All'], ['action', 'Action'], ['bonus', 'Bonus'], ['reaction', 'Reaction']];
-const ORDINAL = ['Cantrip', '1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th'];
 const USE_LABEL: Record<WeaponAttack['use'], string> = { melee: '', thrown: 'thrown', ranged: '', 'two-handed': 'two hands' };
 const title = (s: string) => s.split(/[-\s]/).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-const propsText = (p: string) => p.split(',').filter(Boolean).map((x) => x.replace(/(^|-)([a-z])/g, (m) => m.toUpperCase())).join(', ');
+const propsText = (p: string) => p.split(',').filter(Boolean).map(capWords).join(', ');
 const NO_SHIELD = 'Take off the Shield first';
 
 const ATTACK_BLANK = { name: '', hit: '', dmg: '', info: '', mastery: '', econ: 'action' as Econ, group: 'other' as 'weapon' | 'other' };
@@ -31,6 +31,15 @@ function EconTag({ econ }: { econ: Econ }) {
 }
 function Parts({ label, parts }: { label: string; parts: AcPart[] }) {
   return <span className="muted">{label}: {parts.map((p) => p.label + ' ' + fmt(p.value)).join(' · ') || 'none'}</span>;
+}
+// An attack's two numbers, read out by name.
+function AttackNums({ hit, dmg }: { hit: string; dmg: string }) {
+  return (
+    <div className="row wrap gap-10 act-nums">
+      <span className="sr-only">To hit</span><DieBadge value={hit} />
+      <span className="sr-only">Damage</span><span className="act-dmg">{dmg}</span>
+    </div>
+  );
 }
 // One computed row: taps open its details; `side` holds its numbers and buttons, `extra` lines under it.
 function ActRow({ name, sub, econ, side, body, extra }: { name: ReactNode; sub?: ReactNode; econ?: Econ; side?: ReactNode; body?: ReactNode; extra?: ReactNode }) {
@@ -83,7 +92,7 @@ export function ActionsTab() {
     const r = putInHand(c, it.id, two);
     if (r.blocked) return;
     setAway(r.away.length ? { id: it.id, text: 'Put away: ' + r.away.join(', ') } : null);
-    update(() => r.c);
+    update((p) => putInHand(p, it.id, two).c);
   };
   const handButtons = (it: Item) => {
     const n = c.hands.filter((x) => x === it.id).length;
@@ -116,7 +125,7 @@ export function ActionsTab() {
     return (
       <label className="field">Ammunition
         <select className="input" aria-label={'Ammunition for ' + it.name} value={it.load ?? ''}
-          onChange={(e) => act((p) => ({ ...p, inv: p.inv.map((x) => (x.id === it.id ? { ...x, load: e.target.value || undefined } : x)) }))}>
+          onChange={(e) => act((p) => ({ ...p, inv: patchEntry(p.inv, it.id, { load: e.target.value || undefined }) }))}>
           <option value="">None</option>
           {fits.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
         </select>
@@ -127,10 +136,7 @@ export function ActionsTab() {
     <ActRow key={it.id + a.use} econ={a.econ}
       name={a.name + (USE_LABEL[a.use] ? ' · ' + USE_LABEL[a.use] : '')}
       sub={[a.range, propsText(a.props), a.mastery && 'Mastery: ' + title(a.mastery), a.crit].filter(Boolean).join(' · ')}
-      side={<div className="row wrap gap-10 act-nums">
-        <span className="sr-only">To hit</span><DieBadge value={fmt(a.hit)} />
-        <span className="sr-only">Damage</span><span className="act-dmg">{a.dmg} {a.dtype}</span>
-      </div>}
+      side={<AttackNums hit={fmt(a.hit)} dmg={a.dmg + ' ' + a.dtype} />}
       extra={controls ? <>{handButtons(it)}{a.use === 'ranged' && ammoPicker(it)}</> : undefined}
       body={<>
         <Parts label="To hit" parts={a.hitParts} />
@@ -155,23 +161,22 @@ export function ActionsTab() {
 
   // ---- mastery ----
   const slots = masterySlots(c);
-  const kindName = (kind: string) => c.inv.find((i) => isWeapon(i) && weaponKind(i) === kind)?.name
-    ?? (cat ? entriesOf(cat, 'item').find((e) => e.id === 'item/' + kind)?.name : undefined) ?? title(kind);
-  const kindMastery = (kind: string) => c.inv.find((i) => isWeapon(i) && weaponKind(i) === kind && i.mastery)?.mastery
-    ?? (cat ? entriesOf(cat, 'item').find((e) => e.id === 'item/' + kind)?.mastery : undefined);
+  const catItem = (kind: string) => { const e = cat?.byId.get('item/' + kind); return e?.kind === 'item' ? e : undefined; };
+  const kindName = (kind: string) => c.inv.find((i) => isWeapon(i) && weaponKind(i) === kind)?.name ?? catItem(kind)?.name ?? title(kind);
+  const kindMastery = (kind: string) => c.inv.find((i) => isWeapon(i) && weaponKind(i) === kind && i.mastery)?.mastery ?? catItem(kind)?.mastery;
   const counted = c.mastery.slice(0, slots);
   const masteryLine = counted.map((k) => kindName(k) + (kindMastery(k) ? ' (' + title(kindMastery(k)!) + ')' : '')).join(', ');
   const options = [...new Set([
     ...(cat ? entriesOf(cat, 'item').filter((e) => e.cat === 'weapon' && e.mastery).map((e) => e.id.split('/').pop()!) : []),
     ...c.inv.filter((i) => isWeapon(i) && i.mastery).map(weaponKind), ...c.mastery
   ])].sort((a, b) => kindName(a).localeCompare(kindName(b)));
-  const toggleMastery = (kind: string) => update((p) => ({ mastery: p.mastery.includes(kind) ? p.mastery.filter((k) => k !== kind) : [...p.mastery, kind] }));
+  const toggleMastery = (kind: string) => update((p) => ({ mastery: toggled(p.mastery, kind) }));
   const masteryBox = (slots > 0 || c.mastery.length > 0) && (
     <div className="col gap-6">
       <div className="row wrap gap-8">
         <span className="muted grow">Mastery: {masteryLine || 'none chosen'}</span>
         <button type="button" className="btn btn-sm row gap-4" aria-expanded={masteryOpen} onClick={() => setMasteryOpen(!masteryOpen)}>
-          Choose<ChevronDown size={12} style={{ transform: masteryOpen ? 'rotate(180deg)' : undefined }} />
+          Choose<Caret open={masteryOpen} />
         </button>
       </div>
       {masteryOpen && (
@@ -236,10 +241,7 @@ export function ActionsTab() {
         {a.info && <span className="muted">{a.info}</span>}
         {a.mastery && <span className="muted"><strong style={{ color: 'var(--accent)' }}>Mastery</strong> · {a.mastery}</span>}
       </>}
-      side={<div className="row wrap gap-10 act-nums">
-        <span className="sr-only">To hit</span><DieBadge value={a.hit} />
-        <span className="sr-only">Damage</span><span className="act-dmg">{a.dmg || '—'}</span>
-      </div>}
+      side={<AttackNums hit={a.hit} dmg={a.dmg || '—'} />}
       body={sourceLabel(c, a) ? <span className="muted">Source: {sourceLabel(c, a)}</span> : undefined}
       onEdit={() => fa.openEdit(a.id, { name: a.name, hit: a.hit || '', dmg: a.dmg || '', info: a.info || '', mastery: a.mastery || '', econ: econOfAttack(a), group: a.group ?? 'other' })}
       onRemove={() => act((p) => removeRef(p, { kind: 'attack', id: a.id }))} />
@@ -302,10 +304,7 @@ export function ActionsTab() {
         {[...heldRows,
           shows('action') && (
             <ActRow key="unarmed" econ="action" name="Unarmed Strike" sub={[unarmed.range, unarmed.crit].filter(Boolean).join(' · ')}
-              side={<div className="row wrap gap-10 act-nums">
-                <span className="sr-only">To hit</span><DieBadge value={fmt(unarmed.hit)} />
-                <span className="act-dmg">{unarmed.dmg} {unarmed.dtype}</span>
-              </div>}
+              side={<AttackNums hit={fmt(unarmed.hit)} dmg={unarmed.dmg + ' ' + unarmed.dtype} />}
               body={<>
                 <Parts label="To hit" parts={unarmed.hitParts} />
                 <Parts label="Damage" parts={unarmed.dmgParts} />
@@ -314,16 +313,13 @@ export function ActionsTab() {
           ),
           extra && shows(extra.econ) && (
             <ActRow key="light" econ={extra.econ} name={'Light extra attack · ' + extra.name} sub={[extra.note, extra.crit].filter(Boolean).join(' · ')}
-              side={<div className="row wrap gap-10 act-nums">
-                <span className="sr-only">To hit</span><DieBadge value={fmt(extra.hit)} />
-                <span className="act-dmg">{extra.dmg} {extra.dtype}</span>
-              </div>}
+              side={<AttackNums hit={fmt(extra.hit)} dmg={extra.dmg + ' ' + extra.dtype} />}
               body={<Parts label="Damage" parts={extra.dmgParts} />} />
           ),
           others.length > 0 && filter !== 'bonus' && filter !== 'reaction' && (
             <div key="others" className="col gap-6">
               <button type="button" className="btn btn-sm row gap-4" style={{ alignSelf: 'flex-start' }} aria-expanded={othersOpen} onClick={() => setOthersOpen(!othersOpen)}>
-                Other weapons ({others.length})<ChevronDown size={12} style={{ transform: othersOpen ? 'rotate(180deg)' : undefined }} />
+                Other weapons ({others.length})<Caret open={othersOpen} />
               </button>
               {othersOpen && others.map((it) => weaponRow(it, weaponAttacks(c, it)[0], true))}
             </div>
@@ -386,24 +382,11 @@ function riderForm(fr: ReturnType<typeof useEntryForm<typeof RIDER_BLANK>>, onSa
 function CastButtons({ sp, effect }: { sp: Spell; effect: boolean }) {
   const { c, update } = useSheet();
   const link = linkOf('spell', sp.id);
-  if (effect && !sp.c) {
-    const on = c.effectsOn.includes(link);
-    return (
-      <button type="button" aria-pressed={on} aria-label={(on ? 'Switch off ' : 'Switch on ') + sp.name} className={'btn btn-sm toggle-btn' + (on ? ' on' : '')}
-        onClick={() => update((p) => toggleEffect(p, link))}>{on ? 'On' : 'Off'}</button>
-    );
-  }
+  if (effect && !sp.c) return <EffectSwitch link={link} name={sp.name} />;
   const lvl = sp.lvl || 0;
   const first = lvl > 0 && spellUsable(c, sp) ? [lvl, 2, 3, 4, 5, 6, 7, 8, 9].filter((l) => l >= lvl).find((l) => c.slotMax[l] && slotsLeft(c, l) > 0) : undefined;
   return <>
-    {freeCastsOf(c, sp.id).map((r) => {
-      const used = r.count <= 0;
-      return (
-        <button key={r.id} type="button" aria-pressed={used} className={'btn btn-sm toggle-btn' + (used ? ' used' : '')}
-          aria-label={used ? 'Free casts of ' + sp.name + ' (' + r.name + ') used up; tap to give one back' : 'Use a free cast of ' + sp.name + ' (' + r.name + '), ' + r.count + ' left'}
-          onClick={() => update((p) => castFree(p, sp, r.id))}>{used ? 'Free used' : 'Free · ' + r.count}</button>
-      );
-    })}
+    {freeCastsOf(c, sp.id).map((r) => <FreeCastButton key={r.id} sp={sp} r={r} short />)}
     {first !== undefined && (
       <button type="button" className="btn btn-sm toggle-btn" aria-label={'Cast ' + sp.name + ' with a level ' + first + ' slot, ' + slotsLeft(c, first) + ' left'}
         onClick={() => update((p) => castSpell(p, sp, first))}>Cast {ORDINAL[first]}</button>

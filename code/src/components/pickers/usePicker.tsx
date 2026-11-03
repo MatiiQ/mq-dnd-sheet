@@ -12,7 +12,7 @@ import type { Character } from '../../types';
 // a refusal shows its text instead of the crash screen and leaves the character unchanged.
 export function usePickerFlow() {
   const { c, update } = useSheet();
-  const [flow, setFlow] = useState<{ entry: Entry; preset?: Record<string, string[]> } | null>(null);
+  const [flow, setFlow] = useState<{ entry: Entry } | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   useEffect(() => {
     if (!flow) return;
@@ -20,7 +20,7 @@ export function usePickerFlow() {
   }, [flow]);
   return {
     flow, msg,
-    start: (entry: Entry, preset?: Record<string, string[]>) => { setMsg(null); setFlow({ entry, preset }); },
+    start: (entry: Entry) => { setMsg(null); setFlow({ entry }); },
     cancel: () => setFlow(null),
     // Adds the entry; returns the character before and the one saved, or null when it was refused. after: a follow-up
     // step on the added character (the Inventory tab puts new items in a section), saved in the same update.
@@ -61,6 +61,9 @@ export function PickerFrame({ title, state, msg, onClose, children }: {
     </div>
   );
 }
+
+// The first entry of `after` that `before` lacks: what an add just made.
+export const firstNew = <T extends { id: string }>(before: T[], after: T[]) => after.find((x) => !before.some((b) => b.id === x.id));
 
 // Scrolls a newly added entry into view once it has rendered.
 export const scrollToEntry = (id: string) => setTimeout(() => document.getElementById(id)?.scrollIntoView({ block: 'center', behavior: 'smooth' }), 80);

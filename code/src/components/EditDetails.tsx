@@ -1,6 +1,6 @@
 import { classIdOf, matchId } from '../catalog/copy';
-import type { Catalog } from '../catalog/merge';
-import { entriesOf, useCatalog } from '../catalog/useCatalog';
+import { entriesOf, type Catalog } from '../catalog/merge';
+import { useCatalog } from '../catalog/useCatalog';
 import { CAST_NAMES, clamp, SIZES } from '../logic';
 import { useSheet } from '../sheet';
 import type { CastAbility, Character, Details, Size } from '../types';

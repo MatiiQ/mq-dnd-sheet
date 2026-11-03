@@ -4,7 +4,7 @@ import { slug, type SpellPart } from './catalog/schema';
 import { valueAt } from './catalog/value';
 import { hasProp, isWeapon, twoHanded, versatile, weaponKind, weaponMatches, weaponsHeld } from './hands';
 import { activeGrants, isActive, linkOf, sourceLabel, sourceOf } from './links';
-import { ABILITIES, abilityMod, castAbOf, fmt, normName, num, partsTotal, profBonus, profList, hasProf, spellAttackFor, spellSaveDcFor, spellUsable, valueCtx, type AcPart } from './logic';
+import { ABILITIES, abilityMod, abilityName, castAbOf, fmt, num, partsTotal, profBonus, profList, hasProf, spellAttackFor, spellSaveDcFor, spellUsable, valueCtx, type AcPart } from './logic';
 import type { Ability, Character, Econ, Feature, Grant, Item, Spell } from './types';
 
 // The "Other weapons" list: weapons not in hand, equipped first. A weapon inside a container is left out: the player
@@ -31,7 +31,6 @@ export function diceText(dice: string, mod: number): string {
 }
 // Average roll of 'NdM' terms (1d8 → 4.5), to compare dice. Anything else counts as 0.
 const average = (dice: string) => [...dice.matchAll(/(\d*)d(\d+)/g)].reduce((t, m) => t + (Number(m[1] || 1) * (Number(m[2]) + 1)) / 2, 0);
-const abilityName = (a: Ability) => ABILITIES.find(([k]) => k === a)![1];
 
 export type Use = 'melee' | 'thrown' | 'ranged' | 'two-handed';
 export interface WeaponAttack {
@@ -109,7 +108,7 @@ function rangeOf(it: Item, use: Use): string {
 }
 const isShillelagh = (c: Character, g: Grant) => {
   const src = sourceOf(c, g.from) as Spell | null;
-  return !!src && g.from.startsWith('spell:') && (src.cid ? src.cid === 'spell/shillelagh' : normName(src.name) === 'shillelagh');
+  return !!src && g.from.startsWith('spell:') && spellKey(src) === 'shillelagh';
 };
 
 // A wider Critical Hit range, for attacks with weapons and Unarmed Strikes only (Improved Critical 19-20, Superior
@@ -130,7 +129,7 @@ export function weaponAttacks(c: Character, it: Item): WeaponAttack[] {
   return uses.map((use) => attackFor(c, it, use).attack);
 }
 
-function attackFor(c: Character, it: Item, use: Use): { attack: WeaponAttack; die: string; abilityPart: boolean } {
+function attackFor(c: Character, it: Item, use: Use): { attack: WeaponAttack; die: string; mod: number } {
   const inHand = c.hands.filter((id) => id === it.id).length;
   const pb = profBonus(c.level), ctx = valueCtx(c);
   const ab = weaponAbility(c, it, use), mod = abilityMod(c, ab);
@@ -158,7 +157,7 @@ function attackFor(c: Character, it: Item, use: Use): { attack: WeaponAttack; di
     range: rangeOf(it, use), props: it.props ?? '', ...(it.mastery && hasMastery(c, weaponKind(it)) ? { mastery: it.mastery } : {}), held,
     ...(USE_NOTE[use] ? { note: USE_NOTE[use] } : {}), ...(crit ? { crit } : {})
   };
-  return { attack, die, abilityPart: mod !== 0 };
+  return { attack, die, mod };
 }
 
 // Unarmed Strike (PHB p.377): to-hit Strength modifier + PB; damage 1 + Strength modifier, Bludgeoning; Grapple and
@@ -208,10 +207,9 @@ export function lightExtra(c: Character): (WeaponAttack & { nick: boolean }) | n
   const nicks = items.filter(nickOf);
   const it = nicks.length === 1 ? nicks[0] : items[1];
   const use: Use = it.wrange === 'ranged' ? 'ranged' : 'melee';
-  const { attack, die, abilityPart } = attackFor(c, it, use);
-  const mod = abilityMod(c, weaponAbility(c, it, use));
+  const { attack, die, mod } = attackFor(c, it, use);
   const addMod = activeGrants(c, 'lightExtra').some((g) => g.addMod);
-  const dmgParts = abilityPart && mod > 0 && !addMod ? attack.dmgParts.slice(1) : attack.dmgParts;
+  const dmgParts = mod > 0 && !addMod ? attack.dmgParts.slice(1) : attack.dmgParts;
   const nick = nickOf(it);
   return {
     ...attack, dmgParts, dmg: diceText(die, partsTotal(dmgParts)), econ: nick ? 'action' : 'bonus', nick,
@@ -247,7 +245,6 @@ export interface SpellAction {
   // part: the index of the spell part this row shows (Ice Knife · Burst); absent on the spell's own row.
   part?: number;
 }
-const ABBR = (a: Ability) => a.toUpperCase();
 // An On/Off effect of the spell: an atkAbil grant from it that counts while its effect is on (Shillelagh).
 const effectOf = (c: Character, sp: Spell) => c.grants.some((g) => g.kind === 'atkAbil' && g.from === linkOf('spell', sp.id) && g.when === 'active');
 // Cantrip damage bonus grants (Potent Spellcasting) add to cantrips of the class of the grant's source feature, read from
@@ -296,7 +293,7 @@ type RowFields = Pick<SpellPart, 'dtype' | 'dtypes' | 'save' | 'atk' | 'dmgMod' 
 function spellRow(c: Character, sp: Spell, r: RowFields): Omit<SpellAction, 'name' | 'econ'> {
   const group: SpellAction['group'] = r.save ? 'save' : r.atk || r.fx === 'damage' ? 'damage' : r.fx === 'healing' ? 'healing' : 'damage';
   let dice = r.dice ?? '';
-  if (dice && (sp.cid === 'spell/eldritch-blast' || (!sp.cid && normName(sp.name) === 'eldritch blast'))) {
+  if (dice && spellKey(sp) === 'eldritch-blast') {
     // Eldritch Blast adds beams instead of dice (PHB p.267).
     dice = `${cantripTier(c.level)} beams × ${dice}`;
   } else if (dice && r.scale === 'cantrip') {
@@ -305,7 +302,7 @@ function spellRow(c: Character, sp: Spell, r: RowFields): Omit<SpellAction, 'nam
     // Cure Wounds, Healing Word, Mass Cure Wounds: "+ your spellcasting ability modifier" (PHB pp.259, 284, 296);
     // damage that says the same: Spiritual Weapon, Flame Blade (PHB pp.319, 275).
     const ab = castAbOf(c, sp);
-    if (ab) dice = `${dice} + ${ABBR(ab)} (${fmt(abilityMod(c, ab))})`;
+    if (ab) dice = `${dice} + ${ab.toUpperCase()} (${fmt(abilityMod(c, ab))})`;
   }
   const hit = r.atk ? spellAttackFor(c, sp) : null, dc = r.save ? spellSaveDcFor(c, sp) : null;
   return {

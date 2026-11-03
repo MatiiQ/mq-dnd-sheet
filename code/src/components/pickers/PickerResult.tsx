@@ -17,7 +17,6 @@ export function PickerResult({ entry, taken, onAdd, note, marked, disabled }: {
 }) {
   const [open, setOpen] = useState(false);
   const sub = subline(entry);
-  // A magic armor or weapon of the player's choice comes without its base fields (catalog `base`).
   return (
     <div className="well entry picker-result">
       <div className="entry-row">

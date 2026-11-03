@@ -1,15 +1,15 @@
 import { useState } from 'react';
-import { itemQuestions, type AddChoices } from '../../catalog/copy';
-import type { Catalog } from '../../catalog/merge';
+import { hasItem, itemQuestions, type AddChoices } from '../../catalog/copy';
+import { entriesOf, type Catalog } from '../../catalog/merge';
 import type { ItemEntry } from '../../catalog/schema';
-import { entriesOf, useCatalog } from '../../catalog/useCatalog';
+import { useCatalog } from '../../catalog/useCatalog';
 import { setItemSection } from '../../inventory';
 import { normName } from '../../logic';
 import { useSheet } from '../../sheet';
 import { ChoiceFlow, type FlowState } from './ChoiceFlow';
 import { ItemQuestions } from './ItemQuestions';
 import { PickerResult } from './PickerResult';
-import { PickerFrame, scrollToEntry, usePickerFlow } from './usePicker';
+import { firstNew, PickerFrame, scrollToEntry, usePickerFlow } from './usePicker';
 
 const CATS: [string, string, ItemEntry['cat'][]][] = [
   ['weapon', 'Weapons', ['weapon']], ['armor', 'Armor', ['armor', 'shield']], ['gear', 'Gear', ['gear', 'ammo', 'focus']],
@@ -35,7 +35,7 @@ export function ItemPicker({ onClose, sec }: { onClose: () => void; sec?: string
     const r = pf.finish(cat, ans, sec ? (before, next) =>
       next.inv.filter((i) => !before.inv.some((b) => b.id === i.id)).reduce((x, i) => setItemSection(x, i.id, sec), next) : undefined);
     if (!r) return;
-    const added = r.next.inv.find((x) => !r.before.inv.some((b) => b.id === x.id));
+    const added = firstNew(r.before.inv, r.next.inv);
     onClose();
     if (added) scrollToEntry('item-' + added.id);
   };
@@ -63,7 +63,6 @@ function ItemList({ cat, onAdd }: { cat: Catalog; onAdd: (e: ItemEntry) => void 
   const query = normName(q);
   const cats = CATS.find(([k]) => k === group)![2];
   const shown = query ? items.filter((e) => normName(e.name).includes(query)) : items.filter((e) => cats.includes(e.cat));
-  const taken = (e: ItemEntry) => c.inv.some((i) => (i.cid ? i.cid === e.id : normName(i.name) === normName(e.name)));
   return (
     <div className="col gap-8">
       <label className="field">Search every item by name
@@ -76,7 +75,7 @@ function ItemList({ cat, onAdd }: { cat: Catalog; onAdd: (e: ItemEntry) => void 
       )}
       {shown.length === 0 && <span className="muted">No item by that name.</span>}
       <div className="col gap-6 picker-results">
-        {shown.map((e) => <PickerResult key={e.id} entry={e} taken={taken(e)} onAdd={() => onAdd(e)} />)}
+        {shown.map((e) => <PickerResult key={e.id} entry={e} taken={hasItem(c, e)} onAdd={() => onAdd(e)} />)}
       </div>
     </div>
   );

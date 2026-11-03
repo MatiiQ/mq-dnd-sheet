@@ -113,7 +113,7 @@ export interface Character {
   tab: Tab; prepMax: number; spellFilter: 'all' | 'prepared'; spellSort: SpellSort; usePrep: boolean;
   hdUsed: number; ds: number; df: number; exh: number;
   conds: Record<string, boolean>; conc: Concentration | null;
-  hpUndo: { prev: HpSnapshot; text: string } | null; concCheck: string | null; restMsg: { title: string; body: string } | null;
+  hpUndo: { prev: HpSnapshot; post?: HpSnapshot; text: string } | null; concCheck: string | null; restMsg: { title: string; body: string } | null;
   slotMax: number[]; slotUsed: number[];
   // Pact Magic: every slot refills on a Short Rest too.
   slotsOnShort: boolean;

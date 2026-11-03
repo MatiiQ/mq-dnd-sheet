@@ -1,14 +1,15 @@
 import { useState, type CSSProperties, type ReactNode } from 'react';
 import { PROF_NAMES, type ProfCat } from '../../catalog/names';
-import { entriesOf, useCatalog } from '../../catalog/useCatalog';
+import { entriesOf } from '../../catalog/merge';
+import { useCatalog } from '../../catalog/useCatalog';
 import { hasActiveEffect, linkOf, sourceLabel } from '../../links';
-import { addGrants, grantChips, newId, normName, profList, removalSummary, removeFeature, toggleEffect, type GrantInput } from '../../logic';
+import { addGrants, grantChips, newId, normName, profList, removalSummary, removeFeature, type GrantInput } from '../../logic';
 import { removeEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { Character, Feature, FeatureGroup, SrcKind } from '../../types';
 import { GrantList, SourceChips } from '../Chips';
 import { FeaturePicker } from '../pickers/FeaturePicker';
 import { SourcePicker } from '../SourcePicker';
-import { AddButton, EntryForm, EntryRow, RemoveButton, TextField } from '../ui';
+import { AddButton, EffectSwitch, EntryForm, EntryRow, RemoveButton, TextField } from '../ui';
 
 const PROF_CATS: [ProfCat, string][] = [['armor', 'Armor'], ['weapon', 'Weapons'], ['tool', 'Tools'], ['language', 'Languages']];
 
@@ -73,16 +74,11 @@ export function FeaturesTab() {
               {items.map((x) => {
                 if (f.editingId === x.id) return <div key={x.id}>{form}</div>;
                 const link = linkOf('feature', x.id), src = sourceLabel(c, x);
-                const effect = hasActiveEffect(c, link), on = c.effectsOn.includes(link);
                 return (
                   <EntryRow key={x.id} id={'feat-' + x.id} name={x.name}
                     // A catalog description runs to paragraphs: the row shows its start, the open row all of it.
                     head={<><strong>{x.name}</strong>{x.desc && <span className="muted entry-clamp">{x.desc}</span>}</>}
-                    side={effect ? (
-                      <button type="button" aria-pressed={on} aria-label={(on ? 'Switch off ' : 'Switch on ') + x.name} className="btn btn-sm"
-                        style={{ border: '1px solid var(--accent)', background: on ? 'var(--accent)' : 'transparent', color: on ? 'var(--on-accent)' : 'var(--accent)' }}
-                        onClick={() => update((p) => toggleEffect(p, link))}>{on ? 'On' : 'Off'}</button>
-                    ) : undefined}
+                    side={hasActiveEffect(c, link) ? <EffectSwitch link={link} name={x.name} /> : undefined}
                     body={x.desc || src ? <>
                       {x.desc && <span className="entry-desc">{x.desc}</span>}
                       {src && <span className="muted">Source: {src}</span>}

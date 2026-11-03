@@ -1,17 +1,14 @@
 // The item list in sections (plan 6): sections the player names and orders, and moving items between them.
 // Pure functions (Character → Character), each returning c itself when nothing changes. Imported by components and
 // tests only; logic.ts never imports this file.
-import { setHands } from './hands';
-import { COINS, isContainer, newId, removalSummary, removeItem } from './logic';
+import { itemOf, setHands } from './hands';
+import { COINS, coinWeight, isContainer, newId, removalSummary, removeItem, withoutKeys } from './logic';
 import type { Character, Item, Section } from './types';
 
 // The list for items with no section (or one that is gone): always last, never renamed or removed.
 export const DEFAULT_SECTION = 'Other items';
 
 const hasSection = (c: Character, id: string) => c.sections.some((s) => s.id === id);
-const withoutSec = (it: Item): Item => { const { sec: _, ...rest } = it; return rest; };
-const withoutIn = (it: Item): Item => { const { in: _, ...rest } = it; return rest; };
-const itemOf = (c: Character, id: string) => c.inv.find((i) => i.id === id);
 
 export function addSection(c: Character, name: string): Character {
   const n = name.trim();
@@ -36,13 +33,13 @@ export function moveSection(c: Character, id: string, dir: -1 | 1): Character {
 // Its items go back to the default list.
 export function removeSection(c: Character, id: string): Character {
   if (!hasSection(c, id)) return c;
-  return { ...c, sections: c.sections.filter((s) => s.id !== id), inv: c.inv.map((i) => (i.sec === id ? withoutSec(i) : i)) };
+  return { ...c, sections: c.sections.filter((s) => s.id !== id), inv: c.inv.map((i) => (i.sec === id ? withoutKeys(i, ['sec']) : i)) };
 }
 
 // Puts an item in a section (null: the default list). Picking a section also takes the item out of its container.
 export function setItemSection(c: Character, itemId: string, sec: string | null): Character {
   if (!itemOf(c, itemId) || (sec !== null && !hasSection(c, sec))) return c;
-  return { ...c, inv: c.inv.map((i) => (i.id !== itemId ? i : sec === null ? withoutSec(withoutIn(i)) : { ...withoutIn(i), sec })) };
+  return { ...c, inv: c.inv.map((i) => (i.id !== itemId ? i : sec === null ? withoutKeys(i, ['in', 'sec']) : { ...withoutKeys(i, ['in']), sec })) };
 }
 
 // The sections in order, then the default list (sec null) last, each with its items in list order.
@@ -64,7 +61,7 @@ export function moveInto(c: Character, itemId: string, bagId: string): Character
 // Takes an item out of its container, back to its section (or the default list).
 export function takeOut(c: Character, itemId: string): Character {
   const it = itemOf(c, itemId);
-  return it?.in ? { ...c, inv: c.inv.map((i) => (i.id === itemId ? withoutIn(i) : i)) } : c;
+  return it?.in ? { ...c, inv: c.inv.map((i) => (i.id === itemId ? withoutKeys(i, ['in']) : i)) } : c;
 }
 
 const contentsOf = (c: Character, bagId: string) => c.inv.filter((i) => i.in === bagId);
@@ -74,8 +71,7 @@ const contentsOf = (c: Character, bagId: string) => c.inv.filter((i) => i.in ===
 export function removeContainer(c: Character, bagId: string, contents: 'out' | 'remove'): Character {
   if (contents === 'out') return removeItem(c, bagId);
   const emptied = contentsOf(c, bagId).reduce((x, i) => removeItem(x, i.id), c);
-  const noCoins = (i: Item) => Object.fromEntries(Object.entries(i).filter(([k]) => !(COINS as string[]).includes(k))) as Item;
-  return removeItem({ ...emptied, inv: emptied.inv.map((i) => (i.id === bagId ? noCoins(i) : i)) }, bagId);
+  return removeItem({ ...emptied, inv: emptied.inv.map((i) => (i.id === bagId ? withoutKeys(i, COINS) : i)) }, bagId);
 }
 
 // What the removal confirm shows: the bag's removalSummary, plus with 'remove' each content item (by name) and its own
@@ -96,6 +92,6 @@ export function removeContainerSummary(c: Character, bagId: string, contents: 'o
 export function containerLoad(c: Character, bagId: string): { items: number; coins: number; total: number; cap: number | null } {
   const bag = itemOf(c, bagId);
   const items = contentsOf(c, bagId).reduce((t, i) => t + (i.wt || 0) * i.qty, 0);
-  const coins = COINS.reduce((t, k) => t + (bag?.[k] || 0), 0) / 50;
+  const coins = coinWeight(bag ?? {});
   return { items, coins, total: items + coins, cap: bag?.cap ?? null };
 }

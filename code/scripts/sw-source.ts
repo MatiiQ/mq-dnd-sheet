@@ -6,12 +6,11 @@ self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(PRECACHE.map((u) => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 
+// Old caches stay until the next page load: a page still open from the old version loads its lazy chunks from them.
+const dropOld = () => caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))));
+
 self.addEventListener('activate', (e) => {
-  e.waitUntil(
-    caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
-      .then(() => self.clients.claim())
-  );
+  e.waitUntil(self.clients.claim());
 });
 
 self.addEventListener('fetch', (e) => {
@@ -20,6 +19,7 @@ self.addEventListener('fetch', (e) => {
   // Pages: network first so updates land on the next launch, cache when offline.
   // no-cache revalidates with the server, so a launch right after a deploy doesn't get the HTTP-cached page.
   if (req.mode === 'navigate') {
+    e.waitUntil(dropOld());
     const network = fetch(req, { cache: 'no-cache' }).then((res) =>
       res.ok && !res.redirected ? res : caches.match('./index.html').then((hit) => hit || res));
     // On a slow connection, show the cached page after 3 s instead of waiting for the network.

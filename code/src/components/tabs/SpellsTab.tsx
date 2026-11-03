@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
-  ABILITIES, AC_SPELLS, CAST_NAMES, DAMAGE_TYPES, newId, ownFreeCasts, setOwnFreeCast, SPELL_SORTS, acAfterEdit, castSpell, concAfterEdit, detectAcSpell, effectsAfterEdit, fmt, preparedCount, removeSpell, setConc, setSlotUsed,
-  slotsLeft, sortSpells, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, castFree, freeCastsOf, spellAttackFor, spellSaveDcFor, toggleEffect, type AcPart
+  ABILITIES, AC_SPELLS, CAST_NAMES, newId, ORDINAL, ownFreeCasts, setOwnFreeCast, SPELL_SORTS, acAfterEdit, castSpell, concAfterEdit, detectAcSpell, effectsAfterEdit, fmt, preparedCount, removeSpell, setConc, setSlotUsed,
+  slotsLeft, sortSpells, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, freeCastsOf, spellAttackFor, spellSaveDcFor
 } from '../../logic';
 import { hasActiveEffect, inactiveReason, linkOf, sourceLabel } from '../../links';
 import { BLANK_SPELL, draftFromSpell, spellFromForm, type SpellDraft } from '../../catalog/copy';
@@ -9,9 +9,8 @@ import { patchEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { AcEffect, Character, Spell } from '../../types';
 import { SpellPicker } from '../pickers/SpellPicker';
 import { SourcePicker } from '../SourcePicker';
-import { AddButton, ChevronDown, DieBadge, EntryForm, EntryRow, NumInput, Step, TextField, UsePips } from '../ui';
+import { AddButton, Caret, DamageTypeField, DieBadge, EffectSwitch, EntryForm, EntryRow, FreeCastButton, NumInput, PartTiles, Step, TextField, UsePips } from '../ui';
 
-const ORDINAL = ['Cantrip', '1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th'];
 const AC_EFFECTS: [AcEffect | '', string][] = [['', 'None'], ['bonus', 'Bonus'], ['base', 'Base (+ DEX)'], ['floor', 'Floor']];
 const TIMES = ['Action', 'Bonus Action', 'Reaction', '1 Minute', '10 Minutes', '1 Hour'];
 const SAVES: [SpellDraft['save'], string][] = [['', 'None'], ...ABILITIES.map(([k, n]): [SpellDraft['save'], string] => [k, n])];
@@ -22,10 +21,9 @@ const EFFECTS: [SpellDraft['fx'], string][] = [['', '—'], ['damage', 'Damage']
 const toDraft = (c: Character, sp: Spell): SpellDraft => ({ ...draftFromSpell(sp), freeCast: ownFreeCasts(c, sp.id).length > 0 });
 
 export function SpellsTab() {
-  const { c, update, edit } = useSheet();
+  const { c, update, edit, form: openForm, setForm } = useSheet();
   const [castPick, setCastPick] = useState<string | null>(null);
   const [statOpen, setStatOpen] = useState<'dc' | 'atk' | null>(null);
-  const { form: openForm, setForm } = useSheet();
   const f = useEntryForm('spell', BLANK_SPELL, 'spell', 'Add a custom spell');
   const picking = openForm?.kind === 'pick-spell';
   const usePrep = c.usePrep;
@@ -107,11 +105,7 @@ export function SpellsTab() {
           </select>
         </label>
         <TextField label="Damage or healing dice" value={f.draft.dmg} placeholder="e.g. 8d6" onChange={(v) => f.set({ dmg: v })} />
-        <label className="field">Damage type
-          <select className="input" value={f.draft.dtype} onChange={(e) => f.set({ dtype: e.target.value })}>
-            {['', ...DAMAGE_TYPES, ...(f.draft.dtype && !DAMAGE_TYPES.includes(f.draft.dtype) ? [f.draft.dtype] : [])].map((t) => <option key={t} value={t}>{t || '—'}</option>)}
-          </select>
-        </label>
+        <DamageTypeField value={f.draft.dtype} onChange={(dtype) => f.set({ dtype })} />
         <label className="check"><input type="checkbox" checked={f.draft.freeCast} onChange={(e) => f.set({ freeCast: e.target.checked })} />Give it a free cast (once per Long Rest)</label>
       </div>
       <label className="field">Description
@@ -154,7 +148,13 @@ export function SpellsTab() {
           </div>
         )}
       </div>
-      {breakdown && <SpellBreakdown title={statOpen === 'dc' ? 'Spell save DC' : 'Spell attack'} parts={breakdown} bareFirst={statOpen === 'dc'} />}
+      {breakdown && (
+        <div className="block">
+          <h3 className="block-title">{statOpen === 'dc' ? 'Spell save DC' : 'Spell attack'}</h3>
+          {/* Same look as the Armor Class panel. The DC's first part (8) is a bare number; the rest are signed. */}
+          <PartTiles parts={breakdown} bareFirst={statOpen === 'dc'} />
+        </div>
+      )}
 
       <div className="row wrap" style={{ gap: '8px 14px' }}>
         <button type="button" role="switch" aria-checked={usePrep} className="btn row gap-10" style={{ fontSize: 14, padding: '0 12px 0 8px' }}
@@ -275,23 +275,6 @@ function DieStat({ label, value, open, onToggle }: { label: string; value: strin
   );
 }
 
-// Same look as the Armor Class panel. The DC's first part (8) is a bare number; the rest are signed.
-function SpellBreakdown({ title, parts, bareFirst }: { title: string; parts: AcPart[]; bareFirst: boolean }) {
-  return (
-    <div className="block">
-      <h3 className="block-title">{title}</h3>
-      <div className="grid speed-grid">
-        {parts.map((p, i) => (
-          <div key={p.label} className="tile">
-            <span className="muted">{p.label}</span>
-            <span className="speed-value">{bareFirst && i === 0 ? p.value : fmt(p.value)}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boolean; setPicking: (on: boolean) => void; onEdit: () => void }) {
   const { c, update } = useSheet();
   const lvl = sp.lvl || 0;
@@ -304,7 +287,7 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
   // A non-Concentration spell whose grants need it on (Shillelagh) gets an On/Off switch; a Concentration one is on
   // while concentrating.
   const link = linkOf('spell', sp.id);
-  const effect = !sp.c && hasActiveEffect(c, link), effectOn = c.effectsOn.includes(link);
+  const effect = !sp.c && hasActiveEffect(c, link);
   const concOf = { id: sp.id, name: sp.name };
 
   const casts: { l: number; left: number }[] = [];
@@ -360,19 +343,8 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
           className="btn btn-sm" style={{ border: '1px solid var(--blue)', background: concOn ? 'var(--blue)' : 'transparent', color: concOn ? 'var(--on-accent)' : 'var(--blue)' }}
           onClick={() => update(setConc(concOn ? null : concOf))}>{concOn ? 'Conc. ✓' : 'Conc.'}</button>
       )}
-      {effect && (
-        <button type="button" aria-pressed={effectOn} aria-label={(effectOn ? 'Switch off ' : 'Switch on ') + sp.name}
-          className="btn btn-sm" style={{ border: '1px solid var(--accent)', background: effectOn ? 'var(--accent)' : 'transparent', color: effectOn ? 'var(--on-accent)' : 'var(--accent)' }}
-          onClick={() => update((p) => toggleEffect(p, link))}>{effectOn ? 'On' : 'Off'}</button>
-      )}
-      {(lvl === 0 || usable) && frees.map((r) => {
-        const used = r.count <= 0;
-        return (
-          <button key={r.id} type="button" aria-pressed={used} aria-label={used ? 'Free casts of ' + sp.name + ' (' + r.name + ') used up; tap to give one back' : 'Use a free cast of ' + sp.name + ' (' + r.name + '), ' + r.count + ' left'}
-            className="btn btn-sm" style={{ border: '1px solid ' + (used ? 'var(--line-2)' : 'var(--accent)'), background: 'transparent', color: used ? 'var(--muted)' : 'var(--accent)' }}
-            onClick={() => update((p) => castFree(p, sp, r.id))}>{used ? 'Free used' : 'Free · ' + r.count + ' left'}</button>
-        );
-      })}
+      {effect && <EffectSwitch link={link} name={sp.name} />}
+      {(lvl === 0 || usable) && frees.map((r) => <FreeCastButton key={r.id} sp={sp} r={r} />)}
       {!!first && usable && (
         <div role="group" aria-label={'Spell slots for ' + sp.name} className="row wrap gap-6">
           <button type="button" aria-label={'Cast ' + sp.name + ' with a level ' + first.l + ' slot, ' + first.left + ' left'}
@@ -380,7 +352,7 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
           {upcasts.length > 0 && (
             <button type="button" aria-expanded={picking} aria-label={'Upcast ' + sp.name + ' with a higher slot'} className="btn btn-sm row gap-4"
               style={{ border: '1px solid var(--line-2)', background: 'transparent', color: 'var(--text-2)' }} onClick={() => setPicking(!picking)}>
-              Up<ChevronDown size={12} style={{ transform: picking ? 'rotate(180deg)' : undefined }} />
+              Up<Caret open={picking} />
             </button>
           )}
         </div>

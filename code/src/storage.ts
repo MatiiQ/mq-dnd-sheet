@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { slug } from './catalog/schema';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import { migrate, newId, normalize } from './logic';
 import type { Character } from './types';
@@ -98,7 +99,8 @@ const BACKUP_APP = 'dnd-character-sheet';
 const backup = (characters: unknown[]) => ({ app: BACKUP_APP, version: 1, exportedAt: new Date().toISOString(), characters });
 
 // Your characters, the open one as it is now. An open example isn't in the list, so it's never exported.
-export const exportStore = (s: Store) => backup(freshList(s).map((x) => (x.id === s.id ? s.c : load(x.id))));
+// Others are exported as stored, so an unreadable sheet is left out instead of being swapped for the sample.
+export const exportStore = (s: Store) => backup(freshList(s).map((x) => (x.id === s.id ? s.c : readJSON(sheetKey(x.id)))).filter((x) => x));
 
 // Every saved character exactly as stored, without loading it. Used by the crash screen.
 export function rawBackup() {
@@ -111,11 +113,14 @@ export function rawBackup() {
 // With a character's name, the file is named after it. Resolves to what happened, or null if the user cancelled the share sheet.
 export async function saveBackupFile(data: unknown, name?: string): Promise<string | null> {
   const json = JSON.stringify(data, null, 2);
-  const slug = name === undefined ? 'backup' : name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'character';
-  const fileName = 'character-sheet-' + slug + '-' + new Date().toISOString().slice(0, 10) + '.json';
+  const label = name === undefined ? 'backup' : slug(name) || 'character';
+  const fileName = 'character-sheet-' + label + '-' + new Date().toISOString().slice(0, 10) + '.json';
   const file = new File([json], fileName, { type: 'application/json' });
   if (navigator.canShare?.({ files: [file] })) {
-    try { await navigator.share({ files: [file] }); return 'Backup shared.'; } catch { return null; }
+    try { await navigator.share({ files: [file] }); return 'Backup shared.'; } catch (e) {
+      if ((e as DOMException)?.name === 'AbortError') return null;
+      // Any other failure falls through to the download below.
+    }
   }
   const url = URL.createObjectURL(file);
   const a = document.createElement('a');

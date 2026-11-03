@@ -8,7 +8,7 @@ import type { ChoiceSpec, Entry, GrantSpec } from '../../catalog/schema';
 import { findUnlinked, normName } from '../../logic';
 import { useSheet } from '../../sheet';
 import type { Character } from '../../types';
-import { LinkOrAdd } from '../GrantEditor';
+import { LINKABLE, LinkOrAdd } from '../GrantEditor';
 
 // The answers of one entry in the flow, keyed by its path: '' for the entry being added, then '>' + the id of each
 // entry nested below it (Elf → '>trait/elf/elven-lineage>trait/elf/wood-elf').
@@ -22,7 +22,6 @@ interface CountItem { node: FlowNode; spec: Omit<GrantSpec, 'opt'>; on: boolean 
 interface LinkItem { node: FlowNode; spec: Omit<GrantSpec, 'opt'>; name: string; found: string; choice: 'link' | 'new' | null }
 
 const EMPTY: NodeAnswers = { picks: {}, counted: {}, links: {} };
-const LINKABLE: Partial<Record<GrantSpec['kind'], 'resource' | 'spell' | 'action'>> = { resource: 'resource', spell: 'spell', action: 'action' };
 
 // Every entry of the flow, depth first: the entry, then what it nests (a background's feat, a species' traits, the
 // lineage picked), each with its answers merged over its preset picks. Choices a preset answers are not asked.
@@ -103,15 +102,15 @@ export function ChoiceFlow({ entry, cat, preset, initial, onDone, onCancel }: {
     const valid = validPicks(choice, cur);
     const need = needed(cat, c, choice, node.picks);
     ready = valid.length >= need;
+    const count = (v: string) => cur.filter((x) => x === v).length;
     // A tap adds the option while there is room (a second time only with repeat), else takes it out again.
     const toggle = (v: string) => {
-      const n = cur.filter((x) => x === v).length;
+      const n = count(v);
       const added = [...cur, v];
       if (validPicks(choice, added).length === added.length && (n === 0 || choice.repeat)) setPicks(node, choice, added);
       else if (n > 0) setPicks(node, choice, cur.filter((x) => x !== v));
       else if (choice.pick === 1) setPicks(node, choice, [v]);
     };
-    const count = (v: string) => cur.filter((x) => x === v).length;
     const optButton = (value: string, label: string, extra?: string, warn?: boolean) => (
       <button key={value} type="button" className="pick-opt" aria-pressed={count(value) > 0} onClick={() => toggle(value)}>
         <span className="col">

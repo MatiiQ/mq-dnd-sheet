@@ -1,7 +1,8 @@
 import { expect, it, vi } from 'vitest';
 import srdEntries from '../data/srd/index';
 import { mergeCatalog, type Catalog } from './merge';
-import { entriesOf, startLoad, type CatalogState } from './useCatalog';
+import { entriesOf } from './merge';
+import { startLoad, type CatalogState } from './useCatalog';
 
 const catA = mergeCatalog(srdEntries, null);
 const catB = mergeCatalog(srdEntries.slice(0, 10), null);

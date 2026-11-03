@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { addGrants, grantChips, removeRef, type Chip, type GrantInput } from '../logic';
-import type { Character } from '../types';
 import { useSheet } from '../sheet';
 import type { SourceKind } from '../links';
 import { GrantEditor } from './GrantEditor';
@@ -48,12 +47,10 @@ export function GrantList({ link, fromKind, pending, setPending }: { link: strin
       </div>
       {adding
         ? <GrantEditor fromKind={fromKind} onCancel={() => setAdding(false)} onAdd={(g) => {
-          if (link) update((p) => addTo(p, link, g)); else setPending([...pending, g]);
+          if (link) update((p) => addGrants(p, link, [g])); else setPending([...pending, g]);
           setAdding(false);
         }} />
         : <button type="button" className="btn btn-add" onClick={() => setAdding(true)}>+ Add grant</button>}
     </div>
   );
 }
-
-const addTo = (c: Character, link: string, g: GrantInput) => addGrants(c, link, [g]);

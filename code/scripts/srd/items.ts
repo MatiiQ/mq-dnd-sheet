@@ -1,7 +1,7 @@
 // SRD equipment and magic items → ItemEntry. Tables come from the -layout text, prose from the column text.
 import { withBase } from '../../src/catalog/base.ts';
 import { catalogId, slug, type ItemEntry } from '../../src/catalog/schema.ts';
-import { paragraphs, srdLines } from './text.ts';
+import { paragraphs, srdLines, unbalanced } from './text.ts';
 
 const COST = '[\\d,]+ [GSC]P';
 // '2 lb.', '1/4 lb.', '1½ lb.', '5 lb. (full)' → pounds; '—' and 'Varies' → undefined.
@@ -141,7 +141,6 @@ export function parseTools(text: string): ItemEntry[] {
   });
 }
 
-const unbalanced = (s: string) => (s.match(/\(/g) ?? []).length > (s.match(/\)/g) ?? []).length;
 const TYPE_START = /^(Armor|Weapon|Wondrous Item|Potion|Ring|Rod|Scroll|Staff|Wand)(,| \()/;
 const RARITY = /(Common|Uncommon|Very Rare|Rare|Legendary|Artifact|Rarity Varies)/;
 // Magic Items A–Z: a name line, then "Type, Rarity (Requires Attunement…)", which can wrap.

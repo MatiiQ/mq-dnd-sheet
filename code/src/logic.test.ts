@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { newId } from './logic';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import {
   ABILITIES, SKILLS, grantChips, addGrants, findUnlinked, removalChain, removalSummary, removeFeature, removeResource, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, toggleEffect, dawn, refillFor, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, splitTraining, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, NEW_FIELDS, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, removeItem, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
@@ -1779,5 +1780,22 @@ describe('slotsOnShort', () => {
     const { slotsOnShort: _, ...old } = sampleCharacter();
     expect(migrate(old).slotsOnShort).toBe(false);
     expect(migrate({ ...old, slotsOnShort: true }).slotsOnShort).toBe(true);
+  });
+});
+
+describe('review fixes', () => {
+  it('Undo leaves a condition changed by hand after the damage', () => {
+    const hit = applyDamage(make({ hp: 5, amount: 9 }));
+    const proned = { ...hit, conds: { ...hit.conds, Prone: true } };
+    expect(undoHp(proned)).toMatchObject({ hp: 5, conds: { Prone: true, Unconscious: true } });
+    expect(undoHp(hit).conds.Unconscious).toBeFalsy();
+  });
+  it('newId is unique within one millisecond', () => {
+    expect(new Set(Array.from({ length: 1000 }, newId)).size).toBe(1000);
+  });
+  it('migrate floors a fractional level and clamps HP', () => {
+    const c = migrate({ ...JSON.parse(JSON.stringify(make({}))), level: 5.5, hp: -3, maxHp: 20 });
+    expect(c.level).toBe(5);
+    expect(c.hp).toBe(0);
   });
 });

@@ -39,20 +39,21 @@ export function weaponMatches(it: Item, list: string): boolean {
   });
 }
 
-const itemOf = (c: Character, id: string) => c.inv.find((i) => i.id === id);
+export const itemOf = (c: Character, id: string) => c.inv.find((i) => i.id === id);
+const withEquipped = (c: Character, id: string): Character => ({ ...c, inv: c.inv.map((i) => (i.id === id ? { ...i, eq: true } : i)) });
 export const shieldOn = (c: Character) => c.inv.some((i) => isEquipped(i) && i.armor === 'shield');
 
 // Whole weapons in hand, oldest first. A Two-Handed id twice is one weapon; a Versatile id twice is its two-handed use
 // (two Versatile weapons of one row held one-handed are not modelled); any other entry is one weapon.
 export function weaponsHeld(c: Character, hands: string[] = c.hands): { id: string; two: boolean }[] {
-  const out: { id: string; two: boolean; n: number }[] = [];
+  const out: { id: string; two: boolean }[] = [];
   for (const id of hands) {
     const it = itemOf(c, id);
     const pair = !!it && (twoHanded(it) || versatile(it));
     const prev = pair ? out.find((w) => w.id === id) : undefined;
-    if (prev) { prev.n++; prev.two = true; } else out.push({ id, two: !!it && twoHanded(it), n: 1 });
+    if (prev) prev.two = true; else out.push({ id, two: !!it && twoHanded(it) });
   }
-  return out.map(({ id, two }) => ({ id, two }));
+  return out;
 }
 
 // The hands rules (spec, "Equipped and in hand"): only equipped weapons with quantity 1 or more; a Two-Handed weapon
@@ -115,7 +116,7 @@ export function putInHand(c: Character, id: string, two = false): { c: Character
   if (!it || !isWeapon(it)) return { c, away: [] };
   const both = twoHanded(it) || (two && versatile(it));
   if (both && shieldOn(c)) return { c, away: [], blocked: 'shield' };
-  const base = it.eq ? c : { ...c, inv: c.inv.map((i) => (i.id === id ? { ...i, eq: true } : i)) };
+  const base = it.eq ? c : withEquipped(c, id);
   const once = base.hands.filter((x) => x === id).length === 1;
   const next = once && !twoHanded(it) && !versatile(it) && it.qty >= 2
     ? [...base.hands, id]
@@ -128,7 +129,7 @@ export const putAway = (c: Character, id: string): Character => setHands(c, c.ha
 
 // Equips a Shield: it takes a hand, so hands trim to one entry (a Two-Handed weapon always goes). away: names put away.
 export function equipShield(c: Character, id: string): { c: Character; away: string[] } {
-  const base = { ...c, inv: c.inv.map((i) => (i.id === id ? { ...i, eq: true } : i)) };
+  const base = withEquipped(c, id);
   const out = setHands(base, base.hands);
   return { c: out, away: putAwayNames(base, out) };
 }

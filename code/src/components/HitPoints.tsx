@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { activeGrants, sourceLabel } from '../links';
-import { abilityMod, applyDamage, maxHpOf, num, applyHeal, applySetTemp, clearHpUndo, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, isDead, setHp, setMaxHp, spendHitDie, undoHp } from '../logic';
+import { abilityMod, applyDamage, capital, maxHpOf, num, applyHeal, applySetTemp, clearHpUndo, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, isDead, setHp, setMaxHp, spendHitDie, undoHp } from '../logic';
 import { useWide } from '../layout';
 import { useSheet } from '../sheet';
 import type { Character } from '../types';
@@ -31,6 +31,8 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
   const stateNotice = c.hp === 0 && dead ? 'dead' : stable ? 'stable' : null;
   const [closedNotice, setClosedNotice] = useState<string | null>(null);
   useEffect(() => { if (closedNotice !== stateNotice) setClosedNotice(null); }, [stateNotice]);
+  // These edit the typed value; with an HP-per-level grant it differs from the max shown, so say so.
+  const maxName = max !== c.maxHp ? 'base max HP' : 'max HP';
   const deltaColor = delta < 0 ? 'var(--danger)' : delta > 0 ? 'var(--blue)' : 'var(--muted)';
 
   // The undo row hides itself after a few seconds; a newer HP action restarts the wait.
@@ -88,12 +90,12 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
 
       <div className="row wrap gap-8">
         <div className="row amount">
-          <button type="button" className="step" aria-label="Decrease amount" onClick={() => setAmount(Math.max(1, c.amount - 1))}>−</button>
+          <Step label="Decrease amount" onClick={() => setAmount(Math.max(1, c.amount - 1))}>−</Step>
           <label className="col" style={{ alignItems: 'center', width: 64, fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>Amount
             <NumInput key={amtKey} id="hp-amount" value={c.amount} min={0} max={999} initialDraft={hdPrompt && !c.amount ? '' : null} emptyValue={0} onCommit={(v) => update({ amount: v })}
               style={{ width: 56, font: '700 18px var(--sans)', textAlign: 'center', background: 'transparent', border: 'none', padding: 0 }} />
           </label>
-          <button type="button" className="step" aria-label="Increase amount" onClick={() => setAmount(Math.min(999, c.amount + 1))}>+</button>
+          <Step label="Increase amount" onClick={() => setAmount(Math.min(999, c.amount + 1))}>+</Step>
         </div>
         <button type="button" className="btn btn-act btn-damage" onClick={() => act(applyDamage)}>Damage</button>
         <button type="button" className="btn btn-act btn-heal" aria-disabled={dead} onClick={() => act(hdPrompt ? healHitDie : applyHeal)}>Heal</button>
@@ -111,11 +113,10 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
       {edit && (
         <div className="dashed-box">
           <div className="row gap-6">
-            {/* These edit the typed value; with an HP-per-level grant it differs from the max shown, so say so. */}
-            <span className="muted">{max !== c.maxHp ? 'Base max HP' : 'Max HP'}</span>
-            <Step label={max !== c.maxHp ? 'Decrease base max HP' : 'Decrease max HP'} onClick={() => update((p) => setMaxHp(p, p.maxHp - 1))}>−</Step>
-            <TypeInNumber className="input input-num" aria-label={max !== c.maxHp ? 'Base max HP' : 'Max HP'} value={c.maxHp} onCommit={(n) => update((p) => setMaxHp(p, n))} />
-            <Step label={max !== c.maxHp ? 'Increase base max HP' : 'Increase max HP'} onClick={() => update((p) => setMaxHp(p, p.maxHp + 1))}>+</Step>
+            <span className="muted">{capital(maxName)}</span>
+            <Step label={'Decrease ' + maxName} onClick={() => update((p) => setMaxHp(p, p.maxHp - 1))}>−</Step>
+            <TypeInNumber className="input input-num" aria-label={capital(maxName)} value={c.maxHp} onCommit={(n) => update((p) => setMaxHp(p, n))} />
+            <Step label={'Increase ' + maxName} onClick={() => update((p) => setMaxHp(p, p.maxHp + 1))}>+</Step>
           </div>
           {!c.origOn && (
             <button type="button" className="btn btn-add" style={{ fontSize: 14, padding: '0 12px' }} onClick={() => update((p) => ({ origOn: true, origHp: p.maxHp }))}>+ Original max HP</button>
@@ -144,8 +145,8 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
           <span className="small hd-sub">left · CON {fmt(abilityMod(c, 'con'))}</span>
         </div>
         <div className="row amount">
-          <button type="button" className="step" aria-label="Remove a Hit Die" onClick={() => update({ hdUsed: Math.min(c.level, hdUsed + 1) })}>−</button>
-          <button type="button" className="step" aria-label="Restore a Hit Die" onClick={() => update({ hdUsed: Math.max(0, hdUsed - 1) })}>+</button>
+          <Step label="Remove a Hit Die" onClick={() => update({ hdUsed: Math.min(c.level, hdUsed + 1) })}>−</Step>
+          <Step label="Restore a Hit Die" onClick={() => update({ hdUsed: Math.max(0, hdUsed - 1) })}>+</Step>
         </div>
         <button type="button" className="btn" style={{ fontSize: 14, padding: '0 12px', marginLeft: 'auto' }} aria-disabled={!canSpendHD} onClick={spendHD}>Spend Hit Die</button>
       </div>

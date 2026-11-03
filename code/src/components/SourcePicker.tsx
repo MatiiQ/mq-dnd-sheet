@@ -29,7 +29,7 @@ export function SourcePicker({ self, value, onChange, noKind }: { self?: string;
         <select className="input" value={sel} onChange={(e) => pick(e.target.value)}>
           <option value="">—</option>
           {groups.map(([label, kind, list]) => {
-            const opts = list.map((x) => [linkOf(kind, x.id), x.name]).filter(([l]) => l !== self && ok(l));
+            const opts = list.map((x) => [linkOf(kind, x.id), x.name]).filter(([l]) => ok(l));
             return opts.length > 0 && (
               <optgroup key={kind} label={label}>
                 {opts.map(([l, name]) => <option key={l} value={l}>{name}</option>)}

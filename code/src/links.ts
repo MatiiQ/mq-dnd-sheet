@@ -78,7 +78,8 @@ export function fixLinks(c: Character): Character {
   const set = (k: LinkedList, list: Linked[]) => { out = { ...out, [k]: list }; };
   for (const k of LINKED_LISTS) {
     const list = out[k] as Linked[];
-    if (list.some((x) => x.from !== undefined && !sourceOf(out, x.from))) set(k, list.map((x) => (x.from !== undefined && !sourceOf(out, x.from) ? unlink(x) : x)));
+    const dangling = (x: Linked) => x.from !== undefined && !sourceOf(out, x.from);
+    if (list.some(dangling)) set(k, list.map((x) => (dangling(x) ? unlink(x) : x)));
   }
   for (const [k, kind] of [['feats', 'feature'], ['spells', 'spell']] as const) {
     for (const x of out[k] as (Feature | Spell)[]) {

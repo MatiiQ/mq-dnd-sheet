@@ -1,5 +1,6 @@
 import { CONDITIONS, CONDITION_RULES, setExhaustion, toggleCondition } from '../logic';
 import { useSheet } from '../sheet';
+import { Step } from './ui';
 
 export function Conditions() {
   const { c, update } = useSheet();
@@ -19,8 +20,8 @@ export function Conditions() {
         ))}
         <div className="row amount" style={{ marginLeft: 'auto', paddingLeft: 14 }}>
           <span style={{ fontSize: 14, color: 'var(--text-2)' }}>Exhaustion <strong style={{ color: 'var(--accent)' }}>{c.exh}</strong> / 6</span>
-          <button type="button" className="step" aria-label="Decrease exhaustion" onClick={() => update((p) => setExhaustion(p, p.exh - 1))}>−</button>
-          <button type="button" className="step" aria-label="Increase exhaustion" onClick={() => update((p) => setExhaustion(p, p.exh + 1))}>+</button>
+          <Step label="Decrease exhaustion" onClick={() => update((p) => setExhaustion(p, p.exh - 1))}>−</Step>
+          <Step label="Increase exhaustion" onClick={() => update((p) => setExhaustion(p, p.exh + 1))}>+</Step>
         </div>
       </div>
       {rules.length > 0 && (

@@ -3,6 +3,10 @@ import { catalogId, entryScope, PHB_TO_SRD, slug, type Entry, type GrantSpec, ty
 
 export interface Catalog { list: Entry[]; byId: Map<string, Entry> }
 
+export function entriesOf<K extends Kind>(cat: Catalog, kind: K): Extract<Entry, { kind: K }>[] {
+  return cat.list.filter((e): e is Extract<Entry, { kind: K }> => e.kind === kind);
+}
+
 // A pack lives on the device for months; an app update can add an alias since it was built. Re-keying recomputes
 // every id with today's PHB_TO_SRD and moves the references inside entries (spell grants, free casts, a
 // background's feat) along, so an entry the SRD also has lands on the SRD id instead of being listed twice.

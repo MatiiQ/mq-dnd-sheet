@@ -22,7 +22,7 @@ function worker(seed: Record<string, string>, fetchStub: () => Promise<Response>
   new Function('self', 'caches', 'fetch', 'location', swSource('test', []))(self, caches, fetch, { origin: 'https://x' });
   const fire = (request: { method: string; url: string; mode: string }) => {
     let responded: Promise<Response> | undefined;
-    listeners.fetch({ request, respondWith: (p: Promise<Response>) => { responded = p; } });
+    listeners.fetch({ request, waitUntil: () => {}, respondWith: (p: Promise<Response>) => { responded = p; } });
     return responded!;
   };
   const navigate = () => fire({ method: 'GET', url: 'https://x/', mode: 'navigate' });

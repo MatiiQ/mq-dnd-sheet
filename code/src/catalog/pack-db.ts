@@ -18,9 +18,13 @@ async function run<T>(mode: IDBTransactionMode, f: (s: IDBObjectStore) => IDBReq
   const db = await open();
   try {
     return await new Promise<T>((resolve, reject) => {
-      const req = f(db.transaction(STORE, mode).objectStore(STORE));
-      req.onsuccess = () => resolve(req.result as T);
-      req.onerror = () => reject(new Error('The PHB data storage failed.'));
+      const tx = db.transaction(STORE, mode);
+      const req = f(tx.objectStore(STORE));
+      const fail = () => reject(new Error('The PHB data storage failed.'));
+      req.onerror = fail;
+      tx.onabort = fail;
+      // Done when the transaction commits, not when the request succeeds: a quota abort comes after the request.
+      tx.oncomplete = () => resolve(req.result as T);
     });
   } finally { db.close(); }
 }

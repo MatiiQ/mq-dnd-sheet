@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react';
 import { armorClass, fmt, initiative, modeSpeed, profBonus, speedNow, speedOf, UNARMORED, walkSpeed, zeroSpeedBy } from '../logic';
 import { removeEntry, saveEntry, useEntryForm, useSheet } from '../sheet';
 import type { AcMod, SpeedKind, Unarmored } from '../types';
-import { AddButton, ChevronDown, EntryActions, EntryForm, NumInput, Step, TextField } from './ui';
+import { AddButton, Caret, EntryActions, EntryForm, NumInput, PartTiles, Step, TextField } from './ui';
 
 const SPEEDS: ['walk' | SpeedKind, string][] = [['walk', 'Walk'], ['climb', 'Climb'], ['swim', 'Swim'], ['fly', 'Fly'], ['burrow', 'Burrow']];
 
@@ -32,13 +32,13 @@ export function Vitals() {
       <div className="card stat-bar">
         <button type="button" className={'stat' + (c.acOpen ? ' open' : '')} onClick={() => update({ acOpen: !c.acOpen })} aria-expanded={c.acOpen} aria-controls="ac-panel">
           <span className="stat-value">{ac.total}</span>
-          <span className="row gap-4 stat-label">Armor class<ChevronDown size={12} style={{ transform: c.acOpen ? 'rotate(180deg)' : undefined }} /></span>
+          <span className="row gap-4 stat-label">Armor class<Caret open={c.acOpen} /></span>
           {acHint && <span className="stat-hint">{acHint}</span>}
         </button>
         <div className="stat"><span className="stat-value">{fmt(initiative(c))}</span><span className="stat-label">Initiative</span></div>
         <button type="button" className={'stat' + (c.speedOpen ? ' open' : '')} onClick={() => update({ speedOpen: !c.speedOpen })} aria-expanded={c.speedOpen} aria-controls="speed-panel">
           <span className="stat-value" style={{ color: zeroBy.length ? 'var(--danger)' : undefined }}>{speedNow(c)}<span className="stat-unit"> ft</span></span>
-          <span className="row gap-4 stat-label">Speed<ChevronDown size={12} style={{ transform: c.speedOpen ? 'rotate(180deg)' : undefined }} /></span>
+          <span className="row gap-4 stat-label">Speed<Caret open={c.speedOpen} /></span>
           <span className="stat-hint" style={{ color: zeroBy.length ? 'var(--danger)' : undefined }}>{hint}</span>
         </button>
         <div className="stat"><span className="stat-value">+{profBonus(c.level)}</span><span className="stat-label">Proficiency</span></div>
@@ -47,15 +47,7 @@ export function Vitals() {
       {c.acOpen && (
         <div id="ac-panel" className="block">
           <h2 className="block-title">Armor class</h2>
-          <div className="grid speed-grid">
-            {ac.parts.map((p, i) => (
-              <div key={i} className={'tile' + (p.active ? ' active' : '')}>
-                <span className="muted">{p.label}</span>
-                <span className="speed-value">{acValue(p.value, i)}</span>
-                {p.note && <span className="muted">{p.note}</span>}
-              </div>
-            ))}
-          </div>
+          <PartTiles parts={ac.parts} />
           {edit && (
             <div className="col gap-8">
               <label className="field">Unarmored base

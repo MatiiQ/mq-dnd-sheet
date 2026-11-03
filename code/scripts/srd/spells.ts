@@ -1,7 +1,7 @@
 // SRD spell descriptions → SpellEntry. Input: the plain pdftotext output (reading order).
 import { catalogId, DAMAGE_TYPES, slug, type SpellEntry } from '../../src/catalog/schema.ts';
 import type { Ability } from '../../src/types.ts';
-import { paragraphs, srdLines } from './text.ts';
+import { paragraphs, srdLines, unbalanced } from './text.ts';
 
 const LEVEL = /^(?:Level (\d) (\w+)|(\w+) Cantrip) \(/;
 const FIELD = /^(Casting Time|Range|Components?|Duration): ?(.*)$/;
@@ -27,7 +27,7 @@ const DAMAGE_WORDINGS: RegExp[] = [
 const SECOND = new RegExp(`^${DICE} (?:${DAMAGE_ALT}) damage and (?:another )?${DICE} (${DAMAGE_ALT}) damage`);
 // The spell's own saving throw: the first "<Ability> saving throw" not given Advantage or Disadvantage ("Advantage on
 // Strength, Dexterity, and Constitution saving throws" is a buff, not a save). A Disadvantage after the save doesn't count.
-const ABIL_ALT = 'Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma';
+export const ABIL_ALT = Object.keys(ABILITY_NAMES).join('|');
 const SAVES = new RegExp(`((?:${ABIL_ALT})(?:, (?:${ABIL_ALT}))*(?:,? (?:and|or) (?:${ABIL_ALT}))?) saving throws?`, 'g');
 function saveOf(body: string): { at: number; ab: Ability } | null {
   for (const m of body.matchAll(SAVES)) {
@@ -54,8 +54,6 @@ function damageOf(body: string): { at: number; dice: string; dtype?: string; dty
   return { at: m.index, dice, dtype: m[2] };
 }
 const HEALING = /regains? (?:a number of )?Hit Points equal to (\d+d\d+)|regains? (\d+d\d+(?: ?\+ ?\d+)?) Hit Points|regains? .{0,40}Hit Points/;
-const unbalanced = (s: string) => (s.match(/\(/g) ?? []).length > (s.match(/\)/g) ?? []).length;
-const first = (text: string, res: RegExp[]) => res.map((re) => re.exec(text)).map((m) => m?.index ?? Infinity);
 
 export function parseSpells(text: string): SpellEntry[] {
   const lines = srdLines(text);
@@ -86,10 +84,10 @@ export function parseSpells(text: string): SpellEntry[] {
     const higherP = paras.find((p) => p.startsWith('Using a Higher-Level Spell Slot.'));
     const higher = higherP?.replace(/^Using a Higher-Level Spell Slot\.\s*/, '');
     const ritual = / or Ritual$/.test(f['Casting Time']);
-    const [atkAt] = first(body, [/(melee|ranged) spell attack/]);
+    const atk = /(melee|ranged) spell attack/.exec(body), atkAt = atk?.index ?? Infinity;
     const sv = saveOf(body), saveAt = sv?.at ?? Infinity;
-    const [healAt] = first(body, [HEALING]);
-    const dmg = damageOf(body), heal = HEALING.exec(body), dmgAt = dmg?.at ?? Infinity;
+    const heal = HEALING.exec(body), healAt = heal?.index ?? Infinity;
+    const dmg = damageOf(body), dmgAt = dmg?.at ?? Infinity;
     const fx = dmgAt === Infinity && healAt === Infinity ? 'other' : dmgAt <= healAt ? 'damage' : 'healing';
     const dice = fx === 'damage' ? dmg!.dice : fx === 'healing' ? (heal![1] ?? heal![2])?.replace(/ /g, '') : undefined;
     const slotDice = higher && /increases? by (\d+d\d+) for (?:each|every) (?:spell )?slot level above/.exec(higher)?.[1];
@@ -101,7 +99,7 @@ export function parseSpells(text: string): SpellEntry[] {
       time: f['Casting Time'].replace(/ or Ritual$/, ''), range: f.Range, comp: f.Components, dur: f.Duration,
       conc: /^Concentration/.test(f.Duration), ritual, fx
     };
-    if (atkAt < saveAt) e.atk = /(melee|ranged) spell attack/.exec(body)![1] as 'melee' | 'ranged';
+    if (atkAt < saveAt) e.atk = atk![1] as 'melee' | 'ranged';
     else if (saveAt < atkAt) e.save = sv!.ab;
     if (dice) e.dice = dice;
     if (fx === 'damage' && dmg!.dtype) e.dtype = dmg!.dtype;

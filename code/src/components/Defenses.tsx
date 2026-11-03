@@ -1,5 +1,6 @@
 import { useState, type CSSProperties } from 'react';
-import { ABILITIES, CONDITION_OPTIONS, DAMAGE_TYPES, mergedDefenses, newId, normName, removeRef } from '../logic';
+import { DAMAGE_TYPES } from '../catalog/schema';
+import { ABILITIES, CONDITION_OPTIONS, mergedDefenses, newId, normName, removeRef } from '../logic';
 import { patchEntry, useSheet } from '../sheet';
 import { SourcePicker } from './SourcePicker';
 import type { Character, Defense, DefenseKind } from '../types';
@@ -103,10 +104,7 @@ function DefenseChip({ name, noun, color, onRemove }: { name: string; noun: stri
   const [armed, tap] = useArmed();
   return (
     <button type="button" onClick={() => tap(onRemove)} aria-label={armed ? 'Tap again to remove ' + name + ' ' + noun : 'Remove ' + name + ' ' + noun}
-      className="row gap-6" style={{
-        fontSize: 13, fontWeight: 600, cursor: 'pointer', minHeight: 44, padding: '0 10px 0 12px', borderRadius: 22,
-        border: '1px solid ' + color, background: armed ? color : 'transparent', color: armed ? 'var(--on-accent)' : color
-      }}>
+      className="row gap-6" style={{ ...chipStyle(color), padding: '0 10px 0 12px', background: armed ? color : 'transparent', color: armed ? 'var(--on-accent)' : color }}>
       {armed ? 'Remove ' + name + '?' : name}<XIcon size={14} strokeWidth={2.5} />
     </button>
   );

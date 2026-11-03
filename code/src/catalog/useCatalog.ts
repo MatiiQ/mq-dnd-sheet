@@ -2,7 +2,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { catalogVersion, loadCatalog, onCatalogReset } from './load';
 import type { Catalog } from './merge';
-import type { Entry, Kind } from './schema';
 
 export type CatalogState = { status: 'idle' | 'loading' } | { status: 'ready'; cat: Catalog } | { status: 'error'; retry: () => void };
 
@@ -33,8 +32,4 @@ export function useCatalog(active: boolean): CatalogState {
     return () => { gone = true; off(); };
   }, [active]);
   return state;
-}
-
-export function entriesOf<K extends Kind>(cat: Catalog, kind: K): Extract<Entry, { kind: K }>[] {
-  return cat.list.filter((e): e is Extract<Entry, { kind: K }> => e.kind === kind);
 }

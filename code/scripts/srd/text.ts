@@ -2,6 +2,8 @@
 
 export interface Line { text: string; page: number }
 
+export const unbalanced = (s: string) => (s.match(/\(/g) ?? []).length > (s.match(/\)/g) ?? []).length;
+
 const FOOTER = 'System Reference Document 5.2.1';
 // Lines with the page each one is on (a form feed starts a page), without the page footers: the running title and
 // the page number next to it. A lone number elsewhere (a table cell) stays.
@@ -57,10 +59,11 @@ export function layoutBetween(layout: string, from: RegExp, to: RegExp): string 
   return lines.slice(a, b + 1).join('\n');
 }
 
+export const norm = (s: string) => s.replace(/​/g, '').replace(/\s+/g, ' ').trim();
+
 // Drops fragments of full-width tables that the column crop cut into the prose: runs of short lines, each found in
 // one of the tables' text (normalised). A lone match is prose. keep(i) protects a line (a heading) from the check.
 export function dropFragments(lines: Line[], tables: string[], keep: (i: number) => boolean = () => false): Line[] {
-  const norm = (s: string) => s.replace(/​/g, '').replace(/\s+/g, ' ').trim();
   const cand = lines.map((l, i) => { const t = norm(l.text); return !!t && !keep(i) && t.length <= 45 && tables.some((tb) => tb.includes(t)); });
   const near = (i: number, d: number) => { for (let j = i + d; j >= 0 && j < lines.length; j += d) if (lines[j].text.trim()) return cand[j]; return false; };
   return lines.filter((_, i) => !(cand[i] && (near(i, -1) || near(i, 1))));

@@ -11,7 +11,6 @@ export function ItemQuestions({ entry, cat, onDone, onBack, onCancel }: {
   const qs = itemQuestions(cat, entry);
   const [at, setAt] = useState(0);
   const [a, setA] = useState<ItemAnswers>({});
-  const [typed, setTyped] = useState('');
   const q: ItemQuestion | undefined = qs[at];
   if (!q) return null;
   const answered = (x: ItemQuestion) => x.key === 'charges'
@@ -26,8 +25,8 @@ export function ItemQuestions({ entry, cat, onDone, onBack, onCancel }: {
       <span className="label">{entry.name}</span>
       <h4 className="pick-title">{q.label}</h4>
       {q.key === 'charges' ? (
-        <input type="number" className="input" inputMode="numeric" aria-label={q.label} min={q.min} max={q.max} value={typed}
-          onChange={(e) => { setTyped(e.target.value); setA((x) => ({ ...x, charges: e.target.value === '' ? undefined : Number(e.target.value) })); }} />
+        <input type="number" className="input" inputMode="numeric" aria-label={q.label} min={q.min} max={q.max} value={a.charges ?? ''}
+          onChange={(e) => setA((x) => ({ ...x, charges: e.target.value === '' ? undefined : Number(e.target.value) }))} />
       ) : (
         <div className="row wrap gap-6">
           {q.options!.map((o) => (

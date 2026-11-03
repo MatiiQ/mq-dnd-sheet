@@ -8,7 +8,7 @@ import type { Ability, ArmorKind } from '../../src/types.ts';
 import { skillKey } from '../lib/skills.ts';
 import { profList } from '../srd/classes.ts';
 import { playName, pounds, weaponProps } from '../srd/items.ts';
-import { DAMAGE_ALT } from '../srd/spells.ts';
+import { ABIL_ALT, DAMAGE_ALT } from '../srd/spells.ts';
 
 const ABILITY: Record<string, Ability> = { str: 'str', dex: 'dex', con: 'con', int: 'int', wis: 'wis', cha: 'cha' };
 const ab = (name: string) => ABILITY[name.trim().slice(0, 3).toLowerCase()];
@@ -91,14 +91,13 @@ export function parseSpellsMd(md: string): SpellEntry[] {
 }
 
 const FEAT_CAT: Record<string, FeatEntry['cat']> = { Origin: 'origin', General: 'general', 'Fighting Style': 'style', 'Epic Boon': 'boon' };
-const ABILITY_WORD = 'Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma';
 // "Level 4+; Intelligence, Wisdom, or Charisma 13+" → 'lvl>=4;int|wis|cha>=13'; features and armor training alike.
 export function prereqMd(text: string | undefined): string | undefined {
   if (none(text)) return undefined;
   const t = text!, terms: string[] = [];
   const lvl = /Level (\d+)\+/.exec(t);
   if (lvl) terms.push(`lvl>=${lvl[1]}`);
-  const abil = new RegExp(`((?:(?:${ABILITY_WORD})(?:, or |, | or ))*(?:${ABILITY_WORD})) (\\d+)\\+`).exec(t);
+  const abil = new RegExp(`((?:(?:${ABIL_ALT})(?:, or |, | or ))*(?:${ABIL_ALT})) (\\d+)\\+`).exec(t);
   if (abil) terms.push(`${abil[1].split(/, or |, | or /).map(ab).join('|')}>=${abil[2]}`);
   const feat = /((?:Spellcasting|Fighting Style|Pact Magic)(?: or (?:Spellcasting|Fighting Style|Pact Magic))*) feature/i.exec(t);
   if (feat) terms.push(`feature=${feat[1].split(' or ').map(slug).join('|')}`);
@@ -181,7 +180,7 @@ export function parseClassMd(md: string): [ClassEntry, SubclassEntry[], FeatureE
   const skill = /^Choose (any )?(\d+)(?: skills)?:? ?(.*)$/.exec(core['Skill Proficiencies'])!;
   const skills: ChoiceSpec = { kind: 'choice', id: 'skills', name: 'Skill proficiencies', pick: Number(skill[2]),
     pool: skill[1] ? 'skill:any' : `skill:${skill[3].split(/,\s*(?:or\s+)?|\s+or\s+/).map(skillKey).join('|')}` };
-  const cast = /(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma) is (?:your|the) spellcasting ability/.exec(md);
+  const cast = new RegExp(`(${ABIL_ALT}) is (?:your|the) spellcasting ability`).exec(md);
   const cls: ClassEntry = {
     id: catalogId('class', name), kind: 'class', name, src: 'phb', page: all.find((b) => /^Core Traits/.test(b.title))!.page,
     desc: `Primary Ability: ${core['Primary Ability']}`, hd: Number(/d(\d+)/i.exec(core['Hit Point Die'])![1]),

@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type CSSProperties, type InputHTMLAttributes, type ReactNode } from 'react';
-import { clamp } from '../logic';
+import { DAMAGE_TYPES } from '../catalog/schema';
+import { castFree, clamp, fmt, toggleEffect, type AcPart } from '../logic';
 import { useSheet } from '../sheet';
+import type { Resource, Spell } from '../types';
 
 // ---------- icons (stroke SVG, colored by currentColor) ----------
 interface IconProps { size?: number; style?: CSSProperties }
@@ -19,6 +21,8 @@ export const StarIcon = (p: IconProps & { fill?: string }) => <Svg strokeWidth={
 export const MenuIcon = (p: IconProps) => <Svg strokeWidth={2.2} {...p}><path d="M4 7h16M4 12h16M4 17h16" /></Svg>;
 export const ChevronDown = (p: IconProps) => <Svg strokeWidth={2.5} {...p}><path d="M6 9l6 6 6-6" /></Svg>;
 export const ChevronRight = (p: IconProps) => <Svg strokeWidth={2.5} {...p}><path d="M9 6l6 6-6 6" /></Svg>;
+// A disclosure button's arrow: points up while its panel is open.
+export const Caret = ({ open }: { open: boolean }) => <ChevronDown size={12} style={{ transform: open ? 'rotate(180deg)' : undefined }} />;
 
 // ---------- double-tap to confirm: first tap arms for 3 s, second tap acts ----------
 export function useArmed(ms = 3000) {
@@ -145,6 +149,42 @@ export function DieBadge({ value }: { value: string }) {
 
 export const ProfDot = ({ level }: { level: number }) => <span aria-hidden="true" className={'dot dot-' + level} />;
 
+// A number's parts as tiles. bareFirst: the first part is a plain number (a base); the rest are signed.
+export function PartTiles({ parts, bareFirst = true, style }: { parts: AcPart[]; bareFirst?: boolean; style?: CSSProperties }) {
+  return (
+    <div className="grid speed-grid" style={style}>
+      {parts.map((p, i) => (
+        <div key={i} className={'tile' + (p.active ? ' active' : '')}>
+          <span className="muted">{p.label}</span>
+          <span className="speed-value">{bareFirst && i === 0 ? p.value : fmt(p.value)}</span>
+          {p.note && <span className="muted">{p.note}</span>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// The On/Off switch of a source's effect (Shillelagh, Rage).
+export function EffectSwitch({ link, name }: { link: string; name: string }) {
+  const { c, update } = useSheet();
+  const on = c.effectsOn.includes(link);
+  return (
+    <button type="button" aria-pressed={on} aria-label={(on ? 'Switch off ' : 'Switch on ') + name} className={'btn btn-sm toggle-btn' + (on ? ' on' : '')}
+      onClick={() => update((p) => toggleEffect(p, link))}>{on ? 'On' : 'Off'}</button>
+  );
+}
+
+// A resource that casts this spell. short: the narrow Actions row leaves out the word "left".
+export function FreeCastButton({ sp, r, short }: { sp: Spell; r: Resource; short?: boolean }) {
+  const { update } = useSheet();
+  const used = r.count <= 0;
+  return (
+    <button type="button" aria-pressed={used} className={'btn btn-sm toggle-btn' + (used ? ' used' : '')}
+      aria-label={used ? 'Free casts of ' + sp.name + ' (' + r.name + ') used up; tap to give one back' : 'Use a free cast of ' + sp.name + ' (' + r.name + '), ' + r.count + ' left'}
+      onClick={() => update((p) => castFree(p, sp, r.id))}>{used ? 'Free used' : 'Free · ' + r.count + (short ? '' : ' left')}</button>
+  );
+}
+
 // ---------- number input: keeps the raw text while typing, commits valid numbers ----------
 type NumInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange' | 'min' | 'max'> & {
   value: number; min: number; max: number; onCommit: (n: number) => void; initialDraft?: string | null;
@@ -156,7 +196,9 @@ export function NumInput({ value, min, max, onCommit, initialDraft = null, empty
   return (
     <input type="text" inputMode="numeric" {...rest} value={draft ?? String(value)}
       onChange={(e) => {
-        const raw = e.target.value.replace(min < 0 ? /[^0-9-]/g : /[^0-9]/g, '');
+        // Only a leading minus: parseInt would cut "5-3" to 5 while the field kept showing it.
+        const t = e.target.value;
+        const raw = (min < 0 && t.startsWith('-') ? '-' : '') + t.replace(/[^0-9]/g, '');
         setDraft(raw);
         const n = parseInt(raw, 10);
         if (!isNaN(n)) onCommit(clamp(n, min, max));
@@ -215,6 +257,18 @@ export function AddButton({ onClick, children, style, always }: { onClick: () =>
   const { edit } = useSheet();
   if (!edit && !always) return null;
   return <button type="button" className="btn btn-add" style={style} onClick={onClick}>{children}</button>;
+}
+
+// The damage types, plus a value typed before (an old or catalog one) so it stays selected.
+export function DamageTypeField({ value, onChange, style }: { value: string; onChange: (v: string) => void; style?: CSSProperties }) {
+  const types = ['', ...DAMAGE_TYPES, ...(value && !DAMAGE_TYPES.includes(value) ? [value] : [])];
+  return (
+    <label className="field" style={style}>Damage type
+      <select className="input" value={value} onChange={(e) => onChange(e.target.value)}>
+        {types.map((t) => <option key={t} value={t}>{t || '—'}</option>)}
+      </select>
+    </label>
+  );
 }
 
 // list: the id of a <datalist> of suggestions.

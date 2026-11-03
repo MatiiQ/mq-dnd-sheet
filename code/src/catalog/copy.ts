@@ -1,9 +1,9 @@
 // Copying catalog entries onto a character, and the custom forms that build the same fields by hand. Pure functions:
 // the pickers and forms call them, then save through update().
 import { linkOf, srcKindOfLink } from '../links';
-import { ABILITIES, addGrants, detectArmor, effScore, hasProf, maxFields, maxOf, newId, normName, parseWeight, SKILLS, skillLevel, type GrantInput } from '../logic';
+import { ABILITIES, addGrants, capital, detectArmor, effScore, hasProf, maxFields, maxKindOf, maxOf, newId, normName, parseWeight, regainEvent, SKILLS, skillLevel, type GrantInput, type MaxKind } from '../logic';
 import type { AcEffect, Ability, ArmorKind, Character, Feature, FeatureGroup, Item, Linked, Recharge, Size, Spell, SrcKind } from '../types';
-import type { Catalog } from './merge';
+import { entriesOf, type Catalog } from './merge';
 import { slug, type ChoiceSpec, type Entry, type FeatEntry, type FeatureEntry, type GrantSpec, type ItemEntry, type ProfEntry, type SpellEntry, type SpellPart, type TraitEntry } from './schema';
 import { withBase } from './base';
 import { diceRange } from './value';
@@ -11,7 +11,6 @@ import { diceRange } from './value';
 // Drops undefined values and empty strings, so a copied entry holds only what the catalog has.
 const compact = <T extends object>(x: T): T =>
   Object.fromEntries(Object.entries(x).filter(([, v]) => v !== undefined && v !== '')) as T;
-const ABBR: Record<string, string> = { str: 'STR', dex: 'DEX', con: 'CON', int: 'INT', wis: 'WIS', cha: 'CHA' };
 
 // The damage type a row shows: the type, or a chosen one's list as 'Acid/Cold/Fire'.
 export const dtypeText = (x: { dtype?: string; dtypes?: string }) => x.dtype || x.dtypes?.split(',').join('/') || '';
@@ -21,7 +20,7 @@ function rowSummary(e: Pick<SpellEntry, 'fx' | 'dice' | 'dtype' | 'dtypes' | 'sa
   // Fixed healing that isn't dice (Heal's 70, Power Word Heal's all HP) reads as an amount.
   if (e.fx === 'healing') return /\d+d\d+/.test(e.dice) ? e.dice + ' healing' : `heals ${e.dice.replace(/ HP$/, '')} HP`;
   const dmg = [e.dice, dtypeText(e)].filter(Boolean).join(' ');
-  const how = e.save ? ABBR[e.save] + ' save' : e.atk ? e.atk + ' attack' : '';
+  const how = e.save ? e.save.toUpperCase() + ' save' : e.atk ? e.atk + ' attack' : '';
   return [dmg, how].filter(Boolean).join(' · ');
 }
 // The row summary of a catalog spell: its own row's, then each part's after '; ' as '<label>: <summary>'
@@ -115,20 +114,21 @@ function checkItemAnswers(cat: Catalog, e: Entry, a: ItemAnswers | undefined): v
 // A line from a weapon's or armor's fields, shown where it has no description (the SRD gives weapons and armor only
 // table rows). Armor adds Dex in full (Light), at most 2 (Medium) or not at all (Heavy) (PHB p.219). '' for anything else.
 type StatFields = Pick<ItemEntry, 'wcat' | 'wrange' | 'dmg' | 'dtype' | 'props' | 'thrown' | 'vers' | 'ammo' | 'mastery' | 'armor' | 'acBase' | 'strReq' | 'stealthDis'>;
-const cap = (s: string) => s.replace(/(^|-)([a-z])/g, (m) => m.toUpperCase());
+// 'two-handed' → 'Two-Handed'.
+export const capWords = (s: string) => s.replace(/(^|-)([a-z])/g, (m) => m.toUpperCase());
 export function itemStats(x: StatFields): string {
   if (x.armor === 'shield') return `Shield · +${x.acBase ?? 2} AC`;
   if (x.armor) {
     const dex = x.armor === 'light' ? ' + Dex' : x.armor === 'medium' ? ' + Dex (max 2)' : '';
-    return [`${cap(x.armor)} armor`, `AC ${x.acBase}${dex}`, x.strReq && `Strength ${x.strReq}`, x.stealthDis && 'Stealth Disadvantage'].filter(Boolean).join(' · ');
+    return [`${capWords(x.armor)} armor`, `AC ${x.acBase}${dex}`, x.strReq && `Strength ${x.strReq}`, x.stealthDis && 'Stealth Disadvantage'].filter(Boolean).join(' · ');
   }
   if (!x.wcat && !x.dmg) return '';
   const [range, kind] = (x.ammo ?? '').split(';');
   const props = (x.props ?? '').split(',').filter(Boolean).map((p) =>
     p === 'thrown' && x.thrown ? `Thrown (${x.thrown})` : p === 'versatile' && x.vers ? `Versatile (${x.vers})`
-      : p === 'ammunition' && x.ammo ? `Ammunition (${[range, kind && cap(kind)].filter(Boolean).join(', ')})` : cap(p)).join(', ');
-  return [[x.wcat && cap(x.wcat), x.wrange, 'weapon'].filter(Boolean).join(' '),
-    [x.dmg, x.dtype].filter(Boolean).join(' '), props, x.mastery && `Mastery: ${cap(x.mastery)}`].filter(Boolean).join(' · ');
+      : p === 'ammunition' && x.ammo ? `Ammunition (${[range, kind && capWords(kind)].filter(Boolean).join(', ')})` : capWords(p)).join(', ');
+  return [[x.wcat && capWords(x.wcat), x.wrange, 'weapon'].filter(Boolean).join(' '),
+    [x.dmg, x.dtype].filter(Boolean).join(' '), props, x.mastery && `Mastery: ${capWords(x.mastery)}`].filter(Boolean).join(' · ');
 }
 
 export type ItemKind = 'none' | 'weapon' | 'armor' | 'container';
@@ -143,7 +143,7 @@ export interface ItemDraft {
   thrownRange: string; versDie: string; ammoRange: string; ammoType: string; mastery: string; magic: string;
   armor: ArmorKind; acBase: string; acBonus: string; strReq: string; stealthDis: boolean;
   xdim: boolean; cap: string; capVol: string;
-  charges: boolean; chMaxKind: 'none' | 'number' | 'formula'; chMaxText: string; chCount: number; chRecharge: Recharge; chRegain: string;
+  charges: boolean; chMaxKind: MaxKind; chMaxText: string; chCount: number; chRecharge: Recharge; chRegain: string;
   cat: ItemEntry['cat']; cost?: string; rarity?: string; cid?: string; base?: string;
 }
 export const BLANK_ITEM: ItemDraft = {
@@ -175,7 +175,7 @@ export function itemFromForm(d: ItemDraft): Omit<Item, 'id' | 'eq'> {
   const props = w ? [...d.props].sort() : [];
   const has = (p: WeaponProp) => props.includes(p);
   const range = text(d.ammoRange);
-  const regainOn = d.chRecharge === 'long' ? 'short' as const : d.chRecharge === 'dawn' ? 'dawn' as const : undefined;
+  const regainOn = regainEvent(d.chRecharge);
   const regain = d.charges && regainOn ? text(d.chRegain) : undefined;
   const max = (d.charges && maxFields(d.chMaxKind, d.chMaxText)) || {};
   return {
@@ -213,7 +213,7 @@ export function draftFromItem(it: Item): ItemDraft {
     thrownRange: it.thrown ?? '', versDie: it.vers ?? '', ammoRange, ammoType, mastery: it.mastery ?? '', magic: str(it.magic),
     armor: it.armor ?? 'light', acBase: str(it.acBase), acBonus: kind === 'armor' ? str(it.acBonus) : '', strReq: str(it.strReq), stealthDis: !!it.stealthDis,
     xdim: !!it.xdim, cap: str(it.cap), capVol: it.capVol ?? '',
-    charges: it.count !== undefined, chMaxKind: it.maxV !== undefined ? 'formula' : it.max ? 'number' : 'none', chMaxText: it.maxV ?? str(it.max),
+    charges: it.count !== undefined, chMaxKind: maxKindOf(it), chMaxText: it.maxV ?? str(it.max),
     chCount: it.count ?? 0, chRecharge: it.recharge ?? 'dawn', chRegain: it.regain ?? '',
     cat: it.cat ?? catForKind(kind, it.armor), cost: it.cost, rarity: it.rarity, cid: it.cid, base: it.base
   };
@@ -250,16 +250,15 @@ const KNOWN_KINDS = [...NAME_KINDS, 'skill', 'ability', 'list', 'prof', 'weapon'
 const WEAPON_CATEGORIES = ['prof/simple-weapons', 'prof/martial-weapons'];
 
 const isRef = (v: unknown): v is string => typeof v === 'string' && /^\$[\w-]+$/.test(v);
-const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const ABILITY_NAME = Object.fromEntries(ABILITIES) as Record<Ability, string>;
 const SKILL_NAME = Object.fromEntries(SKILLS.map(([k, n]) => [k, n])) as Record<string, string>;
-const entriesOfKind = <K extends Entry['kind']>(cat: Catalog, kind: K) => cat.list.filter((e): e is Extract<Entry, { kind: K }> => e.kind === kind);
-const profsOf = (cat: Catalog, pc: ProfEntry['cat']) => entriesOfKind(cat, 'prof').filter((p) => p.cat === pc);
+const profsOf = (cat: Catalog, pc: ProfEntry['cat']) => entriesOf(cat, 'prof').filter((p) => p.cat === pc);
 const byName = (a: PoolOption, b: PoolOption) => a.label.localeCompare(b.label);
 
+const grantsOf = (e: Entry) => ('grants' in e && e.grants ? e.grants : []);
 // The entry's choices in order (a class's skill choice is not one of its grants, so not included).
 export function choicesOf(e: Entry): ChoiceSpec[] {
-  return 'grants' in e && e.grants ? e.grants.filter((s): s is ChoiceSpec => s.kind === 'choice') : [];
+  return grantsOf(e).filter((s): s is ChoiceSpec => s.kind === 'choice');
 }
 
 // One button per option, or per `opt` group (all of whose grants come with the pick); the value is the first option's id.
@@ -331,9 +330,11 @@ function filtered<T extends Entry>(list: T[], filter: string, known: string[]): 
   return out;
 }
 
-// The character already has it: a spell or feature with its catalog id, or, without one, the same name.
-export const hasSpell = (c: Character, e: Entry) => c.spells.some((x) => (x.cid ? x.cid === e.id : normName(x.name) === normName(e.name)));
-export const hasFeature = (c: Character, e: Entry) => c.feats.some((f) => (f.cid ? f.cid === e.id : normName(f.name) === normName(e.name)));
+// The character already has it: a spell, feature or item with its catalog id, or, without one, the same name.
+const onSheet = (list: { cid?: string; name: string }[], e: Entry) => list.some((x) => (x.cid ? x.cid === e.id : normName(x.name) === normName(e.name)));
+export const hasSpell = (c: Character, e: Entry) => onSheet(c.spells, e);
+export const hasFeature = (c: Character, e: Entry) => onSheet(c.feats, e);
+export const hasItem = (c: Character, e: Entry) => onSheet(c.inv, e);
 
 // The options a pool offers this character. `adding`: the entry whose choice this is and those above it in the flow,
 // which count as on the sheet for feat prerequisites (a Fighting Style feature offering style feats).
@@ -347,16 +348,16 @@ export function poolOptions(cat: Catalog, c: Character, pool: string, picks: Rec
   const skill = (k: string): PoolOption => ({ value: k, label: SKILL_NAME[k], ...(skillLevel(c, k).level >= 1 ? { taken: true } : {}) });
   switch (kind) {
     case 'spell':
-      return filtered(entriesOfKind(cat, 'spell'), filter, ['list', 'lvl', 'school', 'ritual']).map((e) => ent(e, hasSpell(c, e))).sort(byName);
+      return filtered(entriesOf(cat, 'spell'), filter, ['list', 'lvl', 'school', 'ritual']).map((e) => ent(e, hasSpell(c, e))).sort(byName);
     case 'feat':
-      return filtered(entriesOfKind(cat, 'feat'), filter, ['cat']).map((e) => {
+      return filtered(entriesOf(cat, 'feat'), filter, ['cat']).map((e) => {
         const { missing } = prereqMet(c, e.prereq, adding);
         return { ...ent(e, hasFeature(c, e)), ...(missing.length ? { unmet: missing } : {}) };
       }).sort(byName);
     case 'subclass':
-      return filtered(entriesOfKind(cat, 'subclass'), filter, ['cls']).map((e) => ent(e, hasFeature(c, e))).sort(byName);
+      return filtered(entriesOf(cat, 'subclass'), filter, ['cls']).map((e) => ent(e, hasFeature(c, e))).sort(byName);
     case 'trait':
-      return filtered(entriesOfKind(cat, 'trait'), filter, ['of']).map((e) => ent(e, hasFeature(c, e))).sort(byName);
+      return filtered(entriesOf(cat, 'trait'), filter, ['of']).map((e) => ent(e, hasFeature(c, e))).sort(byName);
     case 'skill': {
       if (filter === 'proficient') return SKILLS.filter(([k]) => skillLevel(c, k).level === 1).map(([k]) => ({ value: k, label: SKILL_NAME[k] }));
       const keys = filter === 'any' ? SKILLS.map(([k]) => k) : words.filter((k) => SKILL_NAME[k]);
@@ -407,17 +408,19 @@ export function missingPicks(cat: Catalog, c: Character, e: Entry, picks: Record
 }
 
 type Resolved = Omit<GrantSpec, 'opt'>;
+// An entry added below another one; preset: choices already answered (a background's origin feat list).
+type Nested = { entry: Entry; preset?: Record<string, string[]> };
 // The entry's grants with the player's picks applied: picked options (an option picked twice gets ids -0 and -1),
 // '$ref' fields filled (a grant over a multi-pick choice copied once per pick, ids -<index>; one over a choice with no
 // valid picks dropped), a `casts` ref pointed at the spell spec of the same pick, and picks no grant uses turned into
 // proficiencies (skills, tools, languages, weapon masteries), entries (feats, traits, subclasses) or notes.
 export function resolveChoices(cat: Catalog, e: Entry, picks: Record<string, string[]>):
-  { specs: Resolved[]; entries: { entry: Entry; preset?: Record<string, string[]> }[]; notes: string[] } {
+  { specs: Resolved[]; entries: Nested[]; notes: string[] } {
   const choices = new Map(choicesOf(e).map((ch) => [ch.id, ch]));
   const vp = (id: string) => { const ch = choices.get(id); return ch ? validPicks(ch, picks[id] ?? []) : []; };
   const strip = ({ opt: _o, ...g }: GrantSpec): Resolved => g;
   const raw: Resolved[] = [];
-  for (const s of 'grants' in e && e.grants ? e.grants : []) {
+  for (const s of grantsOf(e)) {
     if (s.kind !== 'choice') { raw.push(strip(s)); continue; }
     if (!s.options) continue;
     const got = vp(s.id);
@@ -532,8 +535,8 @@ export function groupOf(e: Entry): FeatureGroup | null {
 const titleOfId = (id: string) => titled(id.split('/').pop() ?? id);
 // What addFromCatalog adds as features below e: picked feats, traits and subclasses; a background's origin feat
 // ('feat/magic-initiate:cleric' presets the list); a species' traits (not its lineage options, which come by choice).
-export function nestedEntries(cat: Catalog, e: Entry, picks: Record<string, string[]>): { entry: Entry; preset?: Record<string, string[]> }[] {
-  const out: { entry: Entry; preset?: Record<string, string[]> }[] = [...resolveChoices(cat, e, picks).entries];
+export function nestedEntries(cat: Catalog, e: Entry, picks: Record<string, string[]>): Nested[] {
+  const out: Nested[] = [...resolveChoices(cat, e, picks).entries];
   if (e.kind === 'background') {
     const [id, list] = e.feat.split(':');
     const feat = cat.byId.get(id);
@@ -541,12 +544,12 @@ export function nestedEntries(cat: Catalog, e: Entry, picks: Record<string, stri
   }
   if (e.kind === 'species') {
     const sp = e.id.split('/')[1];
-    out.push(...entriesOfKind(cat, 'trait').filter((t) => t.species === sp && !t.of).map((entry) => ({ entry })));
+    out.push(...entriesOf(cat, 'trait').filter((t) => t.species === sp && !t.of).map((entry) => ({ entry })));
   }
   return out;
 }
 // The answers for a nested entry: its own answers merged over its preset picks.
-const answersFor = (ans: AddChoices, n: { entry: Entry; preset?: Record<string, string[]> }): AddChoices => {
+const answersFor = (ans: AddChoices, n: Nested): AddChoices => {
   const own = ans.nested?.[n.entry.id] ?? NO_ANSWERS;
   return { ...own, picks: { ...n.preset, ...own.picks } };
 };
@@ -576,7 +579,7 @@ function spellFor(cat: Catalog, e: Entry, spec: Resolved): Omit<Spell, 'id'> | u
   const v = spec.spell;
   if (!v || v.startsWith('$')) return undefined;
   if (v.startsWith('spell/')) { const se = cat.byId.get(v); return se?.kind === 'spell' ? spellFromEntry(se) : undefined; }
-  const src = 'grants' in e && e.grants ? e.grants.find((g) => g.kind === 'spell' && (g.id === spec.id || spec.id.startsWith(g.id + '-'))) : undefined;
+  const src = grantsOf(e).find((g) => g.kind === 'spell' && (g.id === spec.id || spec.id.startsWith(g.id + '-')));
   const ref = src?.kind === 'spell' && src.spell?.startsWith('$') ? src.spell.slice(1) : undefined;
   const pool = ref ? choicesOf(e).find((ch) => ch.id === ref)?.pool ?? '' : '';
   const lvl = /(?:^|[:;])lvl=(\d)(?:;|$)/.exec(pool)?.[1];
@@ -635,11 +638,11 @@ export function matchId(cat: Catalog, kind: 'class' | 'subclass' | 'species', te
   if (!n) return '';
   if (kind === 'subclass') {
     const c = cls?.split('/')[1];
-    return entriesOfKind(cat, 'subclass').find((e) => e.cls === c && normName(e.name) === n)?.id ?? '';
+    return entriesOf(cat, 'subclass').find((e) => e.cls === c && normName(e.name) === n)?.id ?? '';
   }
-  const hit = entriesOfKind(cat, kind).find((e) => normName(e.name) === n)?.id;
+  const hit = entriesOf(cat, kind).find((e) => normName(e.name) === n)?.id;
   if (hit || kind === 'class') return hit ?? '';
-  const option = entriesOfKind(cat, 'trait').find((t) => t.of && normName(t.name) === n);
+  const option = entriesOf(cat, 'trait').find((t) => t.of && normName(t.name) === n);
   return option && cat.byId.has('species/' + option.species) ? 'species/' + option.species : '';
 }
 // The character's class id: the stored one when the loaded catalog has it, else the typed name matched again.
@@ -663,18 +666,14 @@ export function addFromCatalog(c: Character, cat: Catalog, e: Entry, ans: AddCho
 
 function addEntry(c: Character, cat: Catalog, e: Entry, ans: AddChoices): Character {
   const r = resolveChoices(cat, e, ans.picks);
-  const linkFields = (x: Character): Linked => {
-    if (!ans.from) return {};
-    const k = srcKindOfLink(x, ans.from);
-    return { from: ans.from, ...(k ? { srcKind: k } : {}) };
-  };
+  const id = newId();
+  const srcKind = ans.from ? srcKindOfLink(c, ans.from) : null;
+  const link: Linked = ans.from ? { from: ans.from, ...(srcKind ? { srcKind } : {}) } : {};
   if (e.kind === 'spell') {
-    const id = newId();
-    const out: Character = { ...c, spells: [...c.spells, { id, ...spellFromEntry(e), ...classSource(cat, c, e), ...linkFields(c) }] };
+    const out: Character = { ...c, spells: [...c.spells, { id, ...spellFromEntry(e), ...classSource(cat, c, e), ...link }] };
     return addWithSpells(out, cat, linkOf('spell', id), inputsOf(cat, e, ans, r.specs));
   }
   if (e.kind === 'item') {
-    const id = newId();
     // A base the player chose (checked by checkAnswers): its fields copied in, then named after it. Ammunition has no
     // fields to copy: only its id is kept, so the ammunition type follows it (ammoType).
     const b = ans.item?.base && BASE_LABEL[e.base ?? ''] ? cat.byId.get(ans.item.base) as ItemEntry : undefined;
@@ -685,7 +684,6 @@ function addEntry(c: Character, cat: Catalog, e: Entry, ans: AddChoices): Charac
   }
   const g = ans.group ?? groupOf(e);
   if (!g) throw new Error(`${e.name}: a ${e.kind} entry can't be added`);
-  const id = newId();
   let out: Character = { ...c, ch: { ...c.ch } };
   const lines = [e.desc, ...r.notes];
   if (e.kind === 'background') {
@@ -707,7 +705,7 @@ function addEntry(c: Character, cat: Catalog, e: Entry, ans: AddChoices): Charac
   const lvl = e.kind === 'feature' || e.kind === 'trait' ? e.lvl : 0;
   const feature: Feature = {
     id, g, name: featureName(cat, c, e, ans.picks), desc: lines.filter((l) => l.trim()).join('\n'), cid: e.id,
-    ...linkFields(c), ...(lvl > c.level ? { minLvl: lvl } : {})
+    ...link, ...(lvl > c.level ? { minLvl: lvl } : {})
   };
   out.feats = [...out.feats, feature];
   out = addWithSpells(out, cat, linkOf('feature', id), inputsOf(cat, e, ans, r.specs));
@@ -783,14 +781,14 @@ export function featureCandidates(cat: Catalog, c: Character, t: FeatureType, fe
   switch (t) {
     case 'class': {
       const cls = classIdOf(cat, c).split('/')[1];
-      return entriesOfKind(cat, 'feature').filter((e) => cls && e.cls === cls && !e.sub).sort(byLevel).map(leveled);
+      return entriesOf(cat, 'feature').filter((e) => cls && e.cls === cls && !e.sub).sort(byLevel).map(leveled);
     }
     case 'sub': {
       const sub = subclassIdOf(cat, c).split('/');
-      return entriesOfKind(cat, 'feature').filter((e) => sub.length === 3 && e.cls === sub[1] && e.sub === sub[2]).sort(byLevel).map(leveled);
+      return entriesOf(cat, 'feature').filter((e) => sub.length === 3 && e.cls === sub[1] && e.sub === sub[2]).sort(byLevel).map(leveled);
     }
     case 'feat': {
-      const rows = entriesOfKind(cat, 'feat').filter((e) => !featCat || e.cat === featCat).map((e) => {
+      const rows = entriesOf(cat, 'feat').filter((e) => !featCat || e.cat === featCat).map((e) => {
         const { ok, missing } = prereqMet(c, e.prereq);
         return { entry: e as Entry, ok, taken: !e.repeat && hasFeature(c, e), ...(missing.length ? { note: missing.join(', ') } : {}) };
       });
@@ -798,10 +796,10 @@ export function featureCandidates(cat: Catalog, c: Character, t: FeatureType, fe
     }
     case 'species': {
       const sp = matchId(cat, 'species', c.ch.species).split('/')[1];
-      return entriesOfKind(cat, 'trait').filter((e) => sp && e.species === sp && !e.of).sort(byLevel).map(leveled);
+      return entriesOf(cat, 'trait').filter((e) => sp && e.species === sp && !e.of).sort(byLevel).map(leveled);
     }
     case 'background':
-      return entriesOfKind(cat, 'background').map((e) => ({ entry: e as Entry, ok: true, taken: hasFeature(c, e) }));
+      return entriesOf(cat, 'background').map((e) => ({ entry: e as Entry, ok: true, taken: hasFeature(c, e) }));
     default:
       return [];
   }
