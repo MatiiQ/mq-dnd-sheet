@@ -244,7 +244,7 @@ function Menu({ store, onClose, onSwitched, onRest }: { store: CharacterStore; o
       const { added, failed } = store.importAll(JSON.parse(await file.text()));
       onSwitched(false, true);
       setBackupMsg('Imported ' + added + (added === 1 ? ' character.' : ' characters.') +
-        (failed ? ' ' + failed + ' could not be saved: storage is full.' : ''));
+        (failed ? ' ' + failed + ' could not be imported.' : ''));
     } catch (e) {
       setBackupMsg(e instanceof Error && e.message.includes('backup') ? e.message : 'That file could not be read as a backup.');
     }

@@ -236,7 +236,7 @@ const FIELDS: Record<Kind, Record<string, [Check, boolean]>> = {
 };
 const HAS_GRANTS: Kind[] = ['feat', 'background', 'trait', 'feature'];
 
-const isObj = (x: unknown): x is Record<string, unknown> => typeof x === 'object' && x !== null && !Array.isArray(x);
+export const isObj = (x: unknown): x is Record<string, unknown> => typeof x === 'object' && x !== null && !Array.isArray(x);
 const primitive = (v: unknown) => v === null || typeof v !== 'object';
 
 function checkFields(o: Record<string, unknown>, fields: Record<string, [Check, boolean]>, where: string, errs: string[]) {
