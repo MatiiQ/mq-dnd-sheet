@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties, type InputHTMLAttributes, type ReactNode } from 'react';
 import { DAMAGE_TYPES } from '../catalog/schema';
-import { castFree, clamp, fmt, toggleEffect, type AcPart } from '../logic';
+import { acCanTargetOther, acOnOther, castFree, clamp, fmt, toggleAcTarget, toggleEffect, type AcPart } from '../logic';
 import { useSheet } from '../sheet';
 import type { Resource, Spell } from '../types';
 
@@ -170,6 +170,17 @@ export function EffectSwitch({ link, name }: { link: string; name: string }) {
   return (
     <button type="button" aria-pressed={on} aria-label={(on ? 'Switch off ' : 'Switch on ') + name} className={'btn btn-sm toggle-btn' + (on ? ' on' : '')}
       onClick={() => update((p) => toggleEffect(p, link))}>{on ? 'On' : 'Off'}</button>
+  );
+}
+
+// Who an AC spell is cast on. Only "me" counts in this character's AC; a Self spell has no choice to make.
+export function AcTargetSwitch({ sp }: { sp: Spell }) {
+  const { update } = useSheet();
+  if (!acCanTargetOther(sp)) return null;
+  const other = acOnOther(sp);
+  return (
+    <button type="button" aria-pressed={other} aria-label={'Cast ' + sp.name + ' on another creature, so it adds no AC'} className={'btn btn-sm toggle-btn' + (other ? ' on' : '')}
+      onClick={() => update((p) => toggleAcTarget(p, sp.id))}>{other ? 'On: other' : 'On: me'}</button>
   );
 }
 

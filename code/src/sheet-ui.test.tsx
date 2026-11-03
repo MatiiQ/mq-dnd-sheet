@@ -40,6 +40,17 @@ describe('entry forms and rows', () => {
     });
     expect(saved().defenses.filter((d) => d.kind === 'res' && d.name === 'Slashing' && !d.from)).toHaveLength(1);
   });
+  it('takes Haste out of AC when it is cast on another creature', () => {
+    const haste = { id: 'h', name: 'Haste', lvl: 3, time: 'Action', range: '30 feet', c: true, acFx: 'bonus' as const, acVal: 2 };
+    renderSheet({ spells: [haste], conc: { id: 'h', name: 'Haste' }, slotMax: [0, 0, 0, 1, 0, 0, 0, 0, 0, 0] });
+    tab('Spells');
+    const sw = label('Cast Haste on another creature, so it adds no AC');
+    expect(sw?.textContent).toBe('On: me');
+    tap(sw);
+    expect(saved().spells[0].acOther).toBe(true);
+    expect(label('Cast Haste on another creature, so it adds no AC')?.textContent).toBe('On: other');
+  });
+
   it('keeps line breaks in a feature description', () => {
     renderSheet({ feats: [feat] });
     editMode();

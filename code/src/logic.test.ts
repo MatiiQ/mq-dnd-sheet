@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { newId } from './logic';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import {
-  ABILITIES, SKILLS, regainLabel, damageHitDie, castAbOf, removeChip, speedOf, armorSlowBy, stealthDisBy, acSpellIdle, untrainedArmor, grantChips, addGrants, findUnlinked, removalChain, removalSummary, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, toggleEffect, dawn, refillFor, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft, num, setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, undoHp
+  ABILITIES, SKILLS, acCanTargetOther, acOnOther, toggleAcTarget, regainLabel, damageHitDie, castAbOf, removeChip, speedOf, armorSlowBy, stealthDisBy, acSpellIdle, untrainedArmor, grantChips, addGrants, findUnlinked, removalChain, removalSummary, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, toggleEffect, dawn, refillFor, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft, num, setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, undoHp
 } from './logic';
 import { migrate } from './migrate';
 import { spellActions } from './actions';
@@ -1860,11 +1860,36 @@ describe('catalog data for rests and AC', () => {
     expect(regainLabel(blankCharacter(), { ...r, regain: '1' })).toBe('1');
     expect(regainLabel(blankCharacter(), { ...r, regain: '1d6+1' })).toBe('1d6+1');
   });
-  it('gives Haste and Warding Bond their AC bonus (PHB pp.284, 340)', () => {
+  it('gives Haste its AC bonus, and Warding Bond none: its +1 goes to another creature (PHB pp.284, 340)', () => {
     expect(cat.byId.get('spell/haste')).toMatchObject({ acFx: 'bonus', acVal: 2 });
-    expect(cat.byId.get('spell/warding-bond')).toMatchObject({ acFx: 'bonus', acVal: 1 });
+    expect(cat.byId.get('spell/warding-bond')).not.toHaveProperty('acFx');
     expect(detectAcSpell('Haste')).toEqual({ acFx: 'bonus', acVal: 2 });
-    expect(detectAcSpell('Warding Bond')).toEqual({ acFx: 'bonus', acVal: 1 });
+    expect(detectAcSpell('Warding Bond')).toBeNull();
+  });
+  it('counts an AC spell only while cast on the caster (PHB pp.284, 245)', () => {
+    const haste: Spell = { id: 'h', name: 'Haste', lvl: 3, time: 'Action', range: '30 feet', c: true, acFx: 'bonus', acVal: 2 };
+    const conc = { id: 'h', name: 'Haste' };
+    expect(ac({ spells: [haste], conc }).total).toBe(16);
+    const toOther = toggleAcTarget(make({ spells: [haste] }), 'h');
+    expect(toOther.spells![0].acOther).toBe(true);
+    expect(ac({ spells: toOther.spells, conc }).total).toBe(14);
+    expect(toggleAcTarget(make(toOther), 'h').spells![0]).not.toHaveProperty('acOther');
+    // A spell without Concentration keeps running on the other creature, and a wrong choice can be corrected after the cast.
+    const bark: Spell = { id: 'b', name: 'Barkskin', lvl: 2, time: 'Bonus Action', range: 'Touch', acFx: 'floor', acVal: 17, acOther: true };
+    expect(ac({ spells: [bark], acOn: ['b'] }).total).toBe(14);
+    expect(ac({ spells: [{ ...bark, acOther: undefined }], acOn: ['b'] }).total).toBe(17);
+  });
+  it('gives a Self AC spell no choice of target (Shield, PHB p.316)', () => {
+    const shield: Spell = { id: 's', name: 'Shield', lvl: 1, time: 'Reaction', range: 'Self', acFx: 'bonus', acVal: 5, acOther: true };
+    expect(acCanTargetOther(shield)).toBe(false);
+    expect(acOnOther(shield)).toBe(false);
+    expect(ac({ spells: [shield], acOn: ['s'] }).total).toBe(19);
+    expect(acCanTargetOther({ id: 'x', name: 'Bless', lvl: 1, time: 'Action', range: '30 feet' })).toBe(false);
+  });
+  it('keeps acOther through a load, and drops a bad value', () => {
+    const sp = { id: 'h', name: 'Haste', lvl: 3, range: '30 feet', acFx: 'bonus', acVal: 2 };
+    expect(migrate({ spells: [{ ...sp, acOther: true }] }).spells[0].acOther).toBe(true);
+    expect(migrate({ spells: [{ ...sp, acOther: 'yes' }] }).spells[0]).not.toHaveProperty('acOther');
   });
 });
 

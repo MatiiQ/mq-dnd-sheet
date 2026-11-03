@@ -4,7 +4,7 @@ import { packSummary, parsePackFile } from '../catalog/pack';
 import { deletePack, getPack, putPack } from '../catalog/pack-db';
 import { SRD_VERSION } from '../catalog/schema';
 import { setLayoutMode, useLayoutMode, useWide, type LayoutMode } from '../layout';
-import { acSpellIdle, CONDITIONS, PILL_STATS, TABS, fmt, hpColor, maxHpOf, pillView, resPill, setConc, setPill, toggleAcSpell, type PillView, type RestEvent } from '../logic';
+import { acOnOther, acSpellIdle, CONDITIONS, PILL_STATS, TABS, fmt, hpColor, maxHpOf, pillView, resPill, setConc, setPill, toggleAcSpell, type PillView, type RestEvent } from '../logic';
 import { useSheet } from '../sheet';
 import { EXAMPLES, charInfo, charName, saveBackupFile, type CharacterStore } from '../storage';
 import type { Character, Spell, Tab } from '../types';
@@ -12,7 +12,7 @@ import { CheckIcon, ChevronDown, ChevronRight, MenuIcon, PencilIcon, StarIcon, X
 
 const SECTION_LINKS = [['sec-hp', 'Hit Points'], ['sec-abilities', 'Abilities'], ['sec-senses', 'Senses'], ['sec-defenses', 'Defenses'], ['sec-conditions', 'Conditions'], ['sec-resources', 'Resources']];
 export const SECTION_IDS = [...SECTION_LINKS.map(([id]) => id), 'sec-tabs'];
-const acEffect = (c: Character, sp: Spell) => (acSpellIdle(c, sp) ? 'no effect in armor' : sp.acFx === 'bonus' ? fmt(sp.acVal || 0) + ' AC' : sp.acFx === 'base' ? 'AC ' + sp.acVal + ' + DEX' : 'AC ' + sp.acVal);
+const acEffect = (c: Character, sp: Spell) => (acOnOther(sp) ? 'on another creature' : acSpellIdle(c, sp) ? 'no effect in armor' : sp.acFx === 'bonus' ? fmt(sp.acVal || 0) + ' AC' : sp.acFx === 'base' ? 'AC ' + sp.acVal + ' + DEX' : 'AC ' + sp.acVal);
 const LAYOUTS: [LayoutMode, string][] = [['auto', 'Auto'], ['one', '1 column'], ['two', '2 columns']];
 
 interface Props {

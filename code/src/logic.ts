@@ -183,10 +183,10 @@ export function detectArmor(name: string): Pick<Item, 'armor' | 'acBase' | 'acBo
 }
 
 // AC spells by name: Shield +5 and Shield of Faith +2 (PHB p.316), Mage Armor base 13 + DEX (p.293), Barkskin AC at least 17 (p.245),
-// Haste +2 (p.284), Warding Bond +1 (p.340).
+// Haste +2 (p.284). Not Warding Bond: its +1 goes to "another creature" (p.340), never the caster.
 export const AC_SPELLS: Record<string, [AcEffect, number]> = {
   shield: ['bonus', 5], 'shield of faith': ['bonus', 2], 'mage armor': ['base', 13], barkskin: ['floor', 17],
-  haste: ['bonus', 2], 'warding bond': ['bonus', 1]
+  haste: ['bonus', 2]
 };
 export function detectAcSpell(name: string): Pick<Spell, 'acFx' | 'acVal'> | null {
   const key = name.trim().toLowerCase();
@@ -196,8 +196,14 @@ export function detectAcSpell(name: string): Pick<Spell, 'acFx' | 'acVal'> | nul
 }
 
 export interface AcPart { label: string; value: number; note?: string; active?: boolean }
+// Haste, Shield of Faith, Mage Armor and Barkskin can go on another creature (PHB pp.284, 316, 293, 245); a Self spell
+// (Shield) can't. Cast on another creature, the spell still runs (slot, Concentration, chip) but the caster's AC stays.
+export const acCanTargetOther = (sp: Spell) => !!sp.acFx && !/^self/i.test((sp.range || '').trim());
+export const acOnOther = (sp: Spell) => !!sp.acOther && acCanTargetOther(sp);
+export const toggleAcTarget = (c: Character, id: string): Partial<Character> =>
+  ({ spells: c.spells.map((sp) => (sp.id !== id ? sp : sp.acOther ? withoutKeys(sp, ['acOther']) : { ...sp, acOther: true as const })) });
 // A Concentration spell's AC effect is on exactly while concentrating on it; any other is on while in acOn.
-export const acSpellActive = (c: Character, sp: Spell) => !!sp.acFx && (sp.c ? c.conc?.id === sp.id : c.acOn.includes(sp.id));
+export const acSpellActive = (c: Character, sp: Spell) => !!sp.acFx && !acOnOther(sp) && (sp.c ? c.conc?.id === sp.id : c.acOn.includes(sp.id));
 
 // Armor Class and the parts it is made of. Base AC is 10 + DEX; armor, spells and features give other base
 // calculations, and only one applies (PHB p.12, p.361). The sheet picks the highest legal one.

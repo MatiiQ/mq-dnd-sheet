@@ -82,7 +82,7 @@ export interface Spell extends Linked {
   c?: boolean; always?: boolean; prep?: boolean;
   // What a linked grant changed, so removing the link can undo it: it turned `always` on; the casting ability before it.
   linkAlways?: true; linkCastAb?: Ability | 'none';
-  acFx?: AcEffect; acVal?: number; castAb?: Ability; cid?: string;
+  acFx?: AcEffect; acVal?: number; acOther?: true; castAb?: Ability; cid?: string;
   // Catalog fields: dice stays the free-text summary shown in the row; dmg/dtype are the damage dice and type.
   desc?: string; school?: string; classes?: string; ritual?: boolean; atk?: 'melee' | 'ranged'; save?: Ability;
   fx?: 'damage' | 'healing' | 'other'; dmg?: string; dtype?: string; scale?: string; higher?: string;

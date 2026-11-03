@@ -11,7 +11,7 @@ import { linkOf, sourceLabel } from '../../links';
 import { castSpell, COMBAT_ACTIONS, fmt, freeCastsOf, ORDINAL, removeRef, slotsLeft, spellUsable, toggled, type AcPart } from '../../logic';
 import { patchEntry, removeEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { Attack, Character, Econ, Item, Rider, Spell } from '../../types';
-import { AddButton, Caret, DieBadge, EffectSwitch, EntryForm, EntryRow, FreeCastButton, Step, TextField, useNoteUntilChange } from '../ui';
+import { AcTargetSwitch, AddButton, Caret, DieBadge, EffectSwitch, EntryForm, EntryRow, FreeCastButton, Step, TextField, useNoteUntilChange } from '../ui';
 
 const ECON: Record<Econ, string> = { action: 'Action', bonus: 'Bonus Action', reaction: 'Reaction', free: 'Free', other: 'Other' };
 type Filter = 'all' | 'action' | 'bonus' | 'reaction';
@@ -385,6 +385,7 @@ function CastButtons({ sp, effect }: { sp: Spell; effect: boolean }) {
   const lvl = sp.lvl || 0;
   const first = lvl > 0 && spellUsable(c, sp) ? [lvl, 2, 3, 4, 5, 6, 7, 8, 9].filter((l) => l >= lvl).find((l) => c.slotMax[l] && slotsLeft(c, l) > 0) : undefined;
   return <>
+    <AcTargetSwitch sp={sp} />
     {freeCastsOf(c, sp.id).map((r) => <FreeCastButton key={r.id} sp={sp} r={r} short />)}
     {first !== undefined && (
       <button type="button" className="btn btn-sm toggle-btn" aria-label={'Cast ' + sp.name + ' with a level ' + first + ' slot, ' + slotsLeft(c, first) + ' left'}

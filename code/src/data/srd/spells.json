@@ -6605,9 +6605,7 @@
     "dur": "1 hour",
     "conc": false,
     "ritual": false,
-    "fx": "other",
-    "acFx": "bonus",
-    "acVal": 1
+    "fx": "other"
   },
   {
     "id": "spell/water-breathing",
