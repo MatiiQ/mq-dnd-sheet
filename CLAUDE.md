@@ -29,9 +29,12 @@ npm run preview  # serve dist/ with the service worker active
 npm run icons    # regenerate public/icons/*.png (dependency-free PNG writer)
 npm run srd      # rebuild src/data/srd/*.json and src/catalog/names.ts from the SRD 5.2.1 text (scripts/srd/README.md)
 npm run pack     # build reference/build/phb-pack.json (PHB data for the device) and the check phrases, from reference/
+npm run audit-catalog  # catalog against the SRD text, reference/ and the app's code; fails on a discrepancy not in reference/audit-known.json, or on a known one now gone
 npm run check-phb  # build, then fail if dist/ or a tracked file holds PHB description text (needs reference/ and npm run pack)
 npm run hooks    # once per clone: install the pre-push hook that runs check-phb on every pushed commit
 ```
+
+`code/scripts/audit/` holds that audit: `catalog-audit.test.ts` also runs in `npm test`, and is skipped without the built pack and `resources/srd/srd.txt`, so CI runs only its fixture tests (`checks.test.ts`). After `npm run srd` or `npm run pack`, read `reference/build/audit-report.txt`; `AUDIT_UPDATE=1 npm run audit-catalog` accepts the current findings as known. Both files stay in `reference/`, because they name and can quote PHB content.
 
 `code/scripts/local/` (gitignored) holds PHB-side tests that need `reference/`; they don't exist in CI or on a clone without it, so a green CI says nothing about them.
 

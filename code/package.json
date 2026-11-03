@@ -11,6 +11,7 @@
     "icons": "node scripts/make-icons.mjs",
     "srd": "node scripts/srd/build.ts",
     "pack": "node scripts/pack/build.ts",
+    "audit-catalog": "vitest run scripts/audit/catalog-audit.test.ts",
     "check-phb": "node scripts/check-phb.ts",
     "hooks": "git config core.hooksPath code/scripts/hooks"
   },
