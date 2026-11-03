@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { newId } from './logic';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import {
-  ABILITIES, SKILLS, damageHitDie, castAbOf, removeChip, speedOf, armorSlowBy, stealthDisBy, acSpellIdle, untrainedArmor, grantChips, addGrants, findUnlinked, removalChain, removalSummary, removeFeature, removeResource, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, toggleEffect, dawn, refillFor, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, splitTraining, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, removeItem, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
+  ABILITIES, SKILLS, regainLabel, damageHitDie, castAbOf, removeChip, speedOf, armorSlowBy, stealthDisBy, acSpellIdle, untrainedArmor, grantChips, addGrants, findUnlinked, removalChain, removalSummary, removeFeature, removeResource, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, toggleEffect, dawn, refillFor, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, splitTraining, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, removeItem, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
   num, setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, undoHp
 } from './logic';
 import { spellActions } from './actions';
@@ -15,6 +15,7 @@ import { activeGrants, isActive } from './links';
 import { inventoryGroups } from './inventory';
 import { applyPatch } from './storage';
 import { oldIlyra, oldSeren } from './test-fixtures';
+import type { FeatureEntry } from './catalog/schema';
 import type { Character, Feature, Grant, Item, Spell } from './types';
 
 const make = (p: Partial<Character> = {}): Character => ({ ...sampleCharacter(), ...p });
@@ -2002,5 +2003,35 @@ describe('HP actions', () => {
   it('takes Exhaustion off the Concentration roll (PHB p.366)', () => {
     const c: Character = { ...blankCharacter(), hp: 8, exh: 2, saveProf: { con: true }, conc: { id: 's', name: 'Bless' }, spells: [], amount: 2 };
     expect(applyDamage(c).concCheck).toContain('roll d20 −2');
+  });
+});
+
+describe('catalog data for rests and AC', () => {
+  const cat = mergeCatalog(srdEntries, null);
+  const bard = (level: number): Character => {
+    const entry = cat.byId.get('feature/bard/bardic-inspiration') as FeatureEntry;
+    const spec = entry.grants!.find((g) => g.id === 'g1') as GrantSpec;
+    const base: Character = { ...blankCharacter(), level, hp: 8, abil: { ...blankCharacter().abil, cha: 16 }, feats: [{ id: 'f', g: 'class', name: 'Bardic Inspiration', desc: '' }] };
+    const c = addGrants(base, 'feature:f', [{ spec }]);
+    return { ...c, res: c.res.map((r) => ({ ...r, count: 0 })) };
+  };
+  it('refills Bardic Inspiration on a Short Rest from level 5 (PHB p.61)', () => {
+    expect(shortRest(bard(4)).res[0].count).toBe(0);
+    expect(shortRest(bard(5)).res[0].count).toBe(3);
+    const back = migrate(JSON.parse(JSON.stringify(bard(5))));
+    expect(shortRest(back).res[0].count).toBe(3);
+  });
+  it('words a level-based regain', () => {
+    const r = { regain: '1:0,5:20', regainOn: 'short' as const, recharge: 'long' as const, max: 3 };
+    expect(regainLabel({ ...blankCharacter(), level: 4 }, r)).toBe('');
+    expect(regainLabel({ ...blankCharacter(), level: 5 }, r)).toBe('all');
+    expect(regainLabel(blankCharacter(), { ...r, regain: '1' })).toBe('1');
+    expect(regainLabel(blankCharacter(), { ...r, regain: '1d6+1' })).toBe('1d6+1');
+  });
+  it('gives Haste and Warding Bond their AC bonus (PHB pp.284, 340)', () => {
+    expect(cat.byId.get('spell/haste')).toMatchObject({ acFx: 'bonus', acVal: 2 });
+    expect(cat.byId.get('spell/warding-bond')).toMatchObject({ acFx: 'bonus', acVal: 1 });
+    expect(detectAcSpell('Haste')).toEqual({ acFx: 'bonus', acVal: 2 });
+    expect(detectAcSpell('Warding Bond')).toEqual({ acFx: 'bonus', acVal: 1 });
   });
 });

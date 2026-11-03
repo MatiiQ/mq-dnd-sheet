@@ -4,6 +4,8 @@
   "spell/mage-armor": { "acFx": "base", "acVal": 13 },
   "spell/hunters-mark": { "grants": [{ "id": "g1", "kind": "xdmg", "name": "Hunter’s Mark", "dice": "1d6", "dtype": "Force", "on": "the marked target", "when": "active" }] },
   "spell/barkskin": { "acFx": "floor", "acVal": 17 },
+  "spell/haste": { "acFx": "bonus", "acVal": 2 },
+  "spell/warding-bond": { "acFx": "bonus", "acVal": 1 },
   "spell/shillelagh": { "grants": [{ "id": "g1", "kind": "atkAbil", "name": "Shillelagh", "ab": "cast", "weapons": "club,quarterstaff", "amode": "melee", "die": "1:1d8,5:1d10,11:1d12,17:2d6", "when": "active" }] },
   "spell/fire-shield": { "dtype": null, "dtypes": "Fire,Cold" },
   "spell/delayed-blast-fireball": { "fx": "damage", "dice": "12d6", "dtype": "Fire" },

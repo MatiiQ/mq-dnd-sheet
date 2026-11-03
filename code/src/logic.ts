@@ -183,10 +183,12 @@ export function detectArmor(name: string): Pick<Item, 'armor' | 'acBase' | 'acBo
   return a ? { armor: a[1], acBase: a[2], ...(plus ? { acBonus: Number(plus[1]) } : {}) } : null;
 }
 
-// AC spells by name: Shield +5 and Shield of Faith +2 (PHB p.316), Mage Armor base 13 + DEX (p.293), Barkskin AC at least 17 (p.245).
+// AC spells by name: Shield +5 and Shield of Faith +2 (PHB p.316), Mage Armor base 13 + DEX (p.293), Barkskin AC at least 17 (p.245),
+// Haste +2 (p.284), Warding Bond +1 (p.340).
 export const AC_EFFECTS: AcEffect[] = ['bonus', 'base', 'floor'];
 export const AC_SPELLS: Record<string, [AcEffect, number]> = {
-  shield: ['bonus', 5], 'shield of faith': ['bonus', 2], 'mage armor': ['base', 13], barkskin: ['floor', 17]
+  shield: ['bonus', 5], 'shield of faith': ['bonus', 2], 'mage armor': ['base', 13], barkskin: ['floor', 17],
+  haste: ['bonus', 2], 'warding bond': ['bonus', 1]
 };
 export function detectAcSpell(name: string): Pick<Spell, 'acFx' | 'acVal'> | null {
   const key = name.trim().toLowerCase();
@@ -606,6 +608,15 @@ export const regainEvent = (rc: Recharge | undefined): Counter['regainOn'] => (r
 export function maxOf(c: Character, x: Partial<Counter>): number | null {
   if (x.maxV !== undefined) return Math.max(0, num(c, x.maxV));
   return x.max && x.max >= 1 ? x.max : null;
+}
+// A counter's partial regain as words: '' when it is 0 now (Font of Inspiration before level 5, PHB p.61), 'all' at its
+// maximum or above, else the number or the dice.
+export function regainLabel(c: Character, x: Partial<Counter>): string {
+  if (!x.regain) return '';
+  const v = valueAt(x.regain, valueCtx(c));
+  if (typeof v === 'string') return v;
+  const m = maxOf(c, x);
+  return v <= 0 ? '' : m !== null && v >= m ? 'all' : String(v);
 }
 export type MaxKind = 'none' | 'number' | 'formula';
 export const maxKindOf = (x: Partial<Counter>): MaxKind => (x.maxV !== undefined ? 'formula' : x.max ? 'number' : 'none');

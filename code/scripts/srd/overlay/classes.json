@@ -337,7 +337,9 @@
         "kind": "resource",
         "name": "Bardic Inspiration",
         "max": "cha>=1",
-        "recharge": "long"
+        "recharge": "long",
+        "regain": "1:0,5:20",
+        "regainOn": "short"
       },
       {
         "id": "g2",

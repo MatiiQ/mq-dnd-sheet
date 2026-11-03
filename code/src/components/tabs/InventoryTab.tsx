@@ -1,7 +1,7 @@
 import { useState, type CSSProperties } from 'react';
 import { armorBaseMissing, BLANK_ITEM, catForKind, draftFromItem, itemFromForm, itemStats, withDetectedArmor, WEAPON_PROPS, type ItemDraft, type ItemKind, type WeaponProp } from '../../catalog/copy';
 import { isValue } from '../../catalog/value';
-import { CARRY_MULT, SIZES, capital, coinWeight, maxFields, maxOf, rechargeOf, regainEvent, carriedWeight, carryCapacity, carryUpOf, sizeOf, effScore, fmt, addGrants, grantChips, isContainer, newId, removeItem, type GrantInput } from '../../logic';
+import { CARRY_MULT, SIZES, regainLabel, capital, coinWeight, maxFields, maxOf, rechargeOf, regainEvent, carriedWeight, carryCapacity, carryUpOf, sizeOf, effScore, fmt, addGrants, grantChips, isContainer, newId, removeItem, type GrantInput } from '../../logic';
 import {
   addSection, containerLoad, DEFAULT_SECTION, inventoryGroups, moveInto, moveSection, removeContainer, removeContainerSummary, removeSection, renameSection,
   setItemSection, takeOut
@@ -208,7 +208,7 @@ export function InventoryTab() {
             <span>{it.name}</span>
             {(weaponNote(it) || acNote(it) || it.wt !== undefined || it.count !== undefined) && <span className="muted">
               {[weaponNote(it), acNote(it), it.wt !== undefined && lb(it.wt) + ' lb' + (it.qty > 1 ? ' each' : ''),
-                it.count !== undefined && (it.qty !== 1 ? '× ' + it.qty + ' · ' : '') + 'charges: ' + RECHARGE_NAMES[rechargeOf(it)] + (it.regain ? ' +' + it.regain : '')].filter(Boolean).join(' · ')}
+                it.count !== undefined && (it.qty !== 1 ? '× ' + it.qty + ' · ' : '') + 'charges: ' + RECHARGE_NAMES[rechargeOf(it)] + (regainLabel(c, it) ? ' +' + regainLabel(c, it) : '')].filter(Boolean).join(' · ')}
             </span>}
           </>}
           side={<div className="row gap-8" style={{ padding: '6px 0' }}>
