@@ -68,12 +68,12 @@ describe('service worker', () => {
   });
 
   it('serves its own page offline, not an older cache', async () => {
-    const w = worker({ 'dnd-sheet-old': page('old'), [OWN]: page('own') }, () => Promise.reject(new TypeError('offline')));
+    const w = worker({ 'dnd-sheet-old': page('old'), [OWN]: page('own') }, () => Promise.reject(new TypeError('offline')), { installing: {} }); // installing: the old cache stays
     expect(await (await w.navigate()).text()).toBe('own');
   });
 
   it('uses its own page on a 503 too', async () => {
-    const w = worker({ 'dnd-sheet-old': page('old'), [OWN]: page('own') }, async () => new Response('down', { status: 503 }));
+    const w = worker({ 'dnd-sheet-old': page('old'), [OWN]: page('own') }, async () => new Response('down', { status: 503 }), { installing: {} });
     expect(await (await w.navigate()).text()).toBe('own');
   });
 
