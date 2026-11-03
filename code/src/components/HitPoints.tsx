@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { activeGrants, sourceLabel } from '../links';
-import { abilityMod, applyDamage, capital, maxHpOf, num, applyHeal, applySetTemp, clearHpUndo, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, isDead, setHp, setMaxHp, spendHitDie, undoHp } from '../logic';
+import { abilityMod, applyDamage, capital, damageHitDie, maxHpOf, num, applyHeal, applySetTemp, clearHpUndo, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, isDead, setHp, setMaxHp, spendHitDie, undoHp } from '../logic';
 import { useWide } from '../layout';
 import { useSheet } from '../sheet';
 import type { Character } from '../types';
@@ -97,7 +97,7 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
           </label>
           <Step label="Increase amount" onClick={() => setAmount(Math.min(999, c.amount + 1))}>+</Step>
         </div>
-        <button type="button" className="btn btn-act btn-damage" onClick={() => act(applyDamage)}>Damage</button>
+        <button type="button" className="btn btn-act btn-damage" onClick={() => act(hdPrompt ? damageHitDie : applyDamage)}>Damage</button>
         <button type="button" className="btn btn-act btn-heal" aria-disabled={dead} onClick={() => act(hdPrompt ? healHitDie : applyHeal)}>Heal</button>
         <button type="button" className="btn btn-act" onClick={() => act(applySetTemp)}>Set Temp</button>
       </div>

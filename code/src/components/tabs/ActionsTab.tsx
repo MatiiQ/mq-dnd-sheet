@@ -30,7 +30,7 @@ function EconTag({ econ }: { econ: Econ }) {
   return <span className={'econ-tag econ-' + econ}>{ECON[econ]}</span>;
 }
 function Parts({ label, parts }: { label: string; parts: AcPart[] }) {
-  return <span className="muted">{label}: {parts.map((p) => p.label + ' ' + fmt(p.value)).join(' · ') || 'none'}</span>;
+  return <span className="muted">{label}: {parts.map((p) => p.label + ' ' + fmt(p.value) + (p.note ? ' (' + p.note + ')' : '')).join(' · ') || 'none'}</span>;
 }
 // An attack's two numbers, read out by name.
 function AttackNums({ hit, dmg }: { hit: string; dmg: string }) {

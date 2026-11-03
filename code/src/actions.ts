@@ -137,8 +137,9 @@ function attackFor(c: Character, it: Item, use: Use): { attack: WeaponAttack; di
   // items and neither text limits the other (SRD 5.2.1 Ammunition, +1, +2, or +3; Ammunition property, PHB p.213).
   const loaded = use === 'ranged' && it.load ? c.inv.find((x) => x.id === it.load)?.magic : undefined;
   const magic = [...(it.magic ? [{ label: 'Magic', value: it.magic }] : []), ...(loaded ? [{ label: 'Ammunition', value: loaded }] : [])];
-  const hitParts: AcPart[] = [{ label: abilityName(ab), value: mod }, ...(weaponProficient(c, it) ? [{ label: 'Proficiency Bonus', value: pb }] : []),
-    ...magic, ...grantParts(c, 'atkBonus', it, use)].filter((p) => p.value !== 0);
+  const profPart: AcPart = weaponProficient(c, it) ? { label: 'Proficiency Bonus', value: pb } : { label: 'Proficiency Bonus', value: 0, note: 'no training' };
+  const hitParts: AcPart[] = [{ label: abilityName(ab), value: mod }, profPart,
+    ...magic, ...grantParts(c, 'atkBonus', it, use)].filter((p: AcPart) => p.value !== 0 || p.note);
   const dmgParts: AcPart[] = [{ label: abilityName(ab), value: mod }, ...magic, ...grantParts(c, 'dmgBonus', it, use)].filter((p) => p.value !== 0);
   // An override's die (evaluated at the level with valueAt: num would read dice as 0) replaces the grip's die when its
   // average is larger, on either grip: Shillelagh's d12 beats a Quarterstaff's d6 and its two-handed d8.
@@ -296,7 +297,8 @@ function spellRow(c: Character, sp: Spell, r: RowFields): Omit<SpellAction, 'nam
   let dice = r.dice ?? '';
   if (dice && spellKey(sp) === 'eldritch-blast') {
     // Eldritch Blast adds beams instead of dice (PHB p.267).
-    dice = `${cantripTier(c.level)} beams × ${dice}`;
+    const beams = cantripTier(c.level);
+    dice = `${beams} ${beams === 1 ? 'beam' : 'beams'} × ${dice}`;
   } else if (dice && r.scale === 'cantrip') {
     dice = diceText(cantripDice(dice, c.level), cantripBonus(c, sp));
   } else if (/\d+d\d+/.test(dice) && ((r.fx === 'healing' && r.healMod) || (r.fx === 'damage' && r.dmgMod))) {

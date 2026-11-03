@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { newId } from './logic';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import {
-  ABILITIES, SKILLS, castAbOf, removeChip, speedOf, armorSlowBy, stealthDisBy, acSpellIdle, untrainedArmor, grantChips, addGrants, findUnlinked, removalChain, removalSummary, removeFeature, removeResource, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, toggleEffect, dawn, refillFor, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, splitTraining, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, removeItem, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
+  ABILITIES, SKILLS, damageHitDie, castAbOf, removeChip, speedOf, armorSlowBy, stealthDisBy, acSpellIdle, untrainedArmor, grantChips, addGrants, findUnlinked, removalChain, removalSummary, removeFeature, removeResource, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, toggleEffect, dawn, refillFor, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, splitTraining, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, removeItem, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
   num, setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, undoHp
 } from './logic';
 import { spellActions } from './actions';
@@ -1978,4 +1978,29 @@ it('updates a saved Musket', () => {
   const fire: Item = { id: 'fb', name: 'Firearm Bullets', qty: 10, eq: false, cat: 'ammo', cid: 'item/firearm-bullets' };
   expect(normalize({ ...blankCharacter(), inv: [musket, sling] }).inv[0].load).toBeUndefined();
   expect(normalize({ ...blankCharacter(), inv: [{ ...musket, load: 'fb' }, fire] }).inv[0].load).toBe('fb');
+});
+
+describe('HP actions', () => {
+  it('refunds the die when undoing damage after spending it', () => {
+    const c: Character = { ...blankCharacter(), level: 3, maxHp: 30, hp: 20 };
+    const spent = spendHitDie(c);
+    expect(spent.hdUsed).toBe(1);
+    const hit = damageHitDie({ ...spent, amount: 5 });
+    expect(hit.hp).toBe(15);
+    const back = undoHp(hit);
+    expect(back.hdUsed).toBe(0);
+    expect(back.hp).toBe(20);
+  });
+  it('clears temp HP with an amount of 0', () => {
+    const c: Character = { ...blankCharacter(), temp: 7, amount: 0 };
+    const out = applySetTemp(c);
+    expect(out.temp).toBe(0);
+    expect(out.hpUndo?.text).toBe('Temp HP cleared (was 7).');
+    const none: Character = { ...blankCharacter(), temp: 0, amount: 0 };
+    expect(applySetTemp(none)).toBe(none);
+  });
+  it('takes Exhaustion off the Concentration roll (PHB p.366)', () => {
+    const c: Character = { ...blankCharacter(), hp: 8, exh: 2, saveProf: { con: true }, conc: { id: 's', name: 'Bless' }, spells: [], amount: 2 };
+    expect(applyDamage(c).concCheck).toContain('roll d20 −2');
+  });
 });

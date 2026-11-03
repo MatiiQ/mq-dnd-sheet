@@ -529,3 +529,20 @@ it('falls back to the normal die for a blank Versatile die', () => {
     expect(weaponAttacks({ ...str16, inv: [sword], hands: ['w', 'w'] }, sword).find((a) => a.use === 'two-handed')!.dmg).toBe('1d8+3');
   }
 });
+
+it('says 1 beam', () => {
+  const sp: Spell = { id: 'e', name: 'Eldritch Blast', lvl: 0, time: 'Action', range: '120 ft', atk: 'ranged', fx: 'damage', dmg: '1d10', dtype: 'Force', scale: 'beams', cid: 'spell/eldritch-blast' };
+  const dice = (level: number) => spellActions({ ...blankCharacter(), level, castAb: 'cha', spells: [sp] })[0].dice;
+  expect(dice(1)).toBe('1 beam × 1d10');
+  expect(dice(5)).toBe('2 beams × 1d10');
+});
+
+it('names a missing Proficiency Bonus', () => {
+  const sword = longsword({ id: 'w' });
+  const c: Character = { ...blankCharacter(), abil: { ...blankCharacter().abil, str: 16 }, inv: [sword], hands: ['w'] };
+  const a = weaponAttacks(c, sword)[0];
+  expect(a.hitParts).toContainEqual({ label: 'Proficiency Bonus', value: 0, note: 'no training' });
+  expect(a.hit).toBe(3);
+  const trained = weaponAttacks({ ...c, profs: [{ id: 'p', cat: 'weapon', name: 'Martial weapons' }] }, sword)[0];
+  expect(trained.hitParts).toContainEqual({ label: 'Proficiency Bonus', value: 2 });
+});

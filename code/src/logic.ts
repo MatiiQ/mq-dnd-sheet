@@ -496,10 +496,12 @@ export function applyDamage(c: Character): Character {
   }
   if (c.conc) {
     const dc = clamp(Math.floor(c.amount / 2), 10, 30);
-    next.concCheck = 'Concentration on ' + c.conc.name + ': CON save DC ' + dc + ' · roll d20 ' + fmt(saveMod(c, 'con')) + '. If you fail, tap the blue chip in the top bar to end it.';
+    // Exhaustion takes 2 × its level off every D20 Test (PHB p.366), so the roll shown includes it.
+    next.concCheck = 'Concentration on ' + c.conc.name + ': CON save DC ' + dc + ' · roll d20 ' + fmt(saveMod(c, 'con') - 2 * c.exh) + '. If you fail, tap the blue chip in the top bar to end it.';
     if (next.hp === 0) {
       next.conc = null;
-      next.concCheck = 'Concentration on ' + c.conc.name + ' ended (dropped to 0 HP).';
+      // Exhaustion takes 2 × its level off every D20 Test (PHB p.366), so the roll shown includes it.
+    next.concCheck = 'Concentration on ' + c.conc.name + ' ended (dropped to 0 HP).';
     }
   }
   if (next.hp === 0 && c.hp > 0) {
@@ -532,10 +534,11 @@ export function applyHeal(c: Character): Character {
   return next;
 }
 
-// Temp HP don't stack: the new set replaces the old one, and Undo keeps the old one instead (PHB p.29).
+// Temp HP don't stack: the new set replaces the old one, and Undo keeps the old one instead (PHB p.29). An amount of 0
+// clears them.
 export function applySetTemp(c: Character): Character {
-  if (!c.amount) return c;
-  const text = 'Temp HP set to ' + c.amount + (c.temp && c.temp !== c.amount
+  if (!c.amount && !c.temp) return c;
+  const text = !c.amount ? 'Temp HP cleared (was ' + c.temp + ').' : 'Temp HP set to ' + c.amount + (c.temp && c.temp !== c.amount
     ? ' (replaced ' + c.temp + '; temp HP don’t stack, tap Undo to keep ' + c.temp + ').'
     : '.');
   const next = { ...c, temp: c.amount };
@@ -588,11 +591,11 @@ export const hitDieRoll = (c: Character) => '1d' + c.hdDie + ' ' + fmt(abilityMo
 
 // Each spent Hit Die restores at least 1 HP, even with a negative Con modifier (PHB p.373).
 // Undoing a Hit Die heal also gives the die back, so the roll can be entered again.
-export function healHitDie(c: Character): Character {
-  const next = applyHeal({ ...c, amount: Math.max(1, c.amount) });
-  if (!next.hpUndo || next.hpUndo === c.hpUndo) return next;
-  return { ...next, hpUndo: { ...next.hpUndo, prev: { ...next.hpUndo.prev, hdUsed: Math.max(0, c.hdUsed - 1) } } };
-}
+const undoGivesDie = (c: Character, next: Character): Character =>
+  (!next.hpUndo || next.hpUndo === c.hpUndo ? next : { ...next, hpUndo: { ...next.hpUndo, prev: { ...next.hpUndo.prev, hdUsed: Math.max(0, c.hdUsed - 1) } } });
+export const healHitDie = (c: Character): Character => undoGivesDie(c, applyHeal({ ...c, amount: Math.max(1, c.amount) }));
+// Damage typed while a spent die waits for its roll: Undo gives that die back too.
+export const damageHitDie = (c: Character): Character => undoGivesDie(c, applyDamage(c));
 
 export const rechargeOf = (r: Partial<Counter>) => r.recharge || 'none';
 // When a counter's partial regain comes: on a Short Rest for a Long Rest counter, at dawn for a Dawn counter.
