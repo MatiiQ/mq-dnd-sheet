@@ -66,6 +66,15 @@ describe('a class with a subclass', () => {
   });
 });
 
+describe('source notes', () => {
+  it('leaves a PHB page citation out of a feature description', () => {
+    const [, , feats] = parseClassMd(fx('class.md').replace('### Level 1: Kindle (PHB p.902)\n', '### Level 1: Kindle (PHB p.902)\n##### Kindle Table (PHB p.97)\nSee page (PHB p.98-99).\n'));
+    const desc = feats.find((f) => f.name === 'Kindle')!.desc;
+    expect(desc).toContain('##### Kindle Table\nSee page.');
+    expect(desc).not.toContain('PHB p.');
+  });
+});
+
 describe('feats, backgrounds, species, equipment', () => {
   it('reads feats with their prerequisites', () => {
     const [ward, bearer] = parseFeatsMd(fx('feats.md'));

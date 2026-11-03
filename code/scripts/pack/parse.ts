@@ -12,8 +12,8 @@ import { ABIL_ALT, DAMAGE_ALT } from '../srd/spells.ts';
 
 const ABILITY: Record<string, Ability> = { str: 'str', dex: 'dex', con: 'con', int: 'int', wis: 'wis', cha: 'cha' };
 const ab = (name: string) => ABILITY[name.trim().slice(0, 3).toLowerCase()];
-// Markdown markup out: bullets, bold and italics.
-const clean = (l: string) => l.replace(/^\s*- /, '').replace(/\*\*/g, '').replace(/\*/g, '').trim();
+// Markdown markup and page citations out: bullets, bold, italics and "(PHB p.97)".
+const clean = (l: string) => l.replace(/^\s*- /, '').replace(/\*\*/g, '').replace(/\*/g, '').replace(/\s*\(PHB p\.[^)]*\)/g, '').trim();
 
 interface Block { title: string; page?: number; depth: number; lines: string[] }
 const HEAD = /^(#{1,4}) (.+?)(?: \(PHB p\.(\d+)[^)]*\))?\s*$/;

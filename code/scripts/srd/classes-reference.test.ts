@@ -3,11 +3,18 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { ClassEntry, Entry, FeatureEntry } from '../../src/catalog/schema.ts';
+import { valueAt } from '../../src/catalog/value.ts';
 
 const REF = new URL('../../../reference/classes/', import.meta.url);
 const data: Entry[] = JSON.parse(readFileSync(new URL('../../src/data/srd/classes.json', import.meta.url), 'utf8'));
 const norm = (s: string) => s.trim().replace(/’/g, "'");
 const CLASSES = data.filter((e): e is ClassEntry => e.kind === 'class');
+// Class table columns that count a resource, by class: column → the feature whose grant holds it.
+const RESOURCE_COLUMNS: Record<string, [string, string]> = {
+  Barbarian: ['Rages', 'feature/barbarian/rage'], Cleric: ['Channel Divinity', 'feature/cleric/channel-divinity'], Druid: ['Wild Shape', 'feature/druid/wild-shape'],
+  Fighter: ['Second Wind', 'feature/fighter/second-wind'], Monk: ['Focus Points', 'feature/monk/monks-focus'], Paladin: ['Channel Divinity', 'feature/paladin/channel-divinity'],
+  Ranger: ['Favored Enemy', 'feature/ranger/favored-enemy'], Sorcerer: ['Sorcery Points', 'feature/sorcerer/font-of-magic']
+};
 
 // The 20 rows of the class table, as header → cell.
 function table(md: string): Record<string, string>[] {
@@ -46,6 +53,14 @@ describe.skipIf(!existsSync(REF))('SRD classes against reference/classes', () =>
           expect(rows.map((_, i) => at(i + 1))).toEqual(rows.map((r) => Number(r.Cantrips)));
         } else expect(c.cantrips).toBeUndefined();
       });
+      if (RESOURCE_COLUMNS[c.name]) {
+        it('has the table’s resource count at every level', () => {
+          const [column, id] = RESOURCE_COLUMNS[c.name], f = data.find((e): e is FeatureEntry => e.id === id)!;
+          const grant = f.grants!.find((g) => g.kind === 'resource' && 'max' in g) as unknown as { max: string };
+          const at = (level: number) => (level < f.lvl ? 0 : valueAt(grant.max, { level, pb: 0, mod: () => 0 }));
+          expect(rows.map((_, i) => at(i + 1))).toEqual(rows.map((r) => (/^[—-]$/.test(r[column]) ? 0 : Number(r[column]))));
+        });
+      }
     });
   }
 });

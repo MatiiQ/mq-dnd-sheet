@@ -159,9 +159,9 @@ npm run dev
 | `npm run icons` | Redraws the app icons into `public/icons/*.png` (a gold d20 on a dark ground). A new file in `public/` must also be added to `PUBLIC_FILES` in `vite.config.ts`, or the service worker won't cache it. |
 | `npm run srd` | Rebuilds the SRD rules data (`src/data/srd/*.json`) and `src/catalog/names.ts` from the SRD 5.2.1 text. Needs the SRD PDF, see [code/scripts/srd/README.md](code/scripts/srd/README.md). |
 | `npm run pack` | Builds the private PHB data pack from `reference/`. See below. |
-| `npm run audit-catalog` | Checks the catalog against the SRD text, `reference/` and the app's code. Needs `reference/`, the built pack and `resources/srd/srd.txt`. |
+| `npm run audit-catalog` | Rebuilds the PHB pack, then checks the catalog against the SRD text, `reference/` and the app's code. Needs `reference/` and `resources/srd/srd.txt`, and fails without them. |
 | `npm run check-phb` | Builds the app, then fails if `dist/` or any tracked file contains Player's Handbook text. See below. |
-| `npm run hooks` | Once per clone: points git at `code/scripts/hooks/`, so the pre-push hook runs `check-phb` before every push. |
+| `npm run hooks` | Once per clone: points git at `code/scripts/hooks/`, so the pre-push hook runs `audit-catalog` (when `reference/` exists) and `check-phb` before every push. |
 
 Stack: React 19, Vite 8, TypeScript 7, Vitest 5. The only other runtime dependency is `@fontsource`
 (Fraunces and Figtree, bundled so they work offline).

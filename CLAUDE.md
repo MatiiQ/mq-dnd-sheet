@@ -29,12 +29,12 @@ npm run preview  # serve dist/ with the service worker active
 npm run icons    # regenerate public/icons/*.png (dependency-free PNG writer)
 npm run srd      # rebuild src/data/srd/*.json and src/catalog/names.ts from the SRD 5.2.1 text (scripts/srd/README.md)
 npm run pack     # build reference/build/phb-pack.json (PHB data for the device) and the check phrases, from reference/
-npm run audit-catalog  # catalog against the SRD text, reference/ and the app's code; fails on a discrepancy not in reference/audit-known.json, or on a known one now gone
+npm run audit-catalog  # rebuild the pack, then catalog against the SRD text, reference/ and the app's code; fails on a missing input, a discrepancy not in reference/audit-known.json, a known one whose note changed or that is gone, or a changed grant hash
 npm run check-phb  # build, then fail if dist/ or a tracked file holds PHB description text (needs reference/ and npm run pack)
-npm run hooks    # once per clone: install the pre-push hook that runs check-phb on every pushed commit
+npm run hooks    # once per clone: install the pre-push hook that runs audit-catalog (when reference/ exists) and check-phb on every pushed commit
 ```
 
-`code/scripts/audit/` holds that audit: `catalog-audit.test.ts` also runs in `npm test`, and is skipped without the built pack and `resources/srd/srd.txt`, so CI runs only its fixture tests (`checks.test.ts`). After `npm run srd` or `npm run pack`, read `reference/build/audit-report.txt`; `AUDIT_UPDATE=1 npm run audit-catalog` accepts the current findings as known. Both files stay in `reference/`, because they name and can quote PHB content.
+`code/scripts/audit/` holds that audit: `catalog-audit.test.ts` also runs in `npm test`, and is skipped without the built pack and `resources/srd/srd.txt`, so CI runs only its fixture tests (`checks.test.ts`). After `npm run srd` or `npm run pack`, run `npm run audit-catalog`, then read `reference/build/audit-report.txt` (its first line gives the run time and the pack's `builtAt`). `AUDIT_UPDATE=1 npm run audit-catalog` accepts the current findings and grant hashes: it prints the keys added, removed and changed, copies the old list to `audit-known.json.bak`, and puts new keys in `todo`. The known list holds `accepted` (fine as they are), `todo` (real defects still to fix), each key with its note and a reason, and `grants` (a hash per entry). A green audit means nothing new, not a clean catalog: read `todo`. All these files stay in `reference/`, because they name and can quote PHB content.
 
 `code/scripts/local/` (gitignored) holds PHB-side tests that need `reference/`; they don't exist in CI or on a clone without it, so a green CI says nothing about them.
 

@@ -1,6 +1,7 @@
 // Finds discrepancies between the catalog and its sources: pure functions over entries and source text, so each can be
 // tested with synthetic input. catalog-audit.test.ts feeds them the real files. A finding's check and id are its key in
-// the known list; its note goes only to the local report, because it can hold PHB values.
+// the known list; its note goes only to gitignored files in reference/, because it can hold PHB values.
+import { createHash } from 'node:crypto';
 import { catalogId, slug, type Entry, type GrantSpec, type Spec } from '../../src/catalog/schema.ts';
 
 export interface Finding { check: string; id: string; note: string }
@@ -19,6 +20,13 @@ const SCHOOL = 'Abjuration|Conjuration|Divination|Enchantment|Evocation|Illusion
 const SPELL_LINE = new RegExp(`^(Level \\d (${SCHOOL})|(${SCHOOL}) Cantrip)`);
 const MAGIC_START = /^(Wondrous Item|Armor|Weapon|Ring|Rod|Staff|Wand|Potion|Scroll|Ammunition)(,| \()/;
 const MAGIC_LINE = /\b(Common|Uncommon|Rare|Legendary|Artifact|Varies|Any)\b/;
+const RARITY = /\b(Very Rare|Uncommon|Common|Rare|Legendary|Artifact)\b/gi;
+// One rarity against the type line's only one (the rarity can wrap to the next line); several ("Rare (Silver), Very Rare
+// (Bronze)") whole.
+const rarityMatches = (rarity: string, line: string, full: string) => {
+  const own = rarity.match(RARITY) ?? [], src = line.match(RARITY) ?? full.match(RARITY) ?? [];
+  return own.length > 1 ? nameKey(full).includes(nameKey(rarity)) : src.length === 1 && own[0]?.toLowerCase() === src[0].toLowerCase();
+};
 
 // Every spell and magic item heading of the SRD text has an entry, and every SRD entry of those kinds has a heading.
 export function srdHeadingChecks(text: string, entries: Entry[]): Finding[] {
@@ -36,11 +44,16 @@ export function srdHeadingChecks(text: string, entries: Entry[]): Finding[] {
     const one = nameKey(L[i - 1]), two = i > 1 ? nameKey(`${L[i - 2]} ${L[i - 1]}`) : '';
     const k = items.has(one) ? one : items.has(two) ? two : '';
     // A line that reads as prose before the type line is not a heading.
-    if (!k) { if (/^[A-Z][\w’' ,+-]*$/.test(L[i - 1])) out.push({ check: 'srd-item-missing', id: one, note: `heading "${L[i - 1]}" has no entry` }); return; }
+    if (!k) {
+      // A heading can wrap, its last line starting lower case.
+      const head = /^[a-z]/.test(L[i - 1]) && i > 1 ? `${L[i - 2]} ${L[i - 1]}` : L[i - 1];
+      if (/^[A-Z][\w’' ,+()-]*$/.test(head)) out.push({ check: 'srd-item-missing', id: nameKey(head), note: `heading "${head}" has no entry` });
+      return;
+    }
     found.add(k);
     const e = items.get(k)!, full = `${l} ${L[i + 1] ?? ''}`;
     if (e.kind !== 'item') return;
-    if (!/varies|\(\+1\)/i.test(full) && !full.toLowerCase().includes((e.rarity ?? '').toLowerCase())) out.push({ check: 'srd-item-rarity', id: e.id, note: `${e.rarity} against "${full.slice(0, 80)}"` });
+    if (!/varies|\(\+1\)/i.test(full) && !rarityMatches(e.rarity ?? '', l, full)) out.push({ check: 'srd-item-rarity', id: e.id, note: `${e.rarity} against "${full.slice(0, 80)}"` });
     if (/\(Requires/.test(full) !== !!e.attune) out.push({ check: 'srd-item-attune', id: e.id, note: `attune ${!!e.attune} against "${full.slice(0, 80)}"` });
   });
   for (const [k, e] of items) if (!found.has(k)) out.push({ check: 'srd-item-extra', id: e.id, note: 'entry with no SRD heading' });
@@ -50,26 +63,34 @@ export function srdHeadingChecks(text: string, entries: Entry[]): Finding[] {
 const COMPARED: Partial<Record<Entry['kind'], string[]>> = {
   spell: ['lvl', 'school', 'classes', 'time', 'range', 'comp', 'dur', 'conc', 'ritual'],
   item: ['cost', 'wt', 'wcat', 'wrange', 'dmg', 'dtype', 'props', 'thrown', 'vers', 'ammo', 'mastery', 'armor', 'acBase', 'strReq', 'stealthDis'],
-  feature: ['lvl', 'again'], feat: ['cat', 'prereq', 'repeat'], background: ['abils', 'feat'], species: ['sizes', 'speed'], trait: ['lvl'], class: ['hd', 'saves']
+  feature: ['lvl', 'again'], feat: ['cat', 'prereq', 'repeat'], background: ['abils', 'feat', 'skills', 'tool'], species: ['sizes', 'speed'], trait: ['lvl'], class: ['hd', 'saves', 'armor', 'weapons', 'tools', 'skills']
 };
+// Spell numbers the parser reads from condensed text, so it can leave one out: compared only when both sides have it.
+const COMPARED_IF_BOTH = ['dice', 'dtype', 'save', 'atk', 'scale'];
 const same = (a: unknown, b: unknown) => (typeof a === 'string' && typeof b === 'string' ? nameKey(a) === nameKey(b) : a === b);
+// A value as it compares: a spell's class list in any order, a class's skill choice as its pick and sorted pool.
+function comparable(f: string, v: unknown): unknown {
+  if (f === 'classes') return [...String(v).split(',')].sort().join();
+  if (f !== 'skills' || typeof v !== 'object' || !v) return v;
+  const c = v as { pick?: number; pool?: string };
+  return `${c.pick} ${(c.pool ?? '').split(/[:|]/).sort().join()}`;
+}
 const diceAndCost = (s: string) => new Set(s.match(/\d+d\d+|[\d,]+\+? GP/g) ?? []);
-// parsed: the PHB parser's output before the pack drops what the SRD has. Each must be in the catalog; an SRD entry must
-// agree with it, field by field, and a spell's dice and costs must not disagree in both directions (one-sided
-// differences are the condensed text leaving things out).
+// parsed: the PHB parser's output before the pack drops what the SRD has. Each must be in the catalog and agree with it,
+// field by field. A difference on a PHB-only entry means a hand overlay or a stale pack. An SRD spell's dice and costs
+// must not disagree in both directions (one-sided differences are the condensed text leaving things out).
 export function referenceChecks(parsed: Entry[], entries: Entry[]): Finding[] {
   const out: Finding[] = [], byId = new Map(entries.map((e) => [e.id, e]));
   for (const p of parsed) {
     const e = byId.get(p.id);
     if (!e) { out.push({ check: 'phb-missing', id: p.id, note: 'parsed from reference/, not in the catalog (run npm run pack?)' }); continue; }
-    if (e.src !== 'srd') continue;
-    for (const f of COMPARED[p.kind] ?? []) {
-      const a = (e as unknown as Record<string, unknown>)[f], b = (p as unknown as Record<string, unknown>)[f];
-      if (f === 'classes' ? nameKey([...String(a).split(',')].sort().join()) !== nameKey([...String(b).split(',')].sort().join()) : !same(a, b)) {
-        out.push({ check: 'srd-phb-field', id: `${p.id}:${f}`, note: `SRD ${JSON.stringify(a)}, PHB ${JSON.stringify(b)}` });
-      }
-    }
-    if (p.kind === 'spell' && p.desc) {
+    const check = e.src === 'srd' ? 'srd-phb-field' : 'pack-field', label = e.src === 'srd' ? 'SRD' : 'Pack';
+    const ev = e as unknown as Record<string, unknown>, pv = p as unknown as Record<string, unknown>;
+    const differs = (f: string) => !same(comparable(f, ev[f]), comparable(f, pv[f]));
+    const report = (f: string) => out.push({ check, id: `${p.id}:${f}`, note: `${label} ${JSON.stringify(ev[f])}, PHB ${JSON.stringify(pv[f])}` });
+    for (const f of COMPARED[p.kind] ?? []) if (differs(f)) report(f);
+    if (p.kind === 'spell') for (const f of COMPARED_IF_BOTH) if (ev[f] !== undefined && pv[f] !== undefined && differs(f)) report(f);
+    if (e.src === 'srd' && p.kind === 'spell' && p.desc) {
       const s = diceAndCost(e.desc), h = diceAndCost(p.desc), so = [...s].filter((x) => !h.has(x)), po = [...h].filter((x) => !s.has(x));
       if (so.length && po.length) out.push({ check: 'srd-phb-dice', id: p.id, note: `SRD ${so.join(', ')}, PHB ${po.join(', ')}` });
     }
@@ -77,16 +98,89 @@ export function referenceChecks(parsed: Entry[], entries: Entry[]): Finding[] {
   return out;
 }
 
+// A parser that gives fewer entries of a kind than the catalog holds: a format change in reference/ turned it off, so
+// nothing of that kind gets compared. The parsers give no rules, proficiencies or magic items.
+export function coverageChecks(parsed: Entry[], entries: Entry[]): Finding[] {
+  const count = (list: Entry[]) => {
+    const n = new Map<string, number>();
+    for (const e of list) if (e.kind !== 'rule' && e.kind !== 'prof' && !(e.kind === 'item' && e.cat === 'magic')) n.set(e.kind, (n.get(e.kind) ?? 0) + 1);
+    return n;
+  };
+  const from = count(parsed);
+  return [...count(entries)].filter(([k, n]) => (from.get(k) ?? 0) < n).map(([k, n]) => ({ check: 'parser-short', id: k, note: `parsed ${from.get(k) ?? 0}, catalog holds ${n}` }));
+}
+
+// A spell's numbers against its own description. Not `save`: the condensed PHB text often leaves it out.
+export function spellNumberChecks(entries: Entry[]): Finding[] {
+  const out: Finding[] = [];
+  for (const e of entries) {
+    if (e.kind !== 'spell') continue;
+    const add = (f: string, note: string) => out.push({ check: `spell-self-${f}`, id: e.id, note }), d = e.desc.toLowerCase();
+    const lead = e.dice ? /^\d+d\d+/.exec(e.dice)?.[0] : undefined;
+    if (lead && !d.includes(lead)) add('dice', `dice ${e.dice} not in the text`);
+    if (e.dtype && !d.includes(e.dtype.toLowerCase())) add('dtype', `${e.dtype} not in the text`);
+    if (e.atk && !d.includes(`${e.atk} spell attack`)) add('atk', `no ${e.atk} spell attack in the text`);
+    if (/^Concentration/.test(e.dur) !== !!e.conc) add('conc', `conc ${!!e.conc} against "${e.dur}"`);
+  }
+  return out;
+}
+
+// A whole-number charge count against the item's own text. Rolled counts (1d3) and formulas are left out.
+export function itemNumberChecks(entries: Entry[]): Finding[] {
+  return entries.flatMap((e) => (e.kind === 'item' && e.charges && /^\d+$/.test(e.charges) && !new RegExp(`\\b${e.charges} charges?\\b`, 'i').test(e.desc)
+    ? [{ check: 'item-self-charges', id: e.id, note: `charges ${e.charges} not in the text` }] : []));
+}
+
+// Rule entries against the parser's reading of the SRD glossary, both ways.
+export function ruleSourceChecks(parsed: Entry[], entries: Entry[]): Finding[] {
+  const ids = (list: Entry[]) => new Set(list.filter((e) => e.kind === 'rule').map((e) => e.id)), from = ids(parsed), have = ids(entries);
+  return [
+    ...[...from].filter((x) => !have.has(x)).map((id) => ({ check: 'rule-source-missing', id, note: 'in the SRD glossary, no entry' })),
+    ...[...have].filter((x) => !from.has(x)).map((id) => ({ check: 'rule-source-extra', id, note: 'entry with no SRD glossary heading' }))
+  ];
+}
+
+// Each entry's grants as a short hash. Grant values mostly have no source to compare with, so any change needs accepting.
+export const grantHashes = (entries: Entry[]): Record<string, string> => Object.fromEntries(entries.filter((e) => grantsOf(e).length)
+  .map((e) => [e.id, createHash('sha1').update(JSON.stringify(grantsOf(e))).digest('hex').slice(0, 12)]).sort(([a], [b]) => a.localeCompare(b)));
+export function grantChecks(entries: Entry[], stored: Record<string, string>): Finding[] {
+  const now = grantHashes(entries);
+  return [...new Set([...Object.keys(now), ...Object.keys(stored)])].sort().filter((id) => now[id] !== stored[id])
+    .map((id) => ({ check: 'grants-changed', id, note: `grants ${stored[id] ?? 'none'} now ${now[id] ?? 'none'}; accept with AUDIT_UPDATE=1` }));
+}
+
+// Known findings. accepted: fine as they are. todo: real defects still to fix. A note holds what the finding covers, so a
+// known finding that gets worse fails too.
+export interface KnownEntry { note: string; reason: string }
+export interface Known { accepted: Record<string, KnownEntry>; todo: Record<string, KnownEntry>; grants?: Record<string, string> }
+export function compareKnown(findings: Finding[], known: Known): { new: string[]; changed: string[]; gone: string[] } {
+  const all = { ...known.accepted, ...known.todo }, keys = new Set(findings.map(keyOf));
+  return {
+    new: findings.filter((f) => !all[keyOf(f)]).map((f) => `${keyOf(f)}: ${f.note}`),
+    changed: findings.filter((f) => all[keyOf(f)] && all[keyOf(f)].note !== f.note).map((f) => `${keyOf(f)}: ${JSON.stringify(all[keyOf(f)].note)} is now ${JSON.stringify(f.note)}`),
+    gone: Object.keys(all).filter((k) => !keys.has(k))
+  };
+}
+// The list after accepting the findings: a kept key keeps its group and reason, a new one goes to todo for triage.
+export function updateKnown(findings: Finding[], known: Known): { next: Known; added: string[]; removed: string[]; changed: string[] } {
+  const next: Known = { accepted: {}, todo: {} }, was = compareKnown(findings, known);
+  for (const f of findings) {
+    const k = keyOf(f), group = known.accepted[k] ? 'accepted' : 'todo';
+    next[group][k] = { note: f.note, reason: known[group][k]?.reason ?? 'new, not triaged' };
+  }
+  return { next, added: was.new.map((x) => x.slice(0, x.indexOf(': '))), removed: was.gone, changed: was.changed.map((x) => x.slice(0, x.indexOf(': '))) };
+}
+
 // Each class's spell list in reference/classes/<class>.md against the spells' `classes`.
 export function spellListChecks(cls: string, md: string, entries: Entry[]): Finding[] {
   const title = cls.charAt(0).toUpperCase() + cls.slice(1), at = md.indexOf(`## ${title} Spell List`);
-  if (at < 0) return [];
+  const onList = new Set(entries.filter((e) => e.kind === 'spell' && e.classes.split(',').includes(cls)).map((e) => e.id));
+  if (at < 0) return onList.size ? [{ check: 'spell-list-no-heading', id: cls, note: `${onList.size} spells name the class; no "## ${title} Spell List" heading` }] : [];
   const end = md.indexOf('\n## ', at + 3), listed = new Set<string>();
   for (const l of md.slice(at, end < 0 ? undefined : end).split('\n')) {
     if (l.startsWith('|') && !/^\|\s*(Spell|-|Name)/.test(l)) listed.add(catalogId('spell', straight(l.split('|')[1].trim())));
     else if (l.startsWith('- ')) listed.add(catalogId('spell', straight(l.slice(2).split('(')[0].trim())));
   }
-  const onList = new Set(entries.filter((e) => e.kind === 'spell' && e.classes.split(',').includes(cls)).map((e) => e.id));
   return [
     ...[...listed].filter((x) => !onList.has(x)).map((id) => ({ check: 'spell-list-missing', id: `${cls}:${id}`, note: 'on the class list, not marked on the spell' })),
     ...[...onList].filter((x) => !listed.has(x)).map((id) => ({ check: 'spell-list-extra', id: `${cls}:${id}`, note: 'marked on the spell, not on the class list' }))
@@ -108,7 +202,7 @@ export function featureHeadingChecks(cls: string, md: string, entries: Entry[]):
 }
 
 // Headings whose tables list things a player looks up: options, stat blocks, roll tables, mounts and vehicles.
-export const LOOKUP_HEADING = /Option|Stat Block|Surge|Mounts|Tack|Vehicles|Mastery/i;
+export const LOOKUP_HEADING = /Option|Stat Block|Surge|Mounts|Tack|Vehicles|Mastery|Languages/i;
 // The rows of those tables whose first cell (the second, after a number or roll range), up to five words, appears
 // nowhere in the catalog's names and descriptions. One finding per table.
 export function lookupTableChecks(file: string, md: string, entries: Entry[]): Finding[] {
@@ -117,7 +211,7 @@ export function lookupTableChecks(file: string, md: string, entries: Entry[]): F
   let heading = '', rows: string[][] = [];
   const flush = () => {
     if (LOOKUP_HEADING.test(heading) && rows.length) {
-      const absent = rows.map((r) => (/^[\d\s–-]*$/.test(r[0]) ? r[1] ?? '' : r[0])).map((c) => straight(c.replace(/\*\*/g, '')).split(/\s+/).slice(0, 5).join(' ').trim())
+      const absent = rows.map((r) => (/^[\d\s–—-]*$/.test(r[0]) ? r[1] ?? '' : r[0])).map((c) => straight(c.replace(/\*/g, '')).split(/\s+/).slice(0, 5).join(' ').trim())
         .filter((c) => c && !new RegExp(`(?<!\\w)${c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?!\\w)`).test(text));
       if (absent.length) out.push({ check: 'lookup-table-absent', id: `${file}#${heading.replace(/\s*\(PHB.*$/, '')}`, note: `${absent.length} of ${rows.length} rows absent: ${absent.slice(0, 6).join(', ')}` });
     }
@@ -136,7 +230,7 @@ export function lookupTableChecks(file: string, md: string, entries: Entry[]): F
   return out;
 }
 
-const NEEDS_TEXT = (e: Entry) => e.kind !== 'prof' && e.kind !== 'rule' && !(e.kind === 'item' && !['magic', 'gear', 'tool', 'pack', 'focus'].includes(e.cat));
+const NEEDS_TEXT = (e: Entry) => e.kind !== 'prof' && !(e.kind === 'item' && !['magic', 'gear', 'tool', 'pack', 'focus'].includes(e.cat));
 const REFERENCED_TABLE = /[Tt]he ((?:[A-Z][\w’'-]* )+)table\b/g;
 // What the descriptions themselves give away. headings: lines that stand alone in the source text (for text that ran
 // on into the next heading); a heading that is also an entry name is a normal last word of a list.
@@ -147,7 +241,7 @@ export function textChecks(entries: Entry[], headings: Set<string> = new Set()):
     if (!d) { if (NEEDS_TEXT(e)) add('text-empty', 'no description'); continue; }
     if (/^#{1,6} /m.test(d) || /^\s*\|/m.test(d) || /\*\*/.test(d) || /(^|\n)-{3,}\s*$/.test(d)) add('text-markdown', 'markdown the app shows as typed');
     if (d.includes('­')) add('text-soft-hyphen', 'soft hyphen breaks searching');
-    if (/System Reference Document|=====/.test(d)) add('text-page-junk', 'page header in the text');
+    if (/System Reference Document|=====|\(PHB p\./.test(d)) add('text-page-junk', 'page header in the text');
     const last = d.split('\n').pop()!, words = last.split(/\s+/);
     if (/\b(Min\.|Cost|Level|Stage|Condition|Effect|Name)$/.test(last)) add('text-table-header-tail', `ends "${last.slice(-40)}"`);
     if (words.length >= 8 && /[a-z,]$/.test(last) && !/\d/.test(last) && !/^(Craft|Utilize):/.test(last)) add('text-cut-short', `ends "${last.slice(-40)}"`);
@@ -159,8 +253,8 @@ export function textChecks(entries: Entry[], headings: Set<string> = new Set()):
       const title = m[1].trim();
       if (/Features$/.test(title)) continue;
       const lastAt = d.lastIndexOf(title);
-      if (lastAt === m.index + m[0].indexOf(title)) add('table-missing', `refers to the ${title} table, which isn't in the text`);
-      else if (!/\d/.test(d.slice(lastAt + title.length))) add('table-cut', `the ${title} table has no rows`);
+      if (lastAt === m.index + m[0].indexOf(title)) out.push({ check: 'table-missing', id: `${e.id}:${title}`, note: `refers to the ${title} table, which isn't in the text` });
+      else if (!/\d/.test(d.slice(lastAt + title.length))) out.push({ check: 'table-cut', id: `${e.id}:${title}`, note: `the ${title} table has no rows` });
     }
   }
   return out.filter((f, i) => out.findIndex((x) => keyOf(x) === keyOf(f)) === i);
@@ -171,19 +265,19 @@ export const standaloneHeadings = (text: string) => new Set(sourceLines(text).fi
 
 // Every weapon property and mastery the items name has rule text to read.
 export function ruleTextChecks(entries: Entry[]): Finding[] {
-  const rules = new Set(entries.filter((e) => e.kind === 'rule').map((e) => slug(e.name))), out = new Map<string, Finding>();
+  const rules = new Set(entries.filter((e) => e.kind === 'rule').map((e) => slug(e.name))), users = new Map<string, string[]>();
   for (const e of entries) {
     if (e.kind !== 'item') continue;
     const need = [...(e.props ? e.props.split(',').map((p) => `property:${p}`) : []), ...(e.mastery ? [`mastery:${slug(e.mastery)}`] : [])];
-    for (const n of need) if (!rules.has(n.split(':')[1])) out.set(n, { check: 'rule-text-missing', id: n, note: `${e.name} shows it; no rule entry explains it` });
+    for (const n of need) if (!rules.has(n.split(':')[1])) users.set(n, [...(users.get(n) ?? []), e.name]);
   }
-  return [...out.values()];
+  return [...users].map(([id, names]) => ({ check: 'rule-text-missing', id, note: `${names.sort().join(', ')} show it; no rule entry explains it` }));
 }
 
 const EFFECTS: { cue: RegExp; kinds: GrantSpec['kind'][]; label: string }[] = [
-  { cue: /\b(?:gain|gains|have|has) a (?:Fly|Swim|Climb|Burrow) Speed|Speed increases by \d+/, kinds: ['speed'], label: 'speed' },
-  { cue: /\b(?:you|target|it) (?:have|has|gain|gains) Resistance to/, kinds: ['defense'], label: 'resistance' },
-  { cue: /\bextra \d+d\d+/, kinds: ['xdmg', 'dmgBonus'], label: 'extra damage' }
+  { cue: /\b(?:gain|gains|have|has) a (?:Fly|Swim|Climb|Burrow) Speed|Speed increases by \d+/g, kinds: ['speed'], label: 'speed' },
+  { cue: /\b(?:you|target|it) (?:have|has|gain|gains) Resistance to/g, kinds: ['defense'], label: 'resistance' },
+  { cue: /\bextra \d+d\d+/g, kinds: ['xdmg', 'dmgBonus'], label: 'extra damage' }
 ];
 // Text that states an effect the sheet has a grant kind for, on an entry with no such grant. A heuristic: the known list
 // holds the ones that are text by design, so only new entries with this shape come up.
@@ -193,8 +287,8 @@ export function effectChecks(entries: Entry[]): Finding[] {
     if (!['spell', 'feature', 'trait', 'feat'].includes(e.kind) && !(e.kind === 'item' && e.cat === 'magic')) continue;
     const kinds = new Set(flatGrants(e).map((g) => g.kind));
     for (const { cue, kinds: want, label } of EFFECTS) {
-      const m = cue.exec(descOf(e));
-      if (m && !want.some((k) => kinds.has(k))) out.push({ check: 'effect-no-grant', id: `${e.id}:${label}`, note: `"${m[0]}" with no ${want.join(' or ')} grant` });
+      const m = [...descOf(e).matchAll(cue)].map((x) => `"${x[0]}"`);
+      if (m.length && !want.some((k) => kinds.has(k))) out.push({ check: 'effect-no-grant', id: `${e.id}:${label}`, note: `${m.join(', ')} with no ${want.join(' or ')} grant` });
     }
   }
   return out;
