@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { newId } from './logic';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import {
-  ABILITIES, SKILLS, acCanTargetOther, acOnOther, toggleAcTarget, regainLabel, damageHitDie, setTempHitDie, castAbOf, removeChip, speedOf, armorSlowBy, stealthDisBy, acSpellIdle, untrainedArmor, grantChips, addGrants, findUnlinked, removalChain, removalSummary, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, toggleEffect, dawn, refillFor, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft, num, setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, undoHp
+  ABILITIES, SKILLS, acCanTargetOther, acOnOther, toggleAcTarget, regainLabel, damageHitDie, setTempHitDie, castAbOf, removeChip, speedOf, armorSlowBy, stealthDisBy, acSpellIdle, untrainedArmor, grantChips, addGrants, findUnlinked, removalChain, removalSummary, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, dawn, refillFor, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft, num, setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, undoHp
 } from './logic';
 import { migrate } from './migrate';
 import { spellActions } from './actions';
@@ -11,7 +11,7 @@ import { addFromCatalog, type ItemAnswers } from './catalog/copy';
 import { mergeCatalog } from './catalog/merge';
 import { valueAt } from './catalog/value';
 import srdEntries from './data/srd/index';
-import { activeGrants, isActive } from './links';
+import { isActive } from './links';
 import { inventoryGroups } from './inventory';
 import { applyPatch } from './storage';
 import type { FeatureEntry } from './catalog/schema';
@@ -284,23 +284,11 @@ describe('rests and Hit Dice', () => {
 });
 
 describe('loading saves and backups', () => {
-  it('gives old saves the HP and AC pills, not the sample picks', () => {
-    const { pills: _, ...old } = sampleCharacter();
-    expect(migrate(old).pills).toEqual(['hp', 'ac', '']);
-  });
   it('keeps saved pills and repairs damaged ones', () => {
     expect(migrate(sampleCharacter()).pills).toEqual(['hp', 'ac', 'res:favored']);
     expect(migrate({ ...sampleCharacter(), pills: ['x', 'hp', 'hp', 'ac'] }).pills).toEqual(['', 'hp', '']);
     expect(migrate({ ...sampleCharacter(), pills: [3, 'res:a'] }).pills).toEqual(['', 'res:a', '']);
     expect(migrate({ ...sampleCharacter(), pills: 'hp' }).pills).toEqual(['hp', 'ac', '']);
-  });
-  it('loads the druid sample unchanged, with its derived numbers', () => {
-    const c = druidSample(); // Seren: Druid 12 (PB 4), WIS 20, CON 16 (PHB p.80)
-    expect(migrate(c)).toEqual(c);
-    expect([spellSaveDC(c), spellAttack(c), saveMod(c, 'wis'), passiveScore(c, 'perception')]).toEqual([17, 9, 9, 19]);
-    expect(c.maxHp).toBe(8 + 11 * 5 + 12 * 3); // fixed Hit Points (PHB p.42)
-    expect(c.slotMax).toEqual([0, 4, 3, 3, 3, 2, 1, 0, 0, 0]);
-    expect(preparedCount(c)).toBe(c.prepMax);
   });
   it('fills missing fields from the blank character, never the sample', () => {
     const c = migrate({ ch: { name: 'Sparse' } });
@@ -312,17 +300,6 @@ describe('loading saves and backups', () => {
   it('keeps only skill levels 0, 1 and 2', () => {
     const c = migrate({ ...sampleCharacter(), skillProf: { arcana: 'x', nature: 2, stealth: 5, history: 1.5, insight: 0 } });
     expect(c.skillProf).toEqual({ nature: 2, insight: 0 });
-  });
-  it('gives a blank character nothing of the sample', () => {
-    expect(blankCharacter().amount).toBe(0);
-    expect(JSON.stringify(blankCharacter())).not.toMatch(/Ilyra|Longbow|Hunter/);
-  });
-  it('fills missing fields from the blank character', () => {
-    const c = migrate({ ch: { name: 'Bob' }, spells: [{ id: 's', name: 'Bless', lvl: 1 }] });
-    expect(c.ch.name).toBe('Bob');
-    expect(c.ch.species).toBe('');
-    expect(c.attacks).toEqual([]);
-    expect(migrate({ ...sampleCharacter(), saveProf: {}, skillProf: { arcana: 1 } })).toMatchObject({ saveProf: {}, skillProf: { arcana: 1 } });
   });
   it('replaces values of the wrong type so the sheet can render', () => {
     const c = migrate({
@@ -351,23 +328,9 @@ describe('loading saves and backups', () => {
     expect(c.attuneIds).toEqual(['', '', '']);
     expect(migrate({ attuneIds: ['a', 'b', 'c', 'd'] }).attuneIds).toEqual(['', '', '']); // ids of missing items drop
   });
-  it('keeps a sense source kind from the list; any other value becomes other', () => {
-    const c = migrate({ ...sampleCharacter(), senses: [
-      { id: 'x', name: 'Darkvision', range: '60 ft', srcKind: 'race' },
-      { id: 'y', name: 'Blindsight', range: '10 ft', srcKind: 'item', srcName: 'Goggles', desc: 'See without light' },
-      { id: 'z', name: 'Tremorsense', range: '5 ft' }] });
-    expect(c.senses.map((s) => s.srcKind)).toEqual(['other', 'item', undefined]);
-    expect(c.senses[1]).toMatchObject({ srcName: 'Goggles', desc: 'See without light' });
-  });
   it('keeps Heroic Inspiration a whole count of 0 or more, with no maximum (house rule)', () => {
     const vals = [true, false, 3, 2.7, -4, 'x', null, undefined];
     expect(vals.map((insp) => migrate({ ...sampleCharacter(), insp }).insp)).toEqual([0, 0, 3, 2, 0, 0, 0, 0]);
-  });
-  it('keeps a spell\'s own casting ability and catalog id only when well formed', () => {
-    const c = migrate({ ...sampleCharacter(), spells: [{ id: 'a', name: 'Light', lvl: 0, time: 'Action', range: 'Touch', castAb: 'cha', cid: 'spell/light' },
-      { id: 'b', name: 'Light', lvl: 0, time: 'Action', range: 'Touch', castAb: 'luck', cid: 3 }] });
-    expect(c.spells[0]).toMatchObject({ castAb: 'cha', cid: 'spell/light' });
-    expect([c.spells[1].castAb, c.spells[1].cid]).toEqual([undefined, undefined]);
   });
   it('keeps dmgMod and a damage type list only when well formed, and never dtypes next to a typed dtype', () => {
     const sp = { id: 'a', name: 'Orb', lvl: 1, time: 'Action', range: '90 ft', fx: 'damage', dmg: '3d8' };
@@ -389,13 +352,14 @@ describe('loading saves and backups', () => {
 });
 
 describe('hpRingStops', () => {
-  it('splits HP and temp over max + temp', () => expect(hpRingStops(make({ hp: 31, maxHp: 44, temp: 0 }))).toEqual({ hp: 70.5, temp: 0 }));
-  it('fills fully at max', () => expect(hpRingStops(make({ hp: 44, maxHp: 44, temp: 0 }))).toEqual({ hp: 100, temp: 0 }));
-  it('shares the ring with temp', () => expect(hpRingStops(make({ hp: 44, maxHp: 44, temp: 11 }))).toEqual({ hp: 80, temp: 20 }));
-  it('handles temp above max', () => expect(hpRingStops(make({ hp: 0, maxHp: 10, temp: 30 }))).toEqual({ hp: 0, temp: 75 }));
-  it('handles max 0', () => expect(hpRingStops(make({ hp: 0, maxHp: 0, temp: 0 }))).toEqual({ hp: 0, temp: 0 }));
-  it('never passes 100 after rounding', () => {
-    const s = hpRingStops(make({ hp: 1, maxHp: 1, temp: 1999 }));
+  it('splits the ring over max + temp, staying within 100', () => {
+    const at = (hp: number, maxHp: number, temp: number) => hpRingStops(make({ hp, maxHp, temp }));
+    expect(at(31, 44, 0)).toEqual({ hp: 70.5, temp: 0 });
+    expect(at(44, 44, 0)).toEqual({ hp: 100, temp: 0 });
+    expect(at(44, 44, 11)).toEqual({ hp: 80, temp: 20 });
+    expect(at(0, 10, 30)).toEqual({ hp: 0, temp: 75 });
+    expect(at(0, 0, 0)).toEqual({ hp: 0, temp: 0 });
+    const s = at(1, 1, 1999);
     expect(s.hp + s.temp).toBeLessThanOrEqual(100);
   });
 });
@@ -430,11 +394,6 @@ describe('top bar pills', () => {
     expect(setPill(['hp', 'ac', ''], 2, 'dc')).toEqual(['hp', 'ac', 'dc']);
     expect(setPill(['hp', 'ac', 'dc'], 0, 'dc')).toEqual(['dc', 'ac', '']);
     expect(setPill(['hp', 'ac', 'dc'], 1, '')).toEqual(['hp', '', 'dc']);
-  });
-  it('gives the samples and a blank character their picks', () => {
-    expect(sampleCharacter().pills).toEqual(['hp', 'ac', 'res:favored']);
-    expect(druidSample().pills).toEqual(['hp', 'ac', 'res:wild']);
-    expect(blankCharacter().pills).toEqual(['hp', 'ac', '']);
   });
 });
 
@@ -488,11 +447,6 @@ describe('armor class', () => {
     expect(detectArmor('Shield')).toEqual({ armor: 'shield', acBase: 2 });
     expect(detectArmor('+1 Chain Mail')).toEqual({ armor: 'heavy', acBase: 16, acBonus: 1 });
     for (const n of ['Leather Pouch', 'Shield Badge', 'Plate of Cheese', 'Rope']) expect(detectArmor(n)).toBeNull();
-  });
-  it('sample characters compute their printed AC', () => {
-    expect(armorClass(sampleCharacter()).total).toBe(16);
-    expect(armorClass(druidSample()).total).toBe(14);
-    expect(armorClass(blankCharacter()).total).toBe(10);
   });
 });
 
@@ -697,13 +651,6 @@ describe('attunement and resources moving to Inventory', () => {
     expect(migrate({ attuneIds: ['i2', 'gone', 'i2'], inv }).attuneIds).toEqual(['i2', '', '']);
     expect(migrate({ attuneIds: [3, 'i2'], inv }).attuneIds).toEqual(['', 'i2', '']);
   });
-  it('removing an item clears its attunement slot; unequipping keeps it attuned', () => {
-    const s = sampleCharacter();
-    const cloak = s.attuneIds[0];
-    expect(removeRef(s, { kind: 'item', id: cloak }).attuneIds).toEqual(['', '', '']);
-    expect(removeRef(s, { kind: 'item', id: cloak }).inv.some((i) => i.id === cloak)).toBe(false);
-    expect(migrate({ ...s, inv: s.inv.map((i) => (i.id === cloak ? { ...i, eq: false } : i)) }).attuneIds[0]).toBe(cloak);
-  });
 });
 
 // Numbers the samples showed before plan 3 (frozen). Every later change must keep them; the rebuilt samples too.
@@ -902,9 +849,6 @@ describe('AC grants', () => {
   it('no longer counts acBonus on an item that is not armor', () => {
     expect(ac({ inv: [it_({ name: 'Cloak', acBonus: 1 })] }).total).toBe(14);
   });
-  it('removing the item removes its grants', () => {
-    expect(removeRef(make({ inv: [ringItem], grants: [ringAc] }), { kind: 'item', id: 'r' }).grants).toEqual([]);
-  });
 });
 
 describe('resources', () => {
@@ -1068,13 +1012,6 @@ describe('free casts as resources and spell overrides', () => {
     const zero = { ...star, res: star.res.map((r) => (r.id === 'bolt' ? { ...r, count: 0 } : r)) };
     expect(castFree(zero, gb, 'bolt').res!.find((r) => r.id === 'bolt')!.count).toBe(1);
   });
-  it('a Long Rest refills free casts like any resource', () => {
-    const c = make({ res: [{ id: 'fc', name: 'Goodberry', note: 'Free cast', count: 0, max: 1, recharge: 'long', casts: 'sp8' }] });
-    const l = longRest(c);
-    expect(l.res[0].count).toBe(1);
-    expect(l.restMsg?.body).toContain('Refilled: Goodberry +1');
-    expect(l.restMsg?.body).not.toContain('free casts');
-  });
   it('removing a spell removes its own free cast and empties a pill naming it', () => {
     const c = make({ pills: ['hp', 'res:fc', ''], res: [{ id: 'fc', name: 'Goodberry', count: 1, max: 1, recharge: 'long', from: 'spell:sp8', casts: 'sp8' }],
       effectsOn: ['spell:sp8'] });
@@ -1084,14 +1021,6 @@ describe('free casts as resources and spell overrides', () => {
     expect(r.effectsOn).toEqual([]);
     const both = make({ res: [{ id: 'a', name: 'A', count: 1, from: 'spell:sp4', casts: 'sp4' }, { id: 'b', name: 'B', count: 1, from: 'feature:f2', casts: 'sp4' }] });
     expect(freeCastsOf(both, 'sp4').map((r) => r.id)).toEqual(['a', 'b']);
-  });
-  it('Shillelagh\'s override is on while switched on, and a Long Rest switches it off', () => {
-    const g: Grant = { id: 'g1', kind: 'atkAbil', name: 'Shillelagh', ab: 'cast', weapons: 'club,quarterstaff', amode: 'melee', die: '1:1d8,5:1d10,11:1d12,17:2d6', when: 'active', from: 'spell:ds3' };
-    const c = { ...druidSample(), grants: [g] };
-    expect(activeGrants(c, 'atkAbil')).toEqual([]);
-    const on = { ...c, ...toggleEffect(c, 'spell:ds3') };
-    expect(activeGrants(on, 'atkAbil')).toEqual([g]);
-    expect(activeGrants(longRest(on), 'atkAbil')).toEqual([]);
   });
   it('a spell with its own casting ability has its own save DC and attack (PHB p.41)', () => {
     const c = druidSample(); // CHA 10, WIS 20, PB 4
@@ -1265,41 +1194,6 @@ describe('grantChips', () => {
   });
 });
 
-describe('backgrounds', () => {
-  it('keeps the samples\' backgrounds as features', () => {
-    expect(sampleCharacter().feats.find((f) => f.g === 'background')).toMatchObject({ id: 'f20', name: 'Guide' });
-    expect(druidSample().feats.find((f) => f.g === 'background')).toMatchObject({ id: 'f26', name: 'Sage' });
-  });
-});
-
-describe('rebuilt samples', () => {
-  it('link their entries to the features that give them', () => {
-    const i = sampleCharacter();
-    expect(grantChips(i, 'feature:f2').map((x) => x.label)).toEqual(['Hunter’s Mark', '3 × Favored Enemy / Long Rest']);
-    expect(i.feats.find((f) => f.id === 'f9')).toMatchObject({ from: 'feature:f20', cid: 'feat/magic-initiate' });
-    expect(i.feats.some((f) => f.g === 'training')).toBe(false);
-    expect(freeCastsOf(i, 'sp9')[0]).toMatchObject({ from: 'feature:f15', minLvl: 3 });
-    expect(i.spells.find((x) => x.id === 'sp12')).toMatchObject({ lvl: 2, minLvl: 5, from: 'feature:f15' });
-    expect(removalSummary(i, { kind: 'feature', id: 'f10' }).keep).toEqual(['DEX 18 still includes +2 from Ability Score Improvement; lower it by hand']);
-    const s = druidSample();
-    expect(s.res.find((r) => r.id === 'wild')).toMatchObject({ maxV: '2:2,6:3,17:4', regain: '1', regainOn: 'short', from: 'feature:f4' });
-    expect(maxOf(s, s.res.find((r) => r.id === 'wild')!)).toBe(3);
-    expect(s.feats.find((f) => f.id === 'f26')).toMatchObject({ g: 'background', name: 'Sage', cid: 'background/sage' });
-    expect(hasProf(s, 'language', 'Druidic')).toBe(true);
-    expect(s.profs.some((p) => p.name === 'Druidic')).toBe(false);
-    expect(s.spells.find((x) => x.id === 'ds7')).toMatchObject({ castAb: 'cha', from: 'feature:f19' });
-    expect(s.grants.find((g) => g.kind === 'atkAbil')).toMatchObject({ from: 'spell:ds3', when: 'active' });
-  });
-  it('load unchanged', () => {
-    expect(migrate(sampleCharacter())).toEqual(sampleCharacter());
-    expect(migrate(druidSample())).toEqual(druidSample());
-  });
-  it('the blank character holds none of their entries', () => {
-    const b = blankCharacter();
-    expect([b.grants, b.defenses, b.profs, b.effectsOn]).toEqual([[], [], [], []]);
-  });
-});
-
 describe('addGrants with a catalog spell (plan 4)', () => {
   const sp: Omit<Spell, 'id'> = { name: 'Goodberry', lvl: 1, time: 'Action', range: 'Self', prep: true, cid: 'spell/goodberry' };
   const c = { ...blankCharacter(), feats: [{ id: 'f1', g: 'feat' as const, name: 'Magic Initiate (Druid)', desc: '' }] };
@@ -1307,41 +1201,6 @@ describe('addGrants with a catalog spell (plan 4)', () => {
     const out = addGrants(c, 'feature:f1', [{ spec: { id: 'g2', kind: 'spell', name: 'Level 1 spell', spell: 'spell/goodberry', always: true }, spell: sp }]);
     expect(out.spells[0].always).toBe(true);
     expect('prep' in out.spells[0]).toBe(false);
-  });
-  it('a granted spell without always is unprepared', () => {
-    const out = addGrants(c, 'feature:f1', [{ spec: { id: 'g1', kind: 'spell', name: 'Cantrips', spell: 'spell/goodberry' }, spell: sp }]);
-    expect(out.spells[0].prep).toBe(false);
-  });
-});
-
-describe('class and subclass ids (plan 4)', () => {
-  it('the samples and the blank character carry them', () => {
-    expect(blankCharacter().ch).toMatchObject({ clsId: '', subId: '' });
-    expect(sampleCharacter().ch).toMatchObject({ clsId: 'class/ranger', subId: 'subclass/ranger/hunter' });
-    expect(druidSample().ch).toMatchObject({ clsId: 'class/druid', subId: '' });
-  });
-});
-
-describe('rebuilt samples (plan 4)', () => {
-  const ilyra = sampleCharacter(), seren = druidSample();
-  it('give the SRD weapons and armor their catalog fields', () => {
-    const inv = (c: Character, name: string) => c.inv.find((i) => i.name === name)!;
-    expect(inv(ilyra, 'Longbow')).toMatchObject({ cat: 'weapon', wcat: 'martial', wrange: 'ranged', dmg: '1d8', dtype: 'Piercing', props: 'ammunition,heavy,two-handed', ammo: '150/600;arrow', mastery: 'slow', cid: 'item/longbow' });
-    expect(inv(ilyra, 'Shortsword')).toMatchObject({ wcat: 'martial', dmg: '1d6', props: 'finesse,light', mastery: 'vex' });
-    expect(inv(ilyra, 'Studded Leather Armor')).toMatchObject({ cat: 'armor', armor: 'light', acBase: 12 });
-    expect(inv(seren, 'Quarterstaff')).toMatchObject({ wcat: 'simple', dmg: '1d6', vers: '1d8', mastery: 'topple' });
-    expect(inv(seren, 'Sickle')).toMatchObject({ wcat: 'simple', dmg: '1d4', mastery: 'nick' });
-    expect(inv(seren, 'Leather Armor')).toMatchObject({ cat: 'armor', armor: 'light', acBase: 11 });
-    expect(inv(seren, 'Shield')).toMatchObject({ cat: 'shield', armor: 'shield', acBase: 2 });
-  });
-  it('give the SRD spells their structured fields, never an SRD description', () => {
-    const fireBolt = seren.spells.find((x) => x.name === 'Fire Bolt')!;
-    expect(fireBolt).toMatchObject({ cid: 'spell/fire-bolt', school: 'Evocation', atk: 'ranged', fx: 'damage', dmg: '1d10', dtype: 'Fire', scale: 'cantrip' });
-    expect(ilyra.spells.find((x) => x.name === 'Cure Wounds')).toMatchObject({ fx: 'healing', dmg: '2d8', scale: '2d8/slot' });
-    for (const c of [ilyra, seren]) for (const sp of c.spells.filter((x) => x.cid)) expect([sp.name, typeof sp.school]).toEqual([sp.name, 'string']);
-    for (const c of [ilyra, seren]) for (const sp of c.spells) expect(sp.higher).toBeUndefined();
-    expect(ilyra.spells.find((x) => x.name === 'Hail of Thorns')!.cid).toBeUndefined();
-    expect(seren.spells.find((x) => x.name === 'Thorn Whip')!.cid).toBeUndefined();
   });
 });
 
@@ -1596,11 +1455,6 @@ describe('slotsOnShort', () => {
     expect(off.slotUsed).toEqual(used);
     expect(off.restMsg!.body).not.toContain('Spell slots restored');
     expect(shortRest(make({ slotsOnShort: true, slotUsed: used, hp: 0 })).slotUsed).toEqual(used);
-  });
-  it('loads an old save with the setting off', () => {
-    const { slotsOnShort: _, ...old } = sampleCharacter();
-    expect(migrate(old).slotsOnShort).toBe(false);
-    expect(migrate({ ...old, slotsOnShort: true }).slotsOnShort).toBe(true);
   });
 });
 

@@ -129,13 +129,15 @@ describe('reaching every saved character', () => {
     expect(body).toContain('no copy');
     expect(body).not.toContain('stays on this device');
   });
-  it.each([['5'], ['[]'], ['"x"']])('treats %s as unreadable', (raw) => {
-    const m = stubStorage();
-    m.set('dnd-sheet-v3:x', raw);
-    const c = load('x');
-    expect(c.inv).toEqual([]);
-    expect(c.restMsg?.title).toBe('Save can’t be read');
-    expect(m.get('dnd-sheet-v3:x:unreadable')).toBe(raw);
+  it('treats a save that is no object as unreadable', () => {
+    for (const raw of ['5', '[]', '"x"']) {
+      const m = stubStorage();
+      m.set('dnd-sheet-v3:x', raw);
+      const c = load('x');
+      expect(c.inv).toEqual([]);
+      expect(c.restMsg?.title).toBe('Save can’t be read');
+      expect(m.get('dnd-sheet-v3:x:unreadable')).toBe(raw);
+    }
   });
   it('says a missing sheet is missing', () => {
     const m = stubStorage();

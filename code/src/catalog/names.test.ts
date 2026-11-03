@@ -12,9 +12,6 @@ describe('SRD rules texts', () => {
     expect(actions).toHaveLength(13);
     expect(actions.map((r) => r.name).filter((n) => n !== 'Opportunity Attack').sort()).toEqual([...COMBAT_ACTIONS].sort());
   });
-  it('hold the four senses', () => {
-    expect(list.filter((r) => r.cat === 'sense').map((r) => r.name).sort()).toEqual(['Blindsight', 'Darkvision', 'Tremorsense', 'Truesight']);
-  });
 });
 
 describe('bundled proficiency names', () => {

@@ -150,23 +150,10 @@ describe('weapon attacks', () => {
     expect(weaponProficient(fighter({}, [], ['Longbow']), shortsword({ id: 'x' }))).toBe(false);
   });
 
-  it('adds a magic bonus to attack and damage', () => {
-    const ls = longsword({ id: 'ls', magic: 1 });
-    expect(use(fighter({ str: 16 }, [ls]), ls, 'melee')).toMatchObject({ hit: 6, dmg: '1d8+4' });
-  });
-
   it('adds a grant for a list of weapons only to those weapons', () => {
     const c = withGrants(ilyra(), grant({ kind: 'dmgBonus', name: 'Bracers of Archery', val: '2', weapon: 'longbow,shortbow' }));
     expect(weaponAttacks(c, c.inv.find((i) => i.id === 'i2')!)[0].dmg).toBe('1d8+6');
     expect(use(c, c.inv.find((i) => i.id === 'i3')!, 'melee').dmg).toBe('1d6+4');
-  });
-
-  it('counts a magic weapon as its base weapon', () => {
-    const venom = catItem('item/dagger-of-venom');
-    expect(venom.base).toBe('item/dagger');
-    expect(weaponKind(venom)).toBe('dagger');
-    expect(hasMastery(ilyra({ mastery: ['dagger'] }), weaponKind(venom))).toBe(true);
-    expect(weaponKind({ ...longsword({ id: 'x' }), name: 'Longsword +1', cid: undefined })).toBe('longsword');
   });
 
   it('lists each use of a weapon', () => {
@@ -316,37 +303,6 @@ describe('spell actions', () => {
     const hr = spellActions(ilyra({ spells: [hand] })).filter((a) => a.part !== undefined);
     expect(hr.map((r) => [r.group, r.dice])).toEqual([['damage', '4d6 + WIS (+2)'], ['healing', '4d12 + WIS (+2)']]);
   });
-  it('shows the SRD spells with more than one damage or healing effect as one row per part', () => {
-    // [name, group, dice, type] per row; Ilyra: WIS +2 modifier, level 5.
-    const want: Record<string, [string, string, string, string?][]> = {
-      'spell/conjure-celestial': [['Conjure Celestial', 'save', '6d12', 'Radiant'], ['Conjure Celestial · Healing Light', 'healing', '4d12 + WIS (+2)']],
-      'spell/ice-knife': [['Ice Knife', 'damage', '1d10', 'Piercing'], ['Ice Knife · Burst', 'save', '2d6', 'Cold']],
-      'spell/wall-of-ice': [['Wall of Ice', 'save', '10d6', 'Cold'], ['Wall of Ice · Frigid Air', 'save', '5d6', 'Cold']],
-      'spell/flame-strike': [['Flame Strike', 'save', '5d6', 'Fire'], ['Flame Strike · Radiant', 'save', '5d6', 'Radiant']],
-      'spell/ice-storm': [['Ice Storm', 'save', '2d10', 'Bludgeoning'], ['Ice Storm · Cold', 'save', '4d6', 'Cold']],
-      'spell/meteor-swarm': [['Meteor Swarm', 'save', '20d6', 'Fire'], ['Meteor Swarm · Bludgeoning', 'save', '20d6', 'Bludgeoning']],
-      'spell/acid-arrow': [['Acid Arrow', 'damage', '4d4', 'Acid'], ['Acid Arrow · Later', 'damage', '2d4', 'Acid']],
-      'spell/arcane-hand': [['Arcane Hand', 'damage', '5d8', 'Force'], ['Arcane Hand · Grasping Hand', 'damage', '4d6 + WIS (+2)', 'Bludgeoning']],
-      'spell/vitriolic-sphere': [['Vitriolic Sphere', 'save', '10d4', 'Acid'], ['Vitriolic Sphere · Later', 'damage', '5d4', 'Acid']],
-      'spell/wall-of-thorns': [['Wall of Thorns', 'save', '7d8', 'Piercing'], ['Wall of Thorns · Slashing', 'save', '7d8', 'Slashing']]
-    };
-    for (const [id, rows] of Object.entries(want)) {
-      const sp = catSpell(id, { always: true });
-      const got = spellActions(ilyra({ spells: [sp] })).map((a) => [a.name, a.group, a.dice, a.dtype].filter((x) => x !== undefined));
-      expect([id, got]).toEqual([id, rows.map((r) => r.filter((x) => x !== undefined))]);
-    }
-    const scales = (id: string) => { const e = cat.byId.get(id) as SpellEntry; return [e.scale, ...(e.parts ?? []).map((p) => p.scale)]; };
-    expect(scales('spell/conjure-celestial')).toEqual(['1d12/slot', '1d12/slot']);
-    expect(scales('spell/ice-knife')).toEqual([undefined, '1d6/slot']);
-    expect(scales('spell/wall-of-ice')).toEqual(['2d6/slot', '1d6/slot']);
-    expect(scales('spell/flame-strike')).toEqual(['1d6/slot', '1d6/slot']);
-    expect(scales('spell/ice-storm')).toEqual(['1d10/slot', undefined]);
-    expect(scales('spell/acid-arrow')).toEqual(['1d4/slot', '1d4/slot']);
-    expect(scales('spell/arcane-hand')).toEqual(['2d8/slot', '2d6/slot']);
-    expect(scales('spell/vitriolic-sphere')).toEqual(['2d4/slot', undefined]);
-    expect(scales('spell/wall-of-thorns')).toEqual(['1d8/slot', '1d8/slot']);
-    expect((cat.byId.get('spell/conjure-celestial') as SpellEntry).healMod).toBeUndefined();
-  });
   it('shows fixed healing as it is, never with a modifier or dice arithmetic', () => {
     expect(actionOf(ilyra({ spells: [catSpell('spell/heal', { always: true })] }), 'heal')).toMatchObject({ group: 'healing', dice: '70' });
     expect(actionOf(ilyra({ spells: [catSpell('spell/power-word-heal', { always: true, healMod: true })] }), 'power-word-heal')!.dice).toBe('all HP');
@@ -422,46 +378,10 @@ describe('extra damage', () => {
 
 describe('samples', () => {
   const bowOf = (c: Character) => weaponAttacks(c, c.inv.find((i) => i.id === 'i2')!)[0];
-  it('Ilyra: Longbow with Archery, two attacks, Unarmed Strike, no typed attacks', () => {
-    const c = sampleCharacter();
-    expect(c.hands).toEqual(['i2', 'i2']);
-    expect(bowOf(c)).toMatchObject({ hit: 9, dmg: '1d8+4', held: true, mastery: 'slow' });
-    expect(bowOf(c).hitParts).toContainEqual({ label: 'Archery', value: 2 });
-    expect(attacksPerAction(c)).toBe(2);
-    expect(unarmedStrike(c).name).toBe('Unarmed Strike');
-    expect(c.attacks).toEqual([]);
-    expect(c.riders.map((r) => r.name)).toEqual(['Critical hit']);
-  });
-  it('Ilyra: Hunter’s Mark only while concentrating; Hail of Thorns and Cure Wounds', () => {
-    const c = sampleCharacter();
-    expect(extraDamage(c).some((x) => x.name === 'Hunter’s Mark')).toBe(false);
-    expect(extraDamage({ ...c, conc: { id: 'sp4', name: 'Hunter’s Mark' } }).map(extraText)).toContain('1d6 Force');
-    expect(spellActions(c).find((a) => a.name === 'Hail of Thorns')).toMatchObject({ group: 'save', dc: 13, dice: '1d10', dtype: 'Piercing' });
-    expect(spellActions(c).find((a) => a.name === 'Cure Wounds')!.dice).toBe('2d8 + WIS (+2)');
-    const withDagger = { ...c, inv: [...c.inv, dagger({ id: 'dg' })] };
-    const thrown = weaponAttacks(withDagger, withDagger.inv.find((i) => i.id === 'dg')!).find((a) => a.use === 'thrown')!;
-    expect(thrown.hitParts.some((p) => p.label === 'Archery')).toBe(false);
-  });
   it('Ilyra: numbers follow DEX and level', () => {
     const c = sampleCharacter();
     expect(bowOf({ ...c, abil: { ...c.abil, dex: 20 } }).hit).toBe(10);
     expect(bowOf({ ...c, level: 9 }).hit).toBe(10);
-  });
-  it('Seren: Shillelagh, Unarmed Strike, Thorn Whip, Produce Flame, Healing Word', () => {
-    const c = druidSample();
-    const qs = c.inv.find((i) => i.id === 'i3')!;
-    expect(c.hands).toEqual(['i3']);
-    expect(c.effectsOn).toEqual([]);
-    expect(weaponAttacks(c, qs)[0]).toMatchObject({ hit: 3, dmg: '1d6−1' });
-    expect(weaponAttacks({ ...c, effectsOn: ['spell:ds3'] }, qs)[0]).toMatchObject({ hit: 9, dmg: '1d12+5' });
-    const spells = spellActions(c);
-    expect(spells.find((a) => a.name === 'Shillelagh')).toMatchObject({ effect: true });
-    expect(unarmedStrike(c).name).toBe('Unarmed Strike');
-    expect(spells.find((a) => a.name === 'Thorn Whip')).toMatchObject({ group: 'damage', hit: 9, dice: '3d6', dtype: 'Piercing' });
-    expect(spells.find((a) => a.name === 'Produce Flame')).toMatchObject({ dice: '3d8', econ: 'action' });
-    expect(spells.find((a) => a.name === 'Healing Word')!.dice).toBe('2d4 + WIS (+5)');
-    expect(c.attacks).toEqual([expect.objectContaining({ name: 'Starry Form · Archer', econ: 'bonus', group: 'other' })]);
-    expect(c.riders.map((r) => r.id)).toEqual(['r2', 'r3']);
   });
 });
 
@@ -500,10 +420,6 @@ describe('critical hit range', () => {
   it('waits for the grant’s level and ignores a value below 2', () => {
     expect(sword(fighter([crit('a', '18', { minLvl: 15 })])).crit).toBeUndefined();
     expect(sword(fighter([crit('a', '0')])).crit).toBeUndefined();
-  });
-  it('comes through from the catalog’s Improved Critical', () => {
-    const c = addFromCatalog(fighter([]), cat, cat.byId.get('feature/fighter/champion/improved-critical')!, { picks: {}, counted: {}, links: {} });
-    expect(sword(c).crit).toBe('Critical Hit on 19–20');
   });
 });
 

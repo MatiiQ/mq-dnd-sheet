@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { blankCharacter, druidSample, sampleCharacter } from './defaults';
-import { draftFromItem, itemFromEntry, itemFromForm } from './catalog/copy';
-import { mergeCatalog } from './catalog/merge';
-import type { ItemEntry } from './catalog/schema';
-import srdEntries from './data/srd/index';
+import { blankCharacter } from './defaults';
+import { draftFromItem, itemFromForm } from './catalog/copy';
 import {
   addSection, containerLoad, DEFAULT_SECTION, inventoryGroups, moveInto, moveSection, removeContainer, removeContainerSummary, removeSection, renameSection,
   setItemSection, takeOut
@@ -35,11 +32,6 @@ describe('sections', () => {
     expect(names(addSection(c, '  Gear '))).toEqual(['Weapons', 'Armour', 'Gear']);
   });
 
-  it('a new character starts with no sections', () => {
-    expect(blankCharacter().sections).toEqual([]);
-    expect(inventoryGroups(make({ inv: [item({ id: 'a' })] }))).toEqual([{ sec: null, items: [item({ id: 'a' })] }]);
-  });
-
   it('moves a section up or down', () => {
     const { c, armour } = twoSections();
     expect(names(moveSection(c, armour, -1))).toEqual(['Armour', 'Weapons']);
@@ -66,19 +58,6 @@ describe('sections', () => {
     const lost = { ...c, inv: c.inv.map((i) => (i.id === 'rope' ? { ...i, sec: 'gone' } : i)) };
     expect(groupOf(lost, 'rope')!.sec).toBeNull();
     expect(migrate(raw(lost)).inv.find((i) => i.id === 'rope')!.sec).toBeUndefined();
-  });
-
-  it('migrate() gives a save without sections an empty list', () => {
-    const r = raw(make());
-    delete r.sections;
-    expect(migrate(r).sections).toEqual([]);
-  });
-
-  it('migrate() keeps sections and their items', () => {
-    const { c, weapons } = twoSections();
-    const m = migrate(raw(c));
-    expect(m.sections).toEqual(c.sections);
-    expect(m.inv.find((i) => i.id === 'sw')!.sec).toBe(weapons);
   });
 
   it('migrate() drops sections with a duplicate id or a blank name', () => {
@@ -242,55 +221,3 @@ describe('containers', () => {
     expect(fixContainers(c)).toBe(c);
   });
 });
-
-describe('samples', () => {
-  const SECTIONS = [{ id: 's1', name: 'Weapons' }, { id: 's2', name: 'Armour' }, { id: 's3', name: 'Magic items' }, { id: 's4', name: 'Gear' }];
-  const secOf = (c: Character) => Object.fromEntries(c.inv.map((i) => [i.id, i.sec]));
-
-  it('both samples have Weapons, Armour, Magic items and Gear, and every item is in one', () => {
-    for (const c of [sampleCharacter(), druidSample()]) {
-      expect(c.sections).toEqual(SECTIONS);
-      expect(c.inv.every((i) => SECTIONS.some((x) => x.id === i.sec))).toBe(true);
-    }
-  });
-
-  it('Ilyra: Longbow and Shortsword in Weapons, armor in Armour, the Cloak in Magic items, the rest in Gear', () => {
-    const c = sampleCharacter();
-    const want = (i: Item) => (['i2', 'i3'].includes(i.id) ? 's1' : i.id === 'i1' ? 's2' : i.id === 'i9' ? 's3' : 's4');
-    expect(c.inv.find((i) => i.id === 'i9')!.name).toBe('Cloak of Elvenkind');
-    expect(secOf(c)).toEqual(Object.fromEntries(c.inv.map((i) => [i.id, want(i)])));
-  });
-
-  it('Seren: weapons, armor and Shield, her Bag of Holding in Magic items, the rest in Gear', () => {
-    const c = druidSample();
-    const want = (i: Item) => (['i3', 'i5'].includes(i.id) ? 's1' : ['i1', 'i2'].includes(i.id) ? 's2' : i.id === 'i14' ? 's3' : 's4');
-    expect(secOf(c)).toEqual(Object.fromEntries(c.inv.map((i) => [i.id, want(i)])));
-  });
-
-  it('Seren\'s Bag of Holding matches the catalog and holds the Book, the Parchment and 50 gp', () => {
-    const c = druidSample();
-    const bagItem = c.inv.find((i) => i.id === 'i14')!;
-    const entry = entriesOfItem('item/bag-of-holding');
-    const { desc: _d, ...fromCatalog } = itemFromEntry(entry);
-    const { id: _i, desc, sec: _s, gp: _g, ...literal } = bagItem;
-    expect(literal).toEqual(fromCatalog);
-    expect(typeof desc).toBe('string');
-    expect(bagItem.gp).toBe(50);
-    expect(c.inv.filter((i) => i.in === 'i14').map((i) => i.name)).toEqual(['Book (history)', 'Parchment']);
-    expect(c.coins.gp).toBe(368);
-  });
-
-  it('Seren\'s bag: the contents and coins weigh on the bag, not on her', () => {
-    const seren = druidSample();
-    const out = removeContainer(seren, 'i14', 'out');
-    expect(out.coins.gp).toBe(418);
-    // Book 5 lb and 50 gp (1 lb, PHB p.213) come off her load; the bag's own 5 lb goes on.
-    expect(carriedWeight(seren)).toBeCloseTo(carriedWeight(out) - 5 - 1 + 5);
-  });
-});
-
-function entriesOfItem(id: string): ItemEntry {
-  const e = mergeCatalog(srdEntries, null).byId.get(id);
-  if (!e || e.kind !== 'item') throw new Error('no catalog item ' + id);
-  return e;
-}

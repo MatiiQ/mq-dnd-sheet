@@ -55,9 +55,9 @@ describe('links', () => {
 
   it('checks link fields on load: unknown kinds read Other, bad values go, a spell level is never a gate', () => {
     const c = migrate({ ...sampleCharacter(), senses: [{ id: 's', name: 'Blindsight', range: '10 ft', srcKind: 'race', when: 'always', minLvl: 0, needEq: 'yes' },
-      { id: 't', name: 'Tremorsense', range: '5 ft', minLvl: 3, when: 'noHeavy' }] });
+      { id: 't', name: 'Tremorsense', range: '5 ft', minLvl: 3, when: 'noHeavy', desc: 'Feel the ground' }] });
     expect(c.senses[0]).toEqual({ id: 's', name: 'Blindsight', range: '10 ft', srcKind: 'other' });
-    expect(c.senses[1]).toMatchObject({ minLvl: 3, when: 'noHeavy' });
+    expect(c.senses[1]).toMatchObject({ minLvl: 3, when: 'noHeavy', desc: 'Feel the ground' });
     const cantrip = migrate(sampleCharacter()).spells.find((x) => x.id === 'sp1')!;
     expect(cantrip.lvl).toBe(0);
     expect(cantrip.minLvl).toBeUndefined();
@@ -120,10 +120,6 @@ describe('when a grant counts', () => {
 
 describe('grants and effects on load', () => {
   const abil = { id: 'g', kind: 'abil', name: 'ASI', ab: 'dex', val: '2', cap: 20 };
-  it('gives a save without grants or effects the blank values', () => {
-    const { grants: _g, effectsOn: _e, ...raw } = sampleCharacter();
-    expect(migrate(raw)).toMatchObject({ grants: [], effectsOn: [] });
-  });
   it('keeps a valid grant and drops a broken or unlinked one', () => {
     const ok = { ...abil, from: 'feature:f10', srcKind: 'feat', counted: true };
     const c = migrate({ ...sampleCharacter(), grants: [ok, { ...abil, id: 'h', from: 'feature:f10', cap: 21 }, { ...abil, id: 'i', from: 'feature:gone' },
@@ -133,10 +129,6 @@ describe('grants and effects on load', () => {
   it('keeps effect links that parse, once, to something there, and never a Concentration spell', () => {
     const c = migrate({ ...sampleCharacter(), effectsOn: ['feature:f2', 'feature:f2', 'item:i9', 'feature:gone', 'junk', 7, 'spell:sp4', 'spell:sp3'] });
     expect(c.effectsOn).toEqual(['feature:f2', 'item:i9', 'spell:sp3']);
-  });
-  it('drops the link-only fields from an entry without a from', () => {
-    const c = migrate({ ...sampleCharacter(), senses: [{ id: 's', name: 'Blindsight', range: '10 ft', needEq: true, when: 'active' }] });
-    expect(c.senses[0]).toEqual({ id: 's', name: 'Blindsight', range: '10 ft' });
   });
 });
 

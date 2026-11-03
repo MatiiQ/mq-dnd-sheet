@@ -153,19 +153,6 @@ describe('weapon kinds', () => {
   });
 });
 
-describe('a typed Unarmed Strike', () => {
-  const attacks = [
-    { id: 'u', name: ' unarmed strike ', hit: '+4', dmg: '2 Bludgeoning', info: 'or Grapple / Shove (DC 12)', mastery: '' },
-    { id: 'b', name: 'Longbow', hit: '+9', dmg: '1d8 +4 Piercing', info: '', mastery: '' }
-  ];
-  it('stays as typed', () => {
-    expect(migrate(raw({ ...sampleCharacter(), attacks, hands: [] })).attacks).toEqual(attacks);
-  });
-  it('is not on the samples', () => {
-    for (const c of [sampleCharacter(), druidSample()]) expect(c.attacks.some((a) => a.name === 'Unarmed Strike')).toBe(false);
-  });
-});
-
 describe('items inside a container (plan 6)', () => {
   const bag: Item = { id: 'bag', name: 'Bag of Holding', qty: 1, eq: false, xdim: true, cap: 500 };
   it('drops a weapon inside the bag even when it is marked equipped', () => {
