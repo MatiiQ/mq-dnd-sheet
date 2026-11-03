@@ -216,6 +216,9 @@ rerolls and minimum rolls (Supreme Healing), damage that adds half a level (Divi
 - Conjure Minor Elementals and Elemental Weapon (pack) add damage to your attacks as `xdmg` grants while the spell is on,
   with no Actions row of their own. Elemental Weapon is simplified to the lowest slot: 1d4 and +1 to attack rolls with
   any weapon; the chosen weapon, the chosen type and a higher slot's bonus are the player's to apply.
+- AC spells (`acFx`/`acVal` in `overlay/spells.json`): Shield (`bonus` 5), Shield of Faith (`bonus` 2), Haste (`bonus` 2),
+  Mage Armor (`base` 13), Barkskin (`floor` 17). Warding Bond has none: its +1 goes to another creature (PHB p.340). Cast
+  on another creature (`Spell.acOther`), any of them runs but adds no AC.
 - Items: `magic` (1–3), `magicPick`, `baseOf`, `base: 'ammo'` (see above).
 - Grants: `spellAtk` and `spellDc` (`val`), and the grant-only value term `magic` (the +N of the item the grant comes
   from; 0 without one; a counter's maximum never reads it).
@@ -238,7 +241,7 @@ are what the pack holds. Wording pasted straight from the PDF or `reference/sour
 detected. Never paste from those files into tracked files. Pushes from a clone without `reference/` (another machine,
 a cloud session) are not checked at all; the hook says so.
 
-## Entry counts (2026-11-01, unchanged by plan 7)
+## Entry counts (rechecked 2026-11-03; SRD counts match `src/data/srd/*.json`)
 
 | Kind | SRD 5.2.1 (committed) | PHB pack (local) |
 |---|---|---|

@@ -11,6 +11,8 @@ Interactive D&D 2024 (Player's Handbook 2024) character sheet for iPad. It's a s
 ```
 .github/workflows/deploy.yml   CI: test, build code/, publish code/dist to Pages (must stay at repo root)
 code/                          the web app (run all npm commands here)
+README.md                      user-facing overview and setup (root, not code/)
+docs/                          local plans and audits, gitignored (the "plan N" references point here)
 reference/                     condensed PHB 2024 rules data (markdown), gitignored
 resources/                     PHB 2024 PDF, gitignored
 ```
@@ -21,8 +23,8 @@ resources/                     PHB 2024 PDF, gitignored
 
 ```sh
 npm run dev      # Vite dev server on :5173, --host so the iPad can open it over Wi-Fi
-npm test         # Vitest: rules logic in src/logic.test.ts
-npm run build    # tsc --noEmit + vite build into dist/
+npm test         # Vitest, every *.test.ts(x) under code/ (rules, catalog, storage, UI, scripts)
+npm run build    # tsc --noEmit, tsc -p scripts (typechecks scripts/), then vite build into dist/
 npm run preview  # serve dist/ with the service worker active
 npm run icons    # regenerate public/icons/*.png (dependency-free PNG writer)
 npm run srd      # rebuild src/data/srd/*.json and src/catalog/names.ts from the SRD 5.2.1 text (scripts/srd/README.md)
@@ -30,6 +32,8 @@ npm run pack     # build reference/build/phb-pack.json (PHB data for the device)
 npm run check-phb  # build, then fail if dist/ or a tracked file holds PHB description text (needs reference/ and npm run pack)
 npm run hooks    # once per clone: install the pre-push hook that runs check-phb on every pushed commit
 ```
+
+`code/scripts/local/` (gitignored) holds PHB-side tests that need `reference/`; they don't exist in CI or on a clone without it, so a green CI says nothing about them.
 
 Toolchain: Node 22+ (CI uses 22), React 19, Vite 8, TypeScript 7, Vitest 5. The app has no other runtime dependencies besides `@fontsource` (Fraunces and Figtree, latin subsets, bundled so they work offline).
 
@@ -50,10 +54,12 @@ Every push to `main` runs `.github/workflows/deploy.yml` (test → build → dep
 | `inventory.ts` | Item sections and containers (plan 6): `addSection`/`renameSection`/`moveSection`/`removeSection`, `setItemSection` (also takes an item out of its container), `inventoryGroups` (sections in order, then the default list "Other items"; items inside a container are left out), `moveInto`/`takeOut`, `removeContainer` (`'out'` = the plain item removal, `'remove'` = contents too) with `removeContainerSummary`, `containerLoad`. Imports types, `logic.ts` and `hands.ts`; only components and tests import it |
 | `actions.ts` | The Actions tab, computed at render time, never stored: `otherWeapons` (not in hand, none inside a container or at quantity 0), `weaponAttacks` (per use: melee, thrown, ranged, two-handed; grant filters, Dueling, ability overrides), `unarmedStrike` (with the Grapple/Shove DC), `attacksPerAction`, `lightExtra` (Nick), `crit` on weapon and Unarmed rows (`critText`), `masterySlots`/`hasMastery`, `spellActions` (cantrip scaling, `healMod`, effect rows), `featureActions`, `extraDamage`, `diceText` (real minus) |
 | `logic.test.ts`, `hands.test.ts`, `actions.test.ts`, `inventory.test.ts` | Tests for the rules; add one whenever rules behaviour changes |
+| `layout.ts` | Layout mode (`auto`/`one`/`two`, saved per device as `dnd-layout`) and the wide-screen query; `styles.css` keys two-column rules on `.sheet.wide` |
+| `test-fixtures.ts` | Weapon and shield items (`dagger`, `longbow`, `shield`…) shared by the hands and actions tests |
 | `storage.ts` | `useCharacters()` hook: multi-character list, localStorage persistence, JSON backup export/import; `applyPatch()` (patch, then `normalize()`) behind `update()` |
 | `sheet.ts` | `Sheet` context (`c`, `update`, `edit`, `form`), `useEntryForm()` for add/edit forms (one open at a time), `saveEntry()` |
 | `App.tsx` | Page assembly, UI-only state (edit mode, menu, active section, hit-die prompt), scroll-spy |
-| `components/` | `TopBar` (bar, nav, menu with rests, Dawn, characters, backup), `RestPrompt` (die-roll regains before a rest), `EditDetails`, `Vitals` (AC and Speed panels), `HitPoints`, `Abilities`, `Senses`, `Defenses`, `Conditions`, `Resources`, `SourcePicker` (link an entry to a feature, item or spell, or name a source), `GrantEditor` (one form for every grant kind, `GRANT_FIELDS`; `LinkOrAdd`), `Chips` (a source's chips and its grant list), `nav.ts` (`jumpTo` a chip's target) |
+| `components/` | `TopBar` (bar, nav, menu with rests, Dawn, characters, backup), `RestPrompt` (die-roll regains before a rest), `EditDetails`, `Vitals` (AC and Speed panels), `HitPoints`, `Abilities`, `Senses`, `Defenses`, `Conditions`, `Resources`, `SourcePicker` (link an entry to a feature, item or spell, or name a source), `GrantEditor` (one form for every grant kind, `GRANT_FIELDS`; `LinkOrAdd`), `Chips` (a source's chips and its grant list), `CrashScreen` (error boundary around `App`), `nav.ts` (`jumpTo` a chip's target) |
 | `components/pickers/` | Catalog pickers, each an in-place panel opened as a `pick-*` form: `SpellPicker` (list and level, or search by name), `ItemPicker` (categories or search), `FeaturePicker` (type, then class/subclass features, feats by category, species, backgrounds; Custom opens the hand form), `ItemQuestions` (after `ChoiceFlow` in the item picker: a base of the player's choice, a +1/+2/+3 bonus, rolled starting charges; `itemQuestions` in `copy.ts`), `ChoiceFlow` (asks an entry's choices, nested entries' choices, "Already counted" and link-or-add, then hands `AddChoices` to `addFromCatalog`), `PickerResult` (tap to expand, Add), `usePicker` (add flow, catalog-swap message, loading/error frame) |
 | `components/tabs/` | `ActionsTab`, `SpellsTab`, `InventoryTab`, `FeaturesTab`, `NotesTab` |
 | `components/ui.tsx` | Shared bits: icons, `Caret`, `RemoveButton` (tap twice to confirm), `EntryActions`, `Step`, `UsePips`/`MarkPips`, `ProfDot`, `PartTiles`, `EffectSwitch`, `FreeCastButton`, `NumInput`, `EntryForm`, `TextField`, `DamageTypeField`, `useArmed` |
