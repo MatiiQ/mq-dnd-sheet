@@ -269,8 +269,9 @@ export function spellActions(c: Character): SpellAction[] {
     if (!(sp.lvl === 0 || spellUsable(c, sp)) || !isActive(c, sp)) continue;
     const effect = effectOf(c, sp);
     const key = spellKey(sp);
-    const [econ, econNote] = SPELL_ECON[key] ?? [econOf(sp.time), undefined];
-    const note = econNote ?? SPELL_NOTES[key];
+    // hasOwn: a spell can be named Constructor.
+    const [econ, econNote] = (Object.hasOwn(SPELL_ECON, key) ? SPELL_ECON[key] : undefined) ?? [econOf(sp.time), undefined];
+    const note = econNote ?? (Object.hasOwn(SPELL_NOTES, key) ? SPELL_NOTES[key] : undefined);
     const source = sourceLabel(c, sp);
     // Spells without the printed text (the examples, older saves) still say which dice a higher slot adds.
     const slotDie = /^(\d+d\d+)\/slot$/.exec(sp.scale ?? '')?.[1];

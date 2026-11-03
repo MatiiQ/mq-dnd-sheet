@@ -1812,3 +1812,5 @@ describe('review fixes', () => {
     expect(c.hp).toBe(0);
   });
 });
+
+it('finds no AC effect for constructor', () => expect(detectAcSpell('constructor')).toBeNull());

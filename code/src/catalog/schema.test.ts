@@ -201,3 +201,7 @@ describe('grants on catalog spells', () => {
     expect(validateEntry({ ...spell, lvl: 3, grants: [{ id: 'g1', kind: 'speed', name: 'x', mode: 'fly', val: '60', lvl: 1 }] })).toEqual([]);
   });
 });
+
+it.each(['constructor', 'toString', '__proto__', 'hasOwnProperty'])('makes an id from %s', (n) => {
+  expect(catalogId('spell', n)).toBe('spell/' + slug(n));
+});

@@ -501,3 +501,10 @@ describe('critical hit range', () => {
     expect(sword(c).crit).toBe('Critical Hit on 19–20');
   });
 });
+
+it('survives a spell named Constructor', () => {
+  const sp = { id: 'x', name: 'Constructor', lvl: 1, time: 'Action', range: '30 ft', prep: true, fx: 'damage' as const, dmg: '1d6' };
+  const c = { ...sampleCharacter(), spells: [sp] };
+  expect(() => spellActions(c)).not.toThrow();
+  expect(spellActions(c)[0].note).toBeUndefined();
+});

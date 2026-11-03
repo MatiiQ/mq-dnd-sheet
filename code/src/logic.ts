@@ -188,8 +188,10 @@ export const AC_SPELLS: Record<string, [AcEffect, number]> = {
   shield: ['bonus', 5], 'shield of faith': ['bonus', 2], 'mage armor': ['base', 13], barkskin: ['floor', 17]
 };
 export function detectAcSpell(name: string): Pick<Spell, 'acFx' | 'acVal'> | null {
-  const fx = AC_SPELLS[name.trim().toLowerCase()];
-  return fx ? { acFx: fx[0], acVal: fx[1] } : null;
+  const key = name.trim().toLowerCase();
+  if (!Object.hasOwn(AC_SPELLS, key)) return null;
+  const fx = AC_SPELLS[key];
+  return { acFx: fx[0], acVal: fx[1] };
 }
 
 export interface AcPart { label: string; value: number; note?: string; active?: boolean }

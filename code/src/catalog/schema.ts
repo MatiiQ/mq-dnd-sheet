@@ -119,7 +119,7 @@ export const slug = (name: string) => name.toLowerCase().replace(/[’']/g, '').
 const aliasBySlug = () => new Map(Object.entries(PHB_TO_SRD).map(([phb, srd]) => [slug(phb), srd]));
 // The one id rule: kind, then the scope (class and subclass for features, class for subclasses, species for traits), then the name.
 export function catalogId(kind: Kind, name: string, scope: (string | undefined)[] = []): string {
-  const n = PHB_TO_SRD[name] ?? aliasBySlug().get(slug(name)) ?? name;
+  const n = (Object.hasOwn(PHB_TO_SRD, name) ? PHB_TO_SRD[name] : undefined) ?? aliasBySlug().get(slug(name)) ?? name;
   return [kind, ...scope.filter((s): s is string => s !== undefined).map(slug), slug(n)].join('/');
 }
 export function entryScope(e: Entry): (string | undefined)[] {

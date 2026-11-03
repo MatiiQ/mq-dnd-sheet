@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  ABILITIES, AC_SPELLS, CAST_NAMES, newId, ORDINAL, ownFreeCasts, setOwnFreeCast, SPELL_SORTS, acAfterEdit, castSpell, concAfterEdit, detectAcSpell, effectsAfterEdit, fmt, preparedCount, removeSpell, setConc, setSlotUsed,
+  ABILITIES, CAST_NAMES, newId, ORDINAL, ownFreeCasts, setOwnFreeCast, SPELL_SORTS, acAfterEdit, castSpell, concAfterEdit, detectAcSpell, effectsAfterEdit, fmt, preparedCount, removeSpell, setConc, setSlotUsed,
   slotsLeft, sortSpells, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, freeCastsOf, spellAttackFor, spellSaveDcFor
 } from '../../logic';
 import { hasActiveEffect, inactiveReason, linkOf, sourceLabel } from '../../links';
@@ -78,8 +78,8 @@ export function SpellsTab() {
         <label className="field">AC effect
           <select className="input" value={f.draft.acFx} onChange={(e) => {
             const acFx = e.target.value as AcEffect | '';
-            const known = AC_SPELLS[f.draft.name.trim().toLowerCase()];
-            f.set({ acFx, ...(acFx && known ? { acVal: known[1] } : {}) });
+            const known = detectAcSpell(f.draft.name);
+            f.set({ acFx, ...(acFx && known ? { acVal: known.acVal } : {}) });
           }}>
             {AC_EFFECTS.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
           </select>
