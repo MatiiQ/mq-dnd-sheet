@@ -10,7 +10,7 @@ import type { Ability, Character, Econ, Feature, Grant, Item, Spell } from './ty
 // The "Other weapons" list: weapons not in hand, equipped first. A weapon inside a container is left out: the player
 // takes it out first to wield it (plan 6).
 export const otherWeapons = (c: Character): Item[] =>
-  c.inv.filter((i) => isWeapon(i) && !i.in && !c.hands.includes(i.id)).sort((a, b) => Number(b.eq) - Number(a.eq));
+  c.inv.filter((i) => isWeapon(i) && !i.in && i.qty >= 1 && !c.hands.includes(i.id)).sort((a, b) => Number(b.eq) - Number(a.eq));
 
 // Weapon Mastery: the number of weapon kinds whose mastery properties the character can use, from the active
 // prof 'mastery' grants without a target (Fighter 3, 4 from level 4, PHB p.91; Ranger 2 …).

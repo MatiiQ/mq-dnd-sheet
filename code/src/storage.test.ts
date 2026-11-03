@@ -119,6 +119,16 @@ describe('reaching every saved character', () => {
     expect(c.restMsg?.title).toBe('Save can’t be read');
     expect(m.get('dnd-sheet-v3:x:unreadable')).toBe('not json');
   });
+  it('does not promise a copy it could not keep', () => {
+    const m = stubStorage();
+    m.set('dnd-sheet-v3:x', 'not json');
+    const setItem = localStorage.setItem;
+    localStorage.setItem = () => { throw new Error('full'); };
+    const body = load('x').restMsg?.body;
+    localStorage.setItem = setItem;
+    expect(body).toContain('no copy');
+    expect(body).not.toContain('stays on this device');
+  });
   it.each([['5'], ['[]'], ['"x"']])('treats %s as unreadable', (raw) => {
     const m = stubStorage();
     m.set('dnd-sheet-v3:x', raw);

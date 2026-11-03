@@ -63,7 +63,7 @@ export function weaponsHeld(c: Character, hands: string[] = c.hands): { id: stri
 // quantity 2 or more; a row held as at most as many weapons as its quantity; two hands, one with an equipped Shield.
 // Anything over goes from the front, one whole weapon at a time (a Dagger × 2 row in both hands is two weapons).
 export function trimHands(c: Character, hands: string[]): string[] {
-  const ok = hands.filter((id) => { const it = itemOf(c, id); return !!it && isEquipped(it) && it.qty >= 1 && isWeapon(it); });
+  const ok = hands.filter((id) => { const it = itemOf(c, id); return !!it && isEquipped(it) && isWeapon(it); });
   const units: { id: string; n: number }[] = [];
   for (const id of ok) {
     const it = itemOf(c, id)!;

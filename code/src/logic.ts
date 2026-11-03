@@ -506,8 +506,7 @@ export function applyDamage(c: Character): Character {
     next.concCheck = 'Concentration on ' + c.conc.name + ': CON save DC ' + dc + ' · roll d20 ' + fmt(saveMod(c, 'con') - 2 * c.exh) + '. If you fail, tap the blue chip in the top bar to end it.';
     if (next.hp === 0) {
       next.conc = null;
-      // Exhaustion takes 2 × its level off every D20 Test (PHB p.366), so the roll shown includes it.
-    next.concCheck = 'Concentration on ' + c.conc.name + ' ended (dropped to 0 HP).';
+      next.concCheck = 'Concentration on ' + c.conc.name + ' ended (dropped to 0 HP).';
     }
   }
   if (next.hp === 0 && c.hp > 0) {
@@ -600,8 +599,9 @@ export const hitDieRoll = (c: Character) => '1d' + c.hdDie + ' ' + fmt(abilityMo
 const undoGivesDie = (c: Character, next: Character): Character =>
   (!next.hpUndo || next.hpUndo === c.hpUndo ? next : { ...next, hpUndo: { ...next.hpUndo, prev: { ...next.hpUndo.prev, hdUsed: Math.max(0, c.hdUsed - 1) } } });
 export const healHitDie = (c: Character): Character => undoGivesDie(c, applyHeal({ ...c, amount: Math.max(1, c.amount) }));
-// Damage typed while a spent die waits for its roll: Undo gives that die back too.
+// Damage or temp HP set while a spent die waits for its roll: Undo gives that die back too.
 export const damageHitDie = (c: Character): Character => undoGivesDie(c, applyDamage(c));
+export const setTempHitDie = (c: Character): Character => undoGivesDie(c, applySetTemp(c));
 
 export const rechargeOf = (r: Partial<Counter>) => r.recharge || 'none';
 // When a counter's partial regain comes: on a Short Rest for a Long Rest counter, at dawn for a Dawn counter.
@@ -1007,6 +1007,7 @@ export function removalSummary(c: Character, ref: Ref): { goes: string[]; keep: 
   const hand = '; lower it by hand';
   for (const r of chain.filter((x) => x.kind === 'grant')) {
     const g = c.grants.find((x) => x.id === r.id);
+    if (g?.kind === 'casting' && c.castAb === g.ab) keep.push(`Spellcasting ability stays ${CAST_NAMES[c.castAb]}; change it in Edit details`);
     if (!g?.counted) continue;
     const src = sourceOf(c, g.from)?.name ?? g.name, v = num(c, g.val, g);
     if (g.kind === 'abil' && g.ab) keep.push(`${g.ab.toUpperCase()} ${effScore(c, g.ab as Ability)} still includes ${fmt(v)} from ${src}${hand}`);

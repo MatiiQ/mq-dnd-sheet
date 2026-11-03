@@ -59,10 +59,11 @@ export function load(id: string): Character {
   if (ex) return ex.make();
   const key = sheetKey(id), data = readJSON(key);
   if (isObj(data)) return migrate(data);
-  let raw: string | null = null;
+  let raw: string | null = null, kept = false;
   try {
     raw = localStorage.getItem(key);
     if (raw && localStorage.getItem(key + UNREADABLE) === null) localStorage.setItem(key + UNREADABLE, raw);
+    kept = true;
   } catch { /* ignore */ }
   const blank = blankCharacter();
   const list = (readJSON(INDEX_KEY) as { list?: unknown } | null)?.list;
@@ -71,7 +72,7 @@ export function load(id: string): Character {
     ...blank,
     ch: { ...blank.ch, ...(typeof name === 'string' ? { name } : {}) },
     restMsg: raw
-      ? { title: 'Save can’t be read', body: 'This character’s saved data couldn’t be read, so a blank sheet opened in its place. The old data stays on this device and goes into every backup file.' }
+      ? { title: 'Save can’t be read', body: 'This character’s saved data couldn’t be read, so a blank sheet opened in its place. ' + (kept ? 'The old data stays on this device and goes into every backup file.' : 'Storage is full, so no copy of the old data could be kept.') }
       : { title: 'Save missing', body: 'This character’s saved data is missing, so a blank sheet opened in its place.' }
   };
 }

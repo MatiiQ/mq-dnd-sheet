@@ -110,6 +110,7 @@ export function inactiveReason(c: Character, x: Linked, seen: Set<string> = new 
     const item = c.inv.find((i) => i.id === p.id);
     // Nothing from an item inside a container counts, whatever its item checks (plan 6).
     if (item?.in) return 'in ' + (c.inv.find((i) => i.id === item.in)?.name ?? 'a container');
+    if (item && item.qty < 1) return 'none left';
     if (x.needEq && !(item && isEquipped(item))) return 'not equipped';
     if (x.needAtt && !c.attuneIds.includes(p.id)) return 'not attuned';
   }

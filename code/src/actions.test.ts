@@ -472,6 +472,10 @@ describe('other weapons (plan 6)', () => {
     expect(otherWeapons(c).map((i) => i.id)).toEqual(['ls', 'dg']);
     expect(otherWeapons(takeOut(c, 'sw')).map((i) => i.id)).toEqual(['sw', 'ls', 'dg']);
   });
+  it('leaves out a weapon with quantity 0', () => {
+    const c = { ...blankCharacter(), inv: [dagger({ id: 'dg', qty: 0 }), longsword({ id: 'ls' })] };
+    expect(otherWeapons(c).map((i) => i.id)).toEqual(['ls']);
+  });
 });
 
 describe('critical hit range', () => {

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { newId } from './logic';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import {
-  ABILITIES, SKILLS, acCanTargetOther, acOnOther, toggleAcTarget, regainLabel, damageHitDie, castAbOf, removeChip, speedOf, armorSlowBy, stealthDisBy, acSpellIdle, untrainedArmor, grantChips, addGrants, findUnlinked, removalChain, removalSummary, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, toggleEffect, dawn, refillFor, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft, num, setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, undoHp
+  ABILITIES, SKILLS, acCanTargetOther, acOnOther, toggleAcTarget, regainLabel, damageHitDie, setTempHitDie, castAbOf, removeChip, speedOf, armorSlowBy, stealthDisBy, acSpellIdle, untrainedArmor, grantChips, addGrants, findUnlinked, removalChain, removalSummary, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, toggleEffect, dawn, refillFor, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft, num, setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, undoHp
 } from './logic';
 import { migrate } from './migrate';
 import { spellActions } from './actions';
@@ -1726,6 +1726,10 @@ describe('grants that do what they say', () => {
     expect(wis.castAb).toBe('wis');
     expect(grantChips(none, 'feature:f')[0].label).toContain('set slots by hand');
   });
+  it('says the casting ability stays when its grant is removed', () => {
+    const none = addGrants({ ...blankCharacter(), feats: [feat] }, 'feature:f', [{ spec: casting }]);
+    expect(removalSummary(none, { kind: 'feature', id: 'f' }).keep).toEqual(['Spellcasting ability stays Intelligence; change it in Edit details']);
+  });
 });
 
 describe('links keep what they promise', () => {
@@ -1823,6 +1827,14 @@ describe('HP actions', () => {
     const back = undoHp(hit);
     expect(back.hdUsed).toBe(0);
     expect(back.hp).toBe(20);
+  });
+  it('refunds the die when undoing Set Temp after spending it', () => {
+    const c: Character = { ...blankCharacter(), level: 3, maxHp: 30, hp: 20, temp: 6 };
+    const cleared = setTempHitDie(spendHitDie(c));
+    expect(cleared.temp).toBe(0);
+    const back = undoHp(cleared);
+    expect(back.temp).toBe(6);
+    expect(back.hdUsed).toBe(0);
   });
   it('clears temp HP with an amount of 0', () => {
     const c: Character = { ...blankCharacter(), temp: 7, amount: 0 };

@@ -175,6 +175,12 @@ describe('items inside a container (plan 6)', () => {
     expect(inactiveReason(c, custom)).toBe('in Bag of Holding');
   });
 
+  it('a grant from an item with quantity 0 does not count, with or without the item checks', () => {
+    const gone = { ...ring, in: undefined, qty: 0 };
+    const custom = g({ needEq: undefined });
+    expect(inactiveReason(make({ inv: [gone], attuneIds: ['ring', '', ''] }), custom)).toBe('none left');
+  });
+
   it('reads "in a container" when the container is missing', () => {
     expect(inactiveReason(make({ inv: [ring], attuneIds: ['ring', '', ''] }), g())).toBe('in a container');
   });
