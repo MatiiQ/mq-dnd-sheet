@@ -19,16 +19,17 @@ self.addEventListener('fetch', (e) => {
   // Pages: network first so updates land on the next launch, cache when offline.
   // no-cache revalidates with the server, so a launch right after a deploy doesn't get the HTTP-cached page.
   if (req.mode === 'navigate') {
-    e.waitUntil(dropOld());
+    // A worker still installing is filling its own cache: dropping it now would break that install.
+    if (!self.registration.installing) e.waitUntil(dropOld());
     const network = fetch(req, { cache: 'no-cache' }).then((res) =>
-      res.ok && !res.redirected ? res : caches.match('./index.html').then((hit) => hit || res));
+      res.ok && !res.redirected ? res : caches.match('./index.html', { cacheName: CACHE }).then((hit) => hit || res));
     // On a slow connection, show the cached page after 3 s instead of waiting for the network.
     // Without a cached copy (first launch) keep waiting.
     const slow = new Promise((resolve) => setTimeout(resolve, 3000))
-      .then(() => caches.match('./index.html'))
+      .then(() => caches.match('./index.html', { cacheName: CACHE }))
       .then((hit) => hit || network);
     e.respondWith(
-      Promise.race([network, slow]).catch(() => caches.match('./index.html').then((hit) => hit || network))
+      Promise.race([network, slow]).catch(() => caches.match('./index.html', { cacheName: CACHE }).then((hit) => hit || network))
     );
     return;
   }

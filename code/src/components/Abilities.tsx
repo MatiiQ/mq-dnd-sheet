@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ABILITIES, SKILLS, abilityMod, abilityParts, clamp, effScore, fmt, saveMod, saveProficient, skillLevel, skillMod } from '../logic';
+import { ABILITIES, SKILLS, abilityMod, abilityParts, clamp, effScore, fmt, saveMod, saveProficient, skillLevel, skillMod, stealthDisBy } from '../logic';
 import { useWide } from '../layout';
 import { useSheet } from '../sheet';
 import type { Ability } from '../types';
@@ -75,7 +75,7 @@ function AbilityCard({ k, name }: { k: Ability; name: string }) {
             <span style={{ minWidth: 28, textAlign: 'center', fontSize: 18, fontWeight: 700, color: scoreColor }}>{cur}</span>
             <Step label={'Raise current ' + lower + ' score'} onClick={() => adjust(1)}>+</Step>
           </div>
-          {changed && (
+          {!!c.abilAdj[k] && (
             <button type="button" className="btn" style={{ fontSize: 13, padding: '0 10px' }} aria-label={'Reset ' + lower + ' to original ' + base}
               onClick={() => update((p) => ({ abilAdj: { ...p.abilAdj, [k]: 0 } }))}>Reset</button>
           )}
@@ -97,13 +97,15 @@ function AbilityCard({ k, name }: { k: Ability; name: string }) {
         // The dot shows the effective level; tapping in Edit mode still cycles only the hand value.
         const { level: lv, hand, by } = skillLevel(c, key);
         const modText = fmt(skillMod(c, key, k));
-        const label = <><ProfDot level={lv} /><span className="grow col">{skill}{by && <span className="small">{LEVEL_NAMES[lv]} from {by}</span>}</span></>;
+        const armor = key === 'stealth' ? stealthDisBy(c) : undefined;
+        const dis = armor && <span className="small">Disadvantage from {armor.name}</span>;
+        const label = <><ProfDot level={lv} /><span className="grow col">{skill}{by && <span className="small">{LEVEL_NAMES[lv]} from {by}</span>}{dis}</span></>;
         return edit ? (
           <button key={key} type="button" aria-label={skill + ': ' + LEVEL_NAMES[hand] + (by ? ', ' + LEVEL_NAMES[lv] + ' from ' + by : '') + '. Tap to change.'} className="row gap-10 abil-edit-row skill-edit"
             style={{ cursor: 'pointer', background: 'transparent', border: 'none', borderBottom: '1px dashed var(--line)', minHeight: 44, textAlign: 'left' }}
             onClick={() => update((p) => ({ skillProf: { ...p.skillProf, [key]: ((p.skillProf[key] || 0) + 1) % 3 } }))}>
             <ProfDot level={lv} />
-            <span className="grow skill-edit-name"><span>{skill}</span><span className="small">{LEVEL_NAMES[hand]}{by && ' · ' + LEVEL_NAMES[lv] + ' from ' + by}</span></span>
+            <span className="grow skill-edit-name"><span>{skill}</span><span className="small">{LEVEL_NAMES[hand]}{by && ' · ' + LEVEL_NAMES[lv] + ' from ' + by}</span>{dis}</span>
             <span className="skill-edit-mod">{modText}</span>
           </button>
         ) : (

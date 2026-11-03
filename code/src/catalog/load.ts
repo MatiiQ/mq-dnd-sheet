@@ -13,7 +13,7 @@ const listeners = new Set<() => void>();
 export function loadCatalog(): Promise<Catalog> {
   if (cached) return cached;
   const p: Promise<Catalog> = (async () => {
-    const [srd, pack] = await Promise.all([importSrd(), getPack().catch(() => null)]);
+    const [srd, pack] = await Promise.all([importSrd(), getPack()]);
     return mergeCatalog(srd, pack);
   })().catch((e: unknown) => { if (cached === p) cached = null; throw e; });
   cached = p;

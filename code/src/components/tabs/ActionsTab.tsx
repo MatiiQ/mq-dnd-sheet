@@ -3,7 +3,7 @@ import {
   attacksPerAction, extraDamage, extraText, featureActions, lightExtra, masterySlots, otherWeapons, spellActions, unarmedStrike, weaponAttacks,
   type SpellAction, type WeaponAttack
 } from '../../actions';
-import { capWords, dtypeText } from '../../catalog/copy';
+import { capWords, dtypeText, titled } from '../../catalog/copy';
 import { entriesOf } from '../../catalog/merge';
 import { useCatalog } from '../../catalog/useCatalog';
 import { canLoad, hasProp, isWeapon, putAway, putInHand, shieldOn as shieldOf, twoHanded, versatile, weaponKind, weaponsHeld } from '../../hands';
@@ -11,13 +11,12 @@ import { linkOf, sourceLabel } from '../../links';
 import { castSpell, COMBAT_ACTIONS, fmt, freeCastsOf, ORDINAL, removeRef, slotsLeft, spellUsable, toggled, type AcPart } from '../../logic';
 import { patchEntry, removeEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { Attack, Character, Econ, Item, Rider, Spell } from '../../types';
-import { AddButton, Caret, DieBadge, EffectSwitch, EntryForm, EntryRow, FreeCastButton, Step, TextField, useNoteUntilChange } from '../ui';
+import { AcTargetSwitch, AddButton, Caret, DieBadge, EffectSwitch, EntryForm, EntryRow, FreeCastButton, Step, TextField, useNoteUntilChange } from '../ui';
 
 const ECON: Record<Econ, string> = { action: 'Action', bonus: 'Bonus Action', reaction: 'Reaction', free: 'Free', other: 'Other' };
 type Filter = 'all' | 'action' | 'bonus' | 'reaction';
 const FILTERS: [Filter, string][] = [['all', 'All'], ['action', 'Action'], ['bonus', 'Bonus'], ['reaction', 'Reaction']];
 const USE_LABEL: Record<WeaponAttack['use'], string> = { melee: '', thrown: 'thrown', ranged: '', 'two-handed': 'two hands' };
-const title = (s: string) => s.split(/[-\s]/).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 const propsText = (p: string) => p.split(',').filter(Boolean).map(capWords).join(', ');
 const NO_SHIELD = 'Take off the Shield first';
 
@@ -30,7 +29,7 @@ function EconTag({ econ }: { econ: Econ }) {
   return <span className={'econ-tag econ-' + econ}>{ECON[econ]}</span>;
 }
 function Parts({ label, parts }: { label: string; parts: AcPart[] }) {
-  return <span className="muted">{label}: {parts.map((p) => p.label + ' ' + fmt(p.value)).join(' · ') || 'none'}</span>;
+  return <span className="muted">{label}: {parts.map((p) => p.label + ' ' + fmt(p.value) + (p.note ? ' (' + p.note + ')' : '')).join(' · ') || 'none'}</span>;
 }
 // An attack's two numbers, read out by name.
 function AttackNums({ hit, dmg }: { hit: string; dmg: string }) {
@@ -135,7 +134,7 @@ export function ActionsTab() {
   const weaponRow = (it: Item, a: WeaponAttack, controls: boolean) => shows(a.econ) && (
     <ActRow key={it.id + a.use} econ={a.econ}
       name={a.name + (USE_LABEL[a.use] ? ' · ' + USE_LABEL[a.use] : '')}
-      sub={[a.range, propsText(a.props), a.mastery && 'Mastery: ' + title(a.mastery), a.crit].filter(Boolean).join(' · ')}
+      sub={[a.range, propsText(a.props), a.mastery && 'Mastery: ' + titled(a.mastery), a.crit].filter(Boolean).join(' · ')}
       side={<AttackNums hit={fmt(a.hit)} dmg={a.dmg + ' ' + a.dtype} />}
       extra={controls ? <>{handButtons(it)}{a.use === 'ranged' && ammoPicker(it)}</> : undefined}
       body={<>
@@ -162,10 +161,10 @@ export function ActionsTab() {
   // ---- mastery ----
   const slots = masterySlots(c);
   const catItem = (kind: string) => { const e = cat?.byId.get('item/' + kind); return e?.kind === 'item' ? e : undefined; };
-  const kindName = (kind: string) => c.inv.find((i) => isWeapon(i) && weaponKind(i) === kind)?.name ?? catItem(kind)?.name ?? title(kind);
+  const kindName = (kind: string) => c.inv.find((i) => isWeapon(i) && weaponKind(i) === kind)?.name ?? catItem(kind)?.name ?? titled(kind);
   const kindMastery = (kind: string) => c.inv.find((i) => isWeapon(i) && weaponKind(i) === kind && i.mastery)?.mastery ?? catItem(kind)?.mastery;
   const counted = c.mastery.slice(0, slots);
-  const masteryLine = counted.map((k) => kindName(k) + (kindMastery(k) ? ' (' + title(kindMastery(k)!) + ')' : '')).join(', ');
+  const masteryLine = counted.map((k) => kindName(k) + (kindMastery(k) ? ' (' + titled(kindMastery(k)!) + ')' : '')).join(', ');
   const options = [...new Set([
     ...(cat ? entriesOf(cat, 'item').filter((e) => e.cat === 'weapon' && e.mastery).map((e) => e.id.split('/').pop()!) : []),
     ...c.inv.filter((i) => isWeapon(i) && i.mastery).map(weaponKind), ...c.mastery
@@ -188,7 +187,7 @@ export function ActionsTab() {
               const i = c.mastery.indexOf(k), on = i >= 0;
               return (
                 <button key={k} type="button" className="filter-btn tall" aria-pressed={on} onClick={() => toggleMastery(k)}>
-                  {kindName(k)}{kindMastery(k) ? ' (' + title(kindMastery(k)!) + ')' : ''}{on && i >= slots ? ' · not counting' : ''}
+                  {kindName(k)}{kindMastery(k) ? ' (' + titled(kindMastery(k)!) + ')' : ''}{on && i >= slots ? ' · not counting' : ''}
                 </button>
               );
             })}
@@ -386,6 +385,7 @@ function CastButtons({ sp, effect }: { sp: Spell; effect: boolean }) {
   const lvl = sp.lvl || 0;
   const first = lvl > 0 && spellUsable(c, sp) ? [lvl, 2, 3, 4, 5, 6, 7, 8, 9].filter((l) => l >= lvl).find((l) => c.slotMax[l] && slotsLeft(c, l) > 0) : undefined;
   return <>
+    <AcTargetSwitch sp={sp} />
     {freeCastsOf(c, sp.id).map((r) => <FreeCastButton key={r.id} sp={sp} r={r} short />)}
     {first !== undefined && (
       <button type="button" className="btn btn-sm toggle-btn" aria-label={'Cast ' + sp.name + ' with a level ' + first + ' slot, ' + slotsLeft(c, first) + ' left'}

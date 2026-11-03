@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
 import { isValue } from '../catalog/value';
 import { inactiveReason, SRC_KINDS, sourceLabel } from '../links';
-import { maxFields, maxKindOf, maxOf, rechargeOf, regainEvent, removeResource, resourceGroups, type MaxKind } from '../logic';
+import { removeRef, maxFields, maxKindOf, maxOf, rechargeOf, regainEvent, regainLabel, resourceGroups, type MaxKind } from '../logic';
 import { patchEntry, saveEntry, useEntryForm, useSheet } from '../sheet';
 import type { Recharge, Resource, SrcKind } from '../types';
 import { SourcePicker } from './SourcePicker';
@@ -136,12 +136,12 @@ export function Resources() {
                     </div>
                   }
                   body={<>
-                    <span className="small">{RECHARGE_TEXT[rc]}{r.regain ? ' · regain ' + r.regain + (r.regainOn === 'dawn' ? ' at dawn' : ' on a Short Rest') : ''}</span>
+                    <span className="small">{RECHARGE_TEXT[rc]}{regainLabel(c, r) ? ' · regain ' + regainLabel(c, r) + (r.regainOn === 'dawn' ? ' at dawn' : ' on a Short Rest') : ''}</span>
                     {why && r.note && <span className="small">{r.note}</span>}
                     {src && <span className="muted">Source: {src}</span>}
                   </>}
                   onEdit={() => f.openEdit(r.id, toDraft(r))}
-                  onRemove={() => update((p) => removeResource(p, r.id))}>
+                  onRemove={() => update((p) => removeRef(p, { kind: 'res', id: r.id }))}>
                   {rc !== 'none' && m === null && <span style={{ fontSize: 12, color: 'var(--danger)' }}>Set a maximum (Edit) so a rest can refill it.</span>}
                 </EntryRow>
                 )

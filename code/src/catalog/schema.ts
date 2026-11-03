@@ -1,7 +1,7 @@
 // Catalog schema shared by the app and both builders (SRD in the repo, PHB pack on the device). Node runs this
 // file directly from the build scripts, so it uses erasable TypeScript only and imports types with `import type`.
 import type { AcEffect, Ability, ArmorKind, Size } from '../types';
-import { isValue } from './value.ts';
+import { hasDice, isValue } from './value.ts';
 
 export const SRD_VERSION: string = '5.2.1';
 
@@ -119,7 +119,7 @@ export const slug = (name: string) => name.toLowerCase().replace(/[’']/g, '').
 const aliasBySlug = () => new Map(Object.entries(PHB_TO_SRD).map(([phb, srd]) => [slug(phb), srd]));
 // The one id rule: kind, then the scope (class and subclass for features, class for subclasses, species for traits), then the name.
 export function catalogId(kind: Kind, name: string, scope: (string | undefined)[] = []): string {
-  const n = PHB_TO_SRD[name] ?? aliasBySlug().get(slug(name)) ?? name;
+  const n = (Object.hasOwn(PHB_TO_SRD, name) ? PHB_TO_SRD[name] : undefined) ?? aliasBySlug().get(slug(name)) ?? name;
   return [kind, ...scope.filter((s): s is string => s !== undefined).map(slug), slug(n)].join('/');
 }
 export function entryScope(e: Entry): (string | undefined)[] {
@@ -236,7 +236,7 @@ const FIELDS: Record<Kind, Record<string, [Check, boolean]>> = {
 };
 const HAS_GRANTS: Kind[] = ['feat', 'background', 'trait', 'feature'];
 
-const isObj = (x: unknown): x is Record<string, unknown> => typeof x === 'object' && x !== null && !Array.isArray(x);
+export const isObj = (x: unknown): x is Record<string, unknown> => typeof x === 'object' && x !== null && !Array.isArray(x);
 const primitive = (v: unknown) => v === null || typeof v !== 'object';
 
 function checkFields(o: Record<string, unknown>, fields: Record<string, [Check, boolean]>, where: string, errs: string[]) {
@@ -365,5 +365,6 @@ export function grantErrors(g: unknown, from: Kind): string[] {
   if ('lvl' in spec) errs.push('grant: stores its level as minLvl');
   checkGrant(minLvl === undefined ? spec : { ...spec, lvl: minLvl }, { kind: from }, 'grant', errs);
   for (const [k, v] of Object.entries(spec)) if (ref(v)) errs.push(`grant: ${k} is an unresolved choice`);
+  if (spec.kind === 'resource' && typeof spec.max === 'string' && hasDice(spec.max)) errs.push('grant: a maximum can’t be dice');
   return errs;
 }

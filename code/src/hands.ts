@@ -13,10 +13,11 @@ export const versatile = (it: Item) => hasProp(it, 'versatile');
 
 // Ammunition types (plan 7). A weapon's is the part of its Ammunition field after ';' ('150/600;arrow'; PHB p.213:
 // the ammunition type is listed with the range). An ammunition item's comes from its catalog id, or from its base for
-// Ammunition +N; Firearm Bullets fit no SRD weapon, and ammunition typed by hand has no type.
-const AMMO_TYPE: Record<string, string> = { 'item/arrows': 'arrow', 'item/bolts': 'bolt', 'item/sling-bullets': 'bullet', 'item/needles': 'needle' };
+// Ammunition +N; ammunition typed by hand has no type. A Musket and a Pistol list "Bullet" but fire Firearm Bullets
+// (PHB p.222), not a Sling's: the rule lives here, not in the data, because saves already hold ';bullet' on them.
+const AMMO_TYPE: Record<string, string> = { 'item/arrows': 'arrow', 'item/bolts': 'bolt', 'item/sling-bullets': 'bullet', 'item/firearm-bullets': 'firearm', 'item/needles': 'needle' };
 export function ammoType(it: Item): string {
-  if (isWeapon(it)) return (it.ammo ?? '').split(';')[1] ?? '';
+  if (isWeapon(it)) return ['musket', 'pistol'].includes(weaponKind(it)) ? 'firearm' : (it.ammo ?? '').split(';')[1] ?? '';
   return AMMO_TYPE[it.cid ?? ''] ?? (it.cid === 'item/ammunition-1-2-or-3' ? AMMO_TYPE[it.base ?? ''] ?? '' : '');
 }
 // A weapon with the Ammunition property can be loaded with ammunition of its own type.
@@ -32,7 +33,8 @@ export function weaponKind(it: Item): string {
 // A comma list of weapon kinds ('club,quarterstaff') and categories: 'simple', 'martial-melee', 'simple-ranged', and
 // with a property after it, 'martial-melee-light' = a Martial Melee weapon that has the Light property.
 export function weaponMatches(it: Item, list: string): boolean {
-  return list.split(',').map((x) => x.trim()).filter(Boolean).some((term) => {
+  // As slugs, so a typed 'Longsword' or 'Martial Melee' matches.
+  return list.split(',').map(slug).filter(Boolean).some((term) => {
     const m = /^(simple|martial)(?:-(melee|ranged))?(?:-([a-z-]+))?$/.exec(term);
     if (!m) return term === weaponKind(it);
     return it.wcat === m[1] && (!m[2] || it.wrange === m[2]) && (!m[3] || hasProp(it, m[3]));
@@ -61,7 +63,7 @@ export function weaponsHeld(c: Character, hands: string[] = c.hands): { id: stri
 // quantity 2 or more; a row held as at most as many weapons as its quantity; two hands, one with an equipped Shield.
 // Anything over goes from the front, one whole weapon at a time (a Dagger × 2 row in both hands is two weapons).
 export function trimHands(c: Character, hands: string[]): string[] {
-  const ok = hands.filter((id) => { const it = itemOf(c, id); return !!it && isEquipped(it) && it.qty >= 1 && isWeapon(it); });
+  const ok = hands.filter((id) => { const it = itemOf(c, id); return !!it && isEquipped(it) && isWeapon(it); });
   const units: { id: string; n: number }[] = [];
   for (const id of ok) {
     const it = itemOf(c, id)!;
@@ -127,9 +129,10 @@ export function putInHand(c: Character, id: string, two = false): { c: Character
 
 export const putAway = (c: Character, id: string): Character => setHands(c, c.hands.filter((x) => x !== id));
 
-// Equips a Shield: it takes a hand, so hands trim to one entry (a Two-Handed weapon always goes). away: names put away.
+// Equips a Shield: it takes a hand, so a Versatile weapon held in two moves to one and hands trim to one entry (a
+// Two-Handed weapon always goes). away: names put away.
 export function equipShield(c: Character, id: string): { c: Character; away: string[] } {
   const base = withEquipped(c, id);
-  const out = setHands(base, base.hands);
+  const out = setHands(base, base.hands.filter((x, i, all) => all.indexOf(x) === i || !versatile(itemOf(c, x)!)));
   return { c: out, away: putAwayNames(base, out) };
 }

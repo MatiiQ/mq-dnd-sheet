@@ -2,7 +2,7 @@
 // Pure functions (Character → Character), each returning c itself when nothing changes. Imported by components and
 // tests only; logic.ts never imports this file.
 import { itemOf, setHands } from './hands';
-import { COINS, coinWeight, isContainer, newId, removalSummary, removeItem, withoutKeys } from './logic';
+import { removeRef, COINS, coinWeight, isContainer, newId, removalSummary, withoutKeys } from './logic';
 import type { Character, Item, Section } from './types';
 
 // The list for items with no section (or one that is gone): always last, never renamed or removed.
@@ -69,9 +69,9 @@ const contentsOf = (c: Character, bagId: string) => c.inv.filter((i) => i.in ===
 // Removes a container. 'out' is the plain item removal: its contents come out and its coins go to the purse. 'remove'
 // removes each content item through the same removal, then the bag with its coins.
 export function removeContainer(c: Character, bagId: string, contents: 'out' | 'remove'): Character {
-  if (contents === 'out') return removeItem(c, bagId);
-  const emptied = contentsOf(c, bagId).reduce((x, i) => removeItem(x, i.id), c);
-  return removeItem({ ...emptied, inv: emptied.inv.map((i) => (i.id === bagId ? withoutKeys(i, COINS) : i)) }, bagId);
+  if (contents === 'out') return removeRef(c, { kind: 'item', id: bagId });
+  const emptied = contentsOf(c, bagId).reduce((x, i) => removeRef(x, { kind: 'item', id: i.id }), c);
+  return removeRef({ ...emptied, inv: emptied.inv.map((i) => (i.id === bagId ? withoutKeys(i, COINS) : i)) }, { kind: 'item', id: bagId });
 }
 
 // What the removal confirm shows: the bag's removalSummary, plus with 'remove' each content item (by name) and its own

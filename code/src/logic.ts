@@ -1,11 +1,10 @@
 // D&D 2024 rules used by the sheet. Pure functions: each takes a character and returns the next one.
-import { blankCharacter, sampleCharacter } from './defaults';
-import { grantErrors, isDtypes, ITEM_CATS, partErrors, type GrantSpec } from './catalog/schema';
+import type { GrantSpec } from './catalog/schema';
 import { hasDice, isValue, valueAt, type ValueCtx } from './catalog/value';
-import { PROF_NAMES, type ProfCat } from './catalog/names';
+import type { ProfCat } from './catalog/names';
 import { canLoad, setHands } from './hands';
-import { activeGrants, dropLinkOnly, fixLinks, GROUP_SRC, hasActiveEffect, inactiveReason, isActive, isEquipped, LINKED_LISTS, srcKindOfLink, type SourceKind, linkOf, parseLink, sourceLabel, sourceOf, SRC_KINDS } from './links';
-import type { AcEffect, Ability, ArmorKind, CastAbility, Character, Coin, Concentration, Counter, DefenseKind, Feature, Grant, HpSnapshot, Item, Prof, Linked, Recharge, Resource, Size, Spell, SpeedKind, SpellSort, Tab, Unarmored, When } from './types';
+import { activeGrants, dropLinkOnly, hasActiveEffect, inactiveReason, isActive, isEquipped, LINKED_LISTS, srcKindOfLink, type SourceKind, linkOf, parseLink, sourceLabel, sourceOf, SRC_KINDS } from './links';
+import type { AcEffect, Ability, ArmorKind, CastAbility, Character, Coin, Concentration, Counter, DefenseKind, Grant, HpSnapshot, Item, Linked, Recharge, Resource, Size, Spell, SpeedKind, SpellSort, Tab, Unarmored } from './types';
 
 export const ABILITIES: [Ability, string][] = [
   ['str', 'Strength'], ['dex', 'Dexterity'], ['con', 'Constitution'],
@@ -108,9 +107,10 @@ export function skillLevel(c: Character, key: string): { level: number; hand: nu
   }
   return by ? { level, hand, by } : { level, hand };
 }
-// Check bonus grants for a skill, or for every check of its ability (Magician: WIS modifier on Arcana and Nature).
+// Check bonus grants for a skill, for every check of its ability (Magician: WIS modifier on Arcana and Nature), or for
+// all checks (Luckstone).
 const checkBonus = (c: Character, targets: string[]) =>
-  activeGrants(c, 'checkBonus').filter((g) => targets.includes(g.target ?? '')).reduce((t, g) => t + num(c, g.val, g), 0);
+  activeGrants(c, 'checkBonus').filter((g) => g.target === 'all' || targets.includes(g.target ?? '')).reduce((t, g) => t + num(c, g.val, g), 0);
 // Skill check: ability modifier + PB × level. Jack of All Trades adds half PB, rounded down, to a check with a skill
 // you aren't proficient in (PHB p.60).
 export function skillMod(c: Character, key: string, ab: Ability): number {
@@ -182,24 +182,40 @@ export function detectArmor(name: string): Pick<Item, 'armor' | 'acBase' | 'acBo
   return a ? { armor: a[1], acBase: a[2], ...(plus ? { acBonus: Number(plus[1]) } : {}) } : null;
 }
 
-// AC spells by name: Shield +5 and Shield of Faith +2 (PHB p.316), Mage Armor base 13 + DEX (p.293), Barkskin AC at least 17 (p.245).
-export const AC_EFFECTS: AcEffect[] = ['bonus', 'base', 'floor'];
+// AC spells by name: Shield +5 and Shield of Faith +2 (PHB p.316), Mage Armor base 13 + DEX (p.293), Barkskin AC at least 17 (p.245),
+// Haste +2 (p.284). Not Warding Bond: its +1 goes to "another creature" (p.340), never the caster.
 export const AC_SPELLS: Record<string, [AcEffect, number]> = {
-  shield: ['bonus', 5], 'shield of faith': ['bonus', 2], 'mage armor': ['base', 13], barkskin: ['floor', 17]
+  shield: ['bonus', 5], 'shield of faith': ['bonus', 2], 'mage armor': ['base', 13], barkskin: ['floor', 17],
+  haste: ['bonus', 2]
 };
 export function detectAcSpell(name: string): Pick<Spell, 'acFx' | 'acVal'> | null {
-  const fx = AC_SPELLS[name.trim().toLowerCase()];
-  return fx ? { acFx: fx[0], acVal: fx[1] } : null;
+  const key = name.trim().toLowerCase();
+  if (!Object.hasOwn(AC_SPELLS, key)) return null;
+  const fx = AC_SPELLS[key];
+  return { acFx: fx[0], acVal: fx[1] };
 }
 
 export interface AcPart { label: string; value: number; note?: string; active?: boolean }
+// Haste, Shield of Faith, Mage Armor and Barkskin can go on another creature (PHB pp.284, 316, 293, 245); a Self spell
+// (Shield) can't. Cast on another creature, the spell still runs (slot, Concentration, chip) but the caster's AC stays.
+export const acCanTargetOther = (sp: Spell) => !!sp.acFx && !/^self/i.test((sp.range || '').trim());
+export const acOnOther = (sp: Spell) => !!sp.acOther && acCanTargetOther(sp);
+export const toggleAcTarget = (c: Character, id: string): Partial<Character> =>
+  ({ spells: c.spells.map((sp) => (sp.id !== id ? sp : sp.acOther ? withoutKeys(sp, ['acOther']) : { ...sp, acOther: true as const })) });
 // A Concentration spell's AC effect is on exactly while concentrating on it; any other is on while in acOn.
-export const acSpellActive = (c: Character, sp: Spell) => !!sp.acFx && (sp.c ? c.conc?.id === sp.id : c.acOn.includes(sp.id));
+export const acSpellActive = (c: Character, sp: Spell) => !!sp.acFx && !acOnOther(sp) && (sp.c ? c.conc?.id === sp.id : c.acOn.includes(sp.id));
 
 // Armor Class and the parts it is made of. Base AC is 10 + DEX; armor, spells and features give other base
 // calculations, and only one applies (PHB p.12, p.361). The sheet picks the highest legal one.
 // Light armor adds DEX, medium at most +2, heavy none (PHB p.219). Parts worth 0 are left out.
+const NO_SHIELD_TRAINING = 'no Shield training';
 const armorValue = (i: Item) => (i.acBase || 0) + (i.acBonus || 0);
+const wornArmor = (c: Character) => c.inv.filter((i) => isEquipped(i) && i.armor && i.armor !== 'shield');
+// Worn armor the character has no training with: Disadvantage on D20 Tests using Strength or Dexterity, and no
+// spellcasting (PHB p.219). The sheet says so and changes no number.
+export const untrainedArmor = (c: Character): Item | undefined => wornArmor(c).find((it) => !hasProf(c, 'armor', capital(it.armor!) + ' armor'));
+// A base AC spell does nothing while armor is worn (Mage Armor, PHB p.293). It can still be ended.
+export const acSpellIdle = (c: Character, sp: Spell) => sp.acFx === 'base' && wornArmor(c).length > 0;
 export function armorClass(c: Character): { total: number; parts: AcPart[] } {
   const dex = abilityMod(c, 'dex');
   const dexPart = (cap: number): AcPart => (dex > cap ? { label: 'Dexterity', value: cap, note: 'max +' + cap } : { label: 'Dexterity', value: dex });
@@ -209,7 +225,9 @@ export function armorClass(c: Character): { total: number; parts: AcPart[] } {
   ];
   const shields = c.inv.filter((i) => isEquipped(i) && i.armor === 'shield');
   const shield = shields.reduce<Item | null>((b, i) => (!b || armorValue(i) > armorValue(b) ? i : b), null);
-  const worn = c.inv.filter((i) => isEquipped(i) && i.armor && i.armor !== 'shield');
+  const worn = wornArmor(c);
+  // A Shield without training gives no AC (PHB p.219). Its part stays, worth 0, to say why.
+  const shieldTrained = hasProf(c, 'armor', 'Shields');
   const spells = c.spells.filter((sp) => acSpellActive(c, sp));
   const spellPart = (sp: Spell): AcPart => ({ label: sp.name, value: sp.acVal || 0, note: 'spell', active: true });
   const bare: AcPart[] = [{ label: 'Unarmored', value: 10 }, dexPart(Infinity)];
@@ -219,9 +237,10 @@ export function armorClass(c: Character): { total: number; parts: AcPart[] } {
     if (ab && (shieldOk || !shield)) {
       candidates.push([...bare, { label: abilityName(ab), value: abilityMod(c, ab), note }]);
     }
-    // Unarmored base grants work like UNARMORED: 10 + DEX + an ability, lost with a Shield unless shieldOk.
-    for (const g of activeGrants(c, 'ac').filter((x) => x.acMode === 'unarmored' && x.ab && (x.shieldOk !== false || !shield))) {
-      candidates.push([...bare, { label: ABILITIES.find(([k]) => k === g.ab)?.[1] ?? g.ab!, value: abilityMod(c, g.ab as Ability), note: g.name }]);
+    // Unarmored base grants work like UNARMORED: 10 + DEX + an ability, or a fixed number (Robe of the Archmagi, 15 + DEX),
+    // lost with a Shield unless shieldOk.
+    for (const g of activeGrants(c, 'ac').filter((x) => x.acMode === 'unarmored' && (x.ab || x.val !== undefined) && (x.shieldOk !== false || !shield))) {
+      candidates.push([...bare, g.ab ? { label: ABILITIES.find(([k]) => k === g.ab)?.[1] ?? g.ab, value: abilityMod(c, g.ab as Ability), note: g.name } : { label: g.name, value: num(c, g.val, g) }]);
     }
     // Mage Armor sets a base AC on a creature not wearing armor (PHB p.293).
     for (const sp of spells.filter((x) => x.acFx === 'base')) candidates.push([spellPart(sp), dexPart(Infinity)]);
@@ -231,13 +250,13 @@ export function armorClass(c: Character): { total: number; parts: AcPart[] } {
   const base = candidates.reduce((b, p) => (partsTotal(p) > partsTotal(b) ? p : b));
   const parts: AcPart[] = [
     ...base,
-    ...(shield ? [{ label: shield.name, value: armorValue(shield), note: 'shield' }] : []),
+    ...(shield ? [shieldTrained ? { label: shield.name, value: armorValue(shield), note: 'shield' } : { label: shield.name, value: 0, note: NO_SHIELD_TRAINING }] : []),
     // AC bonus grants (Ring of Protection, Defense): they follow equip, attunement and armor conditions through
     // activeGrants. acBonus counts only on armor and Shields, inside their own part above.
     ...activeGrants(c, 'ac').filter((g) => g.acMode === 'bonus').map((g) => ({ label: g.name, value: num(c, g.val, g), ...(sourceLabel(c, g) ? { note: sourceLabel(c, g) } : {}) })),
     ...spells.filter((sp) => sp.acFx === 'bonus').map(spellPart),
     ...c.acMods.map((m) => ({ label: m.name, value: m.val, note: 'custom' }))
-  ].filter((p) => p.value !== 0);
+  ].filter((p) => p.value !== 0 || p.note === NO_SHIELD_TRAINING);
   // Barkskin: AC can't be lower than its value, so it comes last and adds only what is missing (PHB p.245).
   const floor = Math.max(0, ...spells.filter((sp) => sp.acFx === 'floor').map((sp) => sp.acVal || 0));
   const fl = spells.find((sp) => sp.acFx === 'floor' && sp.acVal === floor);
@@ -321,7 +340,7 @@ export function setOwnFreeCast(c: Character, spellId: string, on: boolean, oldNa
   const sp = c.spells.find((x) => x.id === spellId);
   if (!sp) return c;
   const has = ownFreeCasts(c, spellId), name = sp.name + ' (free cast)', old = oldName === undefined ? null : oldName + ' (free cast)';
-  if (!on) return has.reduce((x, r) => removeResource(x, r.id), c);
+  if (!on) return has.reduce((x, r) => removeRef(x, { kind: 'res', id: r.id }), c);
   if (has.length) return { ...c, res: c.res.map((r) => (has.includes(r) && r.name === old ? { ...r, name } : r)) };
   return { ...c, res: [...c.res, { id: newId(), name, count: 1, max: 1, recharge: 'long', casts: spellId, from: linkOf('spell', spellId), srcKind: 'spell' }] };
 }
@@ -404,7 +423,13 @@ export function parseWeight(s: string): number | undefined {
 }
 
 export const zeroSpeedBy = (c: Character) => CONDITIONS.filter((n) => c.conds[n] && ZERO_SPEED.includes(n));
-export const speedOf = (c: Character, base: number) => (zeroSpeedBy(c).length ? 0 : Math.max(0, base - 5 * c.exh));
+// Armor with a Strength score slows a wearer whose Strength is lower by 10 ft, and Stealth Disadvantage is the armor's
+// own column (PHB p.219).
+export const armorSlowBy = (c: Character): Item | undefined => c.inv.find((i) => isEquipped(i) && i.strReq !== undefined && effScore(c, 'str') < i.strReq);
+export const stealthDisBy = (c: Character): Item | undefined => c.inv.find((i) => isEquipped(i) && i.stealthDis);
+// Exhaustion and armor's Strength both cut every speed: a deliberate reading of the armor rule's "Speed", matching the
+// Exhaustion note.
+export const speedOf = (c: Character, base: number) => (zeroSpeedBy(c).length ? 0 : Math.max(0, base - 5 * c.exh - (armorSlowBy(c) ? 10 : 0)));
 // Walking Speed before Exhaustion and conditions: the typed base plus walking speed grants (Wood Elf +5 ft).
 export const walkSpeed = (c: Character) => c.speedBase + activeGrants(c, 'speed').filter((g) => g.mode === 'walk').reduce((t, g) => t + num(c, g.val, g), 0);
 // Another speed: the typed one or the best grant, whichever is higher ('walk' means equal to the walking Speed).
@@ -477,7 +502,8 @@ export function applyDamage(c: Character): Character {
   }
   if (c.conc) {
     const dc = clamp(Math.floor(c.amount / 2), 10, 30);
-    next.concCheck = 'Concentration on ' + c.conc.name + ': CON save DC ' + dc + ' · roll d20 ' + fmt(saveMod(c, 'con')) + '. If you fail, tap the blue chip in the top bar to end it.';
+    // Exhaustion takes 2 × its level off every D20 Test (PHB p.366), so the roll shown includes it.
+    next.concCheck = 'Concentration on ' + c.conc.name + ': CON save DC ' + dc + ' · roll d20 ' + fmt(saveMod(c, 'con') - 2 * c.exh) + '. If you fail, tap the blue chip in the top bar to end it.';
     if (next.hp === 0) {
       next.conc = null;
       next.concCheck = 'Concentration on ' + c.conc.name + ' ended (dropped to 0 HP).';
@@ -513,10 +539,11 @@ export function applyHeal(c: Character): Character {
   return next;
 }
 
-// Temp HP don't stack: the new set replaces the old one, and Undo keeps the old one instead (PHB p.29).
+// Temp HP don't stack: the new set replaces the old one, and Undo keeps the old one instead (PHB p.29). An amount of 0
+// clears them.
 export function applySetTemp(c: Character): Character {
-  if (!c.amount) return c;
-  const text = 'Temp HP set to ' + c.amount + (c.temp && c.temp !== c.amount
+  if (!c.amount && !c.temp) return c;
+  const text = !c.amount ? 'Temp HP cleared (was ' + c.temp + ').' : 'Temp HP set to ' + c.amount + (c.temp && c.temp !== c.amount
     ? ' (replaced ' + c.temp + '; temp HP don’t stack, tap Undo to keep ' + c.temp + ').'
     : '.');
   const next = { ...c, temp: c.amount };
@@ -569,11 +596,12 @@ export const hitDieRoll = (c: Character) => '1d' + c.hdDie + ' ' + fmt(abilityMo
 
 // Each spent Hit Die restores at least 1 HP, even with a negative Con modifier (PHB p.373).
 // Undoing a Hit Die heal also gives the die back, so the roll can be entered again.
-export function healHitDie(c: Character): Character {
-  const next = applyHeal({ ...c, amount: Math.max(1, c.amount) });
-  if (!next.hpUndo || next.hpUndo === c.hpUndo) return next;
-  return { ...next, hpUndo: { ...next.hpUndo, prev: { ...next.hpUndo.prev, hdUsed: Math.max(0, c.hdUsed - 1) } } };
-}
+const undoGivesDie = (c: Character, next: Character): Character =>
+  (!next.hpUndo || next.hpUndo === c.hpUndo ? next : { ...next, hpUndo: { ...next.hpUndo, prev: { ...next.hpUndo.prev, hdUsed: Math.max(0, c.hdUsed - 1) } } });
+export const healHitDie = (c: Character): Character => undoGivesDie(c, applyHeal({ ...c, amount: Math.max(1, c.amount) }));
+// Damage or temp HP set while a spent die waits for its roll: Undo gives that die back too.
+export const damageHitDie = (c: Character): Character => undoGivesDie(c, applyDamage(c));
+export const setTempHitDie = (c: Character): Character => undoGivesDie(c, applySetTemp(c));
 
 export const rechargeOf = (r: Partial<Counter>) => r.recharge || 'none';
 // When a counter's partial regain comes: on a Short Rest for a Long Rest counter, at dawn for a Dawn counter.
@@ -585,10 +613,19 @@ export function maxOf(c: Character, x: Partial<Counter>): number | null {
   if (x.maxV !== undefined) return Math.max(0, num(c, x.maxV));
   return x.max && x.max >= 1 ? x.max : null;
 }
+// A counter's partial regain as words: '' when it is 0 now (Font of Inspiration before level 5, PHB p.61), 'all' at its
+// maximum or above, else the number or the dice.
+export function regainLabel(c: Character, x: Partial<Counter>): string {
+  if (!x.regain) return '';
+  const v = valueAt(x.regain, valueCtx(c));
+  if (typeof v === 'string') return v;
+  const m = maxOf(c, x);
+  return v <= 0 ? '' : m !== null && v >= m ? 'all' : String(v);
+}
 export type MaxKind = 'none' | 'number' | 'formula';
 export const maxKindOf = (x: Partial<Counter>): MaxKind => (x.maxV !== undefined ? 'formula' : x.max ? 'number' : 'none');
 // `magic` is a grant-only term: a counter's maximum never reads it.
-const isMaxFormula = (t: string) => isValue(t) && !hasDice(t) && !/magic/.test(t);
+export const isMaxFormula = (t: string) => isValue(t) && !hasDice(t) && !/magic/.test(t);
 // The resource form's Maximum: None, a Number (whole, 1 or more) or a Formula (a Value without dice; '0' is a real
 // maximum of 0). null = refused.
 export function maxFields(kind: MaxKind, text: string): Pick<Counter, 'max' | 'maxV'> | null {
@@ -598,23 +635,23 @@ export function maxFields(kind: MaxKind, text: string): Pick<Counter, 'max' | 'm
   return isMaxFormula(t) ? { maxV: t } : null;
 }
 
-// The single clamp, run by update() and migrate() after every change: resource counts at most their maximum, HP at
-// most max HP. Uses lost while a maximum is lower are not given back when it rises (spec). Returns c when nothing moves.
-// A weapon's loaded ammunition (plan 7) stays only while it names an item in inv, outside any container, that canLoad
-// accepts: so it clears when the ammunition goes, is packed away or doesn't fit, or an edit changes the weapon. Run
+// A weapon's loaded ammunition (plan 7) stays only while it names an item in inv, outside any container, with quantity
+// 1 or more, that canLoad accepts: so it clears when the ammunition goes, runs out, is packed away or doesn't fit, or an edit changes the weapon. Run
 // after fixContainers, which may change `in`. Returns c when nothing changes.
 function fixLoads(c: Character): Character {
   let changed = false;
   const inv = c.inv.map((it) => {
     if (it.load === undefined) return it;
     const a = c.inv.find((x) => x.id === it.load);
-    if (a && !a.in && canLoad(it, a)) return it;
+    if (a && !a.in && a.qty >= 1 && canLoad(it, a)) return it;
     changed = true;
     return withoutKeys(it, ['load']);
   });
   return changed ? { ...c, inv } : c;
 }
 
+// The single clamp, run by update() and migrate() after every change: resource counts at most their maximum, HP at
+// most max HP. Uses lost while a maximum is lower are not given back when it rises (spec). Returns c when nothing moves.
 export function normalize(c0: Character): Character {
   // The container rules first (plan 6), then weapons in hand (plan 5): a quantity or equip change, or an item moved
   // into a container, may take one out of hand, through setHands. Then loaded ammunition (plan 7).
@@ -754,331 +791,11 @@ export function shortRest(c: Character, rolls?: Record<string, number>): Charact
   };
 }
 
-const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
-const sameType = (def: unknown, v: unknown) => (Array.isArray(def) ? Array.isArray(v) : isObj(def) ? isObj(v) : typeof v === typeof def);
-const strings = (v: unknown[]) => v.filter((x): x is string => typeof x === 'string');
-const uniqueStrings = (v: unknown[]) => strings(v).filter((x, i, all) => all.indexOf(x) === i);
+export const strings = (v: unknown[]) => v.filter((x): x is string => typeof x === 'string');
+export const uniqueStrings = (v: unknown[]) => strings(v).filter((x, i, all) => all.indexOf(x) === i);
 // Spell slot counts for levels 0–9; anything missing or damaged counts as 0.
-const slots = (v: unknown[]) => Array.from({ length: 10 }, (_, i) => (typeof v[i] === 'number' ? (v[i] as number) : 0));
-// Records with fixed keys: a missing or damaged key falls back to the blank character's value.
-const FIXED_RECORDS = ['ch', 'abil', 'speeds', 'coins', 'notes'] as const;
-// Lists of entries: each needs a name and holds only plain values.
-const ENTRY_LISTS = ['senses', 'res', 'attacks', 'riders', 'inv', 'spells', 'feats', 'acMods', 'grants', 'profs', 'defenses', 'sections'] as const;
-const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
-export const isEntry = (x: unknown): x is Record<string, unknown> =>
-  isObj(x) && typeof x.name === 'string' && Object.values(x).every((v) => v === null || typeof v !== 'object');
-// Top-level fields added after the first release. A save without one gets the blank character's value, never
-// the sample's (roadmap, "Saves keep working"). Each later field adds its key here.
-const WHENS: When[] = ['armor', 'noHeavy', 'noArmor', 'noShield', 'noArmorNoShield', 'active'];
-// The link fields of an entry, checked on load: an unknown source kind reads as Other, any other bad value goes, and
-// the fields that need a link go from an entry without one. Never touches `lvl` (a spell's level).
-function cleanLinked<T extends Linked>(x: T): T {
-  const { from, srcKind, srcName, when, minLvl, needEq, needAtt, linked, ...rest } = x as Linked & Record<string, unknown>;
-  const out = {
-    ...rest,
-    ...(typeof from === 'string' ? { from } : {}),
-    ...(srcKind == null ? {} : { srcKind: SRC_KINDS.some(([k]) => k === srcKind) ? srcKind : 'other' }),
-    ...(typeof srcName === 'string' ? { srcName } : {}),
-    ...(WHENS.includes(when as When) ? { when } : {}),
-    ...(Number.isInteger(minLvl) && minLvl! >= 1 && minLvl! <= 20 ? { minLvl } : {}),
-    ...(typeof needEq === 'boolean' ? { needEq } : {}),
-    ...(typeof needAtt === 'boolean' ? { needAtt } : {}),
-    ...(typeof linked === 'boolean' ? { linked } : {})
-  } as unknown as T;
-  return out.from === undefined ? dropLinkOnly(out) : out;
-}
-const RECHARGES: Recharge[] = ['none', 'short', 'long', 'dawn'];
-// Counter fields of an item on load (resources: cleanResource). A recharge it didn't have stays unset.
-function cleanCounter({ count, max, maxV, recharge, regain, regainOn }: Partial<Record<keyof Counter, unknown>>): Partial<Counter> {
-  const rc = recharge === undefined ? undefined : RECHARGES.includes(recharge as Recharge) ? (recharge as Recharge) : 'none';
-  const pair = typeof regain === 'string' && isValue(regain) && !!regainOn && regainOn === regainEvent(rc);
-  return {
-    count: count as number, ...(finite(max) && max >= 1 ? { max } : {}), ...(typeof maxV === 'string' && isMaxFormula(maxV) ? { maxV } : {}),
-    ...(rc ? { recharge: rc } : {}), ...(pair ? { regain, regainOn: regainOn as Counter['regainOn'] } : {})
-  };
-}
-// Resource fields on load: a fixed max of at least 1, a formula without dice, a known recharge, a regain only with the
-// recharge it goes with (on a Short Rest for Long Rest, at dawn for Dawn), text fields as strings.
-function cleanResource(r: Resource): Resource {
-  const { count, max, maxV, recharge, regain, regainOn, typeName, note, casts, inv: _inv, ...rest } = r as Resource & Record<string, unknown>;
-  return cleanLinked({
-    ...rest,
-    ...cleanCounter({ count: finite(count) ? count : 0, max, maxV, recharge: recharge ?? 'none', regain, regainOn }),
-    ...(typeof typeName === 'string' ? { typeName } : {}), ...(typeof note === 'string' ? { note } : {}), ...(typeof casts === 'string' ? { casts } : {})
-  } as Resource);
-}
-const cleanCid = <T extends { cid?: string }>(x: T): T => { const { cid, ...rest } = x; return (typeof cid === 'string' ? { ...rest, cid } : rest) as T; };
-// Catalog fields of spells and items on load (all optional): a value of the wrong type or outside its list goes, never the entry.
-type FieldCheck = (v: unknown) => boolean;
-const isStr: FieldCheck = (v) => typeof v === 'string';
-const isBool: FieldCheck = (v) => typeof v === 'boolean';
-const nonEmpty: FieldCheck = (v) => typeof v === 'string' && v !== '';
-const wholeNonNeg: FieldCheck = (v) => Number.isInteger(v) && (v as number) >= 0;
-const among = (...xs: unknown[]): FieldCheck => (v) => xs.includes(v);
-const SPELL_FIELDS: Record<string, FieldCheck> = {
-  desc: isStr, school: isStr, classes: isStr, ritual: isBool, atk: among('melee', 'ranged'), save: among(...ABILITIES.map(([k]) => k)),
-  fx: among('damage', 'healing', 'other'), dmg: isStr, dtype: isStr, scale: isStr, higher: isStr, healMod: (v) => v === true,
-  dmgMod: (v) => v === true, dtypes: isDtypes
-};
-const ATTACK_FIELDS: Record<string, FieldCheck> = { econ: among('action', 'bonus', 'reaction', 'free', 'other'), group: among('weapon', 'other') };
-const ITEM_FIELDS: Record<string, FieldCheck> = {
-  cat: among(...ITEM_CATS), cost: isStr, wcat: among('simple', 'martial'), wrange: among('melee', 'ranged'), dmg: isStr, dtype: isStr, props: isStr,
-  thrown: isStr, vers: isStr, ammo: isStr, mastery: isStr, magic: finite, strReq: finite, stealthDis: isBool, cap: finite, capVol: isStr, xdim: isBool,
-  rarity: isStr, attune: isBool, base: (v) => typeof v === 'string' && v.startsWith('item/'), sec: nonEmpty,
-  in: nonEmpty, load: nonEmpty, cp: wholeNonNeg, sp: wholeNonNeg, ep: wholeNonNeg, gp: wholeNonNeg, pp: wholeNonNeg
-};
-// A spell's parts on load: the good ones stay (partErrors, first of a repeated label), parts goes when none is left;
-// never the spell.
-function cleanParts(sp: Spell): Spell {
-  if (sp.parts === undefined) return sp;
-  const { parts, ...rest } = sp;
-  const seen = new Set<string>();
-  const good = (Array.isArray(parts) ? parts : []).filter((p) => {
-    if (partErrors(p).length || seen.has(p.label)) return false;
-    seen.add(p.label);
-    return true;
-  });
-  return good.length ? { ...rest, parts: good } : rest;
-}
-const cleanFields = <T extends object>(x: T, fields: Record<string, FieldCheck>): T =>
-  Object.fromEntries(Object.entries(x).filter(([k, v]) => !Object.hasOwn(fields, k) || fields[k](v))) as T;
+export const slots = (v: unknown[]) => Array.from({ length: 10 }, (_, i) => (typeof v[i] === 'number' ? (v[i] as number) : 0));
 
-export const NEW_FIELDS: readonly (keyof Character)[] = ['spellSort', 'size', 'carryUp', 'attuneIds', 'grants', 'effectsOn', 'profs', 'defenses', 'hands', 'mastery', 'sections', 'slotsOnShort'];
-// Resources the Inventory tab echoed before `inv` existed.
-const OLD_INVENTORY_RESOURCES = ['arrows', 'potions'];
-
-// Builds a full character from a save or a backup. Missing fields come from the sample character, as before;
-// values of the wrong type fall back too, so damaged data can't crash the sheet on every launch.
-export function migrate(data: unknown): Character {
-  const def = sampleCharacter(), blank = blankCharacter();
-  if (!isObj(data)) return def;
-  const d = { ...def } as Record<string, unknown>;
-  for (const [k, dv] of Object.entries(def)) {
-    if (data[k] !== undefined && (dv === null || sameType(dv, data[k]))) d[k] = data[k];
-  }
-  for (const k of NEW_FIELDS) if (!sameType(blank[k], data[k])) d[k] = blank[k];
-  for (const k of FIXED_RECORDS) {
-    const v = d[k] as Record<string, unknown>, base = blank[k] as Record<string, unknown>;
-    d[k] = Object.fromEntries(Object.entries(base).map(([kk, bv]) => [kk, sameType(bv, v[kk]) ? v[kk] : bv]));
-  }
-  for (const k of ENTRY_LISTS) {
-    // A spell's parts are the one list an entry may hold (plan 7); cleanParts checks them below.
-    const ok = (x: unknown) => isEntry(k === 'spells' && isObj(x) && 'parts' in x ? { ...x, parts: null } : x);
-    d[k] = (d[k] as unknown[]).filter(ok).map((x) => (typeof (x as Record<string, unknown>).id === 'string' ? x : { ...(x as object), id: newId() }));
-  }
-  const c = d as unknown as Character;
-  // The fields rendering relies on, repaired before anything below reads them: a bad text becomes '', so damaged data can't crash the sheet.
-  const texts = <T extends object>(x: T, keys: (keyof T)[]): T => ({ ...x, ...Object.fromEntries(keys.map((k) => [k, typeof x[k] === 'string' ? x[k] : ''])) });
-  c.spells = c.spells.map((x) => ({ ...texts(x, ['time', 'range']), lvl: Number.isInteger(x.lvl) && x.lvl >= 0 && x.lvl <= 9 ? x.lvl : 0 }));
-  c.inv = c.inv.map((i) => ({ ...i, qty: finite(i.qty) && i.qty >= 0 ? Math.floor(i.qty) : 1, eq: i.eq === true }));
-  c.attacks = c.attacks.map((a) => texts(a, ['hit', 'dmg', 'info', 'mastery']));
-  c.riders = c.riders.map((x) => texts(x, ['dice']));
-  c.feats = c.feats.map((x) => cleanCid(cleanLinked({ ...texts(x, ['desc']), g: Object.hasOwn(GROUP_SRC, x.g) ? x.g : 'other' })));
-  c.senses = c.senses.map(({ desc, ...se }) => cleanLinked({ ...texts(se, ['range']), ...(typeof desc === 'string' ? { desc } : {}) }));
-  // Spells named their source in a `source` text before links; it becomes srcName unless one is set.
-  c.spells = c.spells.map((x) => {
-    const { source, castAb, ...sp } = x as Spell & { source?: unknown };
-    const named = typeof source === 'string' && source.trim() && sp.srcName === undefined ? { srcName: source } : {};
-    return cleanCid(cleanLinked({ ...sp, ...named, ...(ABILITIES.some(([k]) => k === castAb) ? { castAb } : {}) }));
-  });
-  // Typed attacks are manual actions (plan 5): their numbers stay as typed; a bad timing or section goes.
-  c.attacks = c.attacks.map((a) => cleanFields(cleanLinked(a), ATTACK_FIELDS));
-  // Every character now has a computed Unarmed Strike (plan 5), and saves copied from the old samples hold a typed one.
-  // It goes once, only from a save from before `hands` existed; one typed later stays. Its "Grapple / Shove (DC n)"
-  // text is covered by the computed row's Grapple and Shove DC.
-  if (data.hands === undefined) c.attacks = c.attacks.filter((a) => normName(a.name) !== 'unarmed strike');
-  // Weapons in hand: strings here; normalize() (below, through setHands) keeps only a valid list.
-  c.hands = strings(c.hands);
-  c.mastery = uniqueStrings(c.mastery);
-  c.profs = c.profs.filter((p) => PROF_CATS.includes(p.cat));
-  // Saves from before proficiencies were data: their Training features become proficiencies, once.
-  if (data.profs === undefined) ({ feats: c.feats, profs: c.profs } = splitTraining(c.feats));
-  // Grants: a link that doesn't parse goes first, so grantErrors knows the source kind; then the grant must be valid.
-  c.grants = c.grants.filter((g) => parseLink(g.from) && !grantErrors(g, parseLink(g.from)!.kind).length).map(cleanLinked);
-  c.inv = c.inv.map((i) => cleanFields(cleanCid(i), ITEM_FIELDS));
-  // Item sections (plan 6): a named section once per id (the first stays); then an item's section that is gone clears,
-  // so the item shows in the default list.
-  c.sections = c.sections.filter((x, i, all) => typeof x.name === 'string' && x.name.trim() !== '' && all.findIndex((y) => y.id === x.id) === i);
-  c.inv = c.inv.map((i) => (i.sec === undefined || c.sections.some((x) => x.id === i.sec) ? i : withoutKeys(i, ['sec'])));
-  // A typed damage type wins over a chosen one's list (spellFromForm), so dtypes never stays next to it.
-  c.spells = c.spells.map((x) => cleanFields(x, SPELL_FIELDS)).map((x) => (x.dtype && x.dtypes !== undefined ? withoutKeys(x, ['dtypes']) : x)).map(cleanParts);
-  // Saves from before defenses were entries kept string lists in `def` (no longer a field, so read from the raw save).
-  if (data.defenses === undefined) {
-    const raw = isObj(data.def) ? data.def : {};
-    const def = Object.fromEntries(DEFENSE_KINDS.map((k) => [k, Array.isArray(raw[k]) ? strings(raw[k] as unknown[]) : []])) as Record<DefenseKind, string[]>;
-    // Resistance and Vulnerability apply to damage types only; Immunity to damage types and conditions (PHB p.28).
-    // Older saves could list a condition under Resistances, meaning Advantage on saves against it, and had a free-text
-    // save note. Both move to Advantage on saves. The note is no longer a field either.
-    const addAdv = (t: string) => { if (!def.adv.includes(t)) def.adv.push(t); };
-    if (typeof data.saveNotes === 'string' && data.saveNotes.trim()) addAdv(data.saveNotes.trim());
-    def.res.filter((n) => CONDITION_OPTIONS.includes(n)).forEach((n) => addAdv('vs ' + n));
-    def.res = def.res.filter((n) => !CONDITION_OPTIONS.includes(n));
-    c.defenses = DEFENSE_KINDS.flatMap((kind) => def[kind].map((name) => ({ id: newId(), kind, name })));
-  }
-  c.defenses = c.defenses.filter((d) => DEFENSE_KINDS.includes(d.kind)).map(cleanLinked);
-  c.slotMax = slots(c.slotMax);
-  c.slotUsed = slots(c.slotUsed);
-  // These values size lists of buttons, so an out-of-range number could freeze the sheet. Limits match the UI.
-  const whole = (v: unknown, min: number, max: number, dflt: number) => (finite(v) ? clamp(Math.floor(v), min, max) : dflt);
-  c.level = whole(c.level, 1, 20, 1);
-  // Whole numbers in a sane range, so a damaged or hand-edited backup can't give fractional Hit Dice or NaN bars.
-  c.maxHp = whole(c.maxHp, 1, 9999, 1);
-  c.hp = whole(c.hp, 0, 9999, 0);
-  c.temp = whole(c.temp, 0, 9999, 0);
-  for (const [k] of ABILITIES) {
-    c.abil[k] = whole(c.abil[k], 1, 30, 10);
-    if (c.abilAdj[k] !== undefined) c.abilAdj[k] = whole(c.abilAdj[k], -30, 30, 0);
-  }
-  c.slotMax = c.slotMax.map((n) => clamp(n, 0, 9));
-  c.slotUsed = c.slotUsed.map((n, i) => clamp(n, 0, c.slotMax[i]));
-  c.exh = clamp(c.exh, 0, 6);
-  c.ds = clamp(c.ds, 0, 3);
-  c.df = clamp(c.df, 0, 3);
-  c.hdUsed = clamp(c.hdUsed, 0, c.level);
-  if (!TABS.some(([t]) => t === c.tab)) c.tab = def.tab;
-  if (!Object.hasOwn(CAST_NAMES, c.castAb)) c.castAb = 'none';
-  if (c.spellFilter !== 'prepared') c.spellFilter = 'all';
-  if (!SPELL_SORTS.some(([k]) => k === c.spellSort)) c.spellSort = 'az';
-  if (!SIZES.some(([k]) => k === c.size)) c.size = 'medium';
-  // Nullable fields: keep only well-formed values. The undo row lasts seconds, so it never survives a reload.
-  const conc = c.conc as unknown;
-  c.conc = isObj(conc) && typeof conc.id === 'string' && typeof conc.name === 'string' ? c.conc : null;
-  // Older versions kept Concentration on a spell after removing it. Checked after the entry filter above.
-  if (c.conc && !c.spells.some((x) => x.id === c.conc!.id)) c.conc = null;
-  c.hpUndo = null;
-  // Inspiration is a counter, 0 or more. This deliberately departs from the rules, where a character has at most one
-  // Heroic Inspiration (PHB p.13, p.368): the book says it doesn't stack, the sheet counts it with no maximum (house rule).
-  // Older saves had an on/off flag; the type changed, so read the raw save.
-  const insp = data.insp;
-  c.insp = typeof insp === 'boolean' ? Number(insp) : finite(insp) ? Math.max(0, Math.floor(insp)) : 0;
-  if (typeof c.concCheck !== 'string') c.concCheck = null;
-  const msg = c.restMsg as unknown;
-  c.restMsg = isObj(msg) && typeof msg.title === 'string' && typeof msg.body === 'string' ? c.restMsg : null;
-  // Older saves had no prepared flags: treat their levelled spells as prepared.
-  c.spells = c.spells.map((x) => (x.prep === undefined && x.always === undefined ? { ...x, prep: true } : x));
-  // AC fields: a damaged one would show NaN or join strings, so it goes, with its partner field.
-  c.acMods = c.acMods.filter((m) => finite(m.val));
-  if (!Object.hasOwn(UNARMORED, c.acUnarm)) c.acUnarm = 'none';
-  c.inv = c.inv.map(({ armor, acBase, acBonus, wt, desc, count, max, maxV, recharge, regain, regainOn, ...i }) => ({
-    ...i,
-    // Charges: only with a count; the other fields as on resources.
-    ...(finite(count) ? cleanCounter({ count, max, maxV, recharge, regain, regainOn }) : {}),
-    ...(['light', 'medium', 'heavy', 'shield'].includes(armor as string) && finite(acBase) ? { armor, acBase } : {}),
-    ...(finite(acBonus) ? { acBonus } : {}),
-    ...(finite(wt) && wt >= 0 ? { wt } : {}),
-    ...(typeof desc === 'string' ? { desc } : {})
-  }));
-  c.spells = c.spells.map(({ acFx, acVal, ...x }) => ({ ...x, ...(AC_EFFECTS.includes(acFx as AcEffect) && finite(acVal) ? { acFx, acVal } : {}) }));
-  c.acOn = strings(c.acOn).filter((id) => c.spells.some((x) => x.id === id && x.acFx && !x.c));
-  // An AC bonus on an item that isn't armor becomes an AC bonus grant that needs the item equipped, as it counted before;
-  // only armor and Shields keep acBonus. A whole non-zero number converts; 0 goes; anything else stays on the item,
-  // uncounted, for the player to fix. Runs before the old-ac step, whose total must already include the grant.
-  c.inv = c.inv.map((i) => {
-    if (i.armor || i.acBonus === undefined) return i;
-    const { acBonus: v, ...rest } = i;
-    if (!Number.isInteger(v) || v === 0) return v === 0 ? rest : i;
-    c.grants = [...c.grants, { id: newId(), kind: 'ac', name: fmt(v) + ' AC', acMode: 'bonus', val: String(v), from: linkOf('item', i.id), srcKind: 'item', needEq: true }];
-    return rest;
-  });
-  // Old saves had a typed `ac`. Fill armor and AC spells from their names (switching none on), then add the
-  // difference as a custom bonus so the number doesn't move. New saves have no `ac`, so this runs once.
-  if (typeof data.ac === 'number') {
-    c.inv = c.inv.map((i) => (i.armor ? i : { ...i, ...detectArmor(i.name) }));
-    c.spells = c.spells.map((x) => (x.acFx ? x : { ...x, ...detectAcSpell(x.name) }));
-    const total = armorClass(c).total;
-    if (total !== data.ac) c.acMods = [...c.acMods, { id: newId(), name: 'Adjustment (from old AC)', val: data.ac - total }];
-  }
-  // Saves from before attunement by item id have no attuneIds. The one-time steps below run only on those, so they
-  // never change entries the player adds later (roadmap, "Saves keep working").
-  const oldSave = data.attuneIds === undefined;
-  // The legacy "Also list in Inventory" flag is no longer a Resource field: read it untyped.
-  const invOf = (r: Resource) => (r as Resource & { inv?: unknown }).inv;
-  if (oldSave) c.res = c.res.map((r) => (invOf(r) === undefined && OLD_INVENTORY_RESOURCES.includes(r.id) ? { ...r, inv: true } as Resource : r));
-  // Older saves had a `refill` flag that meant a Long Rest recharge. Resource no longer declares it: read it untyped.
-  c.res = c.res.map((r) => {
-    const { refill, ...x } = r as Resource & { refill?: unknown };
-    return { ...x, recharge: x.recharge || (refill ? 'long' : 'none') };
-  });
-  const converted: string[] = [];
-  if (oldSave) {
-    // Resources also listed in the Inventory become items. One with a maximum or a recharge moves below, with charges.
-    const added: string[] = [];
-    c.res = c.res.filter((r) => {
-      if (!invOf(r) || r.max || rechargeOf(r) !== 'none') return true;
-      const note = typeof r.note === 'string' ? r.note.trim() : '';
-      const item: Item = { id: newId(), name: r.name, qty: finite(r.count) ? Math.max(0, Math.floor(r.count)) : 1, eq: false, ...(note ? { desc: note } : {}) };
-      c.inv = [...c.inv, item];
-      added.push(item.id);
-      converted.push(r.id);
-      return false;
-    });
-    // Attunement slots held names. A name links the first item with that name not already in a slot; other text
-    // becomes a new equipped item, so nothing is lost. Never run detectArmor here: a slot reading "Shield" would move AC.
-    // A matched item keeps its eq flag, except a just-converted resource, which is equipped like a new item.
-    const oldAttune: unknown[] = Array.isArray(data.attune) ? data.attune : [];
-    const linked: string[] = [];
-    c.attuneIds = [0, 1, 2].map((i) => {
-      const v = oldAttune[i];
-      if (typeof v !== 'string' || !/[\p{L}\p{N}]/u.test(v) || normName(v) === 'none') return '';
-      const match = c.inv.find((it) => normName(it.name) === normName(v) && !linked.includes(it.id));
-      const id = match ? match.id : newId();
-      if (!match) c.inv = [...c.inv, { id, name: v.trim(), qty: 1, eq: true }];
-      else if (added.includes(id)) c.inv = c.inv.map((it) => (it.id === id ? { ...it, eq: true } : it));
-      linked.push(id);
-      return id;
-    });
-  }
-  // Resources still listed in the Inventory (with a maximum or a recharge) move onto items with charges. An item of the
-  // same name without charges (such as one an attunement slot made above) takes them; otherwise a new item. Runs after
-  // the steps above, so it never converts a resource the player adds later (there is no flag to set any more).
-  c.res = c.res.filter((r) => {
-    if (!invOf(r)) return true;
-    const note = typeof r.note === 'string' ? r.note.trim() : '';
-    const charged = (finite(r.max) && r.max >= 1) || rechargeOf(r) !== 'none';
-    const n = finite(r.count) ? Math.max(0, Math.floor(r.count)) : charged ? 0 : 1;
-    const same = charged ? c.inv.find((it) => it.count === undefined && normName(it.name) === normName(r.name)) : undefined;
-    const fields: Partial<Item> = charged ? { count: n, ...(finite(r.max) && r.max >= 1 ? { max: r.max } : {}), recharge: rechargeOf(r) } : {};
-    if (same) c.inv = c.inv.map((it) => (it === same ? { ...it, ...fields, ...(note && !it.desc ? { desc: note } : {}) } : it));
-    else c.inv = [...c.inv, { id: newId(), name: r.name, qty: charged ? 1 : n, eq: false, ...fields, ...(note ? { desc: note } : {}) }];
-    converted.push(r.id);
-    return false;
-  });
-  c.res = c.res.map(cleanResource);
-  // Free casts were a flag on the spell (Spell.free) and a used-list on the character (free); both are gone, so read
-  // them raw. Each becomes a resource from the spell that casts it, used up when the old list said so.
-  const usedFree = isObj(data.free) ? data.free : {};
-  c.spells = c.spells.map((sp) => {
-    const { free, ...x } = sp as Spell & { free?: unknown };
-    if (free === true) c.res = [...c.res, { id: newId(), name: sp.name, note: 'Free cast', count: usedFree[sp.id] === true ? 0 : 1, max: 1, recharge: 'long', from: linkOf('spell', sp.id), srcKind: 'spell', casts: sp.id }];
-    return free === undefined ? sp : x;
-  });
-  c.res = c.res.map((r) => (r.casts !== undefined && !c.spells.some((sp) => sp.id === r.casts) ? withoutKeys(r, ['casts']) : r));
-  // Three slots, each an existing item id or ''. Checked slot by slot, so a bad slot never shifts the ones after it.
-  const ids: unknown[] = c.attuneIds;
-  c.attuneIds = [];
-  for (let i = 0; i < 3; i++) {
-    const x = ids[i];
-    c.attuneIds.push(typeof x === 'string' && c.inv.some((it) => it.id === x) && !c.attuneIds.includes(x) ? x : '');
-  }
-  // From the raw save, not the sample-merged copy: old saves get today's bar (HP and AC), not the sample's picks.
-  // Pills don't show items, so a pill of a resource that became an item empties.
-  c.pills = sanitizePills(data.pills).map((k) => (converted.some((id) => k === resPill(id)) ? '' : k));
-  // Effects switched on: links to something there, once each. A Concentration spell's effect follows c.conc instead.
-  c.effectsOn = strings(c.effectsOn).filter((l, i, all) => all.indexOf(l) === i && sourceOf(c, l) && !(parseLink(l)!.kind === 'spell' && (sourceOf(c, l) as Spell).c));
-  // The background was a text field in Edit details; it becomes a background feature (from the raw save, once).
-  const oldBg = isObj(data.ch) && typeof data.ch.bg === 'string' ? data.ch.bg.trim() : '';
-  if (oldBg && !c.feats.some((f) => f.g === 'background' && normName(f.name) === normName(oldBg))) {
-    c.feats = [...c.feats, { id: newId(), g: 'background', name: oldBg, desc: '' }];
-  }
-  // An action grant that spends a resource that is gone no longer spends anything.
-  c.grants = c.grants.map((g) => (g.kind === 'action' && g.res !== undefined && !c.res.some((r) => r.id === g.res) ? withoutKeys(g, ['res']) : g));
-  const fixed = fixLinks(c);
-  // A grant exists only through its source: one whose link fixLinks cleared goes. normalize() then runs the container
-  // rules (plan 6) and the hands check.
-  return normalize({ ...fixed, grants: fixed.grants.filter((g) => g.from) });
-}
-
-const DEFENSE_KINDS: DefenseKind[] = ['res', 'vul', 'imm', 'adv'];
 
 // Active entries with the same name (normName) show once, listing every source.
 function merged<T extends Linked & { id: string; name: string }>(c: Character, list: T[]): { key: string; first: T; all: T[] }[] {
@@ -1104,7 +821,7 @@ export function mergedSenses(c: Character): { key: string; name: string; range: 
 export const mergedDefenses = (c: Character, kind: DefenseKind): { key: string; name: string; ids: string[]; sources: string[] }[] =>
   merged(c, c.defenses.filter((d) => d.kind === kind)).map(({ key, first, all }) => ({ key, name: first.name, ids: all.map((x) => x.id), sources: sourcesOf(c, all) }));
 
-const PROF_CATS: ProfCat[] = ['armor', 'weapon', 'tool', 'language'];
+export const PROF_CATS: ProfCat[] = ['armor', 'weapon', 'tool', 'language'];
 // Armor, weapon, tool and language proficiencies: the hand ones (with id), then the granted ones (with their source),
 // once per name within a category.
 export function profList(c: Character): { cat: ProfCat; name: string; id?: string; by?: string }[] {
@@ -1119,26 +836,6 @@ export function profList(c: Character): { cat: ProfCat; name: string; id?: strin
   return out;
 }
 export const hasProf = (c: Character, cat: ProfCat, name: string) => profList(c).some((p) => p.cat === cat && normName(p.name) === normName(name));
-
-// Older saves kept proficiencies as Training features ("Armor: Light, Medium, Shields"). Each comma part that names a
-// proficiency becomes one; the rest stays in the feature, and a feature with nothing left goes. Under an Armor,
-// Weapons, Tools or Languages heading a short form matches too ("Light"); under any other heading only full names do.
-const TRAINING_CATS: Record<string, ProfCat> = { armor: 'armor', weapons: 'weapon', tools: 'tool', languages: 'language' };
-export function splitTraining(feats: Feature[]): { feats: Feature[]; profs: Prof[] } {
-  const profs: Prof[] = [];
-  const out = feats.flatMap((f) => {
-    if (f.g !== 'training') return [f];
-    const cat = TRAINING_CATS[normName(f.name)];
-    const left = f.desc.split(',').map((x) => x.trim()).filter(Boolean).filter((part) => {
-      const n = normName(part);
-      const hit = PROF_NAMES.find((p) => (cat ? p.cat === cat && (normName(p.name) === n || (p.short && normName(p.short) === n)) : normName(p.name) === n));
-      if (hit) profs.push({ id: newId(), cat: hit.cat, name: hit.name });
-      return !hit;
-    });
-    return left.length ? [{ ...f, desc: left.join(', ') }] : [];
-  });
-  return { feats: out, profs };
-}
 
 // Names match after trimming, ignoring case and treating ’ and ' as the same character.
 export const normName = (s: string) => s.trim().toLowerCase().replace(/’/g, "'");
@@ -1202,7 +899,18 @@ export function addGrants(c: Character, from: string, inputs: GrantInput[]): Cha
       };
       out.res = [...out.res, { ...r, count: maxOf(c, r) ?? 0 }];
     } else if (s.kind === 'spell') {
-      if (input.link) { out = linkTo('spells', id); continue; }
+      if (input.link) {
+        // A linked spell takes what the grant promises (always prepared, PHB p.235; its own casting ability) and records
+        // it, so removing the link undoes exactly that (unlinkEntry).
+        const ab = ABILITIES.find(([k]) => k === s.castAb)?.[0];
+        out = linkTo('spells', id);
+        out.spells = out.spells.map((x) => (x.id !== id ? x : {
+          ...x,
+          ...(s.always && !x.always ? { always: true, linkAlways: true as const } : {}),
+          ...(ab && ab !== x.castAb ? { castAb: ab, linkCastAb: x.castAb ?? 'none' } : {})
+        }));
+        continue;
+      }
       const { prep: _prep, ...sp } = input.spell ?? { name: s.name, lvl: 0, time: '', range: '' };
       const castAb = ABILITIES.find(([k]) => k === s.castAb)?.[0];
       // A spell with neither flag would load as prepared (migrate), so a granted one is always prepared or unprepared.
@@ -1212,6 +920,9 @@ export function addGrants(c: Character, from: string, inputs: GrantInput[]): Cha
     } else if (s.kind === 'action' && input.link) {
       out = linkTo('attacks', id);
     } else {
+      // A subclass's Spellcasting names the ability (Eldritch Knight, Arcane Trickster): set it unless one is already
+      // there. Its slots are typed by hand, as its chip says.
+      if (s.kind === 'casting' && out.castAb === 'none' && Object.hasOwn(CAST_NAMES, s.ab ?? '')) out.castAb = s.ab as CastAbility;
       const { lvl, res, ...rest } = s;
       const resId = res === undefined ? undefined : ids.get(inputs.find((x) => x.spec.id === res && x.spec.kind === 'resource')!) ?? res;
       out.grants = [...out.grants, { ...rest, id, ...base, ...(lvl ? { minLvl: lvl } : {}), ...(resId ? { res: resId } : {}), ...(input.counted ? { counted: true } : {}) } as Grant];
@@ -1239,6 +950,13 @@ export function removalChain(c: Character, ref: Ref): Ref[] {
   return out;
 }
 
+// An entry a grant only linked, without the link: back to how it was before the grant.
+function unlinkEntry<T extends Entry>(x: T): T {
+  const { from: _f, linked: _l, srcKind: _k, linkAlways, linkCastAb, always, castAb, ...rest } = x as T & Pick<Spell, 'linkAlways' | 'linkCastAb' | 'always' | 'castAb'>;
+  const ab = linkCastAb === undefined ? castAb : linkCastAb === 'none' ? undefined : linkCastAb;
+  return dropLinkOnly({ ...rest, ...(always && !linkAlways ? { always } : {}), ...(ab ? { castAb: ab } : {}) } as unknown as T);
+}
+
 // The one removal path for features, items, spells, resources, senses, defenses, grants and attacks (roadmap). Removes
 // the chain; entries a grant only linked lose the link (from, linked and the srcKind it set) and keep everything else.
 export function removeRef(c0: Character, ref: Ref): Character {
@@ -1249,11 +967,7 @@ export function removeRef(c0: Character, ref: Ref): Character {
   const spells = gone('spell'), res = gone('res'), items = gone('item');
   const c = items.length ? setHands(c0, c0.hands.filter((id) => !items.includes(id))) : c0;
   const links = chain.map(refLink).filter((l): l is string => !!l);
-  const unlinkIt = <T extends Entry>(x: T): T => {
-    if (!x.linked || !links.includes(x.from!)) return x;
-    const { from: _f, linked: _l, srcKind: _k, ...rest } = x;
-    return dropLinkOnly(rest as T);
-  };
+  const unlinkIt = <T extends Entry>(x: T): T => (x.linked && links.includes(x.from!) ? unlinkEntry(x) : x);
   const out = { ...c };
   for (const [list, kind] of LIST_KIND) {
     const ids = gone(kind);
@@ -1275,6 +989,13 @@ export function removeRef(c0: Character, ref: Ref): Character {
   return { ...out, ...(c.conc && spells.includes(c.conc.id) ? setConc(null) : {}) };
 }
 
+// Removing a chip in a source's form: a linked entry was on the sheet first, so only the link goes.
+export function removeChip(c: Character, ref: Ref): Character {
+  const list = LIST_KIND.find(([, k]) => k === ref.kind)?.[0];
+  if (!list || !(c[list] as Entry[]).some((x) => x.id === ref.id && x.linked)) return removeRef(c, ref);
+  return { ...c, [list]: (c[list] as Entry[]).map((x) => (x.id === ref.id ? unlinkEntry(x) : x)) };
+}
+
 // What a removal confirm shows: the names of everything else that goes, and what stays and needs the player: typed
 // numbers that already include a counted grant (the app can't tell which part of a typed value it was), and entries
 // that were only linked.
@@ -1286,10 +1007,12 @@ export function removalSummary(c: Character, ref: Ref): { goes: string[]; keep: 
   const hand = '; lower it by hand';
   for (const r of chain.filter((x) => x.kind === 'grant')) {
     const g = c.grants.find((x) => x.id === r.id);
+    if (g?.kind === 'casting' && c.castAb === g.ab) keep.push(`Spellcasting ability stays ${CAST_NAMES[c.castAb]}; change it in Edit details`);
     if (!g?.counted) continue;
     const src = sourceOf(c, g.from)?.name ?? g.name, v = num(c, g.val, g);
     if (g.kind === 'abil' && g.ab) keep.push(`${g.ab.toUpperCase()} ${effScore(c, g.ab as Ability)} still includes ${fmt(v)} from ${src}${hand}`);
-    else if (g.kind === 'speed') keep.push(`Speed ${walkSpeed(c)} ft still includes ${fmt(v)} ft from ${src}${hand}`);
+    else if (g.kind === 'speed' && g.mode === 'walk') keep.push(`Speed ${walkSpeed(c)} ft still includes ${fmt(v)} ft from ${src}${hand}`);
+    else if (g.kind === 'speed' && g.mode) keep.push(`${capital(g.mode)} ${modeSpeed(c, g.mode as SpeedKind).base} ft still includes this grant`);
     else if (g.kind === 'init') keep.push(`Initiative ${fmt(initiative(c))} still includes ${fmt(v)} from ${src}${hand}`);
     else if (g.kind === 'hpLvl') keep.push(`Max HP ${maxHpOf(c)} still includes ${fmt(v * c.level)} from ${src}${hand}`);
     else if (g.kind === 'ac' && g.acMode === 'bonus') keep.push(`AC ${armorClass(c).total} still includes ${fmt(v)} from ${src} (in the custom AC bonuses)${hand}`);
@@ -1317,6 +1040,7 @@ function grantLabel(c: Character, g: Grant): string {
     case 'saveBonus': return fmt(v) + ' ' + (g.ab === 'all' ? 'all' : (g.ab ?? '').toUpperCase()) + ' saves';
     case 'spellAtk': return fmt(v) + ' spell attack';
     case 'spellDc': return fmt(v) + ' spell save DC';
+    case 'casting': return g.name + ' (set slots by hand)';
     default: return g.name;
   }
 }
@@ -1351,12 +1075,6 @@ export function grantChips(c: Character, link: string): Chip[] {
   }
   return out;
 }
-
-export const removeSpell = (c: Character, id: string) => removeRef(c, { kind: 'spell', id });
-// The one way to remove an item: its attunement slot empties with it, and its grants go.
-export const removeItem = (c: Character, id: string) => removeRef(c, { kind: 'item', id });
-export const removeFeature = (c: Character, id: string) => removeRef(c, { kind: 'feature', id });
-export const removeResource = (c: Character, id: string) => removeRef(c, { kind: 'res', id });
 
 // Top bar pills. [key, picker name, short label], in picker order.
 export type PillStat = 'hp' | 'ac' | 'dc' | 'speed' | 'pp' | 'init' | 'atk' | 'hd' | 'insp';

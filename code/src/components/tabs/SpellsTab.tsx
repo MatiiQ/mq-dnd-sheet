@@ -1,15 +1,16 @@
 import { useState } from 'react';
 import {
-  ABILITIES, AC_SPELLS, CAST_NAMES, newId, ORDINAL, ownFreeCasts, setOwnFreeCast, SPELL_SORTS, acAfterEdit, castSpell, concAfterEdit, detectAcSpell, effectsAfterEdit, fmt, preparedCount, removeSpell, setConc, setSlotUsed,
+  removeRef, ABILITIES, CAST_NAMES, newId, ORDINAL, ownFreeCasts, setOwnFreeCast, SPELL_SORTS, acAfterEdit, castSpell, concAfterEdit, detectAcSpell, effectsAfterEdit, fmt, preparedCount, setConc, setSlotUsed,
   slotsLeft, sortSpells, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, freeCastsOf, spellAttackFor, spellSaveDcFor
 } from '../../logic';
 import { hasActiveEffect, inactiveReason, linkOf, sourceLabel } from '../../links';
-import { BLANK_SPELL, draftFromSpell, spellFromForm, type SpellDraft } from '../../catalog/copy';
+import { BLANK_SPELL, draftFromSpell, keepPrep, spellFromForm, type SpellDraft } from '../../catalog/copy';
 import { patchEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { AcEffect, Character, Spell } from '../../types';
+import { removalNote } from '../Chips';
 import { SpellPicker } from '../pickers/SpellPicker';
 import { SourcePicker } from '../SourcePicker';
-import { AddButton, Caret, DamageTypeField, DieBadge, EffectSwitch, EntryForm, EntryRow, FreeCastButton, NumInput, PartTiles, Step, TextField, UsePips } from '../ui';
+import { AcTargetSwitch, AddButton, Caret, DamageTypeField, DieBadge, EffectSwitch, EntryForm, EntryRow, FreeCastButton, NumInput, PartTiles, Step, TextField, UsePips } from '../ui';
 
 const AC_EFFECTS: [AcEffect | '', string][] = [['', 'None'], ['bonus', 'Bonus'], ['base', 'Base (+ DEX)'], ['floor', 'Floor']];
 const TIMES = ['Action', 'Bonus Action', 'Reaction', '1 Minute', '10 Minutes', '1 Hour'];
@@ -47,7 +48,7 @@ export function SpellsTab() {
     const sid = id ?? newId();
     update((p) => {
       const next = {
-        ...p, spells: saveEntry<Spell>(p.spells, built, id, { prep: true, id: sid }),
+        ...p, spells: saveEntry<Spell>(p.spells, { ...built, ...keepPrep(p.spells.find((x) => x.id === id), d.always) }, id, { prep: true, id: sid }),
         ...(id ? { ...concAfterEdit(p, { ...built, id }), ...acAfterEdit(p, { ...built, id }), ...effectsAfterEdit(p, { ...built, id }) } : {})
       };
       return setOwnFreeCast(next, sid, d.freeCast, p.spells.find((x) => x.id === id)?.name);
@@ -78,8 +79,8 @@ export function SpellsTab() {
         <label className="field">AC effect
           <select className="input" value={f.draft.acFx} onChange={(e) => {
             const acFx = e.target.value as AcEffect | '';
-            const known = AC_SPELLS[f.draft.name.trim().toLowerCase()];
-            f.set({ acFx, ...(acFx && known ? { acVal: known[1] } : {}) });
+            const known = detectAcSpell(f.draft.name);
+            f.set({ acFx, ...(acFx && known ? { acVal: known.acVal } : {}) });
           }}>
             {AC_EFFECTS.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
           </select>
@@ -87,6 +88,7 @@ export function SpellsTab() {
         {f.draft.acFx && (
           <label className="field">{f.draft.acFx === 'bonus' ? 'AC bonus' : f.draft.acFx === 'base' ? 'Base AC (+ DEX)' : 'AC at least'}
             <NumInput className="input" value={f.draft.acVal} min={0} max={30} onCommit={(acVal) => f.set({ acVal })} />
+            {!f.draft.acVal && <span className="small" style={{ color: 'var(--danger)' }}>Enter a value for the AC effect.</span>}
           </label>
         )}
         <label className="field">Attack
@@ -343,6 +345,7 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
           className="btn btn-sm" style={{ border: '1px solid var(--blue)', background: concOn ? 'var(--blue)' : 'transparent', color: concOn ? 'var(--on-accent)' : 'var(--blue)' }}
           onClick={() => update(setConc(concOn ? null : concOf))}>{concOn ? 'Conc. ✓' : 'Conc.'}</button>
       )}
+      <AcTargetSwitch sp={sp} />
       {effect && <EffectSwitch link={link} name={sp.name} />}
       {(lvl === 0 || usable) && frees.map((r) => <FreeCastButton key={r.id} sp={sp} r={r} />)}
       {!!first && usable && (
@@ -367,7 +370,7 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
         {sp.desc && <span className="entry-desc">{sp.desc}</span>}
         {sourceLabel(c, sp) && <span className="muted">Source: {sourceLabel(c, sp)}</span>}
       </> : undefined}
-      onEdit={onEdit} onRemove={() => update((p) => removeSpell(p, sp.id))}>
+      onEdit={onEdit} onRemove={() => update((p) => removeRef(p, { kind: 'spell', id: sp.id }))} removeConfirm={removalNote(c, { kind: 'spell', id: sp.id })}>
       {(picking && upcasts.length > 0 || noSlots) && <>
         {picking && upcasts.length > 0 && (
           <div role="group" aria-label={'Higher slot levels for ' + sp.name} className="row wrap gap-6" style={{ padding: 8, borderRadius: 12, background: 'var(--raised)' }}>

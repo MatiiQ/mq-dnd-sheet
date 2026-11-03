@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { newId } from './logic';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import {
-  ABILITIES, SKILLS, grantChips, addGrants, findUnlinked, removalChain, removalSummary, removeFeature, removeResource, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, toggleEffect, dawn, refillFor, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, splitTraining, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, NEW_FIELDS, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, removeItem, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
-  num, setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, undoHp
+  ABILITIES, SKILLS, acCanTargetOther, acOnOther, toggleAcTarget, regainLabel, damageHitDie, setTempHitDie, castAbOf, removeChip, speedOf, armorSlowBy, stealthDisBy, acSpellIdle, untrainedArmor, grantChips, addGrants, findUnlinked, removalChain, removalSummary, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, toggleEffect, dawn, refillFor, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft, num, setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, undoHp
 } from './logic';
+import { migrate } from './migrate';
 import { spellActions } from './actions';
 import { grantErrors, type GrantSpec } from './catalog/schema';
 import { addFromCatalog, type ItemAnswers } from './catalog/copy';
@@ -14,8 +14,9 @@ import srdEntries from './data/srd/index';
 import { activeGrants, isActive } from './links';
 import { inventoryGroups } from './inventory';
 import { applyPatch } from './storage';
-import { oldIlyra, oldSeren } from './test-fixtures';
-import type { Character, Grant, Item, Spell } from './types';
+import { oldIlyra } from './test-fixtures';
+import type { FeatureEntry } from './catalog/schema';
+import type { Character, Feature, Grant, Item, Spell } from './types';
 
 const make = (p: Partial<Character> = {}): Character => ({ ...sampleCharacter(), ...p });
 const sp = (p: Partial<Spell> = {}): Spell => ({ id: 's1', name: 'Bless', lvl: 1, time: 'Action', range: '30 ft', srcName: 'Cleric', ...p });
@@ -112,11 +113,11 @@ describe('casting and Concentration', () => {
     const fc = (id: string) => ({ id: 'fc' + id, name: 'Free', count: 1, max: 1, recharge: 'long' as const, from: 'spell:' + id, srcKind: 'spell' as const, casts: id });
     const conc = make({ spells: [bless, other], conc: { id: 's1', name: 'Bless' }, concCheck: 'CON save DC 10', res: [fc('s1'), fc('s2')] });
     it('removing it ends Concentration and drops its free cast; removing another keeps it', () => {
-      const c = removeSpell(conc, 's1');
+      const c = removeRef(conc, { kind: 'spell', id: 's1' });
       expect(c.spells.map((x) => x.id)).toEqual(['s2']);
       expect(c).toMatchObject({ conc: null, concCheck: null });
       expect(c.res.map((r) => r.id)).toEqual(['fcs2']);
-      const k = removeSpell(conc, 's2');
+      const k = removeRef(conc, { kind: 'spell', id: 's2' });
       expect(k.conc).toEqual({ id: 's1', name: 'Bless' });
       expect(k.res.map((r) => r.id)).toEqual(['fcs1']);
     });
@@ -302,30 +303,42 @@ describe('loading saves and backups', () => {
     expect(c.slotMax).toEqual([0, 4, 3, 3, 3, 2, 1, 0, 0, 0]);
     expect(preparedCount(c)).toBe(c.prepMax);
   });
-  it('fills missing fields from the sample and marks old levelled spells prepared', () => {
+  it('fills missing fields from the blank character, never the sample', () => {
+    const c = migrate({ ch: { name: 'Sparse' } });
+    expect(c).toMatchObject({ level: 1, inv: [], spells: [], attacks: [], amount: 0 });
+    expect(migrate({ ...sampleCharacter(), inv: 'x' }).inv).toEqual([]);
+    expect(migrate(null)).toEqual(blankCharacter());
+    expect(migrate('x')).toEqual(blankCharacter());
+  });
+  it('keeps only skill levels 0, 1 and 2', () => {
+    const c = migrate({ ...sampleCharacter(), skillProf: { arcana: 'x', nature: 2, stealth: 5, history: 1.5, insight: 0 } });
+    expect(c.skillProf).toEqual({ nature: 2, insight: 0 });
+  });
+  it('gives a blank character nothing of the sample', () => {
+    expect(blankCharacter().amount).toBe(0);
+    expect(JSON.stringify(blankCharacter())).not.toMatch(/Ilyra|Longbow|Hunter/);
+  });
+  it('fills missing fields and marks old levelled spells prepared', () => {
     const c = migrate({ ch: { name: 'Bob' }, spells: [{ id: 's', name: 'Bless', lvl: 1 }] });
     expect(c.ch.name).toBe('Bob');
     expect(c.ch.species).toBe('');
     expect(c.spells[0].prep).toBe(true);
-    expect(c.attacks).toEqual(sampleCharacter().attacks);
+    expect(c.attacks).toEqual([]);
     expect(migrate({ ...sampleCharacter(), saveProf: {}, skillProf: { arcana: 1 } })).toMatchObject({ saveProf: {}, skillProf: { arcana: 1 } });
   });
   it('replaces values of the wrong type so the sheet can render', () => {
-    expect(migrate(null)).toEqual(sampleCharacter());
-    expect(migrate('x')).toEqual(sampleCharacter());
     const c = migrate({
       ...sampleCharacter(), spells: 'x', conds: null, abil: { str: '12', dex: 14 }, tab: 'nope', castAb: 'str',
       attacks: [{ id: 'a', name: 'Club', hit: {} }, { name: 'Sling', hit: '+4' }, 7],
-      def: { res: ['Fire', 3], vul: 'x' }, defenses: undefined, slotMax: [0, 4], slotUsed: [0, 'x'],
+      slotMax: [0, 4], slotUsed: [0, 'x'],
       conc: { name: 'Bless' }, hpUndo: { prev: 1 }, restMsg: { title: 1 }
     });
-    expect(c.spells.map((x) => x.id)).toEqual(sampleCharacter().spells.map((x) => x.id));
+    expect(c.spells).toEqual([]);
     expect(c.conds).toEqual({});
     expect(c.abil).toMatchObject({ str: 10, dex: 14 });
     expect(c).toMatchObject({ tab: 'actions', castAb: 'none', conc: null, hpUndo: null, restMsg: null });
     expect(c.attacks.map((a) => a.name)).toEqual(['Sling']);
     expect(c.attacks[0].id).toBeTruthy();
-    expect(c.defenses.map((d) => [d.kind, d.name])).toEqual([['res', 'Fire']]);
     // Resources moved out of the tabs into the left column.
     expect(migrate({ ...sampleCharacter(), tab: 'resources' }).tab).toBe('actions');
     expect(c.slotMax).toEqual([0, 4, 0, 0, 0, 0, 0, 0, 0, 0]);
@@ -384,10 +397,6 @@ describe('loading saves and backups', () => {
     expect(c.spells.map((s) => s.id)).toEqual(['a', 'b', 'c']);
     expect(c.spells[0].parts).toEqual([burst]);
     expect([c.spells[1].parts, c.spells[2].parts]).toEqual([undefined, undefined]);
-  });
-  it('turns the old refill flag into a recharge', () => {
-    const c = migrate({ res: [{ id: 'a', name: 'Ki', count: 1, refill: true }, { id: 'b', name: 'Rage', count: 1, refill: true, recharge: 'short' }, { id: 'c', name: 'Gold', count: 1 }] });
-    expect(c.res.map((r) => r.recharge)).toEqual(['long', 'short', 'none']);
   });
 });
 
@@ -552,7 +561,7 @@ describe('AC spells', () => {
     expect(acAfterEdit(c, { id: 'sh', c: false, acFx: undefined }).acOn).toEqual(['bk']);
     expect(acAfterEdit(c, { id: 'sh', c: false, acFx: 'bonus' })).toEqual({});
     expect(acAfterEdit(c, { id: 'ma', c: true, acFx: 'base' })).toEqual({}); // not on: nothing to remove
-    expect(removeSpell(c, 'sh').acOn).toEqual(['bk']);
+    expect(removeRef(c, { kind: 'spell', id: 'sh' }).acOn).toEqual(['bk']);
     const rested = longRest(c);
     expect(rested.acOn).toEqual([]);
     expect(rested.restMsg?.body).toContain('Shield, Barkskin ended');
@@ -569,28 +578,6 @@ describe('AC spells', () => {
 
 describe('AC migration', () => {
   const old = (p: Record<string, unknown>) => ({ ...blankCharacter(), ...p }) as Record<string, unknown>;
-  it('detects armor and AC spells by name on saves with a typed ac, without switching spells on', () => {
-    const c = migrate(old({ ac: 16, abil: sampleCharacter().abil, inv: [{ id: 'i', name: 'Studded Leather Armor', qty: 1, eq: true }],
-      spells: [{ id: 's', name: 'Shield', lvl: 1, time: 'Reaction', range: 'Self', source: 'Wizard' }] }));
-    expect(c.inv[0]).toMatchObject({ armor: 'light', acBase: 12 });
-    expect(c.spells[0]).toMatchObject({ acFx: 'bonus', acVal: 5 });
-    expect(c.acOn).toEqual([]);
-    expect(c.acMods).toEqual([]);
-    expect(armorClass(c).total).toBe(16);
-  });
-  it('keeps the old number with an adjustment bonus when the parts disagree', () => {
-    const c = migrate(old({ ac: 13, inv: [{ id: 'p', name: 'Leather Pouch', qty: 1, eq: true }] }));
-    expect(c.inv[0].armor).toBeUndefined();
-    expect(c.acMods).toEqual([{ id: expect.any(String), name: 'Adjustment (from old AC)', val: 3 }]);
-    expect(armorClass(c).total).toBe(13);
-  });
-  it('adds no adjustment when the old number already matches', () => {
-    expect(migrate(old({ ac: 10 })).acMods).toEqual([]);
-  });
-  it('never re-detects on saves already in the new shape', () => {
-    const { ac: _, ...fresh } = old({ inv: [{ id: 'i', name: 'Shield', qty: 1, eq: true }] });
-    expect(migrate(fresh).inv[0].armor).toBeUndefined();
-  });
   it('drops damaged or stale AC state', () => {
     const c = migrate(old({
       spells: [{ id: 'sh', name: 'Shield', lvl: 1, time: 'Reaction', range: 'Self', source: 'W', acFx: 'bonus', acVal: 5 },
@@ -625,7 +612,7 @@ describe('saves keep working', () => {
     expect(migrate(druidSample())).toEqual(druidSample());
   });
   it('fills every new field from the blank character, not the sample, when a save lacks it or holds the wrong type', () => {
-    for (const k of NEW_FIELDS) {
+    for (const k of ['spellSort', 'size', 'carryUp', 'attuneIds', 'grants', 'effectsOn', 'profs', 'defenses', 'hands', 'mastery', 'sections', 'slotsOnShort'] as const) {
       const raw = { ...sampleCharacter() } as Record<string, unknown>;
       delete raw[k];
       // A save without profs also has its Training features split (Training migration); leave none to split here.
@@ -654,27 +641,6 @@ describe('spell sort order', () => {
 });
 
 describe('defenses', () => {
-  const { defenses: _, ...noDefenses } = sampleCharacter();
-  const old = { ...noDefenses, def: { res: ['Fire', 'Charmed', 'Exhaustion', 'Mud'], vul: ['Poisoned'], imm: ['Poison', 'Frightened'] }, saveNotes: 'Advantage vs traps' };
-  const pairs = (c: Character) => c.defenses.map((d) => [d.kind, d.name]);
-  it('moves save notes and conditions under Resistances to Advantage on saves (PHB p.28)', () => {
-    const c = migrate(old);
-    expect(pairs(c)).toEqual([['res', 'Fire'], ['res', 'Mud'], ['vul', 'Poisoned'], ['imm', 'Poison'], ['imm', 'Frightened'],
-      ['adv', 'Advantage vs traps'], ['adv', 'vs Charmed'], ['adv', 'vs Exhaustion']]);
-    expect(c).not.toHaveProperty('saveNotes');
-    expect(c).not.toHaveProperty('def');
-    expect(migrate(c)).toEqual(c);
-  });
-  it('adds nothing for blank save notes and never duplicates an entry', () => {
-    expect(migrate({ ...old, def: { res: [], vul: [], imm: [] }, saveNotes: '  ' }).defenses).toEqual([]);
-    expect(pairs(migrate({ ...old, def: { res: ['Charmed'], vul: [], imm: [], adv: ['vs Charmed'] }, saveNotes: '' }))).toEqual([['adv', 'vs Charmed']]);
-  });
-  it('turns an old save\'s defense lists into entries, and only once', () => {
-    const c = migrate({ ...oldIlyra(), def: { res: ['Poisoned'], vul: [], imm: [], adv: [] }, saveNotes: 'vs magic' });
-    expect(pairs(c)).toEqual([['adv', 'vs magic'], ['adv', 'vs Poisoned']]);
-    expect(pairs(migrate(oldIlyra()))).toEqual([['adv', 'vs Charmed']]);
-    expect(pairs(migrate({ ...sampleCharacter(), def: { res: ['Fire'], vul: [], imm: [], adv: [] } }))).toEqual(pairs(sampleCharacter()));
-  });
   it('drops a defense of an unknown kind and reads an unknown source kind as Other', () => {
     const c = migrate({ ...sampleCharacter(), defenses: [{ id: 'a', kind: 'weak', name: 'Fire' }, { id: 'b', kind: 'res', name: 'Cold', srcKind: 'x' }] });
     expect(c.defenses).toEqual([{ id: 'b', kind: 'res', name: 'Cold', srcKind: 'other' }]);
@@ -738,58 +704,6 @@ describe('carrying capacity', () => {
 });
 
 describe('attunement and resources moving to Inventory', () => {
-  it('turns inventory resources into items, charged ones with their charges, and empties their pills', () => {
-    const c = migrate({ inv: [], attune: ['', '', ''], pills: ['hp', 'res:r1', 'res:r2'], res: [
-      { id: 'r1', name: 'Arrows', note: 'Tap −', count: 20, inv: true },
-      { id: 'r2', name: 'Wand', count: 3, max: 7, recharge: 'none', inv: true },
-      { id: 'r3', name: 'Herbs', count: 1, refill: true, inv: true },
-      { id: 'r4', name: 'Ki', count: 2, max: 2, recharge: 'short' }] });
-    expect(c.inv).toEqual([{ id: expect.any(String), name: 'Arrows', qty: 20, eq: false, desc: 'Tap −' },
-      { id: expect.any(String), name: 'Wand', qty: 1, eq: false, count: 3, max: 7, recharge: 'none' },
-      { id: expect.any(String), name: 'Herbs', qty: 1, eq: false, count: 1, recharge: 'long' }]);
-    expect(c.res.map((r) => [r.id, r.recharge])).toEqual([['r4', 'short']]);
-    expect(c.pills).toEqual(['hp', '', '']);
-    expect(c.attuneIds).toEqual(['', '', '']);
-  });
-  it('still converts very old saves without the inv flag, and only on saves from before this change', () => {
-    const old = migrate({ inv: [], res: [{ id: 'arrows', name: 'Arrows', count: 5 }, { id: 'n1', name: 'Rations', count: 3 }] });
-    expect(old.inv.map((i) => i.name)).toEqual(['Arrows']);
-    expect(old.res.map((r) => r.id)).toEqual(['n1']);
-    const now = migrate({ attuneIds: ['', '', ''], res: [{ id: 'arrows', name: 'Arrows', count: 5 }] });
-    expect(now.res.map((r) => r.id)).toEqual(['arrows']);
-  });
-  it('links attunement slot names to items: matches, duplicates, unknown text, converted resources', () => {
-    const a = migrate({ attune: [' cloak of elvenkind ', 'Ring', 'Ring'], res: [], inv: [
-      { id: 'i1', name: 'Cloak of Elvenkind', qty: 1, eq: false }, { id: 'i2', name: 'Ring', qty: 1, eq: true }, { id: 'i3', name: 'Ring', qty: 1, eq: true }] });
-    expect(a.attuneIds).toEqual(['i1', 'i2', 'i3']);
-    expect(a.inv[0].eq).toBe(false); // a matched item keeps its eq flag
-    const b = migrate({ attune: ['Pearl of Power', 'Shield', 'Ring'], inv: [{ id: 'i2', name: 'Ring', qty: 1, eq: true }],
-      res: [{ id: 'p', name: 'Pearl of Power', count: 1, inv: true }] });
-    expect(b.attuneIds[2]).toBe('i2');
-    expect(b.inv.find((i) => i.id === b.attuneIds[0])).toMatchObject({ name: 'Pearl of Power', eq: true });
-    expect(b.inv.find((i) => i.id === b.attuneIds[1])).toEqual({ id: b.attuneIds[1], name: 'Shield', qty: 1, eq: true }); // no detectArmor
-    const d = migrate({ attune: ['Ring', 'Ring', '  '], res: [], inv: [{ id: 'i2', name: 'Ring', qty: 1, eq: true }] });
-    expect(d.attuneIds[0]).toBe('i2');
-    expect(d.inv.find((i) => i.id === d.attuneIds[1])).toMatchObject({ name: 'Ring', eq: true });
-    expect(d.attuneIds[2]).toBe('');
-    expect(migrate({ attune: ['Cartographer\'s Tools'], res: [], inv: [{ id: 't', name: 'Cartographer’s Tools', qty: 1, eq: true }] }).attuneIds[0]).toBe('t');
-    const e = migrate({ attune: ['-', 'None', '—'], res: [], inv: [] });
-    expect(e.attuneIds).toEqual(['', '', '']); // placeholder text never becomes an item
-    expect(e.inv).toEqual([]);
-    // A charged item tracked as a resource becomes the attuned item, with its charges.
-    const w = migrate({ attune: ['Wand of Magic Missiles'], inv: [],
-      res: [{ id: 'w', name: 'Wand of Magic Missiles', count: 7, max: 7, recharge: 'none', inv: true }] });
-    expect(w.res).toEqual([]);
-    expect(w.inv).toEqual([{ id: w.attuneIds[0], name: 'Wand of Magic Missiles', qty: 1, eq: true, count: 7, max: 7, recharge: 'none' }]);
-  });
-  it('turns damaged resource fields into safe item values', () => {
-    const c = migrate({ inv: [], res: [{ id: 'r', name: 'Rope', note: 5, count: 'x', inv: true }, { id: 's', name: 'Bolts', count: 4.6, inv: true }] });
-    expect(c.inv).toEqual([{ id: expect.any(String), name: 'Rope', qty: 1, eq: false }, { id: expect.any(String), name: 'Bolts', qty: 4, eq: false }]);
-  });
-  it('is idempotent on a converted old save', () => {
-    const once = migrate({ attune: ['Pearl', 'Lamp', ''], res: [{ id: 'p', name: 'Pearl', count: 1, inv: true }], inv: [] });
-    expect(migrate(once)).toEqual(once);
-  });
   it('drops missing, repeated and damaged attunement ids', () => {
     const inv = [{ id: 'i2', name: 'Ring', qty: 1, eq: true }];
     expect(migrate({ attuneIds: ['i2', 'gone', 'i2'], inv }).attuneIds).toEqual(['i2', '', '']);
@@ -798,8 +712,8 @@ describe('attunement and resources moving to Inventory', () => {
   it('removing an item clears its attunement slot; unequipping keeps it attuned', () => {
     const s = sampleCharacter();
     const cloak = s.attuneIds[0];
-    expect(removeItem(s, cloak).attuneIds).toEqual(['', '', '']);
-    expect(removeItem(s, cloak).inv.some((i) => i.id === cloak)).toBe(false);
+    expect(removeRef(s, { kind: 'item', id: cloak }).attuneIds).toEqual(['', '', '']);
+    expect(removeRef(s, { kind: 'item', id: cloak }).inv.some((i) => i.id === cloak)).toBe(false);
     expect(migrate({ ...s, inv: s.inv.map((i) => (i.id === cloak ? { ...i, eq: false } : i)) }).attuneIds[0]).toBe(cloak);
   });
 });
@@ -819,11 +733,10 @@ describe('sample numbers', () => {
     expect(numbers(sampleCharacter(), Object.keys(ILYRA.res))).toEqual(ILYRA);
     expect(numbers(migrate(oldIlyra()), Object.keys(ILYRA.res))).toEqual(ILYRA);
   });
-  it('Seren, and an old save of her', () => {
+  it('Seren', () => {
     // The one change the rebuild makes (approved by the owner): Primal Order · Magician now counts, adding her WIS
     // modifier (+5) to Arcana and Nature checks (PHB p.80). Today's sheet could only hold it in the feature's text.
     expect(numbers(druidSample(), Object.keys(SEREN.res))).toEqual({ ...SEREN, skills: { ...SEREN.skills, arcana: 10, nature: 6 } });
-    expect(numbers(migrate(oldSeren()), Object.keys(SEREN.res))).toEqual(SEREN);
   });
 });
 
@@ -910,31 +823,6 @@ describe('proficiencies', () => {
 });
 
 describe('Training migration', () => {
-  const names = (c: Character) => c.profs.map((p) => p.name);
-  it('turns Ilyra\'s old Training features into proficiencies', () => {
-    const c = migrate(oldIlyra());
-    expect(names(c)).toEqual(['Light armor', 'Medium armor', 'Shields', 'Simple weapons', 'Martial weapons', 'Cartographer’s Tools', 'Common', 'Elvish', 'Sylvan', 'Draconic']);
-    expect(c.profs.map((p) => p.cat)).toEqual(['armor', 'armor', 'armor', 'weapon', 'weapon', 'tool', 'language', 'language', 'language', 'language']);
-    expect(c.feats.some((f) => f.g === 'training')).toBe(false);
-    expect(hasProf(c, 'weapon', 'martial weapons')).toBe(true);
-    expect(migrate(c)).toEqual(c);
-  });
-  it('converts all of Seren\'s, Druidic included', () => {
-    const c = migrate(oldSeren());
-    expect(names(c)).toEqual(['Light armor', 'Shields', 'Simple weapons', 'Herbalism Kit', 'Calligrapher’s Supplies', 'Common', 'Druidic', 'Elvish', 'Dwarvish']);
-    expect(c.feats.some((f) => f.g === 'training')).toBe(false);
-  });
-  it('matches only full names under another heading, and keeps what it can\'t match', () => {
-    const { feats, profs } = splitTraining([{ id: 'x', g: 'training', name: 'Proficiencies', desc: 'Light, Thieves’ Tools' },
-      { id: 'y', g: 'training', name: 'Tools', desc: 'Ox cart, Smith’s Tools' }, { id: 'z', g: 'class', name: 'Rage', desc: 'Angry' }]);
-    expect(profs.map((p) => [p.cat, p.name])).toEqual([['tool', 'Thieves’ Tools'], ['tool', 'Smith’s Tools']]);
-    expect(feats.map((f) => [f.id, f.desc])).toEqual([['x', 'Light'], ['y', 'Ox cart'], ['z', 'Angry']]);
-  });
-  it('runs only on saves without proficiencies', () => {
-    const raw = { ...oldIlyra(), profs: [], feats: [{ id: 't', g: 'training', name: 'Tools', desc: 'Thieves\' Tools' }] };
-    expect(migrate(raw).feats.filter((f) => f.g === 'training')).toEqual([{ id: 't', g: 'training', name: 'Tools', desc: 'Thieves\' Tools' }]);
-    expect(migrate(raw).profs).toEqual([]);
-  });
   it('drops a proficiency with an unknown category', () => {
     expect(migrate({ ...sampleCharacter(), profs: [{ id: 'a', cat: 'vehicle', name: 'Boat' }, { id: 'b', cat: 'tool', name: 'Lute' }] }).profs).toEqual([{ id: 'b', cat: 'tool', name: 'Lute' }]);
   });
@@ -1028,29 +916,7 @@ describe('AC grants', () => {
     expect(ac({ inv: [it_({ name: 'Cloak', acBonus: 1 })] }).total).toBe(14);
   });
   it('removing the item removes its grants', () => {
-    expect(removeItem(make({ inv: [ringItem], grants: [ringAc] }), 'r').grants).toEqual([]);
-  });
-});
-
-describe('AC bonus migration', () => {
-  const old = (p: Record<string, unknown>) => ({ ...blankCharacter(), ...p }) as Record<string, unknown>;
-  it('turns a bonus on an item that isn\'t armor into a grant that needs it equipped, once', () => {
-    const c = migrate(old({ inv: [{ id: 'r', name: 'Ring', qty: 1, eq: true, acBonus: 1 }, { id: 'm', name: '+1 Chain Mail', qty: 1, eq: true, armor: 'heavy', acBase: 16, acBonus: 1 }] }));
-    expect(c.inv.map((i) => i.acBonus)).toEqual([undefined, 1]);
-    expect(c.grants).toEqual([{ id: expect.any(String), kind: 'ac', name: '+1 AC', acMode: 'bonus', val: '1', from: 'item:r', srcKind: 'item', needEq: true }]);
-    expect(armorClass(c).total).toBe(18);
-    expect(migrate(c)).toEqual(c);
-  });
-  it('drops a zero bonus and keeps a broken one on the item, uncounted', () => {
-    const c = migrate(old({ inv: [{ id: 'a', name: 'A', qty: 1, eq: true, acBonus: 0 }, { id: 'b', name: 'B', qty: 1, eq: true, acBonus: 0.5 }] }));
-    expect(c.inv.map((i) => i.acBonus)).toEqual([undefined, 0.5]);
-    expect(c.grants).toEqual([]);
-    expect(armorClass(c).total).toBe(10);
-  });
-  it('keeps the AC total of an old save with both a typed ac and an item bonus', () => {
-    const c = migrate(old({ ac: 13, inv: [{ id: 'r', name: 'Ring', qty: 1, eq: true, acBonus: 1 }] }));
-    expect(armorClass(c).total).toBe(13);
-    expect(c.acMods).toEqual([{ id: expect.any(String), name: 'Adjustment (from old AC)', val: 2 }]);
+    expect(removeRef(make({ inv: [ringItem], grants: [ringAc] }), { kind: 'item', id: 'r' }).grants).toEqual([]);
   });
 });
 
@@ -1101,13 +967,13 @@ describe('resources', () => {
       { id: 'c', name: 'C', count: 1, max: 2, recharge: 'dawn', regain: '1', regainOn: 'short' },
       { id: 'd', name: 'D', count: 1, max: 2, recharge: 'long', regain: '1', regainOn: 'short', typeName: 'Ki', note: 3 },
       { id: 'e', name: 'E', count: 1, maxV: '1d4' }, { id: 'f', name: 'F', count: 1, maxV: 'wis>=1' },
-      { id: 'g', name: 'G', count: 1, from: 'feature:gone', srcKind: 'class', srcName: 'Monk' }, { id: 'h', name: 'H', count: 'x', refill: true }] });
+      { id: 'g', name: 'G', count: 1, from: 'feature:gone', srcKind: 'class', srcName: 'Monk' }, { id: 'h', name: 'H', count: 'x' }] });
     expect(c.res).toEqual([
       { id: 'a', name: 'A', count: 1, recharge: 'long' }, { id: 'b', name: 'B', count: 1, recharge: 'none' },
       { id: 'c', name: 'C', count: 1, max: 2, recharge: 'dawn' },
       { id: 'd', name: 'D', count: 1, max: 2, recharge: 'long', regain: '1', regainOn: 'short', typeName: 'Ki' },
       { id: 'e', name: 'E', count: 1, recharge: 'none' }, { id: 'f', name: 'F', count: 1, maxV: 'wis>=1', recharge: 'none' },
-      { id: 'g', name: 'G', count: 1, srcKind: 'class', srcName: 'Monk', recharge: 'none' }, { id: 'h', name: 'H', count: 0, recharge: 'long' }]);
+      { id: 'g', name: 'G', count: 1, srcKind: 'class', srcName: 'Monk', recharge: 'none' }, { id: 'h', name: 'H', count: 0, recharge: 'none' }]);
     expect(migrate(c)).toEqual(c);
   });
 });
@@ -1148,16 +1014,6 @@ describe('rests, Dawn and item charges', () => {
     const c = make({ inv: [{ ...wand, count: 7 }] });
     expect(applyPatch(c, { inv: [{ ...wand, count: 7, max: 5 }] }).inv[0].count).toBe(5);
   });
-  it('moves a charged resource onto an item, once', () => {
-    const raw = { ...sampleCharacter(), pills: ['hp', 'res:wand', ''], res: [{ id: 'wand', name: 'Wand', count: 3, max: 7, recharge: 'long', inv: true, note: 'x' },
-      { id: 'rope', name: 'Rope', count: 3, inv: true }] };
-    const c = migrate(raw);
-    expect(c.inv.slice(-2)).toEqual([{ id: expect.any(String), name: 'Wand', qty: 1, eq: false, count: 3, max: 7, recharge: 'long', desc: 'x' },
-      { id: expect.any(String), name: 'Rope', qty: 3, eq: false }]);
-    expect(c.res).toEqual([]);
-    expect(c.pills).toEqual(['hp', '', '']);
-    expect(migrate(c)).toEqual(c);
-  });
   it('checks item charge fields on load', () => {
     const c = migrate({ ...sampleCharacter(), inv: [{ id: 'a', name: 'A', qty: 1, eq: false, count: 2, max: 0, recharge: 'weekly', regain: '1', regainOn: 'dawn' },
       { id: 'b', name: 'B', qty: 1, eq: false, max: 3 }] });
@@ -1192,16 +1048,6 @@ describe('free casts as resources and spell overrides', () => {
       expect(ownFreeCasts(setOwnFreeCast(shield, 's2', true, 'Shield'), 's2').map((r) => r.name)).toEqual(['Shield']);
       expect(setOwnFreeCast(base(), 's2', true, 'Shield').res).toHaveLength(2);
     });
-  });
-  it('turns an old save\'s free casts into resources that cast the spell, once', () => {
-    const c = migrate(oldSeren());
-    const fc = freeCastsOf(c, 'ds12');
-    expect(fc).toEqual([{ id: expect.any(String), name: 'Shield', note: 'Free cast', count: 0, max: 1, recharge: 'long', from: 'spell:ds12', srcKind: 'spell', casts: 'ds12' }]);
-    expect(c.spells.some((x) => 'free' in x)).toBe(false);
-    expect(c).not.toHaveProperty('free');
-    expect(migrate(c)).toEqual(c);
-    const i = migrate(oldIlyra());
-    expect(['sp8', 'sp9', 'sp12'].map((id) => freeCastsOf(i, id).map((r) => r.count))).toEqual([[1], [1], [1]]);
   });
   it('drops a cast link to a spell that is gone', () => {
     const c = migrate({ ...sampleCharacter(), res: [{ id: 'x', name: 'X', count: 1, max: 1, recharge: 'long', casts: 'gone' }] });
@@ -1245,7 +1091,7 @@ describe('free casts as resources and spell overrides', () => {
   it('removing a spell removes its own free cast and empties a pill naming it', () => {
     const c = make({ pills: ['hp', 'res:fc', ''], res: [{ id: 'fc', name: 'Goodberry', count: 1, max: 1, recharge: 'long', from: 'spell:sp8', casts: 'sp8' }],
       effectsOn: ['spell:sp8'] });
-    const r = removeSpell(c, 'sp8');
+    const r = removeRef(c, { kind: 'spell', id: 'sp8' });
     expect(r.res).toEqual([]);
     expect(r.pills).toEqual(['hp', '', '']);
     expect(r.effectsOn).toEqual([]);
@@ -1293,7 +1139,7 @@ describe('adding grants', () => {
     expect(added.map((g) => [g.kind, g.from])).toEqual([['abil', 'feature:fx'], ['action', 'feature:fx']]);
     expect(added[1].res).toBe(gift.id);
     expect(effScore(n, 'wis')).toBe(15);
-    const back = removeFeature(n, 'fx');
+    const back = removeRef(n, { kind: 'feature', id: 'fx' });
     for (const k of LISTS) expect(back[k]).toEqual(c[k]);
   });
   it('a sense grant needs a range', () => {
@@ -1307,16 +1153,16 @@ describe('adding grants', () => {
     expect(addGrants(c, 'feature:rs', [{ spec: spec({ kind: 'resource', name: 'Heroic Inspiration', max: '1', recharge: 'long' }) }]).res).toHaveLength(2);
     const sum = removalSummary(linked, { kind: 'feature', id: 'rs' });
     expect(sum.keep).toEqual(['Heroic Inspiration stays (it was on the sheet before Custom Gift)']);
-    const back = removeFeature(linked, 'rs');
+    const back = removeRef(linked, { kind: 'feature', id: 'rs' });
     expect(back.res).toEqual([{ id: 'hi', name: 'Heroic Inspiration', count: 1, max: 1, recharge: 'long' }]);
     const made = addGrants(c, 'feature:rs', [{ spec: spec({ kind: 'resource', name: 'Heroic Inspiration', max: '1', recharge: 'long' }) }]);
-    expect(removeFeature(made, 'rs').res).toEqual(c.res);
+    expect(removeRef(made, { kind: 'feature', id: 'rs' }).res).toEqual(c.res);
   });
   it('a linked spell keeps its resources and its Concentration when the source goes', () => {
     const c = custom(make({ conc: { id: 'sp4', name: 'Hunter’s Mark' }, res: [{ id: 'mine', name: 'Mine', count: 1, from: 'spell:sp4' }] }), 'fe');
     const n = addGrants(c, 'feature:fe', [{ spec: spec({ kind: 'spell', name: 'Hunter’s Mark', spell: 'spell/hunters-mark', always: true }), link: 'sp4' }]);
     expect(n.spells.find((x) => x.id === 'sp4')).toMatchObject({ from: 'feature:fe', linked: true });
-    const r = removeFeature(n, 'fe');
+    const r = removeRef(n, { kind: 'feature', id: 'fe' });
     expect(r.spells.find((x) => x.id === 'sp4')!.from).toBeUndefined();
     expect(r.res.map((x) => x.id)).toEqual(['mine']);
     expect(r.conc).toEqual({ id: 'sp4', name: 'Hunter’s Mark' });
@@ -1366,7 +1212,7 @@ describe('removal cascade', () => {
   // Ilyra: Guide (f20) → Magic Initiate (f9) → Guidance, Produce Flame, Goodberry and Goodberry's free cast.
   it('removes everything whose chain leads to the source, and ends Concentration on it', () => {
     const c = make({ conc: { id: 'sp2', name: 'Guidance' } });
-    const r = removeFeature(c, 'f20');
+    const r = removeRef(c, { kind: 'feature', id: 'f20' });
     expect(r.feats.some((f) => f.id === 'f20' || f.id === 'f9')).toBe(false);
     expect(r.spells.some((x) => ['sp2', 'sp3', 'sp8'].includes(x.id))).toBe(false);
     expect(r.res.some((x) => x.id === 'fc8')).toBe(false);
@@ -1376,11 +1222,11 @@ describe('removal cascade', () => {
   });
   it('removing a spell keeps a feature’s resource that casts it, without casts', () => {
     const c = make({ res: [{ id: 'favored', name: 'Favored Enemy', count: 2, max: 3, recharge: 'long', from: 'feature:f2', casts: 'sp4' }] });
-    expect(removeSpell(c, 'sp4').res).toEqual([{ id: 'favored', name: 'Favored Enemy', count: 2, max: 3, recharge: 'long', from: 'feature:f2' }]);
+    expect(removeRef(c, { kind: 'spell', id: 'sp4' }).res).toEqual([{ id: 'favored', name: 'Favored Enemy', count: 2, max: 3, recharge: 'long', from: 'feature:f2' }]);
   });
   it('removing a resource clears an action grant that spends it, and empties its pills', () => {
     const c = make({ grants: [{ id: 'a', kind: 'action', name: 'Wild Shape', econ: 'bonus', res: 'favored', from: 'feature:f2' }] });
-    const r = removeResource(c, 'favored');
+    const r = removeRef(c, { kind: 'res', id: 'favored' });
     expect(r.grants[0].res).toBeUndefined();
     expect(r.pills).toEqual(['hp', 'ac', '']);
     expect(migrate({ ...c, res: [] }).grants[0].res).toBeUndefined();
@@ -1390,7 +1236,7 @@ describe('removal cascade', () => {
       { id: 'S', g: 'other', name: 'S', desc: '', from: 'feature:S' }] });
     expect(removalChain(c, { kind: 'feature', id: 'A' })).toEqual([{ kind: 'feature', id: 'A' }, { kind: 'feature', id: 'B' }]);
     expect(removalChain(c, { kind: 'feature', id: 'S' })).toEqual([{ kind: 'feature', id: 'S' }]);
-    expect(removeFeature(c, 'A').feats.map((f) => f.id)).toEqual(['S']);
+    expect(removeRef(c, { kind: 'feature', id: 'A' }).feats.map((f) => f.id)).toEqual(['S']);
   });
   it('lists the numbers a counted grant stays in', () => {
     const c = make({ grants: [{ id: 'g', kind: 'abil', name: 'DEX +2', ab: 'dex', val: '2', cap: 20, counted: true, from: 'feature:f10' },
@@ -1401,7 +1247,7 @@ describe('removal cascade', () => {
   });
   it('removing an item empties its slot and removes its grants', () => {
     const s = make({ grants: [{ id: 'g', kind: 'ac', name: '+1 AC', acMode: 'bonus', val: '1', from: 'item:i9', needEq: true }] });
-    const r = removeItem(s, 'i9');
+    const r = removeRef(s, { kind: 'item', id: 'i9' });
     expect(r.attuneIds).toEqual(['', '', '']);
     expect(r.grants).toEqual([]);
   });
@@ -1612,7 +1458,7 @@ describe('a magic armor or Shield bonus chosen when added (plan 7, Task 9)', () 
     return { ...n, inv: n.inv.map((x) => (x.id === it.id ? { ...x, eq: true } : x)) };
   };
   it('counts Armor +1 with its chosen Plate Armor, and Shield +3 on top of the Shield’s 2', () => {
-    const base = { ...blankCharacter(), inv: [] };
+    const base: Character = { ...blankCharacter(), inv: [], profs: [{ id: 'p', cat: 'armor', name: 'Shields' }] };
     const plate = add(base, 'item/armor-1-2-or-3', { base: 'item/plate-armor', bonus: 1 });
     expect(armorClass(plate).total).toBe(19);
     expect(armorClass(add(plate, 'item/shield-1-2-or-3', { bonus: 3 })).total).toBe(24);
@@ -1797,5 +1643,279 @@ describe('review fixes', () => {
     const c = migrate({ ...JSON.parse(JSON.stringify(make({}))), level: 5.5, hp: -3, maxHp: 20 });
     expect(c.level).toBe(5);
     expect(c.hp).toBe(0);
+  });
+});
+
+it('finds no AC effect for constructor', () => expect(detectAcSpell('constructor')).toBeNull());
+
+describe('armor training', () => {
+  const base = (p: Partial<Character> = {}): Character => ({ ...blankCharacter(), abil: { ...blankCharacter().abil, dex: 14 }, ...p });
+  const robe: Grant = { id: 'g', kind: 'ac', name: 'Robe', acMode: 'unarmored', val: '5', when: 'noArmor', needEq: true, needAtt: true, from: 'item:r' };
+  const robeItem: Item = { id: 'r', name: 'Robe of the Archmagi', qty: 1, eq: true, attune: true };
+  const leather: Item = { id: 'l', name: 'Leather Armor', qty: 1, eq: true, armor: 'light', acBase: 11 };
+  const shield: Item = { id: 's', name: 'Shield', qty: 1, eq: true, armor: 'shield', acBase: 2 };
+  it('takes a numeric unarmored base (Robe of the Archmagi)', () => {
+    const on = base({ inv: [robeItem], grants: [robe], attuneIds: ['r', '', ''] });
+    expect(armorClass(on).total).toBe(17);
+    expect(armorClass({ ...on, attuneIds: ['', '', ''] }).total).toBe(12);
+    expect(armorClass({ ...on, inv: [robeItem, leather] }).total).toBe(13);
+  });
+  it('gives a Shield nothing without training (PHB p.219)', () => {
+    const c = base({ abil: blankCharacter().abil, inv: [shield] });
+    expect(armorClass(c).total).toBe(10);
+    expect(armorClass(c).parts).toContainEqual({ label: 'Shield', value: 0, note: 'no Shield training' });
+    expect(armorClass({ ...c, profs: [{ id: 'p', cat: 'armor', name: 'Shields' }] }).total).toBe(12);
+    const f: Feature = { id: 'f', g: 'feat', name: 'Armor Training', desc: '' };
+    expect(armorClass({ ...c, feats: [f], grants: [{ id: 'x', kind: 'prof', name: 'Shields', cat: 'armor', target: 'Shields', from: 'feature:f' }] }).total).toBe(12);
+    expect(armorClass({ ...c, inv: [{ ...shield, acBonus: 1 }] }).total).toBe(10);
+  });
+  it('names worn armor without training', () => {
+    const mail: Item = { id: 'm', name: 'Chain Mail', qty: 1, eq: true, armor: 'heavy', acBase: 16 };
+    expect(untrainedArmor(base({ inv: [mail] }))?.id).toBe('m');
+    expect(untrainedArmor(base({ inv: [mail], profs: [{ id: 'p', cat: 'armor', name: 'Heavy armor' }] }))).toBeUndefined();
+    expect(untrainedArmor(base({ inv: [shield] }))).toBeUndefined();
+  });
+  it('marks Mage Armor idle under armor', () => {
+    const sp: Spell = { id: 'ma', name: 'Mage Armor', lvl: 1, time: 'Action', range: 'Touch', prep: true, acFx: 'base', acVal: 13 };
+    const on = base({ spells: [sp], acOn: ['ma'] });
+    expect(acSpellIdle(on, sp)).toBe(false);
+    expect(acSpellIdle({ ...on, inv: [leather] }, sp)).toBe(true);
+    expect(acSpellIdle({ ...on, inv: [leather] }, { ...sp, acFx: 'bonus' })).toBe(false);
+  });
+});
+
+describe('armor columns', () => {
+  const plate: Item = { id: 'p', name: 'Plate Armor', qty: 1, eq: true, armor: 'heavy', acBase: 18, strReq: 15 };
+  const at = (str: number, p: Partial<Character> = {}): Character =>
+    ({ ...blankCharacter(), speedBase: 30, abil: { ...blankCharacter().abil, str }, inv: [plate], ...p });
+  it('slows a wearer below its Strength by 10 ft (PHB p.219)', () => {
+    expect(speedNow(at(10))).toBe(20);
+    expect(speedNow(at(15))).toBe(30);
+    expect(speedNow(at(10, { inv: [{ ...plate, eq: false }] }))).toBe(30);
+    const bag: Item = { id: 'b', name: 'Bag of Holding', qty: 1, eq: false, xdim: true };
+    expect(speedNow(at(10, { inv: [bag, { ...plate, in: 'b' }] }))).toBe(30);
+    const belt: Item = { id: 'g', name: 'Belt', qty: 1, eq: true };
+    expect(speedNow(at(10, { inv: [plate, belt], grants: [{ id: 's', kind: 'abilSet', name: 'Belt', ab: 'str', val: '19', from: 'item:g' }] }))).toBe(30);
+    expect(speedNow(at(10, { exh: 1 }))).toBe(15);
+    expect(speedNow(at(10, { speedBase: 5 }))).toBe(0);
+    expect(speedOf(at(10), 60)).toBe(50);
+    expect(armorSlowBy(at(10))?.id).toBe('p');
+  });
+  it('names the armor that gives Stealth Disadvantage', () => {
+    const chain: Item = { id: 'c', name: 'Chain Mail', qty: 1, eq: true, armor: 'heavy', acBase: 16, stealthDis: true };
+    expect(stealthDisBy(at(10, { inv: [chain] }))?.id).toBe('c');
+    expect(stealthDisBy(at(10, { inv: [{ ...chain, eq: false }] }))).toBeUndefined();
+  });
+});
+
+describe('grants that do what they say', () => {
+  const stone: Item = { id: 'l', name: 'Luckstone', qty: 1, eq: true, attune: true };
+  it('adds a check bonus for all to every check', () => {
+    const off = { ...blankCharacter(), inv: [stone], attuneIds: ['l', '', ''] };
+    const on: Character = { ...off, grants: [{ id: 'g', kind: 'checkBonus', name: 'Luck', target: 'all', val: '1', needAtt: true, from: 'item:l' }] };
+    expect(skillMod(on, 'arcana', 'int')).toBe(skillMod(off, 'arcana', 'int') + 1);
+    expect(initiative(on)).toBe(initiative(off) + 1);
+    expect(passiveScore(on, 'perception')).toBe(passiveScore(off, 'perception') + 1);
+  });
+  const feat = { id: 'f', g: 'class' as const, name: 'Spellcasting', desc: '' };
+  const casting = { id: 'g', kind: 'casting' as const, name: 'Spellcasting', ab: 'int', list: 'wizard' };
+  it('sets the casting ability from a casting grant', () => {
+    const none = addGrants({ ...blankCharacter(), feats: [feat] }, 'feature:f', [{ spec: casting }]);
+    expect(none.castAb).toBe('int');
+    const wis = addGrants({ ...blankCharacter(), castAb: 'wis', feats: [feat] }, 'feature:f', [{ spec: casting }]);
+    expect(wis.castAb).toBe('wis');
+    expect(grantChips(none, 'feature:f')[0].label).toContain('set slots by hand');
+  });
+  it('says the casting ability stays when its grant is removed', () => {
+    const none = addGrants({ ...blankCharacter(), feats: [feat] }, 'feature:f', [{ spec: casting }]);
+    expect(removalSummary(none, { kind: 'feature', id: 'f' }).keep).toEqual(['Spellcasting ability stays Intelligence; change it in Edit details']);
+  });
+});
+
+describe('links keep what they promise', () => {
+  const feat = { id: 'f', g: 'class' as const, name: 'Domain', desc: '' };
+  const bless: Spell = { id: 'b', name: 'Bless', lvl: 1, time: 'Action', range: '30 ft', prep: false };
+  const base = (sp: Spell, p: Partial<Character> = {}): Character => ({ ...blankCharacter(), castAb: 'wis', usePrep: true, feats: [feat], spells: [sp], ...p });
+  const link = (c: Character, spec: Partial<GrantSpec>) => addGrants(c, 'feature:f', [{ spec: { id: 'g', kind: 'spell', name: 'Bless', ...spec } as GrantSpec, link: c.spells[0].id }]);
+  it('a linked always-prepared grant makes the spell always prepared (PHB p.235)', () => {
+    const c = link(base(bless), { always: true });
+    expect(c.spells[0].always).toBe(true);
+    expect(spellUsable(c, c.spells[0])).toBe(true);
+    const prepared = base({ ...bless, prep: true });
+    expect(preparedCount(prepared)).toBe(1);
+    expect(preparedCount(link(prepared, { always: true }))).toBe(0);
+  });
+  it('a linked grant sets the casting ability', () => {
+    const light: Spell = { id: 'l', name: 'Light', lvl: 0, time: 'Action', range: 'Touch' };
+    const c = link(base(light), { castAb: 'cha' });
+    expect(castAbOf(c, c.spells[0])).toBe('cha');
+  });
+  it('removing the feature restores the spell', () => {
+    const gone = (c: Character) => removeRef(c, { kind: 'feature', id: 'f' }).spells[0];
+    const a = gone(link(base(bless), { always: true, castAb: 'cha' }));
+    expect(a).toEqual(bless);
+    const own = gone(link(base({ ...bless, castAb: 'int' }), { castAb: 'cha' }));
+    expect(own.castAb).toBe('int');
+    expect(own).not.toHaveProperty('linkCastAb');
+    const already = gone(link(base({ ...bless, always: true }), { always: true }));
+    expect(already.always).toBe(true);
+  });
+  it('the link fields survive save and reload', () => {
+    const c = link(base(bless), { always: true, castAb: 'cha' });
+    const back = migrate(JSON.parse(JSON.stringify(c)));
+    expect(back.spells[0]).toMatchObject({ linkAlways: true, linkCastAb: 'none' });
+    const bad = JSON.parse(JSON.stringify(c));
+    bad.spells[0].linkCastAb = 'x';
+    expect(migrate(bad).spells[0]).not.toHaveProperty('linkCastAb');
+  });
+  it('removing a linked chip drops only the link', () => {
+    const ki = { id: 'k', name: 'Ki', count: 3, max: 5, recharge: 'long' as const };
+    const c: Character = addGrants({ ...base(bless), res: [ki] }, 'feature:f', [{ spec: { id: 'g', kind: 'resource', name: 'Ki' } as GrantSpec, link: 'k' }]);
+    const after = removeChip(c, { kind: 'res', id: 'k' });
+    expect(after.res).toEqual([ki]);
+    const sp = link(base(bless), { always: true });
+    expect(removeChip(sp, { kind: 'spell', id: 'b' }).spells).toEqual([bless]);
+  });
+  it('removing an unlinked chip removes the entry', () => {
+    const c: Character = { ...base(bless), senses: [{ id: 's', name: 'Darkvision', range: '60 ft', from: 'feature:f' }] };
+    expect(removeChip(c, { kind: 'sense', id: 's' }).senses).toEqual([]);
+  });
+  it('words counted speeds by their own kind', () => {
+    const c: Character = { ...base(bless), speedBase: 35, speeds: { climb: 30, swim: 0, fly: 60, burrow: 0 } };
+    const keep = (g: Partial<Grant>) => removalSummary({ ...c, grants: [{ id: 'g', kind: 'speed', name: 'X', counted: true, from: 'feature:f', ...g } as Grant] }, { kind: 'feature', id: 'f' }).keep[0];
+    expect(keep({ mode: 'walk', val: '5' })).toBe('Speed 35 ft still includes +5 ft from Domain; lower it by hand');
+    expect(keep({ mode: 'climb', val: 'walk' })).toBe('Climb 30 ft still includes this grant');
+    expect(keep({ mode: 'fly', val: '60' })).toBe('Fly 60 ft still includes this grant');
+  });
+});
+
+describe('a quantity 0 item counts as gone', () => {
+  const dex14 = { ...blankCharacter(), abil: { ...blankCharacter().abil, dex: 14 }, profs: [{ id: 'p', cat: 'armor' as const, name: 'Shields' }, { id: 'h', cat: 'armor' as const, name: 'Heavy armor' }] };
+  it('adds no AC from armor or a Shield', () => {
+    const inv: Item[] = [{ id: 'a', name: 'Plate Armor', qty: 0, eq: true, armor: 'heavy', acBase: 18 }, { id: 's', name: 'Shield', qty: 0, eq: true, armor: 'shield', acBase: 2 }];
+    expect(armorClass({ ...dex14, inv }).total).toBe(12);
+  });
+  it('switches off a grant that needs the item equipped', () => {
+    const ring: Item = { id: 'r', name: 'Ring', qty: 1, eq: true };
+    const g: Grant = { id: 'g', kind: 'ac', name: '+1', acMode: 'bonus', val: '1', needEq: true, from: 'item:r' };
+    expect(armorClass({ ...dex14, inv: [ring], grants: [g] }).total).toBe(13);
+    expect(armorClass({ ...dex14, inv: [{ ...ring, qty: 0 }], grants: [g] }).total).toBe(12);
+  });
+  it('unloads ammunition that ran out', () => {
+    const bow: Item = { id: 'b', name: 'Longbow', qty: 1, eq: true, cat: 'weapon', props: 'ammunition', ammo: '150/600;arrow', load: 'x' };
+    const arrows: Item = { id: 'x', name: '+2 Arrows', qty: 3, eq: false, cat: 'ammo', cid: 'item/arrows' };
+    expect(normalize({ ...dex14, inv: [bow, arrows] }).inv[0].load).toBe('x');
+    expect(normalize({ ...dex14, inv: [bow, { ...arrows, qty: 0 }] }).inv[0].load).toBeUndefined();
+  });
+});
+
+it('updates a saved Musket', () => {
+  const musket: Item = { id: 'm', name: 'Musket', qty: 1, eq: true, cat: 'weapon', cid: 'item/musket', props: 'ammunition,loading,two-handed', ammo: '40/120;bullet', load: 'sb' };
+  const sling: Item = { id: 'sb', name: 'Sling Bullets', qty: 10, eq: false, cat: 'ammo', cid: 'item/sling-bullets' };
+  const fire: Item = { id: 'fb', name: 'Firearm Bullets', qty: 10, eq: false, cat: 'ammo', cid: 'item/firearm-bullets' };
+  expect(normalize({ ...blankCharacter(), inv: [musket, sling] }).inv[0].load).toBeUndefined();
+  expect(normalize({ ...blankCharacter(), inv: [{ ...musket, load: 'fb' }, fire] }).inv[0].load).toBe('fb');
+});
+
+describe('HP actions', () => {
+  it('refunds the die when undoing damage after spending it', () => {
+    const c: Character = { ...blankCharacter(), level: 3, maxHp: 30, hp: 20 };
+    const spent = spendHitDie(c);
+    expect(spent.hdUsed).toBe(1);
+    const hit = damageHitDie({ ...spent, amount: 5 });
+    expect(hit.hp).toBe(15);
+    const back = undoHp(hit);
+    expect(back.hdUsed).toBe(0);
+    expect(back.hp).toBe(20);
+  });
+  it('refunds the die when undoing Set Temp after spending it', () => {
+    const c: Character = { ...blankCharacter(), level: 3, maxHp: 30, hp: 20, temp: 6 };
+    const cleared = setTempHitDie(spendHitDie(c));
+    expect(cleared.temp).toBe(0);
+    const back = undoHp(cleared);
+    expect(back.temp).toBe(6);
+    expect(back.hdUsed).toBe(0);
+  });
+  it('clears temp HP with an amount of 0', () => {
+    const c: Character = { ...blankCharacter(), temp: 7, amount: 0 };
+    const out = applySetTemp(c);
+    expect(out.temp).toBe(0);
+    expect(out.hpUndo?.text).toBe('Temp HP cleared (was 7).');
+    const none: Character = { ...blankCharacter(), temp: 0, amount: 0 };
+    expect(applySetTemp(none)).toBe(none);
+  });
+  it('takes Exhaustion off the Concentration roll (PHB p.366)', () => {
+    const c: Character = { ...blankCharacter(), hp: 8, exh: 2, saveProf: { con: true }, conc: { id: 's', name: 'Bless' }, spells: [], amount: 2 };
+    expect(applyDamage(c).concCheck).toContain('roll d20 −2');
+  });
+});
+
+describe('catalog data for rests and AC', () => {
+  const cat = mergeCatalog(srdEntries, null);
+  const bard = (level: number): Character => {
+    const entry = cat.byId.get('feature/bard/bardic-inspiration') as FeatureEntry;
+    const spec = entry.grants!.find((g) => g.id === 'g1') as GrantSpec;
+    const base: Character = { ...blankCharacter(), level, hp: 8, abil: { ...blankCharacter().abil, cha: 16 }, feats: [{ id: 'f', g: 'class', name: 'Bardic Inspiration', desc: '' }] };
+    const c = addGrants(base, 'feature:f', [{ spec }]);
+    return { ...c, res: c.res.map((r) => ({ ...r, count: 0 })) };
+  };
+  it('refills Bardic Inspiration on a Short Rest from level 5 (PHB p.61)', () => {
+    expect(shortRest(bard(4)).res[0].count).toBe(0);
+    expect(shortRest(bard(5)).res[0].count).toBe(3);
+    const back = migrate(JSON.parse(JSON.stringify(bard(5))));
+    expect(shortRest(back).res[0].count).toBe(3);
+  });
+  it('words a level-based regain', () => {
+    const r = { regain: '1:0,5:20', regainOn: 'short' as const, recharge: 'long' as const, max: 3 };
+    expect(regainLabel({ ...blankCharacter(), level: 4 }, r)).toBe('');
+    expect(regainLabel({ ...blankCharacter(), level: 5 }, r)).toBe('all');
+    expect(regainLabel(blankCharacter(), { ...r, regain: '1' })).toBe('1');
+    expect(regainLabel(blankCharacter(), { ...r, regain: '1d6+1' })).toBe('1d6+1');
+  });
+  it('gives Haste its AC bonus, and Warding Bond none: its +1 goes to another creature (PHB pp.284, 340)', () => {
+    expect(cat.byId.get('spell/haste')).toMatchObject({ acFx: 'bonus', acVal: 2 });
+    expect(cat.byId.get('spell/warding-bond')).not.toHaveProperty('acFx');
+    expect(detectAcSpell('Haste')).toEqual({ acFx: 'bonus', acVal: 2 });
+    expect(detectAcSpell('Warding Bond')).toBeNull();
+  });
+  it('counts an AC spell only while cast on the caster (PHB pp.284, 245)', () => {
+    const haste: Spell = { id: 'h', name: 'Haste', lvl: 3, time: 'Action', range: '30 feet', c: true, acFx: 'bonus', acVal: 2 };
+    const conc = { id: 'h', name: 'Haste' };
+    expect(ac({ spells: [haste], conc }).total).toBe(16);
+    const toOther = toggleAcTarget(make({ spells: [haste] }), 'h');
+    expect(toOther.spells![0].acOther).toBe(true);
+    expect(ac({ spells: toOther.spells, conc }).total).toBe(14);
+    expect(toggleAcTarget(make(toOther), 'h').spells![0]).not.toHaveProperty('acOther');
+    // A spell without Concentration keeps running on the other creature, and a wrong choice can be corrected after the cast.
+    const bark: Spell = { id: 'b', name: 'Barkskin', lvl: 2, time: 'Bonus Action', range: 'Touch', acFx: 'floor', acVal: 17, acOther: true };
+    expect(ac({ spells: [bark], acOn: ['b'] }).total).toBe(14);
+    expect(ac({ spells: [{ ...bark, acOther: undefined }], acOn: ['b'] }).total).toBe(17);
+  });
+  it('gives a Self AC spell no choice of target (Shield, PHB p.316)', () => {
+    const shield: Spell = { id: 's', name: 'Shield', lvl: 1, time: 'Reaction', range: 'Self', acFx: 'bonus', acVal: 5, acOther: true };
+    expect(acCanTargetOther(shield)).toBe(false);
+    expect(acOnOther(shield)).toBe(false);
+    expect(ac({ spells: [shield], acOn: ['s'] }).total).toBe(19);
+    expect(acCanTargetOther({ id: 'x', name: 'Bless', lvl: 1, time: 'Action', range: '30 feet' })).toBe(false);
+  });
+  it('keeps acOther through a load, and drops a bad value', () => {
+    const sp = { id: 'h', name: 'Haste', lvl: 3, range: '30 feet', acFx: 'bonus', acVal: 2 };
+    expect(migrate({ spells: [{ ...sp, acOther: true }] }).spells[0].acOther).toBe(true);
+    expect(migrate({ spells: [{ ...sp, acOther: 'yes' }] }).spells[0]).not.toHaveProperty('acOther');
+  });
+});
+
+describe('pinned rules', () => {
+  it('a set score never lowers a higher one', () => {
+    const c: Character = { ...blankCharacter(), abil: { ...blankCharacter().abil, str: 20 }, inv: [{ id: 'b', name: 'Belt', qty: 1, eq: true }],
+      grants: [{ id: 'g', kind: 'abilSet', name: 'Belt', ab: 'str', val: '19', from: 'item:b' }] };
+    expect(effScore(c, 'str')).toBe(20);
+  });
+  it('speed floors at 0', () => {
+    expect(speedOf({ ...blankCharacter(), exh: 5 }, 20)).toBe(0);
+  });
+  it('the Concentration DC caps at 30', () => {
+    const c: Character = { ...blankCharacter(), temp: 100, amount: 100, conc: { id: 's', name: 'Bless' } };
+    expect(applyDamage(c).concCheck).toContain('DC 30');
   });
 });

@@ -43,7 +43,7 @@ function DefenseGroup({ kind, title, noun, color, addLabel, options, placeholder
   const [text, setText] = useState('');
   const list = mergedDefenses(c, kind);
   // A hand entry, unless this kind already has one with that name.
-  const add = (v: string) => update((p) => (p.defenses.some((d) => d.kind === kind && normName(d.name) === normName(v)) ? {}
+  const add = (v: string) => update((p) => (p.defenses.some((d) => !d.from && d.kind === kind && normName(d.name) === normName(v)) ? {}
     : { defenses: [...p.defenses, { id: newId(), kind, name: v }] }));
   // Removing a row removes its hand entries; a row that only grants hold removes those (its sources are listed first).
   const remove = (ids: string[]) => update((p) => {

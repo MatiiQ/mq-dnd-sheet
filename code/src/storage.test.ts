@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import { isActive } from './links';
 import { longRest } from './logic';
-import { addToStore, applyPatch, deleteFromStore, exportStore, freshList, initialStore, load, openExampleOnNextLoad, persistStore, switchStore, writeBackup, type Store } from './storage';
+import { addToStore, applyPatch, deleteFromStore, exportStore, freshList, initialStore, load, openExampleOnNextLoad, persistStore, rawBackup, switchStore, unreadableSheets, writeBackup, type Store } from './storage';
 
 const renamed = (): Store => ({
   id: 'a', list: [{ id: 'a', name: 'Ilyra Moonbrook' }, { id: 'b', name: 'Other' }],
@@ -30,7 +30,9 @@ const stubStorage = (fail: (n: number) => boolean = () => false) => {
   vi.stubGlobal('localStorage', {
     getItem: (k: string) => m.get(k) ?? null,
     setItem: (k: string, v: string) => { if (fail(n++)) throw new Error('QuotaExceededError'); m.set(k, v); },
-    removeItem: (k: string) => { m.delete(k); }
+    removeItem: (k: string) => { m.delete(k); },
+    get length() { return m.size; },
+    key: (i: number) => [...m.keys()][i] ?? null
   });
   return m;
 };
@@ -57,16 +59,124 @@ describe('backup import', () => {
 
 describe('unreadable sheet', () => {
   afterEach(() => { vi.unstubAllGlobals(); });
-  it('keeps a copy of the raw text before falling back to the sample, never overwriting an earlier copy', () => {
+  it('keeps a copy of the raw text before opening blank, never overwriting an earlier copy', () => {
     const m = stubStorage();
     m.set('dnd-sheet-v3:x', '{not json');
-    expect(load('x').ch.name).toBe(sampleCharacter().ch.name);
+    expect(load('x').inv).toEqual([]);
     expect(m.get('dnd-sheet-v3:x:unreadable')).toBe('{not json');
     m.set('dnd-sheet-v3:x', '{second');
     load('x');
     expect(m.get('dnd-sheet-v3:x:unreadable')).toBe('{not json');
   });
 });
+
+describe('reaching every saved character', () => {
+  afterEach(() => { vi.unstubAllGlobals(); });
+  const named = (name: string) => JSON.stringify({ ...blankCharacter(), ch: { ...blankCharacter().ch, name } });
+  it('rebuilds the list when the index is unreadable', () => {
+    const m = stubStorage();
+    m.set('dnd-index-v3', '{bad');
+    m.set('dnd-sheet-v3:a', named('Ann'));
+    const s = initialStore();
+    expect(s.list.map((x) => x.id)).toEqual(['a']);
+    expect(s.id).toBe('a');
+    expect(s.c.ch.name).toBe('Ann');
+    expect(s.list[0].name).toBe('Ann');
+  });
+  it('adds a sheet missing from a good index, keeping the active one', () => {
+    const m = stubStorage();
+    m.set('dnd-index-v3', JSON.stringify({ active: 'a', list: [{ id: 'a', name: 'Ann' }] }));
+    m.set('dnd-sheet-v3:a', named('Ann'));
+    m.set('dnd-sheet-v3:b', named('Bob'));
+    const s = initialStore();
+    expect(s.id).toBe('a');
+    expect(s.list.map((x) => x.name)).toEqual(['Ann', 'Bob']);
+  });
+  it('never lists an :unreadable key as a character', () => {
+    const m = stubStorage();
+    m.set('dnd-sheet-v3:a:unreadable', '{bad');
+    expect(initialStore()).toMatchObject({ id: 'example:ilyra', list: [] });
+  });
+  it('names a rebuilt entry whose sheet does not parse', () => {
+    const m = stubStorage();
+    m.set('dnd-sheet-v3:a', 'not json');
+    expect(initialStore().list).toEqual([{ id: 'a', name: 'Unreadable character' }]);
+  });
+  it('rawBackup holds a sheet missing from the index', () => {
+    const m = stubStorage();
+    m.set('dnd-index-v3', JSON.stringify({ active: 'a', list: [{ id: 'a', name: 'Ann' }] }));
+    m.set('dnd-sheet-v3:a', named('Ann'));
+    m.set('dnd-sheet-v3:b', named('Bob'));
+    expect(rawBackup().characters.map((x) => (x as { ch: { name: string } }).ch.name)).toEqual(['Ann', 'Bob']);
+  });
+  it('opens an unreadable sheet blank, under its name, with a notice', () => {
+    const m = stubStorage();
+    m.set('dnd-index-v3', JSON.stringify({ active: 'x', list: [{ id: 'x', name: 'Mine' }] }));
+    m.set('dnd-sheet-v3:x', 'not json');
+    const c = load('x');
+    expect(c.ch.name).toBe('Mine');
+    expect(c.inv).toEqual([]);
+    expect(c.restMsg?.title).toBe('Save can’t be read');
+    expect(m.get('dnd-sheet-v3:x:unreadable')).toBe('not json');
+  });
+  it('does not promise a copy it could not keep', () => {
+    const m = stubStorage();
+    m.set('dnd-sheet-v3:x', 'not json');
+    const setItem = localStorage.setItem;
+    localStorage.setItem = () => { throw new Error('full'); };
+    const body = load('x').restMsg?.body;
+    localStorage.setItem = setItem;
+    expect(body).toContain('no copy');
+    expect(body).not.toContain('stays on this device');
+  });
+  it.each([['5'], ['[]'], ['"x"']])('treats %s as unreadable', (raw) => {
+    const m = stubStorage();
+    m.set('dnd-sheet-v3:x', raw);
+    const c = load('x');
+    expect(c.inv).toEqual([]);
+    expect(c.restMsg?.title).toBe('Save can’t be read');
+    expect(m.get('dnd-sheet-v3:x:unreadable')).toBe(raw);
+  });
+  it('says a missing sheet is missing', () => {
+    const m = stubStorage();
+    const c = load('x');
+    expect(c.restMsg?.body).toContain('missing');
+    expect(m.has('dnd-sheet-v3:x:unreadable')).toBe(false);
+  });
+  it('carries unreadable text in both backups, unopened ones too', () => {
+    const m = stubStorage();
+    m.set('dnd-index-v3', JSON.stringify({ active: 'a', list: [{ id: 'a', name: 'Ann' }, { id: 'b', name: 'Bad' }, { id: 'n', name: 'Num' }] }));
+    m.set('dnd-sheet-v3:a', named('Ann'));
+    m.set('dnd-sheet-v3:b', '{bad');
+    m.set('dnd-sheet-v3:n', '5');
+    m.set('dnd-sheet-v3:old:unreadable', 'old text');
+    const want = [{ key: 'dnd-sheet-v3:b', text: '{bad' }, { key: 'dnd-sheet-v3:n', text: '5' }, { key: 'dnd-sheet-v3:old:unreadable', text: 'old text' }];
+    expect(unreadableSheets()).toEqual(want);
+    expect(rawBackup().unreadable).toEqual(want);
+    const data = exportStore(initialStoreOf('a'));
+    expect(data.unreadable).toEqual(want);
+    expect(data.characters).toHaveLength(1);
+    expect(rawBackup().characters).toHaveLength(1);
+  });
+  it('adds no unreadable field to a clean backup', () => {
+    const m = stubStorage();
+    m.set('dnd-sheet-v3:a', named('Ann'));
+    expect(rawBackup()).not.toHaveProperty('unreadable');
+  });
+  it('import ignores the unreadable field', () => {
+    const m = stubStorage();
+    const r = writeBackup({ ...backupOf(1), unreadable: [{ key: 'dnd-sheet-v3:b', text: '{bad' }] });
+    expect(r.added).toHaveLength(1);
+    expect(m.size).toBe(1);
+  });
+  it('counts entries without ch as failed', () => {
+    stubStorage();
+    const r = writeBackup({ app: 'dnd-character-sheet', version: 1, characters: [{ ch: {} }, { x: 1 }] });
+    expect(r.added).toHaveLength(1);
+    expect(r.failed).toBe(1);
+  });
+});
+const initialStoreOf = (id: string): Store => ({ id, list: [{ id: 'a', name: 'Ann' }, { id: 'b', name: 'Bad' }, { id: 'n', name: 'Num' }], c: blankCharacter() });
 
 describe('example characters', () => {
   afterEach(() => { vi.unstubAllGlobals(); });

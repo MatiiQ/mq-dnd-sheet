@@ -3187,7 +3187,9 @@
     "dur": "Concentration, up to 1 minute",
     "conc": true,
     "ritual": false,
-    "fx": "other"
+    "fx": "other",
+    "acFx": "bonus",
+    "acVal": 2
   },
   {
     "id": "spell/heal",

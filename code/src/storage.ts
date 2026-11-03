@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react';
-import { slug } from './catalog/schema';
+import { isObj, slug } from './catalog/schema';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
-import { migrate, newId, normalize } from './logic';
+import { newId, normalize } from './logic';
+import { migrate } from './migrate';
 import type { Character } from './types';
 
 const INDEX_KEY = 'dnd-index-v3';
-const sheetKey = (id: string) => 'dnd-sheet-v3:' + id;
+const SHEET_PREFIX = 'dnd-sheet-v3:';
+const sheetKey = (id: string) => SHEET_PREFIX + id;
+const UNREADABLE = ':unreadable';
 
 export interface IndexEntry { id: string; name: string; info?: string }
 export type Patch = Partial<Character> | ((c: Character) => Partial<Character>);
@@ -31,21 +34,47 @@ export const EXAMPLES: { id: string; make: () => Character }[] = [
 export const isExample = (id: string) => id.startsWith('example:');
 const example = (id: string) => EXAMPLES.find((x) => x.id === id);
 
-// A sheet that doesn't parse falls back to the sample, and the save effect then writes the sample over it.
-// So the raw text is copied to `<key>:unreadable` first. Only into an empty key: the first copy is never
+// Every key holding a sheet or a kept copy of one. Empty when storage is blocked.
+function sheetKeys(): string[] {
+  try {
+    return Array.from({ length: localStorage.length }, (_, i) => localStorage.key(i)).filter((k): k is string => !!k?.startsWith(SHEET_PREFIX));
+  } catch { return []; }
+}
+// The characters that have a sheet, whatever the index says.
+const sheetIds = () => sheetKeys().filter((k) => !k.endsWith(UNREADABLE)).map((k) => k.slice(SHEET_PREFIX.length)).filter((id) => !isExample(id));
+
+// Text that can't open as a character: kept copies, and sheets that don't hold a character, opened yet or not.
+export function unreadableSheets(): { key: string; text: string }[] {
+  try {
+    return sheetKeys().filter((k) => k.endsWith(UNREADABLE) || !isObj(readJSON(k))).map((key) => ({ key, text: localStorage.getItem(key) ?? '' }));
+  } catch { return []; }
+}
+
+// A sheet that isn't a character (it doesn't parse, or parses to `5`) opens blank, and the save effect then writes the
+// blank over it. So the raw text is copied to `<key>:unreadable` first. Only into an empty key: the first copy is never
 // overwritten, which also makes this safe to repeat inside setS updaters (StrictMode runs them twice).
 // Deleting the character leaves the copy behind on purpose, as it is the only copy of that data.
 export function load(id: string): Character {
   const ex = example(id);
   if (ex) return ex.make();
   const key = sheetKey(id), data = readJSON(key);
-  if (data === null) {
-    try {
-      const raw = localStorage.getItem(key);
-      if (raw && localStorage.getItem(key + ':unreadable') === null) localStorage.setItem(key + ':unreadable', raw);
-    } catch { /* ignore */ }
-  }
-  return migrate(data);
+  if (isObj(data)) return migrate(data);
+  let raw: string | null = null, kept = false;
+  try {
+    raw = localStorage.getItem(key);
+    if (raw && localStorage.getItem(key + UNREADABLE) === null) localStorage.setItem(key + UNREADABLE, raw);
+    kept = true;
+  } catch { /* ignore */ }
+  const blank = blankCharacter();
+  const list = (readJSON(INDEX_KEY) as { list?: unknown } | null)?.list;
+  const name = Array.isArray(list) ? list.find((x) => x?.id === id)?.name : undefined;
+  return {
+    ...blank,
+    ch: { ...blank.ch, ...(typeof name === 'string' ? { name } : {}) },
+    restMsg: raw
+      ? { title: 'Save can’t be read', body: 'This character’s saved data couldn’t be read, so a blank sheet opened in its place. ' + (kept ? 'The old data stays on this device and goes into every backup file.' : 'Storage is full, so no copy of the old data could be kept.') }
+      : { title: 'Save missing', body: 'This character’s saved data is missing, so a blank sheet opened in its place.' }
+  };
 }
 export const charName = (c: Character) => c.ch.name || 'Unnamed character';
 export const charInfo = (c: Character) => [c.ch.species, (c.ch.cls || 'Level') + ' ' + c.level].filter((x) => x).join(' · ');
@@ -67,7 +96,12 @@ const firstExample = (list: IndexEntry[]): Store => ({ id: EXAMPLES[0].id, list,
 
 export function initialStore(): Store {
   const idx = readJSON(INDEX_KEY) as { active?: string; list?: IndexEntry[] } | null;
-  const saved = Array.isArray(idx?.list) ? idx.list.filter((x) => x && typeof x.id === 'string' && typeof x.name === 'string') : [];
+  const listed = Array.isArray(idx?.list) ? idx.list.filter((x) => x && typeof x.id === 'string' && typeof x.name === 'string') : [];
+  // A sheet the index doesn't name (a damaged index, a save that stopped halfway) still gets its entry.
+  const saved = [...listed, ...sheetIds().filter((id) => !listed.some((x) => x.id === id)).map((id) => {
+    const data = readJSON(sheetKey(id));
+    return isObj(data) ? entryOf(id, migrate(data)) : { id, name: 'Unreadable character' };
+  })];
   // An open example reopens fresh, even when your own list is empty.
   const ex = example(String(idx?.active));
   if (ex) return { id: ex.id, list: saved, c: ex.make() };
@@ -96,17 +130,18 @@ export function deleteFromStore(s: Store): Store {
 }
 
 const BACKUP_APP = 'dnd-character-sheet';
-const backup = (characters: unknown[]) => ({ app: BACKUP_APP, version: 1, exportedAt: new Date().toISOString(), characters });
+const backup = (characters: unknown[], unreadable: { key: string; text: string }[] = []) =>
+  ({ app: BACKUP_APP, version: 1, exportedAt: new Date().toISOString(), characters, ...(unreadable.length ? { unreadable } : {}) });
 
 // Your characters, the open one as it is now. An open example isn't in the list, so it's never exported.
-// Others are exported as stored, so an unreadable sheet is left out instead of being swapped for the sample.
-export const exportStore = (s: Store) => backup(freshList(s).map((x) => (x.id === s.id ? s.c : readJSON(sheetKey(x.id)))).filter((x) => x));
+// Others are exported as stored; an unreadable sheet goes into `unreadable` as text, which import ignores.
+export const exportStore = (s: Store) => backup(freshList(s).map((x) => (x.id === s.id ? s.c : readJSON(sheetKey(x.id)))).filter(isObj), unreadableSheets());
 
 // Every saved character exactly as stored, without loading it. Used by the crash screen.
 export function rawBackup() {
   const idx = readJSON(INDEX_KEY) as { list?: IndexEntry[] } | null;
   const ids = Array.isArray(idx?.list) ? idx.list.map((x) => x?.id) : [];
-  return backup(ids.map((id) => readJSON(sheetKey(String(id)))).filter((x) => x));
+  return backup([...new Set([...ids, ...sheetIds()])].map((id) => readJSON(sheetKey(String(id)))).filter(isObj), unreadableSheets());
 }
 
 // Offers a backup file: the share sheet on iPad (Save to Files / iCloud Drive), a download elsewhere.
@@ -129,8 +164,8 @@ export async function saveBackupFile(data: unknown, name?: string): Promise<stri
   return 'Backup downloaded.';
 }
 
-// Saves a backup's characters under new ids. Returns the ones that were saved and how many the browser refused
-// (storage full), so the index never lists a character that has no sheet.
+// Saves a backup's characters under new ids. Returns the ones that were saved and how many weren't (not a character,
+// or the browser refused: storage full), so the index never lists a character that has no sheet.
 export function writeBackup(data: unknown): { added: { id: string; c: Character }[]; failed: number } {
   const d = data as { app?: string; characters?: unknown[] } | null;
   if (!d || d.app !== BACKUP_APP || !Array.isArray(d.characters)) throw new Error('Not a character sheet backup file.');
@@ -138,7 +173,7 @@ export function writeBackup(data: unknown): { added: { id: string; c: Character 
   if (!chars.length) throw new Error('The backup has no characters.');
   const added = chars.map((c) => ({ id: newId(), c })).filter((a) => writeJSON(sheetKey(a.id), a.c));
   if (!added.length) throw new Error('The backup could not be saved: storage is full.');
-  return { added, failed: chars.length - added.length };
+  return { added, failed: d.characters.length - added.length };
 }
 
 // All characters, the active one, and every way to change them. Saves on each change.

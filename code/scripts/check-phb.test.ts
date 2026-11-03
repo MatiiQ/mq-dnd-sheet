@@ -1,9 +1,9 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { addedLines, findPhrases, scanPushRanges } from './check-phb.ts';
+import { addedLines, findPhrases, forbiddenPaths, scanPushRanges } from './check-phb.ts';
 import { normText } from './lib/text.ts';
 
 // The phrases below are invented; no PHB text in the repo.
@@ -17,6 +17,11 @@ it('reads added lines from ordinary and combined diffs, never the file headers',
     '@@@ -1,1 -1,1 +1,2 @@@', '- old', ' -other', '++secret', '+-removed in one parent', '+++1 bonus', '  same', 'commit bbb', 'diff --git a/b.txt b/b.txt', '--- a/b.txt', '+++ b/b.txt',
     '@@ -1 +1 @@', '-gone', '++plus first'].join('\n');
   expect([...addedLines(patch)]).toEqual([['aaa', ['secret', '+1 bonus']], ['bbb', ['+plus first']]]);
+});
+
+it('flags forbidden paths and binaries outside the icons', () => {
+  expect(forbiddenPaths('-\t-\tbook.pdf\n1\t0\treference/a.md\n1\t0\tresources/b.txt\n1\t0\tcode/scripts/local/t.ts\n-\t-\tcode/public/icons/i.png\n1\t0\tcode/src/a.ts\n'))
+    .toEqual(['book.pdf', 'reference/a.md', 'resources/b.txt', 'code/scripts/local/t.ts']);
 });
 
 describe('pushed commits', () => {
@@ -47,5 +52,23 @@ describe('pushed commits', () => {
     const merge = git('rev-parse', 'HEAD');
     expect(scanPushRanges([`refs/heads/main ${merge} refs/heads/main ${base}`], ['secret marker phrase'], dir)).not.toEqual([]);
     expect(scanPushRanges([`refs/heads/main ${merge} refs/heads/main ${git('rev-parse', 'HEAD^1')}`], ['secret marker phrase'], dir)).not.toEqual([]);
+  });
+  it('catches a binary file in a pushed commit', () => {
+    const { dir, git, base } = repo();
+    writeFileSync(join(dir, 'x.pdf'), Buffer.from([0, 1, 2])); git('add', '.'); git('commit', '-qm', 'add');
+    expect(scanPushRanges([`refs/heads/main ${git('rev-parse', 'HEAD')} refs/heads/main ${base}`], [], dir)).toEqual(['forbidden file in the push: x.pdf']);
+  });
+  it('lets a deleted binary through', () => {
+    const { dir, git } = repo();
+    writeFileSync(join(dir, 'x.pdf'), Buffer.from([0, 1, 2])); git('add', '.'); git('commit', '-qm', 'add');
+    const base = git('rev-parse', 'HEAD');
+    rmSync(join(dir, 'x.pdf')); git('add', '.'); git('commit', '-qm', 'remove');
+    expect(scanPushRanges([`refs/heads/main ${git('rev-parse', 'HEAD')} refs/heads/main ${base}`], [], dir)).toEqual([]);
+  });
+  it('catches a phrase in a commit message', () => {
+    const { dir, git, base } = repo();
+    writeFileSync(join(dir, 'a.txt'), 'changed\n'); git('commit', '-qam', 'about the secret marker phrase');
+    const head = git('rev-parse', 'HEAD');
+    expect(scanPushRanges([`refs/heads/main ${head} refs/heads/main ${base}`], ['secret marker phrase'], dir)).toEqual([`"secret marker phrase" in the message of commit ${head.slice(0, 10)}`]);
   });
 });

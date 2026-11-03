@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties, type InputHTMLAttributes, type ReactNode } from 'react';
 import { DAMAGE_TYPES } from '../catalog/schema';
-import { castFree, clamp, fmt, toggleEffect, type AcPart } from '../logic';
+import { acCanTargetOther, acOnOther, castFree, clamp, fmt, toggleAcTarget, toggleEffect, type AcPart } from '../logic';
 import { useSheet } from '../sheet';
 import type { Resource, Spell } from '../types';
 
@@ -63,8 +63,7 @@ export function RemoveButton({ name, onRemove, confirm }: { name: string; onRemo
   );
 }
 
-export function EntryActions({ name, canEdit, onEdit, onRemove, confirm }: { name: string; canEdit: boolean; onEdit?: () => void; onRemove: () => void; confirm?: ReactNode }) {
-  if (!canEdit) return null;
+export function EntryActions({ name, onEdit, onRemove, confirm }: { name: string; onEdit?: () => void; onRemove: () => void; confirm?: ReactNode }) {
   return (
     <div className="row">
       {onEdit && <button type="button" className="icon-btn" aria-label={'Edit ' + name} onClick={onEdit}><PencilIcon /></button>}
@@ -90,13 +89,13 @@ export function EntryRow({ name, before, head, side, body, onEdit, onRemove, rem
         {before}
         <button type="button" className="entry-head" aria-expanded={open} onClick={() => setOpen(!open)}>{head}</button>
         {side}
-        {edit && <EntryActions name={name} canEdit onEdit={onEdit} onRemove={onRemove} confirm={removeConfirm} />}
+        {edit && <EntryActions name={name} onEdit={onEdit} onRemove={onRemove} confirm={removeConfirm} />}
       </div>
       {children && <div className="entry-extra">{children}</div>}
       {open && (body || !edit) && (
         <div className="entry-body">
           {body}
-          {!edit && <EntryActions name={name} canEdit onEdit={onEdit} onRemove={onRemove} confirm={removeConfirm} />}
+          {!edit && <EntryActions name={name} onEdit={onEdit} onRemove={onRemove} confirm={removeConfirm} />}
         </div>
       )}
     </div>
@@ -171,6 +170,17 @@ export function EffectSwitch({ link, name }: { link: string; name: string }) {
   return (
     <button type="button" aria-pressed={on} aria-label={(on ? 'Switch off ' : 'Switch on ') + name} className={'btn btn-sm toggle-btn' + (on ? ' on' : '')}
       onClick={() => update((p) => toggleEffect(p, link))}>{on ? 'On' : 'Off'}</button>
+  );
+}
+
+// Who an AC spell is cast on. Only "me" counts in this character's AC; a Self spell has no choice to make.
+export function AcTargetSwitch({ sp }: { sp: Spell }) {
+  const { update } = useSheet();
+  if (!acCanTargetOther(sp)) return null;
+  const other = acOnOther(sp);
+  return (
+    <button type="button" aria-pressed={other} aria-label={'Cast ' + sp.name + ' on another creature, so it adds no AC'} className={'btn btn-sm toggle-btn' + (other ? ' on' : '')}
+      onClick={() => update((p) => toggleAcTarget(p, sp.id))}>{other ? 'On: other' : 'On: me'}</button>
   );
 }
 

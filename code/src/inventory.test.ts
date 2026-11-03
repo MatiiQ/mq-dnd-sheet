@@ -8,7 +8,8 @@ import {
   addSection, containerLoad, DEFAULT_SECTION, inventoryGroups, moveInto, moveSection, removeContainer, removeContainerSummary, removeSection, renameSection,
   setItemSection, takeOut
 } from './inventory';
-import { carriedWeight, fixContainers, migrate, normalize, removeItem } from './logic';
+import { removeRef, carriedWeight, fixContainers, normalize } from './logic';
+import { migrate } from './migrate';
 import { saveEntry } from './sheet';
 import { applyPatch } from './storage';
 import { shortsword } from './test-fixtures';
@@ -205,7 +206,7 @@ describe('containers', () => {
     expect(gone.inv).toEqual([]);
     expect(gone.coins).toEqual(c.coins);
     // The Edit-mode path: plain item removal.
-    expect(removeItem(c, 'bag')).toEqual(out);
+    expect(removeRef(c, { kind: 'item', id: 'bag' })).toEqual(out);
   });
 
   it('one bag row is one container whatever its quantity', () => {

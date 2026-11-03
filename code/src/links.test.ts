@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { sampleCharacter } from './defaults';
 import { activeGrants, fixLinks, hasActiveEffect, inactiveReason, isActive, parseLink, sourceLabel, wouldLoop } from './links';
-import { castSpell, effectsAfterEdit, longRest, migrate, toggleEffect } from './logic';
+import { castSpell, effectsAfterEdit, longRest, toggleEffect } from './logic';
+import { migrate } from './migrate';
 import type { Character, Feature, Grant, Item } from './types';
 
 const make = (p: Partial<Character> = {}): Character => ({ ...sampleCharacter(), ...p });
@@ -172,6 +173,12 @@ describe('items inside a container (plan 6)', () => {
     const custom = g();
     delete custom.needEq; delete custom.needAtt;
     expect(inactiveReason(c, custom)).toBe('in Bag of Holding');
+  });
+
+  it('a grant from an item with quantity 0 does not count, with or without the item checks', () => {
+    const gone = { ...ring, in: undefined, qty: 0 };
+    const custom = g({ needEq: undefined });
+    expect(inactiveReason(make({ inv: [gone], attuneIds: ['ring', '', ''] }), custom)).toBe('none left');
   });
 
   it('reads "in a container" when the container is missing', () => {

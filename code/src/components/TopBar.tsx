@@ -4,15 +4,15 @@ import { packSummary, parsePackFile } from '../catalog/pack';
 import { deletePack, getPack, putPack } from '../catalog/pack-db';
 import { SRD_VERSION } from '../catalog/schema';
 import { setLayoutMode, useLayoutMode, useWide, type LayoutMode } from '../layout';
-import { CONDITIONS, PILL_STATS, TABS, fmt, hpColor, maxHpOf, pillView, resPill, setConc, setPill, toggleAcSpell, type PillView, type RestEvent } from '../logic';
+import { acOnOther, acSpellIdle, CONDITIONS, PILL_STATS, TABS, fmt, hpColor, maxHpOf, pillView, resPill, setConc, setPill, toggleAcSpell, type PillView, type RestEvent } from '../logic';
 import { useSheet } from '../sheet';
 import { EXAMPLES, charInfo, charName, saveBackupFile, type CharacterStore } from '../storage';
-import type { Spell, Tab } from '../types';
+import type { Character, Spell, Tab } from '../types';
 import { CheckIcon, ChevronDown, ChevronRight, MenuIcon, PencilIcon, StarIcon, XIcon, useArmed } from './ui';
 
 const SECTION_LINKS = [['sec-hp', 'Hit Points'], ['sec-abilities', 'Abilities'], ['sec-senses', 'Senses'], ['sec-defenses', 'Defenses'], ['sec-conditions', 'Conditions'], ['sec-resources', 'Resources']];
 export const SECTION_IDS = [...SECTION_LINKS.map(([id]) => id), 'sec-tabs'];
-const acEffect = (sp: Spell) => (sp.acFx === 'bonus' ? fmt(sp.acVal || 0) + ' AC' : sp.acFx === 'base' ? 'AC ' + sp.acVal + ' + DEX' : 'AC ' + sp.acVal);
+const acEffect = (c: Character, sp: Spell) => (acOnOther(sp) ? 'on another creature' : acSpellIdle(c, sp) ? 'no effect in armor' : sp.acFx === 'bonus' ? fmt(sp.acVal || 0) + ' AC' : sp.acFx === 'base' ? 'AC ' + sp.acVal + ' + DEX' : 'AC ' + sp.acVal);
 const LAYOUTS: [LayoutMode, string][] = [['auto', 'Auto'], ['one', '1 column'], ['two', '2 columns']];
 
 interface Props {
@@ -158,8 +158,8 @@ export function TopBar({ store, activeSec, setActiveSec, menuOpen, setMenuOpen, 
             </button>
           )}
           {c.acOn.map((id) => c.spells.find((x) => x.id === id)).map((sp) => sp && (
-            <button key={sp.id} type="button" className="status-chip" onClick={() => update((p) => toggleAcSpell(p, sp.id))} aria-label={'End ' + sp.name + ' (' + acEffect(sp) + ')'}>
-              {sp.name} · {acEffect(sp)}<XIcon size={14} strokeWidth={2.5} />
+            <button key={sp.id} type="button" className="status-chip" onClick={() => update((p) => toggleAcSpell(p, sp.id))} aria-label={'End ' + sp.name + ' (' + acEffect(c, sp) + ')'}>
+              {sp.name} · {acEffect(c, sp)}<XIcon size={14} strokeWidth={2.5} />
             </button>
           ))}
           {condParts.length > 0 && (
@@ -244,7 +244,7 @@ function Menu({ store, onClose, onSwitched, onRest }: { store: CharacterStore; o
       const { added, failed } = store.importAll(JSON.parse(await file.text()));
       onSwitched(false, true);
       setBackupMsg('Imported ' + added + (added === 1 ? ' character.' : ' characters.') +
-        (failed ? ' ' + failed + ' could not be saved: storage is full.' : ''));
+        (failed ? ' ' + failed + ' could not be imported.' : ''));
     } catch (e) {
       setBackupMsg(e instanceof Error && e.message.includes('backup') ? e.message : 'That file could not be read as a backup.');
     }

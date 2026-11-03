@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { ABILITIES, AC_EFFECTS as APP_AC_EFFECTS, ARMORS, isEntry, SIZES } from '../logic';
+import { ABILITIES, ARMORS, SIZES } from '../logic';
+import { isEntry } from '../migrate';
 import items from '../data/srd/items.json';
 import srdSpells from '../data/srd/spells.json';
-import { ABILITY_KEYS, AC_EFFECTS, ARMOR_KINDS, catalogId, grantErrors, PHB_TO_SRD, SIZE_KEYS, slug, validateEntry, type ItemEntry, type SpellEntry } from './schema';
+import { ABILITY_KEYS, ARMOR_KINDS, catalogId, grantErrors, PHB_TO_SRD, SIZE_KEYS, slug, validateEntry, type ItemEntry, type SpellEntry } from './schema';
 
 describe('catalog ids', () => {
   it('slugs names: lower case, apostrophes dropped, other runs become -', () => {
@@ -171,7 +172,6 @@ describe('enum lists', () => {
   it('match the app lists they copy', () => {
     expect(new Set(ABILITY_KEYS)).toEqual(new Set(ABILITIES.map(([k]) => k)));
     expect(new Set(ARMOR_KINDS)).toEqual(new Set(ARMORS.map(([, k]) => k)));
-    expect(new Set(AC_EFFECTS)).toEqual(new Set(APP_AC_EFFECTS));
     expect(new Set(SIZE_KEYS)).toEqual(new Set(SIZES.map(([k]) => k)));
   });
 });
@@ -200,4 +200,13 @@ describe('grants on catalog spells', () => {
     expect(validateEntry({ ...spell, grants: [{ id: 'g1', kind: 'atkAbil', name: 'Shillelagh', ab: 'cast', when: 'active' }] })).toEqual([]);
     expect(validateEntry({ ...spell, lvl: 3, grants: [{ id: 'g1', kind: 'speed', name: 'x', mode: 'fly', val: '60', lvl: 1 }] })).toEqual([]);
   });
+});
+
+it.each(['constructor', 'toString', '__proto__', 'hasOwnProperty'])('makes an id from %s', (n) => {
+  expect(catalogId('spell', n)).toBe('spell/' + slug(n));
+});
+
+it('refuses dice as a resource maximum', () => {
+  expect(grantErrors({ id: 'g', kind: 'resource', name: 'X', recharge: 'long', max: '1d4' }, 'feature')).not.toEqual([]);
+  expect(grantErrors({ id: 'g', kind: 'resource', name: 'X', recharge: 'long', max: 'pb' }, 'feature')).toEqual([]);
 });

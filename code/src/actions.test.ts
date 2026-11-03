@@ -7,7 +7,8 @@ import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import { attacksPerAction, cantripDice, econOf, extraDamage, extraText, featureActions, hasMastery, lightExtra, masterySlots, otherWeapons, spellActions, unarmedStrike, weaponAbility, weaponAttacks, weaponProficient, type Use } from './actions';
 import { weaponKind } from './hands';
 import { takeOut } from './inventory';
-import { addGrants, migrate, normalize } from './logic';
+import { addGrants, normalize } from './logic';
+import { migrate } from './migrate';
 import { applyPatch } from './storage';
 import { dagger, dart, handaxe, handCrossbow, longbow, longsword, quarterstaff, rapier, shield, shortsword, spear } from './test-fixtures';
 import type { Character, Grant, Item, Prof, Spell } from './types';
@@ -471,6 +472,10 @@ describe('other weapons (plan 6)', () => {
     expect(otherWeapons(c).map((i) => i.id)).toEqual(['ls', 'dg']);
     expect(otherWeapons(takeOut(c, 'sw')).map((i) => i.id)).toEqual(['sw', 'ls', 'dg']);
   });
+  it('leaves out a weapon with quantity 0', () => {
+    const c = { ...blankCharacter(), inv: [dagger({ id: 'dg', qty: 0 }), longsword({ id: 'ls' })] };
+    expect(otherWeapons(c).map((i) => i.id)).toEqual(['ls']);
+  });
 });
 
 describe('critical hit range', () => {
@@ -499,5 +504,73 @@ describe('critical hit range', () => {
   it('comes through from the catalog’s Improved Critical', () => {
     const c = addFromCatalog(fighter([]), cat, cat.byId.get('feature/fighter/champion/improved-critical')!, { picks: {}, counted: {}, links: {} });
     expect(sword(c).crit).toBe('Critical Hit on 19–20');
+  });
+});
+
+it('survives a spell named Constructor', () => {
+  const sp = { id: 'x', name: 'Constructor', lvl: 1, time: 'Action', range: '30 ft', prep: true, fx: 'damage' as const, dmg: '1d6' };
+  const c = { ...sampleCharacter(), spells: [sp] };
+  expect(() => spellActions(c)).not.toThrow();
+  expect(spellActions(c)[0].note).toBeUndefined();
+});
+
+describe('typed grant filters', () => {
+  const sword = longsword({ id: 'w' });
+  const c = (g: Grant): Character => ({ ...blankCharacter(), inv: [sword], hands: ['w'], feats: [{ id: 'f', g: 'feat', name: 'Feat', desc: '' }], grants: [{ ...g, from: 'feature:f' }] });
+  it('matches a typed property', () => {
+    const on = c({ id: 'g', kind: 'atkBonus', name: 'Bonus', val: '1', prop: 'Versatile', from: '' });
+    expect(weaponAttacks(on, sword)[0].hit).toBe(weaponAttacks({ ...on, grants: [] }, sword)[0].hit + 1);
+  });
+  it('matches a typed Unarmed Strike', () => {
+    const u = unarmedStrike(c({ id: 'g', kind: 'dmgBonus', name: 'Claws', val: '2', weapon: 'Unarmed Strike', from: '' }));
+    expect(u.dmgParts.map((p) => p.label)).toContain('Claws');
+  });
+});
+
+it('falls back to the normal die for a blank Versatile die', () => {
+  const str16 = { ...blankCharacter(), abil: { ...blankCharacter().abil, str: 16 } };
+  for (const vers of [undefined, '']) {
+    const sword = longsword({ id: 'w', vers });
+    expect(weaponAttacks({ ...str16, inv: [sword], hands: ['w', 'w'] }, sword).find((a) => a.use === 'two-handed')!.dmg).toBe('1d8+3');
+  }
+});
+
+it('says 1 beam', () => {
+  const sp: Spell = { id: 'e', name: 'Eldritch Blast', lvl: 0, time: 'Action', range: '120 ft', atk: 'ranged', fx: 'damage', dmg: '1d10', dtype: 'Force', scale: 'beams', cid: 'spell/eldritch-blast' };
+  const dice = (level: number) => spellActions({ ...blankCharacter(), level, castAb: 'cha', spells: [sp] })[0].dice;
+  expect(dice(1)).toBe('1 beam × 1d10');
+  expect(dice(5)).toBe('2 beams × 1d10');
+});
+
+it('names a missing Proficiency Bonus', () => {
+  const sword = longsword({ id: 'w' });
+  const c: Character = { ...blankCharacter(), abil: { ...blankCharacter().abil, str: 16 }, inv: [sword], hands: ['w'] };
+  const a = weaponAttacks(c, sword)[0];
+  expect(a.hitParts).toContainEqual({ label: 'Proficiency Bonus', value: 0, note: 'no training' });
+  expect(a.hit).toBe(3);
+  const trained = weaponAttacks({ ...c, profs: [{ id: 'p', cat: 'weapon', name: 'Martial weapons' }] }, sword)[0];
+  expect(trained.hitParts).toContainEqual({ label: 'Proficiency Bonus', value: 2 });
+});
+
+describe('pinned rules', () => {
+  it('reach is 10 ft', () => {
+    const glaive = catItem('item/glaive'), sword = longsword({ id: 'w' });
+    const c: Character = { ...blankCharacter(), inv: [glaive, sword] };
+    expect(weaponAttacks(c, glaive)[0].range).toBe('Melee 10 ft');
+    expect(weaponAttacks(c, sword)[0].range).toBe('Melee 5 ft');
+  });
+  it('ranged bonuses skip Unarmed Strike', () => {
+    const c: Character = { ...blankCharacter(), feats: [{ id: 'f', g: 'feat', name: 'Feat', desc: '' }],
+      grants: [{ id: 'g', kind: 'atkBonus', name: 'Far', val: '2', weapon: 'unarmed-strike', amode: 'ranged', from: 'feature:f' }] };
+    expect(unarmedStrike(c).hitParts.map((p) => p.label)).not.toContain('Far');
+  });
+  it('the Light extra attack keeps a negative modifier', () => {
+    const at = (str: number): Character => ({ ...blankCharacter(), abil: { ...blankCharacter().abil, str, dex: 8 }, inv: [dagger({ id: 'a' }), dagger({ id: 'b' })], hands: ['a', 'b'] });
+    expect(lightExtra(at(8))!.dmg).toBe('1d4−1');
+    expect(lightExtra(at(16))!.dmg).toBe('1d4');
+  });
+  it('the third cantrip tier starts at 11', () => {
+    expect(cantripDice('1d10', 10)).toBe('2d10');
+    expect(cantripDice('1d10', 11)).toBe('3d10');
   });
 });

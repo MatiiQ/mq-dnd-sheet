@@ -1,13 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import srdEntries from '../data/srd/index';
 import { blankCharacter, sampleCharacter } from '../defaults';
-import { armorClass, migrate, removeFeature, removeSpell } from '../logic';
+import { removeRef, armorClass } from '../logic';
+import { migrate } from '../migrate';
 import { inactiveReason, isActive } from '../links';
 import { saveEntry } from '../sheet';
 import type { Character, Item, Spell } from '../types';
 import { mergeCatalog } from './merge';
 import type { Entry, FeatureEntry, ItemEntry, SpellEntry } from './schema';
 import {
+  keepPrep,
   addFromCatalog, armorBaseMissing, draftFromItem, featureCandidates, grantSpellName, withDetectedArmor, BLANK_ITEM, BLANK_SPELL, catForKind, countedDefault, draftFromSpell, spellFromForm, type SpellDraft, choicesOf, classIdOf, matchId, nestedEntries, subclassIdOf, type AddChoices, freeText, itemFromEntry, itemFromForm, missingPicks, needed, optionGroups, poolOptions, prereqMet, resolveChoices,
   spellFromEntry, spellSummary, validPicks, itemQuestions, itemStats, answeredName, type ItemAnswers, type ItemDraft
 } from './copy';
@@ -520,7 +522,7 @@ describe('addFromCatalog', () => {
     expect(fromOf(c, 'feature:' + feat.id).res).toHaveLength(1);
     expect(() => addFromCatalog(blank, cat, E('background/acolyte'), A({ abil: ['o2', 'o2', 'o3'] }))).toThrow();
     expect(() => addFromCatalog(blank, cat, E('background/acolyte'), A({}, { 'feat/magic-initiate': mi }))).toThrow();
-    const gone = removeFeature(c, bg.id);
+    const gone = removeRef(c, { kind: 'feature', id: bg.id });
     expect(gone.feats).toEqual([]);
     expect(gone.spells).toEqual([]);
     expect(gone.grants).toEqual([]);
@@ -561,7 +563,7 @@ describe('addFromCatalog', () => {
     const c = addFromCatalog(blankCharacter(), cat, E('spell/shillelagh'), A());
     const sp = c.spells[0];
     expect(c.grants).toEqual([expect.objectContaining({ kind: 'atkAbil', from: 'spell:' + sp.id })]);
-    expect(removeSpell(c, sp.id).grants).toEqual([]);
+    expect(removeRef(c, { kind: 'spell', id: sp.id }).grants).toEqual([]);
   });
 
   it('gives a spell granted by another entry its own grants, once, also when linked', () => {
@@ -580,7 +582,7 @@ describe('addFromCatalog', () => {
     const twice = addFromCatalog(picked, cat, E('feat/magic-initiate'), A(picks, undefined, { links: { 'g1-0': pid } }));
     expect(twice.grants.filter((g) => g.kind === 'atkAbil')).toHaveLength(1);
     const feat = twice.feats[0];
-    const after = removeFeature(twice, feat.id);
+    const after = removeRef(twice, { kind: 'feature', id: feat.id });
     expect(after.spells.map((x) => x.id)).toEqual([pid]);
     expect(after.grants.filter((g) => g.kind === 'atkAbil')).toHaveLength(1);
   });
@@ -665,7 +667,7 @@ describe('addFromCatalog', () => {
     expect(isActive(c, ls)).toBe(false);
     const kept = addFromCatalog({ ...blankCharacter(), ch: { ...blankCharacter().ch, species: 'Wood Elf' } }, cat, E('species/elf'), ans);
     expect(kept.ch.species).toBe('Wood Elf');
-    const gone = removeFeature(c, elf.id);
+    const gone = removeRef(c, { kind: 'feature', id: elf.id });
     expect([gone.feats, gone.spells, gone.senses, gone.defenses, gone.grants, gone.res]).toEqual([[], [], [], [], [], []]);
     const flat = A({}, {
       'trait/elf/elven-lineage': A({ lin: ['trait/elf/wood-elf'] }), 'trait/elf/wood-elf': A({ ab: ['wis'] }), 'trait/elf/keen-senses': A({ c1: ['o2'] })
@@ -921,5 +923,19 @@ describe('armor base AC in the custom item form', () => {
     expect(armorBaseMissing(armorDraft({ armor: 'heavy', acBase: '18' }))).toBe(false);
     expect(armorBaseMissing(armorDraft({ armor: 'shield' }))).toBe(false);
     expect(armorBaseMissing({ ...BLANK_ITEM, name: 'Rope' })).toBe(false);
+  });
+});
+
+describe('form details', () => {
+  const sp: Spell = { id: 's', name: 'Bless', lvl: 1, time: 'Action', range: '30 ft', always: true };
+  it('keeps a spell unprepared after unticking Always prepared', () => {
+    const edited: Spell = { ...sp, always: undefined, ...keepPrep(sp, false) };
+    expect(edited.prep).toBe(false);
+    expect(migrate(JSON.parse(JSON.stringify({ ...blankCharacter(), spells: [edited] }))).spells[0].prep).toBe(false);
+    expect(keepPrep({ ...sp, prep: true }, false)).toEqual({ prep: true });
+    expect(keepPrep(sp, true)).toEqual({});
+  });
+  it('reads a decimal comma in Holds', () => {
+    expect(itemFromForm({ ...BLANK_ITEM, name: 'Bag', kind: 'container', cap: '1,5' }).cap).toBe(1.5);
   });
 });

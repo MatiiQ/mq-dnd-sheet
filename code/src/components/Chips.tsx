@@ -1,10 +1,18 @@
-import { useState } from 'react';
-import { addGrants, grantChips, removeRef, type Chip, type GrantInput } from '../logic';
+import { useState, type ReactNode } from 'react';
+import { addGrants, grantChips, removalSummary, removeChip, type Chip, type GrantInput, type Ref } from '../logic';
 import { useSheet } from '../sheet';
 import type { SourceKind } from '../links';
+import type { Character } from '../types';
 import { GrantEditor } from './GrantEditor';
 import { jumpTo } from './nav';
 import { RemoveButton } from './ui';
+
+// What a removal confirm lists: everything else that goes, and what stays for the player to fix.
+export function removalNote(c: Character, ref: Ref): ReactNode {
+  const { goes, keep } = removalSummary(c, ref);
+  if (!goes.length && !keep.length) return undefined;
+  return <>{goes.length > 0 && <span>Also removes: {goes.join(', ')}</span>}{keep.map((k) => <span key={k}>{k}</span>)}</>;
+}
 
 // What a source gives, as chips. Tapping one jumps to where it lives; an inactive one says why.
 export function SourceChips({ link }: { link: string }) {
@@ -35,7 +43,7 @@ export function GrantList({ link, fromKind, pending, setPending }: { link: strin
       <div className="row wrap gap-6">
         {chips.map((x) => (
           <span key={x.ref.kind + x.ref.id} className="prof-chip">{x.label}
-            <RemoveButton name={x.label} onRemove={() => update((p) => removeRef(p, x.ref))} />
+            <RemoveButton name={x.label} onRemove={() => update((p) => removeChip(p, x.ref))} />
           </span>
         ))}
         {pending.map((g, i) => (
@@ -45,6 +53,7 @@ export function GrantList({ link, fromKind, pending, setPending }: { link: strin
         ))}
         {!chips.length && !pending.length && <span className="small">Nothing yet</span>}
       </div>
+      {link && <span className="small">Grants save at once; Cancel doesn’t undo them.</span>}
       {adding
         ? <GrantEditor fromKind={fromKind} onCancel={() => setAdding(false)} onAdd={(g) => {
           if (link) update((p) => addGrants(p, link, [g])); else setPending([...pending, g]);

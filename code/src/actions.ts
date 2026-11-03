@@ -10,7 +10,7 @@ import type { Ability, Character, Econ, Feature, Grant, Item, Spell } from './ty
 // The "Other weapons" list: weapons not in hand, equipped first. A weapon inside a container is left out: the player
 // takes it out first to wield it (plan 6).
 export const otherWeapons = (c: Character): Item[] =>
-  c.inv.filter((i) => isWeapon(i) && !i.in && !c.hands.includes(i.id)).sort((a, b) => Number(b.eq) - Number(a.eq));
+  c.inv.filter((i) => isWeapon(i) && !i.in && i.qty >= 1 && !c.hands.includes(i.id)).sort((a, b) => Number(b.eq) - Number(a.eq));
 
 // Weapon Mastery: the number of weapon kinds whose mastery properties the character can use, from the active
 // prof 'mastery' grants without a target (Fighter 3, 4 from level 4, PHB p.91; Ranger 2 …).
@@ -92,7 +92,7 @@ function grantFits(c: Character, g: Grant, it: Item, use: Use): boolean {
   if (g.cantrip) return false;
   if (g.wrange && g.wrange !== it.wrange) return false;
   if (g.amode && g.amode !== attackMode(use)) return false;
-  if (g.prop && !hasProp(it, g.prop)) return false;
+  if (g.prop && !hasProp(it, slug(g.prop))) return false;
   if (g.weapon && !weaponMatches(it, g.weapon)) return false;
   if (g.oneHand && (use === 'two-handed' || !aloneInOneHand(c, it))) return false;
   return true;
@@ -137,12 +137,13 @@ function attackFor(c: Character, it: Item, use: Use): { attack: WeaponAttack; di
   // items and neither text limits the other (SRD 5.2.1 Ammunition, +1, +2, or +3; Ammunition property, PHB p.213).
   const loaded = use === 'ranged' && it.load ? c.inv.find((x) => x.id === it.load)?.magic : undefined;
   const magic = [...(it.magic ? [{ label: 'Magic', value: it.magic }] : []), ...(loaded ? [{ label: 'Ammunition', value: loaded }] : [])];
-  const hitParts: AcPart[] = [{ label: abilityName(ab), value: mod }, ...(weaponProficient(c, it) ? [{ label: 'Proficiency Bonus', value: pb }] : []),
-    ...magic, ...grantParts(c, 'atkBonus', it, use)].filter((p) => p.value !== 0);
+  const profPart: AcPart = weaponProficient(c, it) ? { label: 'Proficiency Bonus', value: pb } : { label: 'Proficiency Bonus', value: 0, note: 'no training' };
+  const hitParts: AcPart[] = [{ label: abilityName(ab), value: mod }, profPart,
+    ...magic, ...grantParts(c, 'atkBonus', it, use)].filter((p: AcPart) => p.value !== 0 || p.note);
   const dmgParts: AcPart[] = [{ label: abilityName(ab), value: mod }, ...magic, ...grantParts(c, 'dmgBonus', it, use)].filter((p) => p.value !== 0);
   // An override's die (evaluated at the level with valueAt: num would read dice as 0) replaces the grip's die when its
   // average is larger, on either grip: Shillelagh's d12 beats a Quarterstaff's d6 and its two-handed d8.
-  let die = (use === 'two-handed' ? it.vers : it.dmg) ?? '';
+  let die = (use === 'two-handed' ? it.vers || it.dmg : it.dmg) ?? '';
   const overs = overridesFor(c, it, use);
   for (const g of overs) {
     const d = g.die ? valueAt(g.die, ctx) : 0;
@@ -176,7 +177,7 @@ export function unarmedStrike(c: Character): WeaponAttack & { dc: number } {
     const d = valueAt(g.die ?? '', ctx);
     if (typeof d === 'string' && average(d) > Math.max(1, average(die))) { die = d; dtype = g.dtype || 'Bludgeoning'; }
   }
-  const fits = (g: Grant) => !!g.weapon && g.weapon.split(',').map((x) => x.trim()).includes('unarmed-strike') && !g.wrange && !g.prop && !g.oneHand && g.amode !== 'ranged';
+  const fits = (g: Grant) => !!g.weapon && g.weapon.split(',').map(slug).includes('unarmed-strike') && !g.wrange && !g.prop && !g.oneHand && g.amode !== 'ranged';
   const bonus = (kind: 'atkBonus' | 'dmgBonus') => activeGrants(c, kind).filter(fits).map((g) => ({ label: g.name, value: num(c, g.val, g) }));
   const hitParts = [{ label: abilityName(ab), value: mod }, { label: 'Proficiency Bonus', value: pb }, ...bonus('atkBonus')].filter((p) => p.value !== 0);
   const dmgParts = [...(die ? [] : [{ label: 'Unarmed Strike', value: 1 }]), { label: abilityName(ab), value: mod }, ...bonus('dmgBonus')].filter((p) => p.value !== 0);
@@ -269,8 +270,9 @@ export function spellActions(c: Character): SpellAction[] {
     if (!(sp.lvl === 0 || spellUsable(c, sp)) || !isActive(c, sp)) continue;
     const effect = effectOf(c, sp);
     const key = spellKey(sp);
-    const [econ, econNote] = SPELL_ECON[key] ?? [econOf(sp.time), undefined];
-    const note = econNote ?? SPELL_NOTES[key];
+    // hasOwn: a spell can be named Constructor.
+    const [econ, econNote] = (Object.hasOwn(SPELL_ECON, key) ? SPELL_ECON[key] : undefined) ?? [econOf(sp.time), undefined];
+    const note = econNote ?? (Object.hasOwn(SPELL_NOTES, key) ? SPELL_NOTES[key] : undefined);
     const source = sourceLabel(c, sp);
     // Spells without the printed text (the examples, older saves) still say which dice a higher slot adds.
     const slotDie = /^(\d+d\d+)\/slot$/.exec(sp.scale ?? '')?.[1];
@@ -295,7 +297,8 @@ function spellRow(c: Character, sp: Spell, r: RowFields): Omit<SpellAction, 'nam
   let dice = r.dice ?? '';
   if (dice && spellKey(sp) === 'eldritch-blast') {
     // Eldritch Blast adds beams instead of dice (PHB p.267).
-    dice = `${cantripTier(c.level)} beams × ${dice}`;
+    const beams = cantripTier(c.level);
+    dice = `${beams} ${beams === 1 ? 'beam' : 'beams'} × ${dice}`;
   } else if (dice && r.scale === 'cantrip') {
     dice = diceText(cantripDice(dice, c.level), cantripBonus(c, sp));
   } else if (/\d+d\d+/.test(dice) && ((r.fx === 'healing' && r.healMod) || (r.fx === 'damage' && r.dmgMod))) {
