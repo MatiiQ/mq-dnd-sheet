@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { addGrants, grantChips, removeRef, type Chip, type GrantInput } from '../logic';
+import { addGrants, grantChips, removeChip, type Chip, type GrantInput } from '../logic';
 import { useSheet } from '../sheet';
 import type { SourceKind } from '../links';
 import { GrantEditor } from './GrantEditor';
@@ -35,7 +35,7 @@ export function GrantList({ link, fromKind, pending, setPending }: { link: strin
       <div className="row wrap gap-6">
         {chips.map((x) => (
           <span key={x.ref.kind + x.ref.id} className="prof-chip">{x.label}
-            <RemoveButton name={x.label} onRemove={() => update((p) => removeRef(p, x.ref))} />
+            <RemoveButton name={x.label} onRemove={() => update((p) => removeChip(p, x.ref))} />
           </span>
         ))}
         {pending.map((g, i) => (

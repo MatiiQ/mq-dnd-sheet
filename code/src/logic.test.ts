@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { newId } from './logic';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import {
-  ABILITIES, SKILLS, speedOf, armorSlowBy, stealthDisBy, acSpellIdle, untrainedArmor, grantChips, addGrants, findUnlinked, removalChain, removalSummary, removeFeature, removeResource, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, toggleEffect, dawn, refillFor, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, splitTraining, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, removeItem, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
+  ABILITIES, SKILLS, castAbOf, removeChip, speedOf, armorSlowBy, stealthDisBy, acSpellIdle, untrainedArmor, grantChips, addGrants, findUnlinked, removalChain, removalSummary, removeFeature, removeResource, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, toggleEffect, dawn, refillFor, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, splitTraining, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, removeItem, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
   num, setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, undoHp
 } from './logic';
 import { spellActions } from './actions';
@@ -1892,5 +1892,62 @@ describe('grants that do what they say', () => {
     const wis = addGrants({ ...blankCharacter(), castAb: 'wis', feats: [feat] }, 'feature:f', [{ spec: casting }]);
     expect(wis.castAb).toBe('wis');
     expect(grantChips(none, 'feature:f')[0].label).toContain('set slots by hand');
+  });
+});
+
+describe('links keep what they promise', () => {
+  const feat = { id: 'f', g: 'class' as const, name: 'Domain', desc: '' };
+  const bless: Spell = { id: 'b', name: 'Bless', lvl: 1, time: 'Action', range: '30 ft', prep: false };
+  const base = (sp: Spell, p: Partial<Character> = {}): Character => ({ ...blankCharacter(), castAb: 'wis', usePrep: true, feats: [feat], spells: [sp], ...p });
+  const link = (c: Character, spec: Partial<GrantSpec>) => addGrants(c, 'feature:f', [{ spec: { id: 'g', kind: 'spell', name: 'Bless', ...spec } as GrantSpec, link: c.spells[0].id }]);
+  it('a linked always-prepared grant makes the spell always prepared (PHB p.235)', () => {
+    const c = link(base(bless), { always: true });
+    expect(c.spells[0].always).toBe(true);
+    expect(spellUsable(c, c.spells[0])).toBe(true);
+    const prepared = base({ ...bless, prep: true });
+    expect(preparedCount(prepared)).toBe(1);
+    expect(preparedCount(link(prepared, { always: true }))).toBe(0);
+  });
+  it('a linked grant sets the casting ability', () => {
+    const light: Spell = { id: 'l', name: 'Light', lvl: 0, time: 'Action', range: 'Touch' };
+    const c = link(base(light), { castAb: 'cha' });
+    expect(castAbOf(c, c.spells[0])).toBe('cha');
+  });
+  it('removing the feature restores the spell', () => {
+    const gone = (c: Character) => removeRef(c, { kind: 'feature', id: 'f' }).spells[0];
+    const a = gone(link(base(bless), { always: true, castAb: 'cha' }));
+    expect(a).toEqual(bless);
+    const own = gone(link(base({ ...bless, castAb: 'int' }), { castAb: 'cha' }));
+    expect(own.castAb).toBe('int');
+    expect(own).not.toHaveProperty('linkCastAb');
+    const already = gone(link(base({ ...bless, always: true }), { always: true }));
+    expect(already.always).toBe(true);
+  });
+  it('the link fields survive save and reload', () => {
+    const c = link(base(bless), { always: true, castAb: 'cha' });
+    const back = migrate(JSON.parse(JSON.stringify(c)));
+    expect(back.spells[0]).toMatchObject({ linkAlways: true, linkCastAb: 'none' });
+    const bad = JSON.parse(JSON.stringify(c));
+    bad.spells[0].linkCastAb = 'x';
+    expect(migrate(bad).spells[0]).not.toHaveProperty('linkCastAb');
+  });
+  it('removing a linked chip drops only the link', () => {
+    const ki = { id: 'k', name: 'Ki', count: 3, max: 5, recharge: 'long' as const };
+    const c: Character = addGrants({ ...base(bless), res: [ki] }, 'feature:f', [{ spec: { id: 'g', kind: 'resource', name: 'Ki' } as GrantSpec, link: 'k' }]);
+    const after = removeChip(c, { kind: 'res', id: 'k' });
+    expect(after.res).toEqual([ki]);
+    const sp = link(base(bless), { always: true });
+    expect(removeChip(sp, { kind: 'spell', id: 'b' }).spells).toEqual([bless]);
+  });
+  it('removing an unlinked chip removes the entry', () => {
+    const c: Character = { ...base(bless), senses: [{ id: 's', name: 'Darkvision', range: '60 ft', from: 'feature:f' }] };
+    expect(removeChip(c, { kind: 'sense', id: 's' }).senses).toEqual([]);
+  });
+  it('words counted speeds by their own kind', () => {
+    const c: Character = { ...base(bless), speedBase: 35, speeds: { climb: 30, swim: 0, fly: 60, burrow: 0 } };
+    const keep = (g: Partial<Grant>) => removalSummary({ ...c, grants: [{ id: 'g', kind: 'speed', name: 'X', counted: true, from: 'feature:f', ...g } as Grant] }, { kind: 'feature', id: 'f' }).keep[0];
+    expect(keep({ mode: 'walk', val: '5' })).toBe('Speed 35 ft still includes +5 ft from Domain; lower it by hand');
+    expect(keep({ mode: 'climb', val: 'walk' })).toBe('Climb 30 ft still includes this grant');
+    expect(keep({ mode: 'fly', val: '60' })).toBe('Fly 60 ft still includes this grant');
   });
 });

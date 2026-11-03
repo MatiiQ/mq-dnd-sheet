@@ -835,7 +835,7 @@ const among = (...xs: unknown[]): FieldCheck => (v) => xs.includes(v);
 const SPELL_FIELDS: Record<string, FieldCheck> = {
   desc: isStr, school: isStr, classes: isStr, ritual: isBool, atk: among('melee', 'ranged'), save: among(...ABILITIES.map(([k]) => k)),
   fx: among('damage', 'healing', 'other'), dmg: isStr, dtype: isStr, scale: isStr, higher: isStr, healMod: (v) => v === true,
-  dmgMod: (v) => v === true, dtypes: isDtypes
+  dmgMod: (v) => v === true, dtypes: isDtypes, linkAlways: (v) => v === true, linkCastAb: among('none', ...ABILITIES.map(([k]) => k))
 };
 const ATTACK_FIELDS: Record<string, FieldCheck> = { econ: among('action', 'bonus', 'reaction', 'free', 'other'), group: among('weapon', 'other') };
 const ITEM_FIELDS: Record<string, FieldCheck> = {
@@ -1219,7 +1219,18 @@ export function addGrants(c: Character, from: string, inputs: GrantInput[]): Cha
       };
       out.res = [...out.res, { ...r, count: maxOf(c, r) ?? 0 }];
     } else if (s.kind === 'spell') {
-      if (input.link) { out = linkTo('spells', id); continue; }
+      if (input.link) {
+        // A linked spell takes what the grant promises (always prepared, PHB p.235; its own casting ability) and records
+        // it, so removing the link undoes exactly that (unlinkEntry).
+        const ab = ABILITIES.find(([k]) => k === s.castAb)?.[0];
+        out = linkTo('spells', id);
+        out.spells = out.spells.map((x) => (x.id !== id ? x : {
+          ...x,
+          ...(s.always && !x.always ? { always: true, linkAlways: true as const } : {}),
+          ...(ab && ab !== x.castAb ? { castAb: ab, linkCastAb: x.castAb ?? 'none' } : {})
+        }));
+        continue;
+      }
       const { prep: _prep, ...sp } = input.spell ?? { name: s.name, lvl: 0, time: '', range: '' };
       const castAb = ABILITIES.find(([k]) => k === s.castAb)?.[0];
       // A spell with neither flag would load as prepared (migrate), so a granted one is always prepared or unprepared.
@@ -1259,6 +1270,13 @@ export function removalChain(c: Character, ref: Ref): Ref[] {
   return out;
 }
 
+// An entry a grant only linked, without the link: back to how it was before the grant.
+function unlinkEntry<T extends Entry>(x: T): T {
+  const { from: _f, linked: _l, srcKind: _k, linkAlways, linkCastAb, always, castAb, ...rest } = x as T & Pick<Spell, 'linkAlways' | 'linkCastAb' | 'always' | 'castAb'>;
+  const ab = linkCastAb === undefined ? castAb : linkCastAb === 'none' ? undefined : linkCastAb;
+  return dropLinkOnly({ ...rest, ...(always && !linkAlways ? { always } : {}), ...(ab ? { castAb: ab } : {}) } as unknown as T);
+}
+
 // The one removal path for features, items, spells, resources, senses, defenses, grants and attacks (roadmap). Removes
 // the chain; entries a grant only linked lose the link (from, linked and the srcKind it set) and keep everything else.
 export function removeRef(c0: Character, ref: Ref): Character {
@@ -1269,11 +1287,7 @@ export function removeRef(c0: Character, ref: Ref): Character {
   const spells = gone('spell'), res = gone('res'), items = gone('item');
   const c = items.length ? setHands(c0, c0.hands.filter((id) => !items.includes(id))) : c0;
   const links = chain.map(refLink).filter((l): l is string => !!l);
-  const unlinkIt = <T extends Entry>(x: T): T => {
-    if (!x.linked || !links.includes(x.from!)) return x;
-    const { from: _f, linked: _l, srcKind: _k, ...rest } = x;
-    return dropLinkOnly(rest as T);
-  };
+  const unlinkIt = <T extends Entry>(x: T): T => (x.linked && links.includes(x.from!) ? unlinkEntry(x) : x);
   const out = { ...c };
   for (const [list, kind] of LIST_KIND) {
     const ids = gone(kind);
@@ -1295,6 +1309,13 @@ export function removeRef(c0: Character, ref: Ref): Character {
   return { ...out, ...(c.conc && spells.includes(c.conc.id) ? setConc(null) : {}) };
 }
 
+// Removing a chip in a source's form: a linked entry was on the sheet first, so only the link goes.
+export function removeChip(c: Character, ref: Ref): Character {
+  const list = LIST_KIND.find(([, k]) => k === ref.kind)?.[0];
+  if (!list || !(c[list] as Entry[]).some((x) => x.id === ref.id && x.linked)) return removeRef(c, ref);
+  return { ...c, [list]: (c[list] as Entry[]).map((x) => (x.id === ref.id ? unlinkEntry(x) : x)) };
+}
+
 // What a removal confirm shows: the names of everything else that goes, and what stays and needs the player: typed
 // numbers that already include a counted grant (the app can't tell which part of a typed value it was), and entries
 // that were only linked.
@@ -1309,7 +1330,8 @@ export function removalSummary(c: Character, ref: Ref): { goes: string[]; keep: 
     if (!g?.counted) continue;
     const src = sourceOf(c, g.from)?.name ?? g.name, v = num(c, g.val, g);
     if (g.kind === 'abil' && g.ab) keep.push(`${g.ab.toUpperCase()} ${effScore(c, g.ab as Ability)} still includes ${fmt(v)} from ${src}${hand}`);
-    else if (g.kind === 'speed') keep.push(`Speed ${walkSpeed(c)} ft still includes ${fmt(v)} ft from ${src}${hand}`);
+    else if (g.kind === 'speed' && g.mode === 'walk') keep.push(`Speed ${walkSpeed(c)} ft still includes ${fmt(v)} ft from ${src}${hand}`);
+    else if (g.kind === 'speed' && g.mode) keep.push(`${capital(g.mode)} ${modeSpeed(c, g.mode as SpeedKind).base} ft still includes this grant`);
     else if (g.kind === 'init') keep.push(`Initiative ${fmt(initiative(c))} still includes ${fmt(v)} from ${src}${hand}`);
     else if (g.kind === 'hpLvl') keep.push(`Max HP ${maxHpOf(c)} still includes ${fmt(v * c.level)} from ${src}${hand}`);
     else if (g.kind === 'ac' && g.acMode === 'bonus') keep.push(`AC ${armorClass(c).total} still includes ${fmt(v)} from ${src} (in the custom AC bonuses)${hand}`);
