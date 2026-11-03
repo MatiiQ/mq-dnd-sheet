@@ -63,8 +63,7 @@ export function RemoveButton({ name, onRemove, confirm }: { name: string; onRemo
   );
 }
 
-export function EntryActions({ name, canEdit, onEdit, onRemove, confirm }: { name: string; canEdit: boolean; onEdit?: () => void; onRemove: () => void; confirm?: ReactNode }) {
-  if (!canEdit) return null;
+export function EntryActions({ name, onEdit, onRemove, confirm }: { name: string; onEdit?: () => void; onRemove: () => void; confirm?: ReactNode }) {
   return (
     <div className="row">
       {onEdit && <button type="button" className="icon-btn" aria-label={'Edit ' + name} onClick={onEdit}><PencilIcon /></button>}
@@ -90,13 +89,13 @@ export function EntryRow({ name, before, head, side, body, onEdit, onRemove, rem
         {before}
         <button type="button" className="entry-head" aria-expanded={open} onClick={() => setOpen(!open)}>{head}</button>
         {side}
-        {edit && <EntryActions name={name} canEdit onEdit={onEdit} onRemove={onRemove} confirm={removeConfirm} />}
+        {edit && <EntryActions name={name} onEdit={onEdit} onRemove={onRemove} confirm={removeConfirm} />}
       </div>
       {children && <div className="entry-extra">{children}</div>}
       {open && (body || !edit) && (
         <div className="entry-body">
           {body}
-          {!edit && <EntryActions name={name} canEdit onEdit={onEdit} onRemove={onRemove} confirm={removeConfirm} />}
+          {!edit && <EntryActions name={name} onEdit={onEdit} onRemove={onRemove} confirm={removeConfirm} />}
         </div>
       )}
     </div>

@@ -64,7 +64,7 @@ export function Vitals() {
                   <span>{m.name}</span>
                   <div className="row gap-8">
                     <strong>{fmt(m.val)}</strong>
-                    <EntryActions name={m.name} canEdit={edit}
+                    <EntryActions name={m.name}
                       onEdit={() => f.openEdit(m.id, { name: m.name, val: m.val })}
                       onRemove={() => update((p) => ({ acMods: removeEntry(p.acMods, m.id) }))} />
                   </div>

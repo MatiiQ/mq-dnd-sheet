@@ -3,7 +3,7 @@ import { PROF_NAMES, type ProfCat } from '../../catalog/names';
 import { entriesOf } from '../../catalog/merge';
 import { useCatalog } from '../../catalog/useCatalog';
 import { hasActiveEffect, linkOf, sourceLabel } from '../../links';
-import { addGrants, grantChips, newId, normName, profList, removeFeature, type GrantInput } from '../../logic';
+import { removeRef, addGrants, grantChips, newId, normName, profList, type GrantInput } from '../../logic';
 import { removeEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { Character, Feature, FeatureGroup, SrcKind } from '../../types';
 import { GrantList, removalNote, SourceChips } from '../Chips';
@@ -79,7 +79,7 @@ export function FeaturesTab() {
                       {src && <span className="muted">Source: {src}</span>}
                     </> : undefined}
                     onEdit={() => f.openEdit(x.id, { g: x.g || 'other', name: x.name, desc: x.desc || '', from: x.from, srcKind: x.srcKind, srcName: x.srcName, pending: [] })}
-                    onRemove={() => update((p) => removeFeature(p, x.id))}
+                    onRemove={() => update((p) => removeRef(p, { kind: 'feature', id: x.id }))}
                     removeConfirm={removalNote(c, { kind: 'feature', id: x.id })}>
                     {grantChips(c, link).length > 0 && <SourceChips link={link} />}
                   </EntryRow>

@@ -1,7 +1,7 @@
 import { useState, type CSSProperties } from 'react';
 import { armorBaseMissing, BLANK_ITEM, catForKind, draftFromItem, itemFromForm, itemStats, withDetectedArmor, WEAPON_PROPS, type ItemDraft, type ItemKind, type WeaponProp } from '../../catalog/copy';
 import { isValue } from '../../catalog/value';
-import { CARRY_MULT, SIZES, regainLabel, capital, coinWeight, maxFields, maxOf, rechargeOf, regainEvent, carriedWeight, carryCapacity, carryUpOf, sizeOf, effScore, fmt, addGrants, grantChips, isContainer, newId, removeItem, type GrantInput } from '../../logic';
+import { removeRef, CARRY_MULT, SIZES, regainLabel, capital, coinWeight, maxFields, maxOf, rechargeOf, regainEvent, carriedWeight, carryCapacity, carryUpOf, sizeOf, effScore, fmt, addGrants, grantChips, isContainer, newId, type GrantInput } from '../../logic';
 import {
   addSection, containerLoad, DEFAULT_SECTION, inventoryGroups, moveInto, moveSection, removeContainer, removeContainerSummary, removeSection, renameSection,
   setItemSection, takeOut
@@ -236,7 +236,7 @@ export function InventoryTab() {
           </div>}
           body={info || moves ? <>{info && <span className="entry-desc">{info}</span>}{moves}</> : undefined}
           onEdit={() => f.openEdit(it.id, { ...draftFromItem(it), pending: [] })}
-          onRemove={() => update((p) => (isContainer(it) ? removeContainer(p, it.id, removeMode(it)) : removeItem(p, it.id)))}
+          onRemove={() => update((p) => (isContainer(it) ? removeContainer(p, it.id, removeMode(it)) : removeRef(p, { kind: 'item', id: it.id })))}
           removeConfirm={isContainer(it) && holds(it) ? bagConfirm(it) : removalNote(c, { kind: 'item', id: it.id })}>
           {(gives || away) && <>
             {gives && <SourceChips link={linkOf('item', it.id)} />}

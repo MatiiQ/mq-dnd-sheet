@@ -3,7 +3,7 @@ import {
   attacksPerAction, extraDamage, extraText, featureActions, lightExtra, masterySlots, otherWeapons, spellActions, unarmedStrike, weaponAttacks,
   type SpellAction, type WeaponAttack
 } from '../../actions';
-import { capWords, dtypeText } from '../../catalog/copy';
+import { capWords, dtypeText, titled } from '../../catalog/copy';
 import { entriesOf } from '../../catalog/merge';
 import { useCatalog } from '../../catalog/useCatalog';
 import { canLoad, hasProp, isWeapon, putAway, putInHand, shieldOn as shieldOf, twoHanded, versatile, weaponKind, weaponsHeld } from '../../hands';
@@ -17,7 +17,6 @@ const ECON: Record<Econ, string> = { action: 'Action', bonus: 'Bonus Action', re
 type Filter = 'all' | 'action' | 'bonus' | 'reaction';
 const FILTERS: [Filter, string][] = [['all', 'All'], ['action', 'Action'], ['bonus', 'Bonus'], ['reaction', 'Reaction']];
 const USE_LABEL: Record<WeaponAttack['use'], string> = { melee: '', thrown: 'thrown', ranged: '', 'two-handed': 'two hands' };
-const title = (s: string) => s.split(/[-\s]/).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 const propsText = (p: string) => p.split(',').filter(Boolean).map(capWords).join(', ');
 const NO_SHIELD = 'Take off the Shield first';
 
@@ -135,7 +134,7 @@ export function ActionsTab() {
   const weaponRow = (it: Item, a: WeaponAttack, controls: boolean) => shows(a.econ) && (
     <ActRow key={it.id + a.use} econ={a.econ}
       name={a.name + (USE_LABEL[a.use] ? ' · ' + USE_LABEL[a.use] : '')}
-      sub={[a.range, propsText(a.props), a.mastery && 'Mastery: ' + title(a.mastery), a.crit].filter(Boolean).join(' · ')}
+      sub={[a.range, propsText(a.props), a.mastery && 'Mastery: ' + titled(a.mastery), a.crit].filter(Boolean).join(' · ')}
       side={<AttackNums hit={fmt(a.hit)} dmg={a.dmg + ' ' + a.dtype} />}
       extra={controls ? <>{handButtons(it)}{a.use === 'ranged' && ammoPicker(it)}</> : undefined}
       body={<>
@@ -162,10 +161,10 @@ export function ActionsTab() {
   // ---- mastery ----
   const slots = masterySlots(c);
   const catItem = (kind: string) => { const e = cat?.byId.get('item/' + kind); return e?.kind === 'item' ? e : undefined; };
-  const kindName = (kind: string) => c.inv.find((i) => isWeapon(i) && weaponKind(i) === kind)?.name ?? catItem(kind)?.name ?? title(kind);
+  const kindName = (kind: string) => c.inv.find((i) => isWeapon(i) && weaponKind(i) === kind)?.name ?? catItem(kind)?.name ?? titled(kind);
   const kindMastery = (kind: string) => c.inv.find((i) => isWeapon(i) && weaponKind(i) === kind && i.mastery)?.mastery ?? catItem(kind)?.mastery;
   const counted = c.mastery.slice(0, slots);
-  const masteryLine = counted.map((k) => kindName(k) + (kindMastery(k) ? ' (' + title(kindMastery(k)!) + ')' : '')).join(', ');
+  const masteryLine = counted.map((k) => kindName(k) + (kindMastery(k) ? ' (' + titled(kindMastery(k)!) + ')' : '')).join(', ');
   const options = [...new Set([
     ...(cat ? entriesOf(cat, 'item').filter((e) => e.cat === 'weapon' && e.mastery).map((e) => e.id.split('/').pop()!) : []),
     ...c.inv.filter((i) => isWeapon(i) && i.mastery).map(weaponKind), ...c.mastery
@@ -188,7 +187,7 @@ export function ActionsTab() {
               const i = c.mastery.indexOf(k), on = i >= 0;
               return (
                 <button key={k} type="button" className="filter-btn tall" aria-pressed={on} onClick={() => toggleMastery(k)}>
-                  {kindName(k)}{kindMastery(k) ? ' (' + title(kindMastery(k)!) + ')' : ''}{on && i >= slots ? ' · not counting' : ''}
+                  {kindName(k)}{kindMastery(k) ? ' (' + titled(kindMastery(k)!) + ')' : ''}{on && i >= slots ? ' · not counting' : ''}
                 </button>
               );
             })}

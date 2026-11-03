@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { ABILITIES, AC_EFFECTS as APP_AC_EFFECTS, ARMORS, isEntry, SIZES } from '../logic';
+import { ABILITIES, ARMORS, SIZES } from '../logic';
+import { isEntry } from '../migrate';
 import items from '../data/srd/items.json';
 import srdSpells from '../data/srd/spells.json';
-import { ABILITY_KEYS, AC_EFFECTS, ARMOR_KINDS, catalogId, grantErrors, PHB_TO_SRD, SIZE_KEYS, slug, validateEntry, type ItemEntry, type SpellEntry } from './schema';
+import { ABILITY_KEYS, ARMOR_KINDS, catalogId, grantErrors, PHB_TO_SRD, SIZE_KEYS, slug, validateEntry, type ItemEntry, type SpellEntry } from './schema';
 
 describe('catalog ids', () => {
   it('slugs names: lower case, apostrophes dropped, other runs become -', () => {
@@ -171,7 +172,6 @@ describe('enum lists', () => {
   it('match the app lists they copy', () => {
     expect(new Set(ABILITY_KEYS)).toEqual(new Set(ABILITIES.map(([k]) => k)));
     expect(new Set(ARMOR_KINDS)).toEqual(new Set(ARMORS.map(([, k]) => k)));
-    expect(new Set(AC_EFFECTS)).toEqual(new Set(APP_AC_EFFECTS));
     expect(new Set(SIZE_KEYS)).toEqual(new Set(SIZES.map(([k]) => k)));
   });
 });

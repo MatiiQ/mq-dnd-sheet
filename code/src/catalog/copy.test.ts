@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import srdEntries from '../data/srd/index';
 import { blankCharacter, sampleCharacter } from '../defaults';
-import { armorClass, migrate, removeFeature, removeSpell } from '../logic';
+import { removeRef, armorClass } from '../logic';
+import { migrate } from '../migrate';
 import { inactiveReason, isActive } from '../links';
 import { saveEntry } from '../sheet';
 import type { Character, Item, Spell } from '../types';
@@ -521,7 +522,7 @@ describe('addFromCatalog', () => {
     expect(fromOf(c, 'feature:' + feat.id).res).toHaveLength(1);
     expect(() => addFromCatalog(blank, cat, E('background/acolyte'), A({ abil: ['o2', 'o2', 'o3'] }))).toThrow();
     expect(() => addFromCatalog(blank, cat, E('background/acolyte'), A({}, { 'feat/magic-initiate': mi }))).toThrow();
-    const gone = removeFeature(c, bg.id);
+    const gone = removeRef(c, { kind: 'feature', id: bg.id });
     expect(gone.feats).toEqual([]);
     expect(gone.spells).toEqual([]);
     expect(gone.grants).toEqual([]);
@@ -562,7 +563,7 @@ describe('addFromCatalog', () => {
     const c = addFromCatalog(blankCharacter(), cat, E('spell/shillelagh'), A());
     const sp = c.spells[0];
     expect(c.grants).toEqual([expect.objectContaining({ kind: 'atkAbil', from: 'spell:' + sp.id })]);
-    expect(removeSpell(c, sp.id).grants).toEqual([]);
+    expect(removeRef(c, { kind: 'spell', id: sp.id }).grants).toEqual([]);
   });
 
   it('gives a spell granted by another entry its own grants, once, also when linked', () => {
@@ -581,7 +582,7 @@ describe('addFromCatalog', () => {
     const twice = addFromCatalog(picked, cat, E('feat/magic-initiate'), A(picks, undefined, { links: { 'g1-0': pid } }));
     expect(twice.grants.filter((g) => g.kind === 'atkAbil')).toHaveLength(1);
     const feat = twice.feats[0];
-    const after = removeFeature(twice, feat.id);
+    const after = removeRef(twice, { kind: 'feature', id: feat.id });
     expect(after.spells.map((x) => x.id)).toEqual([pid]);
     expect(after.grants.filter((g) => g.kind === 'atkAbil')).toHaveLength(1);
   });
@@ -666,7 +667,7 @@ describe('addFromCatalog', () => {
     expect(isActive(c, ls)).toBe(false);
     const kept = addFromCatalog({ ...blankCharacter(), ch: { ...blankCharacter().ch, species: 'Wood Elf' } }, cat, E('species/elf'), ans);
     expect(kept.ch.species).toBe('Wood Elf');
-    const gone = removeFeature(c, elf.id);
+    const gone = removeRef(c, { kind: 'feature', id: elf.id });
     expect([gone.feats, gone.spells, gone.senses, gone.defenses, gone.grants, gone.res]).toEqual([[], [], [], [], [], []]);
     const flat = A({}, {
       'trait/elf/elven-lineage': A({ lin: ['trait/elf/wood-elf'] }), 'trait/elf/wood-elf': A({ ab: ['wis'] }), 'trait/elf/keen-senses': A({ c1: ['o2'] })

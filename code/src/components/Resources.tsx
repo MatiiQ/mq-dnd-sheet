@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
 import { isValue } from '../catalog/value';
 import { inactiveReason, SRC_KINDS, sourceLabel } from '../links';
-import { maxFields, maxKindOf, maxOf, rechargeOf, regainEvent, regainLabel, removeResource, resourceGroups, type MaxKind } from '../logic';
+import { removeRef, maxFields, maxKindOf, maxOf, rechargeOf, regainEvent, regainLabel, resourceGroups, type MaxKind } from '../logic';
 import { patchEntry, saveEntry, useEntryForm, useSheet } from '../sheet';
 import type { Recharge, Resource, SrcKind } from '../types';
 import { SourcePicker } from './SourcePicker';
@@ -141,7 +141,7 @@ export function Resources() {
                     {src && <span className="muted">Source: {src}</span>}
                   </>}
                   onEdit={() => f.openEdit(r.id, toDraft(r))}
-                  onRemove={() => update((p) => removeResource(p, r.id))}>
+                  onRemove={() => update((p) => removeRef(p, { kind: 'res', id: r.id }))}>
                   {rc !== 'none' && m === null && <span style={{ fontSize: 12, color: 'var(--danger)' }}>Set a maximum (Edit) so a rest can refill it.</span>}
                 </EntryRow>
                 )

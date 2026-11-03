@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { isObj, slug } from './catalog/schema';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
-import { migrate, newId, normalize } from './logic';
+import { newId, normalize } from './logic';
+import { migrate } from './migrate';
 import type { Character } from './types';
 
 const INDEX_KEY = 'dnd-index-v3';

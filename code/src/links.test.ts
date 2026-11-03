@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { sampleCharacter } from './defaults';
 import { activeGrants, fixLinks, hasActiveEffect, inactiveReason, isActive, parseLink, sourceLabel, wouldLoop } from './links';
-import { castSpell, effectsAfterEdit, longRest, migrate, toggleEffect } from './logic';
+import { castSpell, effectsAfterEdit, longRest, toggleEffect } from './logic';
+import { migrate } from './migrate';
 import type { Character, Feature, Grant, Item } from './types';
 
 const make = (p: Partial<Character> = {}): Character => ({ ...sampleCharacter(), ...p });

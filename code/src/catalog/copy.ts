@@ -495,7 +495,7 @@ export function resolveChoices(cat: Catalog, e: Entry, picks: Record<string, str
 // Feature prerequisites by slug: a feature whose cid ends with /<slug>; one without cid whose name, up to its first
 // '·', ':' or '(', slugs to it (a hand-typed "Fighting Style · Archery"); or an entry being added in the same flow.
 const ARMOR_PROF: Record<string, string> = { light: 'Light armor', medium: 'Medium armor', heavy: 'Heavy armor', shield: 'Shields' };
-const titled = (s: string) => s.split('-').map(capital).join(' ');
+export const titled = (s: string) => s.split(/[-\s]/).map(capital).join(' ');
 export function prereqMet(c: Character, prereq: string | undefined, adding: Entry[] = []): { ok: boolean; missing: string[] } {
   const missing: string[] = [];
   for (const t of prereq ? prereq.split(';') : []) {

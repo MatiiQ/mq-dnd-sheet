@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  ABILITIES, CAST_NAMES, newId, ORDINAL, ownFreeCasts, setOwnFreeCast, SPELL_SORTS, acAfterEdit, castSpell, concAfterEdit, detectAcSpell, effectsAfterEdit, fmt, preparedCount, removeSpell, setConc, setSlotUsed,
+  removeRef, ABILITIES, CAST_NAMES, newId, ORDINAL, ownFreeCasts, setOwnFreeCast, SPELL_SORTS, acAfterEdit, castSpell, concAfterEdit, detectAcSpell, effectsAfterEdit, fmt, preparedCount, setConc, setSlotUsed,
   slotsLeft, sortSpells, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, freeCastsOf, spellAttackFor, spellSaveDcFor
 } from '../../logic';
 import { hasActiveEffect, inactiveReason, linkOf, sourceLabel } from '../../links';
@@ -369,7 +369,7 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
         {sp.desc && <span className="entry-desc">{sp.desc}</span>}
         {sourceLabel(c, sp) && <span className="muted">Source: {sourceLabel(c, sp)}</span>}
       </> : undefined}
-      onEdit={onEdit} onRemove={() => update((p) => removeSpell(p, sp.id))} removeConfirm={removalNote(c, { kind: 'spell', id: sp.id })}>
+      onEdit={onEdit} onRemove={() => update((p) => removeRef(p, { kind: 'spell', id: sp.id }))} removeConfirm={removalNote(c, { kind: 'spell', id: sp.id })}>
       {(picking && upcasts.length > 0 || noSlots) && <>
         {picking && upcasts.length > 0 && (
           <div role="group" aria-label={'Higher slot levels for ' + sp.name} className="row wrap gap-6" style={{ padding: 8, borderRadius: 12, background: 'var(--raised)' }}>

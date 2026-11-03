@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import { ammoType, canLoad, equipShield, putAway, putInHand, setHands, trimHands, weaponKind, weaponMatches, weaponsHeld } from './hands';
-import { migrate, normalize, removeItem } from './logic';
+import { removeRef, normalize } from './logic';
+import { migrate } from './migrate';
 import { applyPatch } from './storage';
 import { dagger, longbow, longsword, quarterstaff, shield, shortsword } from './test-fixtures';
 import type { Character, Item } from './types';
@@ -108,7 +109,7 @@ describe('letting go ends Shillelagh (PHB p.316)', () => {
     const paths: [string, (c: Character) => Character][] = [
       ['put away', (c) => putAway(c, 'i3')],
       ['unequip', (c) => applyPatch(c, (s) => ({ inv: s.inv.map((i) => (i.id === 'i3' ? { ...i, eq: false } : i)) }))],
-      ['remove', (c) => removeItem(c, 'i3')],
+      ['remove', (c) => removeRef(c, { kind: 'item', id: 'i3' })],
       ['quantity 0', (c) => qty(c, 'i3', 0)]
     ];
     for (const [name, go] of paths) {
@@ -199,7 +200,7 @@ describe('ammunition types (plan 7, Task 9b)', () => {
     const c = make([{ ...longbow({ id: 'lb' }), load: 'a1' }, arrows1, arrows, bag, bolts]);
     expect(normalize(c).inv[0].load).toBe('a1');
     expect(migrate(raw(c)).inv[0].load).toBe('a1');
-    expect(removeItem(c, 'a1').inv[0].load).toBeUndefined();
+    expect(removeRef(c, { kind: 'item', id: 'a1' }).inv[0].load).toBeUndefined();
     expect(normalize({ ...c, inv: c.inv.map((i) => (i.id === 'a1' ? { ...i, in: 'bag' } : i)) }).inv[0].load).toBeUndefined();
     expect(normalize({ ...c, inv: c.inv.map((i, k) => (k === 0 ? { ...i, load: 'bo' } : i)) }).inv[0].load).toBeUndefined();
     expect(normalize({ ...c, inv: c.inv.map((i, k) => (k === 0 ? { ...i, load: 'nope' } : i)) }).inv[0].load).toBeUndefined();
