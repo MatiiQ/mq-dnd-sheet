@@ -109,7 +109,6 @@ describe('letting go ends Shillelagh (PHB p.316)', () => {
       ['put away', (c) => putAway(c, 'i3')],
       ['unequip', (c) => applyPatch(c, (s) => ({ inv: s.inv.map((i) => (i.id === 'i3' ? { ...i, eq: false } : i)) }))],
       ['remove', (c) => removeItem(c, 'i3')],
-      ['shield', (c) => equipShield(putInHand(c, 'i3', true).c, 'i2').c],
       ['quantity 0', (c) => qty(c, 'i3', 0)]
     ];
     for (const [name, go] of paths) {
@@ -117,6 +116,12 @@ describe('letting go ends Shillelagh (PHB p.316)', () => {
       expect(out.effectsOn, name).toEqual([]);
       expect(out.restMsg, name).toEqual(ended);
     }
+  });
+
+  it('stays on when a Shield moves the Quarterstaff to one hand', () => {
+    const out = equipShield(putInHand(seren(), 'i3', true).c, 'i2').c;
+    expect(out.effectsOn).toEqual(['spell:ds3']);
+    expect(out.hands).toEqual(['i3']);
   });
 
   it('stays on with nothing in hand', () => {
@@ -187,7 +192,7 @@ describe('ammunition types (plan 7, Task 9b)', () => {
   const firearm: Item = { id: 'fb', name: 'Firearm Bullets', qty: 10, eq: false, cat: 'ammo', cid: 'item/firearm-bullets' };
   const typed: Item = { id: 'ty', name: 'Arrows', qty: 20, eq: false, cat: 'gear' };
   it('reads a weapon’s type from its ammo field and an ammunition item’s from its catalog id or base', () => {
-    expect([ammoType(longbow({ id: 'lb' })), ammoType(arrows), ammoType(arrows1), ammoType(bolts), ammoType(firearm), ammoType(typed)]).toEqual(['arrow', 'arrow', 'arrow', 'bolt', '', '']);
+    expect([ammoType(longbow({ id: 'lb' })), ammoType(arrows), ammoType(arrows1), ammoType(bolts), ammoType(firearm), ammoType(typed)]).toEqual(['arrow', 'arrow', 'arrow', 'bolt', 'firearm', '']);
   });
   it('keeps a weapon’s load only while it names ammunition in the inventory, out of any container, that fits', () => {
     const bag: Item = { id: 'bag', name: 'Bag of Holding', qty: 1, eq: false, xdim: true, cap: 500 };
@@ -215,4 +220,30 @@ it('matches typed weapon names', () => {
   expect(weaponMatches(xbow, 'hand crossbow')).toBe(true);
   expect(weaponMatches(sword, 'Martial Melee')).toBe(true);
   expect(weaponMatches(longbow({ id: 'b' }), 'Longsword')).toBe(false);
+});
+
+describe('firearms', () => {
+  const gun = (cid: string, ammo: string): Item => ({ id: 'g', name: cid, qty: 1, eq: true, cat: 'weapon', cid, props: 'ammunition,loading', ammo });
+  const fire: Item = { id: 'fb', name: 'Firearm Bullets', qty: 10, eq: false, cat: 'ammo', cid: 'item/firearm-bullets' };
+  const slingB: Item = { id: 'sb', name: 'Sling Bullets', qty: 10, eq: false, cat: 'ammo', cid: 'item/sling-bullets' };
+  const plus: Item = { id: 'pb', name: 'Ammunition +1', qty: 5, eq: false, cat: 'ammo', cid: 'item/ammunition-1-2-or-3', base: 'item/firearm-bullets' };
+  it('loads firearms with Firearm Bullets only', () => {
+    for (const g of [gun('item/musket', '40/120;bullet'), gun('item/pistol', '30/90;bullet')]) {
+      expect(canLoad(g, fire)).toBe(true);
+      expect(canLoad(g, slingB)).toBe(false);
+      expect(canLoad(g, plus)).toBe(true);
+    }
+    const sling = gun('item/sling', '30/120;bullet');
+    expect(canLoad(sling, fire)).toBe(false);
+    expect(canLoad(sling, slingB)).toBe(true);
+  });
+});
+
+it('moves a Versatile weapon to one hand for a Shield', () => {
+  const c: Character = { ...blankCharacter(), inv: [quarterstaff({ id: 'q' }), shield({ id: 's', eq: false })], hands: ['q', 'q'] };
+  const r = equipShield(c, 's');
+  expect(r.c.hands).toEqual(['q']);
+  expect(r.away).toEqual([]);
+  const bow: Character = { ...blankCharacter(), inv: [longbow({ id: 'b' }), shield({ id: 's', eq: false })], hands: ['b', 'b'] };
+  expect(equipShield(bow, 's').c.hands).toEqual([]);
 });

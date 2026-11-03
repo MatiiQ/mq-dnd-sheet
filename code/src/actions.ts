@@ -142,7 +142,7 @@ function attackFor(c: Character, it: Item, use: Use): { attack: WeaponAttack; di
   const dmgParts: AcPart[] = [{ label: abilityName(ab), value: mod }, ...magic, ...grantParts(c, 'dmgBonus', it, use)].filter((p) => p.value !== 0);
   // An override's die (evaluated at the level with valueAt: num would read dice as 0) replaces the grip's die when its
   // average is larger, on either grip: Shillelagh's d12 beats a Quarterstaff's d6 and its two-handed d8.
-  let die = (use === 'two-handed' ? it.vers : it.dmg) ?? '';
+  let die = (use === 'two-handed' ? it.vers || it.dmg : it.dmg) ?? '';
   const overs = overridesFor(c, it, use);
   for (const g of overs) {
     const d = g.die ? valueAt(g.die, ctx) : 0;

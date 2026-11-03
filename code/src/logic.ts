@@ -617,15 +617,15 @@ export function maxFields(kind: MaxKind, text: string): Pick<Counter, 'max' | 'm
   return isMaxFormula(t) ? { maxV: t } : null;
 }
 
-// A weapon's loaded ammunition (plan 7) stays only while it names an item in inv, outside any container, that canLoad
-// accepts: so it clears when the ammunition goes, is packed away or doesn't fit, or an edit changes the weapon. Run
+// A weapon's loaded ammunition (plan 7) stays only while it names an item in inv, outside any container, with quantity
+// 1 or more, that canLoad accepts: so it clears when the ammunition goes, runs out, is packed away or doesn't fit, or an edit changes the weapon. Run
 // after fixContainers, which may change `in`. Returns c when nothing changes.
 function fixLoads(c: Character): Character {
   let changed = false;
   const inv = c.inv.map((it) => {
     if (it.load === undefined) return it;
     const a = c.inv.find((x) => x.id === it.load);
-    if (a && !a.in && canLoad(it, a)) return it;
+    if (a && !a.in && a.qty >= 1 && canLoad(it, a)) return it;
     changed = true;
     return withoutKeys(it, ['load']);
   });

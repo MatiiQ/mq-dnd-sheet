@@ -99,7 +99,7 @@ export function isOn(c: Character, link: string): boolean {
 
 // Worn or wielded: equipped and not inside a container (plan 6). The one test every rule reads; the row's equip toggle
 // still reads and writes `eq`.
-export const isEquipped = (it: Item): boolean => it.eq && !it.in;
+export const isEquipped = (it: Item): boolean => it.eq && !it.in && it.qty >= 1;
 
 // Why an entry or grant doesn't count right now, or null when it counts. Level and armor conditions apply to every
 // entry; the item checks, "while its effect is on" and the source's own state need a link. The visited set stops loops.

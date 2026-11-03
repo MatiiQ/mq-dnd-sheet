@@ -521,3 +521,11 @@ describe('typed grant filters', () => {
     expect(u.dmgParts.map((p) => p.label)).toContain('Claws');
   });
 });
+
+it('falls back to the normal die for a blank Versatile die', () => {
+  const str16 = { ...blankCharacter(), abil: { ...blankCharacter().abil, str: 16 } };
+  for (const vers of [undefined, '']) {
+    const sword = longsword({ id: 'w', vers });
+    expect(weaponAttacks({ ...str16, inv: [sword], hands: ['w', 'w'] }, sword).find((a) => a.use === 'two-handed')!.dmg).toBe('1d8+3');
+  }
+});

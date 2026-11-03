@@ -1951,3 +1951,31 @@ describe('links keep what they promise', () => {
     expect(keep({ mode: 'fly', val: '60' })).toBe('Fly 60 ft still includes this grant');
   });
 });
+
+describe('a quantity 0 item counts as gone', () => {
+  const dex14 = { ...blankCharacter(), abil: { ...blankCharacter().abil, dex: 14 }, profs: [{ id: 'p', cat: 'armor' as const, name: 'Shields' }, { id: 'h', cat: 'armor' as const, name: 'Heavy armor' }] };
+  it('adds no AC from armor or a Shield', () => {
+    const inv: Item[] = [{ id: 'a', name: 'Plate Armor', qty: 0, eq: true, armor: 'heavy', acBase: 18 }, { id: 's', name: 'Shield', qty: 0, eq: true, armor: 'shield', acBase: 2 }];
+    expect(armorClass({ ...dex14, inv }).total).toBe(12);
+  });
+  it('switches off a grant that needs the item equipped', () => {
+    const ring: Item = { id: 'r', name: 'Ring', qty: 1, eq: true };
+    const g: Grant = { id: 'g', kind: 'ac', name: '+1', acMode: 'bonus', val: '1', needEq: true, from: 'item:r' };
+    expect(armorClass({ ...dex14, inv: [ring], grants: [g] }).total).toBe(13);
+    expect(armorClass({ ...dex14, inv: [{ ...ring, qty: 0 }], grants: [g] }).total).toBe(12);
+  });
+  it('unloads ammunition that ran out', () => {
+    const bow: Item = { id: 'b', name: 'Longbow', qty: 1, eq: true, cat: 'weapon', props: 'ammunition', ammo: '150/600;arrow', load: 'x' };
+    const arrows: Item = { id: 'x', name: '+2 Arrows', qty: 3, eq: false, cat: 'ammo', cid: 'item/arrows' };
+    expect(normalize({ ...dex14, inv: [bow, arrows] }).inv[0].load).toBe('x');
+    expect(normalize({ ...dex14, inv: [bow, { ...arrows, qty: 0 }] }).inv[0].load).toBeUndefined();
+  });
+});
+
+it('updates a saved Musket', () => {
+  const musket: Item = { id: 'm', name: 'Musket', qty: 1, eq: true, cat: 'weapon', cid: 'item/musket', props: 'ammunition,loading,two-handed', ammo: '40/120;bullet', load: 'sb' };
+  const sling: Item = { id: 'sb', name: 'Sling Bullets', qty: 10, eq: false, cat: 'ammo', cid: 'item/sling-bullets' };
+  const fire: Item = { id: 'fb', name: 'Firearm Bullets', qty: 10, eq: false, cat: 'ammo', cid: 'item/firearm-bullets' };
+  expect(normalize({ ...blankCharacter(), inv: [musket, sling] }).inv[0].load).toBeUndefined();
+  expect(normalize({ ...blankCharacter(), inv: [{ ...musket, load: 'fb' }, fire] }).inv[0].load).toBe('fb');
+});
