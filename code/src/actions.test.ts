@@ -546,3 +546,26 @@ it('names a missing Proficiency Bonus', () => {
   const trained = weaponAttacks({ ...c, profs: [{ id: 'p', cat: 'weapon', name: 'Martial weapons' }] }, sword)[0];
   expect(trained.hitParts).toContainEqual({ label: 'Proficiency Bonus', value: 2 });
 });
+
+describe('pinned rules', () => {
+  it('reach is 10 ft', () => {
+    const glaive = catItem('item/glaive'), sword = longsword({ id: 'w' });
+    const c: Character = { ...blankCharacter(), inv: [glaive, sword] };
+    expect(weaponAttacks(c, glaive)[0].range).toBe('Melee 10 ft');
+    expect(weaponAttacks(c, sword)[0].range).toBe('Melee 5 ft');
+  });
+  it('ranged bonuses skip Unarmed Strike', () => {
+    const c: Character = { ...blankCharacter(), feats: [{ id: 'f', g: 'feat', name: 'Feat', desc: '' }],
+      grants: [{ id: 'g', kind: 'atkBonus', name: 'Far', val: '2', weapon: 'unarmed-strike', amode: 'ranged', from: 'feature:f' }] };
+    expect(unarmedStrike(c).hitParts.map((p) => p.label)).not.toContain('Far');
+  });
+  it('the Light extra attack keeps a negative modifier', () => {
+    const at = (str: number): Character => ({ ...blankCharacter(), abil: { ...blankCharacter().abil, str, dex: 8 }, inv: [dagger({ id: 'a' }), dagger({ id: 'b' })], hands: ['a', 'b'] });
+    expect(lightExtra(at(8))!.dmg).toBe('1d4−1');
+    expect(lightExtra(at(16))!.dmg).toBe('1d4');
+  });
+  it('the third cantrip tier starts at 11', () => {
+    expect(cantripDice('1d10', 10)).toBe('2d10');
+    expect(cantripDice('1d10', 11)).toBe('3d10');
+  });
+});

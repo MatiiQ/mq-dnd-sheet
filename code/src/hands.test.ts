@@ -247,3 +247,15 @@ it('moves a Versatile weapon to one hand for a Shield', () => {
   const bow: Character = { ...blankCharacter(), inv: [longbow({ id: 'b' }), shield({ id: 's', eq: false })], hands: ['b', 'b'] };
   expect(equipShield(bow, 's').c.hands).toEqual([]);
 });
+
+describe('pinned rules', () => {
+  it('a weapon isn’t ammunition', () => {
+    const short: Item = { ...longbow({ id: 's' }), name: 'Shortbow', cid: 'item/shortbow', ammo: '80/320;arrow' };
+    expect(canLoad(longbow({ id: 'b' }), short)).toBe(false);
+  });
+  it('quantity 0 leaves the hand', () => {
+    const c = (qty: number): Character => ({ ...blankCharacter(), inv: [dagger({ id: 'd', qty })] });
+    expect(trimHands(c(0), ['d'])).toEqual([]);
+    expect(trimHands(c(1), ['d'])).toEqual(['d']);
+  });
+});

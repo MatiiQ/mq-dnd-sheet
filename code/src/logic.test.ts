@@ -2035,3 +2035,18 @@ describe('catalog data for rests and AC', () => {
     expect(detectAcSpell('Warding Bond')).toEqual({ acFx: 'bonus', acVal: 1 });
   });
 });
+
+describe('pinned rules', () => {
+  it('a set score never lowers a higher one', () => {
+    const c: Character = { ...blankCharacter(), abil: { ...blankCharacter().abil, str: 20 }, inv: [{ id: 'b', name: 'Belt', qty: 1, eq: true }],
+      grants: [{ id: 'g', kind: 'abilSet', name: 'Belt', ab: 'str', val: '19', from: 'item:b' }] };
+    expect(effScore(c, 'str')).toBe(20);
+  });
+  it('speed floors at 0', () => {
+    expect(speedOf({ ...blankCharacter(), exh: 5 }, 20)).toBe(0);
+  });
+  it('the Concentration DC caps at 30', () => {
+    const c: Character = { ...blankCharacter(), temp: 100, amount: 100, conc: { id: 's', name: 'Bless' } };
+    expect(applyDamage(c).concCheck).toContain('DC 30');
+  });
+});
