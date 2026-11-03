@@ -416,7 +416,13 @@ export function parseWeight(s: string): number | undefined {
 }
 
 export const zeroSpeedBy = (c: Character) => CONDITIONS.filter((n) => c.conds[n] && ZERO_SPEED.includes(n));
-export const speedOf = (c: Character, base: number) => (zeroSpeedBy(c).length ? 0 : Math.max(0, base - 5 * c.exh));
+// Armor with a Strength score slows a wearer whose Strength is lower by 10 ft, and Stealth Disadvantage is the armor's
+// own column (PHB p.219).
+export const armorSlowBy = (c: Character): Item | undefined => c.inv.find((i) => isEquipped(i) && i.strReq !== undefined && effScore(c, 'str') < i.strReq);
+export const stealthDisBy = (c: Character): Item | undefined => c.inv.find((i) => isEquipped(i) && i.stealthDis);
+// Exhaustion and armor's Strength both cut every speed: a deliberate reading of the armor rule's "Speed", matching the
+// Exhaustion note.
+export const speedOf = (c: Character, base: number) => (zeroSpeedBy(c).length ? 0 : Math.max(0, base - 5 * c.exh - (armorSlowBy(c) ? 10 : 0)));
 // Walking Speed before Exhaustion and conditions: the typed base plus walking speed grants (Wood Elf +5 ft).
 export const walkSpeed = (c: Character) => c.speedBase + activeGrants(c, 'speed').filter((g) => g.mode === 'walk').reduce((t, g) => t + num(c, g.val, g), 0);
 // Another speed: the typed one or the best grant, whichever is higher ('walk' means equal to the walking Speed).

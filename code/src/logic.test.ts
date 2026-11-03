@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { newId } from './logic';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import {
-  ABILITIES, SKILLS, acSpellIdle, untrainedArmor, grantChips, addGrants, findUnlinked, removalChain, removalSummary, removeFeature, removeResource, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, toggleEffect, dawn, refillFor, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, splitTraining, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, removeItem, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
+  ABILITIES, SKILLS, speedOf, armorSlowBy, stealthDisBy, acSpellIdle, untrainedArmor, grantChips, addGrants, findUnlinked, removalChain, removalSummary, removeFeature, removeResource, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, toggleEffect, dawn, refillFor, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, splitTraining, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, removeItem, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
   num, setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, undoHp
 } from './logic';
 import { spellActions } from './actions';
@@ -1848,5 +1848,29 @@ describe('armor training', () => {
     expect(acSpellIdle(on, sp)).toBe(false);
     expect(acSpellIdle({ ...on, inv: [leather] }, sp)).toBe(true);
     expect(acSpellIdle({ ...on, inv: [leather] }, { ...sp, acFx: 'bonus' })).toBe(false);
+  });
+});
+
+describe('armor columns', () => {
+  const plate: Item = { id: 'p', name: 'Plate Armor', qty: 1, eq: true, armor: 'heavy', acBase: 18, strReq: 15 };
+  const at = (str: number, p: Partial<Character> = {}): Character =>
+    ({ ...blankCharacter(), speedBase: 30, abil: { ...blankCharacter().abil, str }, inv: [plate], ...p });
+  it('slows a wearer below its Strength by 10 ft (PHB p.219)', () => {
+    expect(speedNow(at(10))).toBe(20);
+    expect(speedNow(at(15))).toBe(30);
+    expect(speedNow(at(10, { inv: [{ ...plate, eq: false }] }))).toBe(30);
+    const bag: Item = { id: 'b', name: 'Bag of Holding', qty: 1, eq: false, xdim: true };
+    expect(speedNow(at(10, { inv: [bag, { ...plate, in: 'b' }] }))).toBe(30);
+    const belt: Item = { id: 'g', name: 'Belt', qty: 1, eq: true };
+    expect(speedNow(at(10, { inv: [plate, belt], grants: [{ id: 's', kind: 'abilSet', name: 'Belt', ab: 'str', val: '19', from: 'item:g' }] }))).toBe(30);
+    expect(speedNow(at(10, { exh: 1 }))).toBe(15);
+    expect(speedNow(at(10, { speedBase: 5 }))).toBe(0);
+    expect(speedOf(at(10), 60)).toBe(50);
+    expect(armorSlowBy(at(10))?.id).toBe('p');
+  });
+  it('names the armor that gives Stealth Disadvantage', () => {
+    const chain: Item = { id: 'c', name: 'Chain Mail', qty: 1, eq: true, armor: 'heavy', acBase: 16, stealthDis: true };
+    expect(stealthDisBy(at(10, { inv: [chain] }))?.id).toBe('c');
+    expect(stealthDisBy(at(10, { inv: [{ ...chain, eq: false }] }))).toBeUndefined();
   });
 });

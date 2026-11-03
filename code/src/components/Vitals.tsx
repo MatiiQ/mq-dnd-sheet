@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { armorClass, fmt, untrainedArmor, initiative, modeSpeed, profBonus, speedNow, speedOf, UNARMORED, walkSpeed, zeroSpeedBy } from '../logic';
+import { armorClass, armorSlowBy, fmt, untrainedArmor, initiative, modeSpeed, profBonus, speedNow, speedOf, UNARMORED, walkSpeed, zeroSpeedBy } from '../logic';
 import { removeEntry, saveEntry, useEntryForm, useSheet } from '../sheet';
 import type { AcMod, SpeedKind, Unarmored } from '../types';
 import { AddButton, Caret, EntryActions, EntryForm, NumInput, PartTiles, Step, TextField } from './ui';
@@ -22,10 +22,12 @@ export function Vitals() {
   };
   const zeroBy = zeroSpeedBy(c);
   const exhCut = 5 * c.exh;
+  const slowBy = armorSlowBy(c);
   const extraCount = SPEEDS.filter(([k]) => k !== 'walk' && modeSpeed(c, k).base).length;
   const hint = c.speedOpen ? 'Hide' : zeroBy.length ? 'Speed 0 · ' + zeroBy[0] : extraCount ? '+' + extraCount + ' more' : 'Climb · Swim · Fly';
   const note = (zeroBy.length ? 'Speed 0 while ' + zeroBy.join(', ') + '. ' : '') +
     (exhCut ? 'Exhaustion: −' + exhCut + ' ft applied to every speed. ' : '') +
+    (slowBy ? slowBy.name + ': −10 ft, needs Strength ' + slowBy.strReq + '. ' : '') +
     (edit ? 'Use − / + to set each base speed.' : 'Without a climb or swim speed, each foot costs 1 extra foot.');
 
   return (
@@ -101,7 +103,7 @@ export function Vitals() {
               return (
                 <div key={k} className="tile">
                   <span className="muted">{label}</span>
-                  <span className="speed-value" style={{ color: base ? (exhCut || zeroBy.length ? 'var(--danger)' : 'var(--text)') : 'var(--dim)' }}>
+                  <span className="speed-value" style={{ color: base ? (exhCut || slowBy || zeroBy.length ? 'var(--danger)' : 'var(--text)') : 'var(--dim)' }}>
                     {base ? speedOf(c, base) + ' ft' : k === 'climb' || k === 'swim' ? 'Walk ×½' : '—'}
                   </span>
                   {mode?.by && <span className="muted">{mode.hover ? 'hover · ' : ''}from {mode.by}</span>}
