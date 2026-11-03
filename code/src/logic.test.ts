@@ -4,7 +4,7 @@ import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import {
   ABILITIES, SKILLS, regainLabel, damageHitDie, castAbOf, removeChip, speedOf, armorSlowBy, stealthDisBy, acSpellIdle, untrainedArmor, grantChips, addGrants, findUnlinked, removalChain, removalSummary, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, toggleEffect, dawn, refillFor, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft, num, setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, undoHp
 } from './logic';
-import { splitTraining, migrate } from './migrate';
+import { migrate } from './migrate';
 import { spellActions } from './actions';
 import { grantErrors, type GrantSpec } from './catalog/schema';
 import { addFromCatalog, type ItemAnswers } from './catalog/copy';
@@ -14,7 +14,7 @@ import srdEntries from './data/srd/index';
 import { activeGrants, isActive } from './links';
 import { inventoryGroups } from './inventory';
 import { applyPatch } from './storage';
-import { oldIlyra, oldSeren } from './test-fixtures';
+import { oldIlyra } from './test-fixtures';
 import type { FeatureEntry } from './catalog/schema';
 import type { Character, Feature, Grant, Item, Spell } from './types';
 
@@ -330,7 +330,7 @@ describe('loading saves and backups', () => {
     const c = migrate({
       ...sampleCharacter(), spells: 'x', conds: null, abil: { str: '12', dex: 14 }, tab: 'nope', castAb: 'str',
       attacks: [{ id: 'a', name: 'Club', hit: {} }, { name: 'Sling', hit: '+4' }, 7],
-      def: { res: ['Fire', 3], vul: 'x' }, defenses: undefined, slotMax: [0, 4], slotUsed: [0, 'x'],
+      slotMax: [0, 4], slotUsed: [0, 'x'],
       conc: { name: 'Bless' }, hpUndo: { prev: 1 }, restMsg: { title: 1 }
     });
     expect(c.spells).toEqual([]);
@@ -339,7 +339,6 @@ describe('loading saves and backups', () => {
     expect(c).toMatchObject({ tab: 'actions', castAb: 'none', conc: null, hpUndo: null, restMsg: null });
     expect(c.attacks.map((a) => a.name)).toEqual(['Sling']);
     expect(c.attacks[0].id).toBeTruthy();
-    expect(c.defenses.map((d) => [d.kind, d.name])).toEqual([['res', 'Fire']]);
     // Resources moved out of the tabs into the left column.
     expect(migrate({ ...sampleCharacter(), tab: 'resources' }).tab).toBe('actions');
     expect(c.slotMax).toEqual([0, 4, 0, 0, 0, 0, 0, 0, 0, 0]);
@@ -398,10 +397,6 @@ describe('loading saves and backups', () => {
     expect(c.spells.map((s) => s.id)).toEqual(['a', 'b', 'c']);
     expect(c.spells[0].parts).toEqual([burst]);
     expect([c.spells[1].parts, c.spells[2].parts]).toEqual([undefined, undefined]);
-  });
-  it('turns the old refill flag into a recharge', () => {
-    const c = migrate({ res: [{ id: 'a', name: 'Ki', count: 1, refill: true }, { id: 'b', name: 'Rage', count: 1, refill: true, recharge: 'short' }, { id: 'c', name: 'Gold', count: 1 }] });
-    expect(c.res.map((r) => r.recharge)).toEqual(['long', 'short', 'none']);
   });
 });
 
@@ -583,28 +578,6 @@ describe('AC spells', () => {
 
 describe('AC migration', () => {
   const old = (p: Record<string, unknown>) => ({ ...blankCharacter(), ...p }) as Record<string, unknown>;
-  it('detects armor and AC spells by name on saves with a typed ac, without switching spells on', () => {
-    const c = migrate(old({ ac: 16, abil: sampleCharacter().abil, inv: [{ id: 'i', name: 'Studded Leather Armor', qty: 1, eq: true }],
-      spells: [{ id: 's', name: 'Shield', lvl: 1, time: 'Reaction', range: 'Self', source: 'Wizard' }] }));
-    expect(c.inv[0]).toMatchObject({ armor: 'light', acBase: 12 });
-    expect(c.spells[0]).toMatchObject({ acFx: 'bonus', acVal: 5 });
-    expect(c.acOn).toEqual([]);
-    expect(c.acMods).toEqual([]);
-    expect(armorClass(c).total).toBe(16);
-  });
-  it('keeps the old number with an adjustment bonus when the parts disagree', () => {
-    const c = migrate(old({ ac: 13, inv: [{ id: 'p', name: 'Leather Pouch', qty: 1, eq: true }] }));
-    expect(c.inv[0].armor).toBeUndefined();
-    expect(c.acMods).toEqual([{ id: expect.any(String), name: 'Adjustment (from old AC)', val: 3 }]);
-    expect(armorClass(c).total).toBe(13);
-  });
-  it('adds no adjustment when the old number already matches', () => {
-    expect(migrate(old({ ac: 10 })).acMods).toEqual([]);
-  });
-  it('never re-detects on saves already in the new shape', () => {
-    const { ac: _, ...fresh } = old({ inv: [{ id: 'i', name: 'Shield', qty: 1, eq: true }] });
-    expect(migrate(fresh).inv[0].armor).toBeUndefined();
-  });
   it('drops damaged or stale AC state', () => {
     const c = migrate(old({
       spells: [{ id: 'sh', name: 'Shield', lvl: 1, time: 'Reaction', range: 'Self', source: 'W', acFx: 'bonus', acVal: 5 },
@@ -668,27 +641,6 @@ describe('spell sort order', () => {
 });
 
 describe('defenses', () => {
-  const { defenses: _, ...noDefenses } = sampleCharacter();
-  const old = { ...noDefenses, def: { res: ['Fire', 'Charmed', 'Exhaustion', 'Mud'], vul: ['Poisoned'], imm: ['Poison', 'Frightened'] }, saveNotes: 'Advantage vs traps' };
-  const pairs = (c: Character) => c.defenses.map((d) => [d.kind, d.name]);
-  it('moves save notes and conditions under Resistances to Advantage on saves (PHB p.28)', () => {
-    const c = migrate(old);
-    expect(pairs(c)).toEqual([['res', 'Fire'], ['res', 'Mud'], ['vul', 'Poisoned'], ['imm', 'Poison'], ['imm', 'Frightened'],
-      ['adv', 'Advantage vs traps'], ['adv', 'vs Charmed'], ['adv', 'vs Exhaustion']]);
-    expect(c).not.toHaveProperty('saveNotes');
-    expect(c).not.toHaveProperty('def');
-    expect(migrate(c)).toEqual(c);
-  });
-  it('adds nothing for blank save notes and never duplicates an entry', () => {
-    expect(migrate({ ...old, def: { res: [], vul: [], imm: [] }, saveNotes: '  ' }).defenses).toEqual([]);
-    expect(pairs(migrate({ ...old, def: { res: ['Charmed'], vul: [], imm: [], adv: ['vs Charmed'] }, saveNotes: '' }))).toEqual([['adv', 'vs Charmed']]);
-  });
-  it('turns an old save\'s defense lists into entries, and only once', () => {
-    const c = migrate({ ...oldIlyra(), def: { res: ['Poisoned'], vul: [], imm: [], adv: [] }, saveNotes: 'vs magic' });
-    expect(pairs(c)).toEqual([['adv', 'vs magic'], ['adv', 'vs Poisoned']]);
-    expect(pairs(migrate(oldIlyra()))).toEqual([['adv', 'vs Charmed']]);
-    expect(pairs(migrate({ ...sampleCharacter(), def: { res: ['Fire'], vul: [], imm: [], adv: [] } }))).toEqual(pairs(sampleCharacter()));
-  });
   it('drops a defense of an unknown kind and reads an unknown source kind as Other', () => {
     const c = migrate({ ...sampleCharacter(), defenses: [{ id: 'a', kind: 'weak', name: 'Fire' }, { id: 'b', kind: 'res', name: 'Cold', srcKind: 'x' }] });
     expect(c.defenses).toEqual([{ id: 'b', kind: 'res', name: 'Cold', srcKind: 'other' }]);
@@ -752,58 +704,6 @@ describe('carrying capacity', () => {
 });
 
 describe('attunement and resources moving to Inventory', () => {
-  it('turns inventory resources into items, charged ones with their charges, and empties their pills', () => {
-    const c = migrate({ inv: [], attune: ['', '', ''], pills: ['hp', 'res:r1', 'res:r2'], res: [
-      { id: 'r1', name: 'Arrows', note: 'Tap −', count: 20, inv: true },
-      { id: 'r2', name: 'Wand', count: 3, max: 7, recharge: 'none', inv: true },
-      { id: 'r3', name: 'Herbs', count: 1, refill: true, inv: true },
-      { id: 'r4', name: 'Ki', count: 2, max: 2, recharge: 'short' }] });
-    expect(c.inv).toEqual([{ id: expect.any(String), name: 'Arrows', qty: 20, eq: false, desc: 'Tap −' },
-      { id: expect.any(String), name: 'Wand', qty: 1, eq: false, count: 3, max: 7, recharge: 'none' },
-      { id: expect.any(String), name: 'Herbs', qty: 1, eq: false, count: 1, recharge: 'long' }]);
-    expect(c.res.map((r) => [r.id, r.recharge])).toEqual([['r4', 'short']]);
-    expect(c.pills).toEqual(['hp', '', '']);
-    expect(c.attuneIds).toEqual(['', '', '']);
-  });
-  it('still converts very old saves without the inv flag, and only on saves from before this change', () => {
-    const old = migrate({ inv: [], res: [{ id: 'arrows', name: 'Arrows', count: 5 }, { id: 'n1', name: 'Rations', count: 3 }] });
-    expect(old.inv.map((i) => i.name)).toEqual(['Arrows']);
-    expect(old.res.map((r) => r.id)).toEqual(['n1']);
-    const now = migrate({ attuneIds: ['', '', ''], res: [{ id: 'arrows', name: 'Arrows', count: 5 }] });
-    expect(now.res.map((r) => r.id)).toEqual(['arrows']);
-  });
-  it('links attunement slot names to items: matches, duplicates, unknown text, converted resources', () => {
-    const a = migrate({ attune: [' cloak of elvenkind ', 'Ring', 'Ring'], res: [], inv: [
-      { id: 'i1', name: 'Cloak of Elvenkind', qty: 1, eq: false }, { id: 'i2', name: 'Ring', qty: 1, eq: true }, { id: 'i3', name: 'Ring', qty: 1, eq: true }] });
-    expect(a.attuneIds).toEqual(['i1', 'i2', 'i3']);
-    expect(a.inv[0].eq).toBe(false); // a matched item keeps its eq flag
-    const b = migrate({ attune: ['Pearl of Power', 'Shield', 'Ring'], inv: [{ id: 'i2', name: 'Ring', qty: 1, eq: true }],
-      res: [{ id: 'p', name: 'Pearl of Power', count: 1, inv: true }] });
-    expect(b.attuneIds[2]).toBe('i2');
-    expect(b.inv.find((i) => i.id === b.attuneIds[0])).toMatchObject({ name: 'Pearl of Power', eq: true });
-    expect(b.inv.find((i) => i.id === b.attuneIds[1])).toEqual({ id: b.attuneIds[1], name: 'Shield', qty: 1, eq: true }); // no detectArmor
-    const d = migrate({ attune: ['Ring', 'Ring', '  '], res: [], inv: [{ id: 'i2', name: 'Ring', qty: 1, eq: true }] });
-    expect(d.attuneIds[0]).toBe('i2');
-    expect(d.inv.find((i) => i.id === d.attuneIds[1])).toMatchObject({ name: 'Ring', eq: true });
-    expect(d.attuneIds[2]).toBe('');
-    expect(migrate({ attune: ['Cartographer\'s Tools'], res: [], inv: [{ id: 't', name: 'Cartographer’s Tools', qty: 1, eq: true }] }).attuneIds[0]).toBe('t');
-    const e = migrate({ attune: ['-', 'None', '—'], res: [], inv: [] });
-    expect(e.attuneIds).toEqual(['', '', '']); // placeholder text never becomes an item
-    expect(e.inv).toEqual([]);
-    // A charged item tracked as a resource becomes the attuned item, with its charges.
-    const w = migrate({ attune: ['Wand of Magic Missiles'], inv: [],
-      res: [{ id: 'w', name: 'Wand of Magic Missiles', count: 7, max: 7, recharge: 'none', inv: true }] });
-    expect(w.res).toEqual([]);
-    expect(w.inv).toEqual([{ id: w.attuneIds[0], name: 'Wand of Magic Missiles', qty: 1, eq: true, count: 7, max: 7, recharge: 'none' }]);
-  });
-  it('turns damaged resource fields into safe item values', () => {
-    const c = migrate({ inv: [], res: [{ id: 'r', name: 'Rope', note: 5, count: 'x', inv: true }, { id: 's', name: 'Bolts', count: 4.6, inv: true }] });
-    expect(c.inv).toEqual([{ id: expect.any(String), name: 'Rope', qty: 1, eq: false }, { id: expect.any(String), name: 'Bolts', qty: 4, eq: false }]);
-  });
-  it('is idempotent on a converted old save', () => {
-    const once = migrate({ attune: ['Pearl', 'Lamp', ''], res: [{ id: 'p', name: 'Pearl', count: 1, inv: true }], inv: [] });
-    expect(migrate(once)).toEqual(once);
-  });
   it('drops missing, repeated and damaged attunement ids', () => {
     const inv = [{ id: 'i2', name: 'Ring', qty: 1, eq: true }];
     expect(migrate({ attuneIds: ['i2', 'gone', 'i2'], inv }).attuneIds).toEqual(['i2', '', '']);
@@ -833,11 +733,10 @@ describe('sample numbers', () => {
     expect(numbers(sampleCharacter(), Object.keys(ILYRA.res))).toEqual(ILYRA);
     expect(numbers(migrate(oldIlyra()), Object.keys(ILYRA.res))).toEqual(ILYRA);
   });
-  it('Seren, and an old save of her', () => {
+  it('Seren', () => {
     // The one change the rebuild makes (approved by the owner): Primal Order · Magician now counts, adding her WIS
     // modifier (+5) to Arcana and Nature checks (PHB p.80). Today's sheet could only hold it in the feature's text.
     expect(numbers(druidSample(), Object.keys(SEREN.res))).toEqual({ ...SEREN, skills: { ...SEREN.skills, arcana: 10, nature: 6 } });
-    expect(numbers(migrate(oldSeren()), Object.keys(SEREN.res))).toEqual(SEREN);
   });
 });
 
@@ -924,31 +823,6 @@ describe('proficiencies', () => {
 });
 
 describe('Training migration', () => {
-  const names = (c: Character) => c.profs.map((p) => p.name);
-  it('turns Ilyra\'s old Training features into proficiencies', () => {
-    const c = migrate(oldIlyra());
-    expect(names(c)).toEqual(['Light armor', 'Medium armor', 'Shields', 'Simple weapons', 'Martial weapons', 'Cartographer’s Tools', 'Common', 'Elvish', 'Sylvan', 'Draconic']);
-    expect(c.profs.map((p) => p.cat)).toEqual(['armor', 'armor', 'armor', 'weapon', 'weapon', 'tool', 'language', 'language', 'language', 'language']);
-    expect(c.feats.some((f) => f.g === 'training')).toBe(false);
-    expect(hasProf(c, 'weapon', 'martial weapons')).toBe(true);
-    expect(migrate(c)).toEqual(c);
-  });
-  it('converts all of Seren\'s, Druidic included', () => {
-    const c = migrate(oldSeren());
-    expect(names(c)).toEqual(['Light armor', 'Shields', 'Simple weapons', 'Herbalism Kit', 'Calligrapher’s Supplies', 'Common', 'Druidic', 'Elvish', 'Dwarvish']);
-    expect(c.feats.some((f) => f.g === 'training')).toBe(false);
-  });
-  it('matches only full names under another heading, and keeps what it can\'t match', () => {
-    const { feats, profs } = splitTraining([{ id: 'x', g: 'training', name: 'Proficiencies', desc: 'Light, Thieves’ Tools' },
-      { id: 'y', g: 'training', name: 'Tools', desc: 'Ox cart, Smith’s Tools' }, { id: 'z', g: 'class', name: 'Rage', desc: 'Angry' }]);
-    expect(profs.map((p) => [p.cat, p.name])).toEqual([['tool', 'Thieves’ Tools'], ['tool', 'Smith’s Tools']]);
-    expect(feats.map((f) => [f.id, f.desc])).toEqual([['x', 'Light'], ['y', 'Ox cart'], ['z', 'Angry']]);
-  });
-  it('runs only on saves without proficiencies', () => {
-    const raw = { ...oldIlyra(), profs: [], feats: [{ id: 't', g: 'training', name: 'Tools', desc: 'Thieves\' Tools' }] };
-    expect(migrate(raw).feats.filter((f) => f.g === 'training')).toEqual([{ id: 't', g: 'training', name: 'Tools', desc: 'Thieves\' Tools' }]);
-    expect(migrate(raw).profs).toEqual([]);
-  });
   it('drops a proficiency with an unknown category', () => {
     expect(migrate({ ...sampleCharacter(), profs: [{ id: 'a', cat: 'vehicle', name: 'Boat' }, { id: 'b', cat: 'tool', name: 'Lute' }] }).profs).toEqual([{ id: 'b', cat: 'tool', name: 'Lute' }]);
   });
@@ -1046,28 +920,6 @@ describe('AC grants', () => {
   });
 });
 
-describe('AC bonus migration', () => {
-  const old = (p: Record<string, unknown>) => ({ ...blankCharacter(), ...p }) as Record<string, unknown>;
-  it('turns a bonus on an item that isn\'t armor into a grant that needs it equipped, once', () => {
-    const c = migrate(old({ inv: [{ id: 'r', name: 'Ring', qty: 1, eq: true, acBonus: 1 }, { id: 'm', name: '+1 Chain Mail', qty: 1, eq: true, armor: 'heavy', acBase: 16, acBonus: 1 }] }));
-    expect(c.inv.map((i) => i.acBonus)).toEqual([undefined, 1]);
-    expect(c.grants).toEqual([{ id: expect.any(String), kind: 'ac', name: '+1 AC', acMode: 'bonus', val: '1', from: 'item:r', srcKind: 'item', needEq: true }]);
-    expect(armorClass(c).total).toBe(18);
-    expect(migrate(c)).toEqual(c);
-  });
-  it('drops a zero bonus and keeps a broken one on the item, uncounted', () => {
-    const c = migrate(old({ inv: [{ id: 'a', name: 'A', qty: 1, eq: true, acBonus: 0 }, { id: 'b', name: 'B', qty: 1, eq: true, acBonus: 0.5 }] }));
-    expect(c.inv.map((i) => i.acBonus)).toEqual([undefined, 0.5]);
-    expect(c.grants).toEqual([]);
-    expect(armorClass(c).total).toBe(10);
-  });
-  it('keeps the AC total of an old save with both a typed ac and an item bonus', () => {
-    const c = migrate(old({ ac: 13, inv: [{ id: 'r', name: 'Ring', qty: 1, eq: true, acBonus: 1 }] }));
-    expect(armorClass(c).total).toBe(13);
-    expect(c.acMods).toEqual([{ id: expect.any(String), name: 'Adjustment (from old AC)', val: 2 }]);
-  });
-});
-
 describe('resources', () => {
   const seren = druidSample(); // WIS 20 (+5), level 12
   it('reads a maximum: a number of at least 1, a formula, or none', () => {
@@ -1115,13 +967,13 @@ describe('resources', () => {
       { id: 'c', name: 'C', count: 1, max: 2, recharge: 'dawn', regain: '1', regainOn: 'short' },
       { id: 'd', name: 'D', count: 1, max: 2, recharge: 'long', regain: '1', regainOn: 'short', typeName: 'Ki', note: 3 },
       { id: 'e', name: 'E', count: 1, maxV: '1d4' }, { id: 'f', name: 'F', count: 1, maxV: 'wis>=1' },
-      { id: 'g', name: 'G', count: 1, from: 'feature:gone', srcKind: 'class', srcName: 'Monk' }, { id: 'h', name: 'H', count: 'x', refill: true }] });
+      { id: 'g', name: 'G', count: 1, from: 'feature:gone', srcKind: 'class', srcName: 'Monk' }, { id: 'h', name: 'H', count: 'x' }] });
     expect(c.res).toEqual([
       { id: 'a', name: 'A', count: 1, recharge: 'long' }, { id: 'b', name: 'B', count: 1, recharge: 'none' },
       { id: 'c', name: 'C', count: 1, max: 2, recharge: 'dawn' },
       { id: 'd', name: 'D', count: 1, max: 2, recharge: 'long', regain: '1', regainOn: 'short', typeName: 'Ki' },
       { id: 'e', name: 'E', count: 1, recharge: 'none' }, { id: 'f', name: 'F', count: 1, maxV: 'wis>=1', recharge: 'none' },
-      { id: 'g', name: 'G', count: 1, srcKind: 'class', srcName: 'Monk', recharge: 'none' }, { id: 'h', name: 'H', count: 0, recharge: 'long' }]);
+      { id: 'g', name: 'G', count: 1, srcKind: 'class', srcName: 'Monk', recharge: 'none' }, { id: 'h', name: 'H', count: 0, recharge: 'none' }]);
     expect(migrate(c)).toEqual(c);
   });
 });
@@ -1162,16 +1014,6 @@ describe('rests, Dawn and item charges', () => {
     const c = make({ inv: [{ ...wand, count: 7 }] });
     expect(applyPatch(c, { inv: [{ ...wand, count: 7, max: 5 }] }).inv[0].count).toBe(5);
   });
-  it('moves a charged resource onto an item, once', () => {
-    const raw = { ...sampleCharacter(), pills: ['hp', 'res:wand', ''], res: [{ id: 'wand', name: 'Wand', count: 3, max: 7, recharge: 'long', inv: true, note: 'x' },
-      { id: 'rope', name: 'Rope', count: 3, inv: true }] };
-    const c = migrate(raw);
-    expect(c.inv.slice(-2)).toEqual([{ id: expect.any(String), name: 'Wand', qty: 1, eq: false, count: 3, max: 7, recharge: 'long', desc: 'x' },
-      { id: expect.any(String), name: 'Rope', qty: 3, eq: false }]);
-    expect(c.res).toEqual([]);
-    expect(c.pills).toEqual(['hp', '', '']);
-    expect(migrate(c)).toEqual(c);
-  });
   it('checks item charge fields on load', () => {
     const c = migrate({ ...sampleCharacter(), inv: [{ id: 'a', name: 'A', qty: 1, eq: false, count: 2, max: 0, recharge: 'weekly', regain: '1', regainOn: 'dawn' },
       { id: 'b', name: 'B', qty: 1, eq: false, max: 3 }] });
@@ -1206,16 +1048,6 @@ describe('free casts as resources and spell overrides', () => {
       expect(ownFreeCasts(setOwnFreeCast(shield, 's2', true, 'Shield'), 's2').map((r) => r.name)).toEqual(['Shield']);
       expect(setOwnFreeCast(base(), 's2', true, 'Shield').res).toHaveLength(2);
     });
-  });
-  it('turns an old save\'s free casts into resources that cast the spell, once', () => {
-    const c = migrate(oldSeren());
-    const fc = freeCastsOf(c, 'ds12');
-    expect(fc).toEqual([{ id: expect.any(String), name: 'Shield', note: 'Free cast', count: 0, max: 1, recharge: 'long', from: 'spell:ds12', srcKind: 'spell', casts: 'ds12' }]);
-    expect(c.spells.some((x) => 'free' in x)).toBe(false);
-    expect(c).not.toHaveProperty('free');
-    expect(migrate(c)).toEqual(c);
-    const i = migrate(oldIlyra());
-    expect(['sp8', 'sp9', 'sp12'].map((id) => freeCastsOf(i, id).map((r) => r.count))).toEqual([[1], [1], [1]]);
   });
   it('drops a cast link to a spell that is gone', () => {
     const c = migrate({ ...sampleCharacter(), res: [{ id: 'x', name: 'X', count: 1, max: 1, recharge: 'long', casts: 'gone' }] });
