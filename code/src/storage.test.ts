@@ -57,10 +57,10 @@ describe('backup import', () => {
 
 describe('unreadable sheet', () => {
   afterEach(() => { vi.unstubAllGlobals(); });
-  it('keeps a copy of the raw text before falling back to the sample, never overwriting an earlier copy', () => {
+  it('keeps a copy of the raw text before opening blank, never overwriting an earlier copy', () => {
     const m = stubStorage();
     m.set('dnd-sheet-v3:x', '{not json');
-    expect(load('x').ch.name).toBe(sampleCharacter().ch.name);
+    expect(load('x').inv).toEqual([]);
     expect(m.get('dnd-sheet-v3:x:unreadable')).toBe('{not json');
     m.set('dnd-sheet-v3:x', '{second');
     load('x');

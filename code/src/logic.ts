@@ -1,5 +1,5 @@
 // D&D 2024 rules used by the sheet. Pure functions: each takes a character and returns the next one.
-import { blankCharacter, sampleCharacter } from './defaults';
+import { blankCharacter } from './defaults';
 import { grantErrors, isDtypes, ITEM_CATS, partErrors, type GrantSpec } from './catalog/schema';
 import { hasDice, isValue, valueAt, type ValueCtx } from './catalog/value';
 import { PROF_NAMES, type ProfCat } from './catalog/names';
@@ -598,8 +598,6 @@ export function maxFields(kind: MaxKind, text: string): Pick<Counter, 'max' | 'm
   return isMaxFormula(t) ? { maxV: t } : null;
 }
 
-// The single clamp, run by update() and migrate() after every change: resource counts at most their maximum, HP at
-// most max HP. Uses lost while a maximum is lower are not given back when it rises (spec). Returns c when nothing moves.
 // A weapon's loaded ammunition (plan 7) stays only while it names an item in inv, outside any container, that canLoad
 // accepts: so it clears when the ammunition goes, is packed away or doesn't fit, or an edit changes the weapon. Run
 // after fixContainers, which may change `in`. Returns c when nothing changes.
@@ -615,6 +613,8 @@ function fixLoads(c: Character): Character {
   return changed ? { ...c, inv } : c;
 }
 
+// The single clamp, run by update() and migrate() after every change: resource counts at most their maximum, HP at
+// most max HP. Uses lost while a maximum is lower are not given back when it rises (spec). Returns c when nothing moves.
 export function normalize(c0: Character): Character {
   // The container rules first (plan 6), then weapons in hand (plan 5): a quantity or equip change, or an item moved
   // into a container, may take one out of hand, through setHands. Then loaded ammunition (plan 7).
@@ -767,8 +767,6 @@ const ENTRY_LISTS = ['senses', 'res', 'attacks', 'riders', 'inv', 'spells', 'fea
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 export const isEntry = (x: unknown): x is Record<string, unknown> =>
   isObj(x) && typeof x.name === 'string' && Object.values(x).every((v) => v === null || typeof v !== 'object');
-// Top-level fields added after the first release. A save without one gets the blank character's value, never
-// the sample's (roadmap, "Saves keep working"). Each later field adds its key here.
 const WHENS: When[] = ['armor', 'noHeavy', 'noArmor', 'noShield', 'noArmorNoShield', 'active'];
 // The link fields of an entry, checked on load: an unknown source kind reads as Other, any other bad value goes, and
 // the fields that need a link go from an entry without one. Never touches `lvl` (a spell's level).
@@ -843,22 +841,20 @@ function cleanParts(sp: Spell): Spell {
 const cleanFields = <T extends object>(x: T, fields: Record<string, FieldCheck>): T =>
   Object.fromEntries(Object.entries(x).filter(([k, v]) => !Object.hasOwn(fields, k) || fields[k](v))) as T;
 
-export const NEW_FIELDS: readonly (keyof Character)[] = ['spellSort', 'size', 'carryUp', 'attuneIds', 'grants', 'effectsOn', 'profs', 'defenses', 'hands', 'mastery', 'sections', 'slotsOnShort'];
 // Resources the Inventory tab echoed before `inv` existed.
 const OLD_INVENTORY_RESOURCES = ['arrows', 'potions'];
 
-// Builds a full character from a save or a backup. Missing fields come from the sample character, as before;
+// Builds a full character from a save or a backup. Missing fields come from the blank character, never the sample;
 // values of the wrong type fall back too, so damaged data can't crash the sheet on every launch.
 export function migrate(data: unknown): Character {
-  const def = sampleCharacter(), blank = blankCharacter();
+  const def = blankCharacter();
   if (!isObj(data)) return def;
   const d = { ...def } as Record<string, unknown>;
   for (const [k, dv] of Object.entries(def)) {
     if (data[k] !== undefined && (dv === null || sameType(dv, data[k]))) d[k] = data[k];
   }
-  for (const k of NEW_FIELDS) if (!sameType(blank[k], data[k])) d[k] = blank[k];
   for (const k of FIXED_RECORDS) {
-    const v = d[k] as Record<string, unknown>, base = blank[k] as Record<string, unknown>;
+    const v = d[k] as Record<string, unknown>, base = def[k] as Record<string, unknown>;
     d[k] = Object.fromEntries(Object.entries(base).map(([kk, bv]) => [kk, sameType(bv, v[kk]) ? v[kk] : bv]));
   }
   for (const k of ENTRY_LISTS) {
@@ -867,6 +863,8 @@ export function migrate(data: unknown): Character {
     d[k] = (d[k] as unknown[]).filter(ok).map((x) => (typeof (x as Record<string, unknown>).id === 'string' ? x : { ...(x as object), id: newId() }));
   }
   const c = d as unknown as Character;
+  // A skill's level is 0, 1 or 2: anything else would multiply the Proficiency Bonus by a wrong number.
+  c.skillProf = Object.fromEntries(Object.entries(c.skillProf).filter(([, v]) => v === 0 || v === 1 || v === 2));
   // The fields rendering relies on, repaired before anything below reads them: a bad text becomes '', so damaged data can't crash the sheet.
   const texts = <T extends object>(x: T, keys: (keyof T)[]): T => ({ ...x, ...Object.fromEntries(keys.map((k) => [k, typeof x[k] === 'string' ? x[k] : ''])) });
   c.spells = c.spells.map((x) => ({ ...texts(x, ['time', 'range']), lvl: Number.isInteger(x.lvl) && x.lvl >= 0 && x.lvl <= 9 ? x.lvl : 0 }));
@@ -1060,7 +1058,7 @@ export function migrate(data: unknown): Character {
     const x = ids[i];
     c.attuneIds.push(typeof x === 'string' && c.inv.some((it) => it.id === x) && !c.attuneIds.includes(x) ? x : '');
   }
-  // From the raw save, not the sample-merged copy: old saves get today's bar (HP and AC), not the sample's picks.
+  // From the raw save: old saves get today's bar (HP and AC).
   // Pills don't show items, so a pill of a resource that became an item empties.
   c.pills = sanitizePills(data.pills).map((k) => (converted.some((id) => k === resPill(id)) ? '' : k));
   // Effects switched on: links to something there, once each. A Concentration spell's effect follows c.conc instead.

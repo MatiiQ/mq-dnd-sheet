@@ -263,7 +263,7 @@ export function blankCharacter(): Character {
     size: 'medium', carryUp: false,
     level: 1, speedBase: 30, initMisc: 0, hdDie: 8, castAb: 'none', insp: 0, pills: ['hp', 'ac', ''], spellSort: 'az',
     abil: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 }, abilAdj: {}, saveProf: {}, skillProf: {},
-    hp: 8, maxHp: 8, origHp: 8, hdUsed: 0,
+    hp: 8, maxHp: 8, origHp: 8, amount: 0, hdUsed: 0,
     slotMax: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], slotUsed: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], slotsOnShort: false,
     defenses: [], senses: [], res: [], attacks: [], riders: [],
     coins: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 }, attuneIds: ['', '', ''], inv: [], spells: [], feats: [], prepMax: 0,

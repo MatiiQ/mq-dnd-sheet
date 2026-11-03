@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { newId } from './logic';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import {
-  ABILITIES, SKILLS, grantChips, addGrants, findUnlinked, removalChain, removalSummary, removeFeature, removeResource, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, toggleEffect, dawn, refillFor, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, splitTraining, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, NEW_FIELDS, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, removeItem, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
+  ABILITIES, SKILLS, grantChips, addGrants, findUnlinked, removalChain, removalSummary, removeFeature, removeResource, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, toggleEffect, dawn, refillFor, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, splitTraining, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, removeItem, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
   num, setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, undoHp
 } from './logic';
 import { spellActions } from './actions';
@@ -302,24 +302,37 @@ describe('loading saves and backups', () => {
     expect(c.slotMax).toEqual([0, 4, 3, 3, 3, 2, 1, 0, 0, 0]);
     expect(preparedCount(c)).toBe(c.prepMax);
   });
-  it('fills missing fields from the sample and marks old levelled spells prepared', () => {
+  it('fills missing fields from the blank character, never the sample', () => {
+    const c = migrate({ ch: { name: 'Sparse' } });
+    expect(c).toMatchObject({ level: 1, inv: [], spells: [], attacks: [], amount: 0 });
+    expect(migrate({ ...sampleCharacter(), inv: 'x' }).inv).toEqual([]);
+    expect(migrate(null)).toEqual(blankCharacter());
+    expect(migrate('x')).toEqual(blankCharacter());
+  });
+  it('keeps only skill levels 0, 1 and 2', () => {
+    const c = migrate({ ...sampleCharacter(), skillProf: { arcana: 'x', nature: 2, stealth: 5, history: 1.5, insight: 0 } });
+    expect(c.skillProf).toEqual({ nature: 2, insight: 0 });
+  });
+  it('gives a blank character nothing of the sample', () => {
+    expect(blankCharacter().amount).toBe(0);
+    expect(JSON.stringify(blankCharacter())).not.toMatch(/Ilyra|Longbow|Hunter/);
+  });
+  it('fills missing fields and marks old levelled spells prepared', () => {
     const c = migrate({ ch: { name: 'Bob' }, spells: [{ id: 's', name: 'Bless', lvl: 1 }] });
     expect(c.ch.name).toBe('Bob');
     expect(c.ch.species).toBe('');
     expect(c.spells[0].prep).toBe(true);
-    expect(c.attacks).toEqual(sampleCharacter().attacks);
+    expect(c.attacks).toEqual([]);
     expect(migrate({ ...sampleCharacter(), saveProf: {}, skillProf: { arcana: 1 } })).toMatchObject({ saveProf: {}, skillProf: { arcana: 1 } });
   });
   it('replaces values of the wrong type so the sheet can render', () => {
-    expect(migrate(null)).toEqual(sampleCharacter());
-    expect(migrate('x')).toEqual(sampleCharacter());
     const c = migrate({
       ...sampleCharacter(), spells: 'x', conds: null, abil: { str: '12', dex: 14 }, tab: 'nope', castAb: 'str',
       attacks: [{ id: 'a', name: 'Club', hit: {} }, { name: 'Sling', hit: '+4' }, 7],
       def: { res: ['Fire', 3], vul: 'x' }, defenses: undefined, slotMax: [0, 4], slotUsed: [0, 'x'],
       conc: { name: 'Bless' }, hpUndo: { prev: 1 }, restMsg: { title: 1 }
     });
-    expect(c.spells.map((x) => x.id)).toEqual(sampleCharacter().spells.map((x) => x.id));
+    expect(c.spells).toEqual([]);
     expect(c.conds).toEqual({});
     expect(c.abil).toMatchObject({ str: 10, dex: 14 });
     expect(c).toMatchObject({ tab: 'actions', castAb: 'none', conc: null, hpUndo: null, restMsg: null });
@@ -625,7 +638,7 @@ describe('saves keep working', () => {
     expect(migrate(druidSample())).toEqual(druidSample());
   });
   it('fills every new field from the blank character, not the sample, when a save lacks it or holds the wrong type', () => {
-    for (const k of NEW_FIELDS) {
+    for (const k of ['spellSort', 'size', 'carryUp', 'attuneIds', 'grants', 'effectsOn', 'profs', 'defenses', 'hands', 'mastery', 'sections', 'slotsOnShort'] as const) {
       const raw = { ...sampleCharacter() } as Record<string, unknown>;
       delete raw[k];
       // A save without profs also has its Training features split (Training migration); leave none to split here.
