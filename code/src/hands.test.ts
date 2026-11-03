@@ -153,18 +153,12 @@ describe('weapon kinds', () => {
   });
 });
 
-describe('the old typed Unarmed Strike', () => {
+describe('a typed Unarmed Strike', () => {
   const attacks = [
     { id: 'u', name: ' unarmed strike ', hit: '+4', dmg: '2 Bludgeoning', info: 'or Grapple / Shove (DC 12)', mastery: '' },
     { id: 'b', name: 'Longbow', hit: '+9', dmg: '1d8 +4 Piercing', info: '', mastery: '' }
   ];
-  it('goes from a save from before hands, once', () => {
-    const { hands: _h, ...old } = raw({ ...sampleCharacter(), attacks });
-    const out = migrate(old);
-    expect(out.attacks).toEqual([attacks[1]]);
-    expect(migrate(raw(out)).attacks).toEqual([attacks[1]]);
-  });
-  it('stays when typed after this plan', () => {
+  it('stays as typed', () => {
     expect(migrate(raw({ ...sampleCharacter(), attacks, hands: [] })).attacks).toEqual(attacks);
   });
   it('is not on the samples', () => {

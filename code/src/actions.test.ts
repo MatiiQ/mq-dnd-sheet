@@ -64,8 +64,8 @@ describe('weapon mastery', () => {
     expect(masterySlots({ ...c, level: 3 })).toBe(3);
   });
   it('keeps the picks valid on load and on every change', () => {
-    const { mastery: _m, ...old } = raw(ilyra({ mastery: ['longbow'] }));
-    expect(migrate(old).mastery).toEqual([]);
+    const { mastery: _m, ...noMastery } = raw(ilyra({ mastery: ['longbow'] }));
+    expect(migrate(noMastery).mastery).toEqual([]);
     expect(migrate({ ...raw(ilyra()), mastery: ['x', 'x', 3] }).mastery).toEqual(['x']);
     expect(applyPatch(ilyra(), { mastery: ['x', 'x'] }).mastery).toEqual(['x']);
     const ok = ilyra({ mastery: ['longbow'] });

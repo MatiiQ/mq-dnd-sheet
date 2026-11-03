@@ -14,7 +14,6 @@ import srdEntries from './data/srd/index';
 import { activeGrants, isActive } from './links';
 import { inventoryGroups } from './inventory';
 import { applyPatch } from './storage';
-import { oldIlyra } from './test-fixtures';
 import type { FeatureEntry } from './catalog/schema';
 import type { Character, Feature, Grant, Item, Spell } from './types';
 
@@ -318,11 +317,10 @@ describe('loading saves and backups', () => {
     expect(blankCharacter().amount).toBe(0);
     expect(JSON.stringify(blankCharacter())).not.toMatch(/Ilyra|Longbow|Hunter/);
   });
-  it('fills missing fields and marks old levelled spells prepared', () => {
+  it('fills missing fields from the blank character', () => {
     const c = migrate({ ch: { name: 'Bob' }, spells: [{ id: 's', name: 'Bless', lvl: 1 }] });
     expect(c.ch.name).toBe('Bob');
     expect(c.ch.species).toBe('');
-    expect(c.spells[0].prep).toBe(true);
     expect(c.attacks).toEqual([]);
     expect(migrate({ ...sampleCharacter(), saveProf: {}, skillProf: { arcana: 1 } })).toMatchObject({ saveProf: {}, skillProf: { arcana: 1 } });
   });
@@ -361,19 +359,9 @@ describe('loading saves and backups', () => {
     expect(c.senses.map((s) => s.srcKind)).toEqual(['other', 'item', undefined]);
     expect(c.senses[1]).toMatchObject({ srcName: 'Goggles', desc: 'See without light' });
   });
-  it('turns the old Heroic Inspiration flag into a count with no maximum (house rule)', () => {
+  it('keeps Heroic Inspiration a whole count of 0 or more, with no maximum (house rule)', () => {
     const vals = [true, false, 3, 2.7, -4, 'x', null, undefined];
-    expect(vals.map((insp) => migrate({ ...sampleCharacter(), insp }).insp)).toEqual([1, 0, 3, 2, 0, 0, 0, 0]);
-  });
-  it('renames a spell\'s old source text to srcName, keeping one already set', () => {
-    const c = migrate({ ...sampleCharacter(), spells: [{ id: 'a', name: 'Bless', lvl: 1, time: 'Action', range: '30 ft', source: 'Ranger' },
-      { id: 'b', name: 'Aid', lvl: 2, time: 'Action', range: '30 ft', source: 'Old', srcName: 'Cleric' },
-      { id: 'c', name: 'Light', lvl: 0, time: 'Action', range: 'Touch', source: '' }] });
-    expect(c.spells[0]).toMatchObject({ srcName: 'Ranger' });
-    expect(c.spells[1]).toMatchObject({ srcName: 'Cleric' });
-    expect(c.spells.map((x) => 'source' in x)).toEqual([false, false, false]);
-    expect(c.spells[2].srcName).toBeUndefined();
-    expect(migrate(oldIlyra()).spells.find((x) => x.id === 'sp4')?.srcName).toBe('Ranger · Favored Enemy');
+    expect(vals.map((insp) => migrate({ ...sampleCharacter(), insp }).insp)).toEqual([0, 0, 3, 2, 0, 0, 0, 0]);
   });
   it('keeps a spell\'s own casting ability and catalog id only when well formed', () => {
     const c = migrate({ ...sampleCharacter(), spells: [{ id: 'a', name: 'Light', lvl: 0, time: 'Action', range: 'Touch', castAb: 'cha', cid: 'spell/light' },
@@ -729,9 +717,8 @@ describe('sample numbers', () => {
   });
   const ILYRA = { eff: [12, 18, 14, 10, 14, 8], save: [4, 7, 2, 0, 2, -1], skills: { athletics: 1, acrobatics: 4, sleight: 4, stealth: 7, arcana: 0, history: 0, investigation: 0, nature: 3, religion: 0, animal: 5, insight: 5, medicine: 2, perception: 5, survival: 8, deception: -1, intimidation: -1, performance: -1, persuasion: -1 }, speed: 35, ac: 16, init: 4, maxHp: 44, pp: 15, res: { favored: 3 } };
   const SEREN = { eff: [8, 13, 16, 13, 20, 10], save: [-1, 1, 3, 5, 9, 0], skills: { athletics: -1, acrobatics: 1, sleight: 1, stealth: 1, arcana: 5, history: 5, investigation: 1, nature: 1, religion: 1, animal: 5, insight: 5, medicine: 9, perception: 9, survival: 5, deception: 0, intimidation: 0, performance: 0, persuasion: 0 }, speed: 25, ac: 14, init: 1, maxHp: 99, pp: 19, res: { wild: 3, bolt: 5, omen: 5, resurge: 1, hands: 1, reveal: 1 } };
-  it('Ilyra, and an old save of her', () => {
+  it('Ilyra', () => {
     expect(numbers(sampleCharacter(), Object.keys(ILYRA.res))).toEqual(ILYRA);
-    expect(numbers(migrate(oldIlyra()), Object.keys(ILYRA.res))).toEqual(ILYRA);
   });
   it('Seren', () => {
     // The one change the rebuild makes (approved by the owner): Primal Order · Magician now counts, adding her WIS
@@ -1278,20 +1265,10 @@ describe('grantChips', () => {
   });
 });
 
-describe('background migration', () => {
-  it('turns the old Background text into a background feature, once', () => {
-    const c = migrate({ ...blankCharacter(), ch: { ...blankCharacter().ch, bg: 'Sage' }, feats: [] });
-    expect(c.feats).toEqual([{ id: expect.any(String), g: 'background', name: 'Sage', desc: '' }]);
-    expect(c.ch).not.toHaveProperty('bg');
-    expect(migrate(c)).toEqual(c);
-    expect(migrate({ ...blankCharacter(), ch: { ...blankCharacter().ch, bg: '  ' }, feats: [] }).feats).toEqual([]);
-    const has = migrate({ ...blankCharacter(), ch: { ...blankCharacter().ch, bg: 'Sage' }, feats: [{ id: 'b', g: 'background', name: 'Sage', desc: 'x' }] });
-    expect(has.feats).toHaveLength(1);
-  });
+describe('backgrounds', () => {
   it('keeps the samples\' backgrounds as features', () => {
     expect(sampleCharacter().feats.find((f) => f.g === 'background')).toMatchObject({ id: 'f20', name: 'Guide' });
     expect(druidSample().feats.find((f) => f.g === 'background')).toMatchObject({ id: 'f26', name: 'Sage' });
-    expect(migrate(oldIlyra()).feats.filter((f) => f.g === 'background').map((f) => f.name)).toEqual(['Guide']);
   });
 });
 
@@ -1338,9 +1315,7 @@ describe('addGrants with a catalog spell (plan 4)', () => {
 });
 
 describe('class and subclass ids (plan 4)', () => {
-  it('an old save without them loads with empty ids', () => {
-    const c = migrate(oldIlyra());
-    expect([c.ch.clsId, c.ch.subId]).toEqual(['', '']);
+  it('the samples and the blank character carry them', () => {
     expect(blankCharacter().ch).toMatchObject({ clsId: '', subId: '' });
     expect(sampleCharacter().ch).toMatchObject({ clsId: 'class/ranger', subId: 'subclass/ranger/hunter' });
     expect(druidSample().ch).toMatchObject({ clsId: 'class/druid', subId: '' });

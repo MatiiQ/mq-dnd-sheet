@@ -274,7 +274,7 @@ export function spellActions(c: Character): SpellAction[] {
     const [econ, econNote] = (Object.hasOwn(SPELL_ECON, key) ? SPELL_ECON[key] : undefined) ?? [econOf(sp.time), undefined];
     const note = econNote ?? (Object.hasOwn(SPELL_NOTES, key) ? SPELL_NOTES[key] : undefined);
     const source = sourceLabel(c, sp);
-    // Spells without the printed text (the examples, older saves) still say which dice a higher slot adds.
+    // Spells without the printed text (the examples) still say which dice a higher slot adds.
     const slotDie = /^(\d+d\d+)\/slot$/.exec(sp.scale ?? '')?.[1];
     const upcast = sp.higher || (slotDie && `+${slotDie} for each slot level above ${sp.lvl}`);
     if (sp.atk || sp.save || sp.fx === 'damage' || sp.fx === 'healing' || effect) {

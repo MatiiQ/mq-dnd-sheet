@@ -168,7 +168,6 @@ export function druidSample(): Character {
       // The SRD 5.2 Bag of Holding (catalog item/bag-of-holding), holding the Book and the Parchment and 50 GP of her coins.
       { id: 'i14', name: 'Bag of Holding', qty: 1, eq: false, wt: 5, desc: 'Holds up to 500 lb; its contents and coins don’t count toward your load', cid: 'item/bag-of-holding', cat: 'magic', rarity: 'Uncommon', xdim: true, cap: 500, capVol: '64 cubic feet', sec: 's3', gp: 50 }
     ],
-    // Cantrips carry prep so migrate() leaves them as they are.
     spells: [
       { id: 'ds1', name: 'Druidcraft', lvl: 0, time: 'Action', range: '30 ft', srcName: 'Druid', dur: 'Instantaneous', comp: 'V, S', prep: true, school: 'Transmutation', classes: 'druid', fx: 'other', cid: 'spell/druidcraft' },
       { id: 'ds2', name: 'Produce Flame', lvl: 0, time: 'Bonus Action', range: 'Self · throw 60 ft', srcName: 'Druid', dice: 'd20 +9 · 3d8 Fire', dur: '10 minutes', comp: 'V, S', prep: true, school: 'Conjuration', classes: 'druid', scale: 'cantrip', atk: 'ranged', fx: 'damage', dmg: '1d8', dtype: 'Fire', cid: 'spell/produce-flame' },

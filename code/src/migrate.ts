@@ -1,10 +1,10 @@
-// Save repair: builds a full, valid character from a save or a backup, however old or damaged. This file imports
+// Save repair: builds a full, valid character from a save or a backup, however damaged. This file imports
 // logic.ts, never the reverse, so the rules stay free of old save formats.
 import { blankCharacter } from './defaults';
 import { AC_EFFECTS, grantErrors, isDtypes, isObj, ITEM_CATS, partErrors } from './catalog/schema';
 import { isValue } from './catalog/value';
 import { dropLinkOnly, fixLinks, GROUP_SRC, parseLink, sourceOf, SRC_KINDS } from './links';
-import { ABILITIES, CAST_NAMES, clamp, isMaxFormula, newId, normalize, normName, PROF_CATS, regainEvent, sanitizePills, SIZES, slots, SPELL_SORTS, strings, TABS, UNARMORED, uniqueStrings, withoutKeys } from './logic';
+import { ABILITIES, CAST_NAMES, clamp, isMaxFormula, newId, normalize, PROF_CATS, regainEvent, sanitizePills, SIZES, slots, SPELL_SORTS, strings, TABS, UNARMORED, uniqueStrings, withoutKeys } from './logic';
 import type { AcEffect, Character, Counter, DefenseKind, Linked, Recharge, Resource, Spell, When } from './types';
 
 const sameType = (def: unknown, v: unknown) => (Array.isArray(def) ? Array.isArray(v) : isObj(def) ? isObj(v) : typeof v === typeof def);
@@ -119,18 +119,12 @@ export function migrate(data: unknown): Character {
   c.riders = c.riders.map((x) => texts(x, ['dice']));
   c.feats = c.feats.map((x) => cleanCid(cleanLinked({ ...texts(x, ['desc']), g: Object.hasOwn(GROUP_SRC, x.g) ? x.g : 'other' })));
   c.senses = c.senses.map(({ desc, ...se }) => cleanLinked({ ...texts(se, ['range']), ...(typeof desc === 'string' ? { desc } : {}) }));
-  // Spells named their source in a `source` text before links; it becomes srcName unless one is set.
   c.spells = c.spells.map((x) => {
-    const { source, castAb, ...sp } = x as Spell & { source?: unknown };
-    const named = typeof source === 'string' && source.trim() && sp.srcName === undefined ? { srcName: source } : {};
-    return cleanCid(cleanLinked({ ...sp, ...named, ...(ABILITIES.some(([k]) => k === castAb) ? { castAb } : {}) }));
+    const { castAb, ...sp } = x;
+    return cleanCid(cleanLinked({ ...sp, ...(ABILITIES.some(([k]) => k === castAb) ? { castAb } : {}) }));
   });
   // Typed attacks are manual actions (plan 5): their numbers stay as typed; a bad timing or section goes.
   c.attacks = c.attacks.map((a) => cleanFields(cleanLinked(a), ATTACK_FIELDS));
-  // Every character now has a computed Unarmed Strike (plan 5), and saves copied from the old samples hold a typed one.
-  // It goes once, only from a save from before `hands` existed; one typed later stays. Its "Grapple / Shove (DC n)"
-  // text is covered by the computed row's Grapple and Shove DC.
-  if (data.hands === undefined) c.attacks = c.attacks.filter((a) => normName(a.name) !== 'unarmed strike');
   // Weapons in hand: strings here; normalize() (below, through setHands) keeps only a valid list.
   c.hands = strings(c.hands);
   c.mastery = uniqueStrings(c.mastery);
@@ -172,19 +166,15 @@ export function migrate(data: unknown): Character {
   // Nullable fields: keep only well-formed values. The undo row lasts seconds, so it never survives a reload.
   const conc = c.conc as unknown;
   c.conc = isObj(conc) && typeof conc.id === 'string' && typeof conc.name === 'string' ? c.conc : null;
-  // Older versions kept Concentration on a spell after removing it. Checked after the entry filter above.
+  // Concentration on a spell that is gone clears. Checked after the entry filter above.
   if (c.conc && !c.spells.some((x) => x.id === c.conc!.id)) c.conc = null;
   c.hpUndo = null;
   // Inspiration is a counter, 0 or more. This deliberately departs from the rules, where a character has at most one
   // Heroic Inspiration (PHB p.13, p.368): the book says it doesn't stack, the sheet counts it with no maximum (house rule).
-  // Older saves had an on/off flag; the type changed, so read the raw save.
-  const insp = data.insp;
-  c.insp = typeof insp === 'boolean' ? Number(insp) : finite(insp) ? Math.max(0, Math.floor(insp)) : 0;
+  c.insp = finite(c.insp) ? Math.max(0, Math.floor(c.insp)) : 0;
   if (typeof c.concCheck !== 'string') c.concCheck = null;
   const msg = c.restMsg as unknown;
   c.restMsg = isObj(msg) && typeof msg.title === 'string' && typeof msg.body === 'string' ? c.restMsg : null;
-  // Older saves had no prepared flags: treat their levelled spells as prepared.
-  c.spells = c.spells.map((x) => (x.prep === undefined && x.always === undefined ? { ...x, prep: true } : x));
   // AC fields: a damaged one would show NaN or join strings, so it goes, with its partner field.
   c.acMods = c.acMods.filter((m) => finite(m.val));
   if (!Object.hasOwn(UNARMORED, c.acUnarm)) c.acUnarm = 'none';
@@ -211,11 +201,6 @@ export function migrate(data: unknown): Character {
   c.pills = sanitizePills(data.pills);
   // Effects switched on: links to something there, once each. A Concentration spell's effect follows c.conc instead.
   c.effectsOn = strings(c.effectsOn).filter((l, i, all) => all.indexOf(l) === i && sourceOf(c, l) && !(parseLink(l)!.kind === 'spell' && (sourceOf(c, l) as Spell).c));
-  // The background was a text field in Edit details; it becomes a background feature (from the raw save, once).
-  const oldBg = isObj(data.ch) && typeof data.ch.bg === 'string' ? data.ch.bg.trim() : '';
-  if (oldBg && !c.feats.some((f) => f.g === 'background' && normName(f.name) === normName(oldBg))) {
-    c.feats = [...c.feats, { id: newId(), g: 'background', name: oldBg, desc: '' }];
-  }
   // An action grant that spends a resource that is gone no longer spends anything.
   c.grants = c.grants.map((g) => (g.kind === 'action' && g.res !== undefined && !c.res.some((r) => r.id === g.res) ? withoutKeys(g, ['res']) : g));
   const fixed = fixLinks(c);
