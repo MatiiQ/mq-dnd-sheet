@@ -30,6 +30,17 @@ export function addedLines(patch: string): Map<string, string[]> {
   return out;
 }
 
+// Paths in `git log --numstat` output that must never be published: the PHB folders, local scripts, and any binary
+// file (a PDF's text can't be searched) except the app's icons. A binary shows as '-' counts.
+export function forbiddenPaths(numstat: string): string[] {
+  return numstat.split('\n').filter(Boolean).flatMap((line) => {
+    const [added, , path] = line.split('\t');
+    if (!path) return [];
+    const binary = added === '-' && !path.startsWith('code/public/icons/');
+    return binary || /^(reference|resources|code\/scripts\/local)\//.test(path) ? [path] : [];
+  });
+}
+
 const git = (args: string[], cwd: string) => execFileSync('git', args, { cwd, encoding: 'utf8', maxBuffer: 1 << 28 });
 // Each pre-push stdin line: <local ref> <local sha> <remote ref> <remote sha>. Returns one message per phrase found.
 export function scanPushRanges(lines: string[], phrases: string[], cwd: string): string[] {
@@ -44,6 +55,9 @@ export function scanPushRanges(lines: string[], phrases: string[], cwd: string):
     const patch = git(['log', '-p', '--cc', '--no-color', '--no-ext-diff', ...range], cwd);
     // One commit at a time: a phrase must belong to one commit, so the message can name it.
     for (const [sha, added] of addedLines(patch)) for (const p of findPhrases(added.join(' '), phrases)) hits.push(`"${p}" added in commit ${sha.slice(0, 10)}`);
+    for (const path of forbiddenPaths(git(['log', '-m', '--numstat', '--no-renames', '--diff-filter=d', '--format=', ...range], cwd))) hits.push(`forbidden file in the push: ${path}`);
+    const log = git(['log', '--format=%H%x00%B%x00', ...range], cwd).split('\0');
+    for (let i = 0; i + 1 < log.length; i += 2) for (const p of findPhrases(log[i + 1], phrases)) hits.push(`"${p}" in the message of commit ${log[i].trim().slice(0, 10)}`);
   }
   return hits;
 }
