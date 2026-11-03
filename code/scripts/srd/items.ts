@@ -127,6 +127,38 @@ export function parseGear(text: string, layout: string): ItemEntry[] {
   return out;
 }
 
+const MOUNT_ROW = (name: string, cell: string) => new RegExp(`(?:^|\\s{2,})${name.replace(/[()]/g, '\\$&')}\\s{2,}(${cell})\\s+(${COST})(?:\\s|$)`, 'm');
+const FOCUS_USERS: Record<string, string> = { 'Arcane Focus': 'A Sorcerer, Warlock, or Wizard', 'Druidic Focus': 'A Druid or Ranger', 'Holy Symbol': 'A Cleric or Paladin' };
+const FOCUSES: [string, string, string][] = [
+  ['Arcane Focus', 'Crystal', 'Crystal'], ['Arcane Focus', 'Orb', 'Orb'], ['Arcane Focus', 'Rod', 'Rod'], ['Arcane Focus', 'Staff (also a Quarterstaff)', 'Staff'], ['Arcane Focus', 'Wand', 'Wand'],
+  ['Druidic Focus', 'Sprig of mistletoe', 'Sprig of Mistletoe'], ['Druidic Focus', 'Wooden staff (also a Quarterstaff)', 'Wooden Staff'], ['Druidic Focus', 'Yew wand', 'Yew Wand'],
+  ['Holy Symbol', 'Amulet (worn or held)', 'Amulet'], ['Holy Symbol', 'Emblem (borne on fabric or a Shield)', 'Emblem'], ['Holy Symbol', 'Reliquary (held)', 'Reliquary']
+];
+const WEIGHT = '—|[\\d½/,]+ lb\\.';
+// A focus's forms, the Mounts and Tack tables and the large vehicles, found by name: these tables share their lines
+// with the neighbouring column. Stabling, like lifestyle and lodging, is a cost and not a thing to carry.
+export function parseMounts(layout: string): ItemEntry[] {
+  const out: ItemEntry[] = [];
+  for (const [group, row, form] of FOCUSES) {
+    const m = MOUNT_ROW(row, WEIGHT).exec(layout);
+    if (!m) continue;
+    const wt = pounds(m[1]), note = /\((.+)\)/.exec(row)?.[1];
+    out.push(item(`${group} (${form})`, { cat: 'focus', cost: m[2], ...(wt === undefined ? {} : { wt }), desc: `${note ? note[0].toUpperCase() + note.slice(1) + '. ' : ''}${FOCUS_USERS[group]} can use it as a Spellcasting Focus.` }));
+  }
+  for (const name of ['Camel', 'Elephant', 'Horse, Draft', 'Horse, Riding', 'Mastiff', 'Mule', 'Pony', 'Warhorse']) {
+    const m = MOUNT_ROW(name, WEIGHT).exec(layout);
+    if (m) out.push(item(name, { cat: 'mount', cost: m[2], desc: `Carrying capacity ${m[1]}` }));
+  }
+  for (const [name, label] of [['Carriage'], ['Cart'], ['Chariot'], ['Feed per day'], ['Exotic', 'Saddle, Exotic'], ['Military', 'Saddle, Military'], ['Riding', 'Saddle, Riding'], ['Sled'], ['Wagon']]) {
+    const m = MOUNT_ROW(name, WEIGHT).exec(layout);
+    if (m) out.push(item(label ?? name, { cat: 'mount', wt: pounds(m[1]), cost: m[2], desc: '' }));
+  }
+  for (const m of layout.matchAll(new RegExp(`^\\s*(Airship|Galley|Keelboat|Longship|Rowboat|Sailing Ship|Warship)\\s{2,}(\\S+ mph)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\d+)\\s+(\\d+)\\s+(\\S+)\\s+(${COST})`, 'gm'))) {
+    out.push(item(m[1], { cat: 'mount', cost: m[9], desc: `Speed ${m[2]}; Crew ${m[3]}; Passengers ${m[4]}; Cargo ${m[5]} tons; AC ${m[6]}; HP ${m[7]}; Damage Threshold ${m[8]}.` }));
+  }
+  return out;
+}
+
 // Tools: "Name (cost)" blocks followed by Ability, Weight, Utilize, Craft and Variants lines.
 export function parseTools(text: string): ItemEntry[] {
   return pricedBlocks(text).filter((b) => /^Ability:/.test(b.lines.find((l) => l.trim())?.trim() ?? '')).map((b) => {

@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { expect, it } from 'vitest';
-import { parseClass } from './classes.ts';
+import { parseClass, parseOptions } from './classes.ts';
 
 const fx = (f: string) => readFileSync(new URL(`./fixtures/${f}`, import.meta.url), 'utf8');
 const [cls, subs, feats] = parseClass(fx('ranger.txt'), fx('ranger-layout.txt'));
@@ -37,4 +37,19 @@ it('reads the subclass and its features', () => {
     ['feature/ranger/hunter/hunters-lore', 3, 'hunter'], ['feature/ranger/hunter/hunters-prey', 3, 'hunter']
   ]);
   expect(feats.find((f) => f.name === 'Hunter’s Prey')!.desc).toContain('Colossus Slayer. Your tenacity');
+});
+
+it('reads option features from a section, with prerequisites, repeat and wrapped prerequisite lines', () => {
+  const lines = ['Agonizing Blast', '', 'Prerequisite: Level 2+ Warlock, a Warlock Cantrip', 'That Deals Damage', '', 'Add your Charisma modifier.', 'Repeatable. You can gain this more than once.', '',
+    'Devouring Blade', '', 'Prerequisite: Level 12+ Warlock, Thirsting Blade', 'Invocation', '', 'Two attacks.', '', 'Armor of Shadows', '', 'Cast Mage Armor.', ''];
+  const opts = parseOptions(lines, ['Agonizing Blast', 'Armor of Shadows', 'Devouring Blade', 'Not In This Text'], { cls: 'Warlock', of: 'invocation', lvl: 1, page: 73 });
+  expect(opts.map((o) => o.id)).toEqual(['feature/warlock/agonizing-blast', 'feature/warlock/devouring-blade', 'feature/warlock/armor-of-shadows']);
+  expect(opts[0]).toMatchObject({ kind: 'feature', src: 'srd', cls: 'warlock', of: 'invocation', lvl: 2, prereq: 'lvl>=2', repeat: true, page: 73, grants: [] });
+  expect(opts[1]).toMatchObject({ lvl: 12, prereq: 'lvl>=12;feature=thirsting-blade' });
+  expect(opts[1].desc).toBe('Prerequisite: Level 12+ Warlock, Thirsting Blade Invocation\nTwo attacks.');
+  expect(opts[2].prereq).toBeUndefined();
+});
+it('reads a Cost line right under the heading', () => {
+  const [o] = parseOptions(['Empowered Spell', 'Cost: 1 Sorcery Point', '', 'Reroll dice.', ''], ['Empowered Spell'], { cls: 'Sorcerer', of: 'metamagic', lvl: 2 });
+  expect(o).toMatchObject({ id: 'feature/sorcerer/empowered-spell', of: 'metamagic', lvl: 2, desc: 'Cost: 1 Sorcery Point\nReroll dice.' });
 });

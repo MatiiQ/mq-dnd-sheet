@@ -209,3 +209,15 @@ describe('known list', () => {
     expect(r).toMatchObject({ added: ['c|c'], removed: ['c|d'], changed: ['c|a'] });
   });
 });
+
+describe('checks after the second-print fixes', () => {
+  const spellText = 'Telekinesis\nLevel 5 Transmutation (Sorcerer, Wizard)\n';
+  const spell = { id: 'spell/telekinesis', kind: 'spell', name: 'Telekinesis', src: 'phb', replace: true, desc: 'x', lvl: 5, school: 'Transmutation', classes: 'wizard', time: 'Action', range: '60 feet', comp: 'V', dur: '1 hour', conc: false, ritual: false, fx: 'other' } as unknown as Entry;
+  it('counts a PHB entry that replaces its SRD entry as having one', () => {
+    expect(srdHeadingChecks(spellText, [spell]).filter((f) => f.check === 'srd-spell-missing')).toEqual([]);
+  });
+  it('accepts a table written as plain lines without digits', () => {
+    const e = { id: 'feature/x/y', kind: 'feature', name: 'Y', src: 'srd', cls: 'x', lvl: 1, grants: [], desc: 'As shown in the Land Ward table.\nLand Ward (land: Resistance)\nArid: Fire' } as unknown as Entry;
+    expect(textChecks([e]).filter((f) => f.check === 'table-cut')).toEqual([]);
+  });
+});

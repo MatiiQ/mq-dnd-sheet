@@ -3,7 +3,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { catalogId, type Entry, type ItemEntry, type ProfEntry } from '../../src/catalog/schema.ts';
 import { applyOverlay, type Overlay } from '../lib/overlay.ts';
 import { writeEntries } from '../lib/write.ts';
-import { copyBase, parseArmor, parseGear, parseMagicItems, parseTools, parseWeapons } from './items.ts';
+import { copyBase, parseArmor, parseGear, parseMagicItems, parseMounts, parseTools, parseWeapons } from './items.ts';
 import { parseClass } from './classes.ts';
 import { parseBackgrounds, parseFeats, parseSpecies } from './origins.ts';
 import { parseLanguages, parseRules } from './rules.ts';
@@ -29,6 +29,7 @@ const items: ItemEntry[] = [
   ...parseArmor(layoutBetween(layout, /^\s+Armor\s+Armor Class \(AC\)/, /^\s+Shield\s+\+2/)),
   ...parseGear(section(srdText, 'Acid (25 GP)', 'Mounts and Vehicles'),
     layoutBetween(layout, /^\s+Adventuring Gear\s+Item\s+Weight/, /^\s+Ink\s+—/) + '\n' + layoutBetween(layout, /^\s+Type\s+Amount Storage/, /^\s+Needles\s/)),
+  ...parseMounts(layout),
   ...parseTools(section(srdText, 'Alchemist’s Supplies (50 GP)', 'Adventuring Gear')),
   ...parseMagicItems(section(srdText, 'Adamantine Armor', 'Monsters', 'Magic Items A–Z'))
 ];

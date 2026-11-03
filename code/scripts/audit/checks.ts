@@ -30,7 +30,7 @@ const rarityMatches = (rarity: string, line: string, full: string) => {
 
 // Every spell and magic item heading of the SRD text has an entry, and every SRD entry of those kinds has a heading.
 export function srdHeadingChecks(text: string, entries: Entry[]): Finding[] {
-  const out: Finding[] = [], L = sourceLines(text), srd = entries.filter((e) => e.src === 'srd');
+  const out: Finding[] = [], L = sourceLines(text), srd = entries.filter((e) => e.src === 'srd' || e.replace);
   const spells = new Set(srd.filter((e) => e.kind === 'spell').map((e) => nameKey(e.name)));
   const spellHeads = new Set(L.flatMap((l, i) => (SPELL_LINE.test(l) && i ? [nameKey(L[i - 1])] : [])));
   for (const h of spellHeads) if (!spells.has(h)) out.push({ check: 'srd-spell-missing', id: h, note: 'heading in the SRD text, no entry' });
@@ -254,7 +254,7 @@ export function textChecks(entries: Entry[], headings: Set<string> = new Set()):
       if (/Features$/.test(title)) continue;
       const lastAt = d.lastIndexOf(title);
       if (lastAt === m.index + m[0].indexOf(title)) out.push({ check: 'table-missing', id: `${e.id}:${title}`, note: `refers to the ${title} table, which isn't in the text` });
-      else if (!/\d/.test(d.slice(lastAt + title.length))) out.push({ check: 'table-cut', id: `${e.id}:${title}`, note: `the ${title} table has no rows` });
+      else if (!/\d|\n/.test(d.slice(lastAt + title.length))) out.push({ check: 'table-cut', id: `${e.id}:${title}`, note: `the ${title} table has no rows` });
     }
   }
   return out.filter((f, i) => out.findIndex((x) => keyOf(x) === keyOf(f)) === i);

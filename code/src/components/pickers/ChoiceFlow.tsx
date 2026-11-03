@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  choicesOf, countedDefault, featureName, freeText, grantSpellName, isCountable, needed, nestedEntries, optionGroups, poolOptions, resolveChoices,
+  atLevel, choicesOf, countedDefault, featureName, freeText, grantSpellName, isCountable, needed, nestedEntries, optionGroups, poolOptions, resolveChoices,
   validPicks, type AddChoices
 } from '../../catalog/copy';
 import type { Catalog } from '../../catalog/merge';
@@ -28,6 +28,7 @@ const EMPTY: NodeAnswers = { picks: {}, counted: {}, links: {} };
 function walk(cat: Catalog, c: Character, answers: Record<string, NodeAnswers>, entry: Entry, key: string, parent: string | null,
   preset: Record<string, string[]>, adding: Entry[], out: FlowNode[]): void {
   const picks = { ...preset, ...(answers[key]?.picks ?? {}) };
+  entry = atLevel(c, entry);
   const node: FlowNode = { key, parent, entry, picks, preset, adding: [...adding, entry], title: featureName(cat, c, entry, picks) };
   out.push(node);
   for (const n of nestedEntries(cat, entry, picks)) walk(cat, c, answers, n.entry, key + '>' + n.entry.id, key, n.preset ?? {}, node.adding, out);

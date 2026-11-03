@@ -1152,7 +1152,7 @@
     "page": 84,
     "species": "dragonborn",
     "lvl": 1,
-    "desc": "Your lineage stems from a dragon progenitor. Choose the kind of dragon from the Draconic Ancestors table. Your choice affects your Breath Weapon and Damage Resistance traits as well as your appearance.",
+    "desc": "Your lineage stems from a dragon progenitor. Choose the kind of dragon from the Draconic Ancestors table. Your choice affects your Breath Weapon and Damage Resistance traits as well as your appearance.\nDraconic Ancestors (dragon: damage type)\nBlack: Acid\nBlue: Lightning\nBrass: Fire\nBronze: Lightning\nCopper: Acid\nGold: Fire\nGreen: Poison\nRed: Fire\nSilver: Cold\nWhite: Cold",
     "grants": [
       {
         "kind": "choice",
@@ -1445,7 +1445,7 @@
     "page": 84,
     "species": "elf",
     "lvl": 1,
-    "desc": "You are part of a lineage that grants you supernatural abilities. Choose a lineage from the Elven Lineages table. You gain the level 1 benefit of that lineage. When you reach character levels 3 and 5, you learn a higher-level spell, as shown on the table. You always have that spell prepared. You can cast it once without a spell slot, and you regain the ability to cast it in that way when you finish a Long Rest. You can also cast the spell using any spell slots you have of the appropriate level.\nYou know the Prestidigitation cantrip. Wheneve a Long Rest, you can replace that cantrip with Intelligence, Wisdom, or Charisma is your spellcasting ability for the spells you cast with this trait (choose the ability when you select the lineage).",
+    "desc": "You are part of a lineage that grants you supernatural abilities. Choose a lineage from the Elven Lineages table. You gain the level 1 benefit of that lineage. When you reach character levels 3 and 5, you learn a higher-level spell, as shown on the table. You always have that spell prepared. You can cast it once without a spell slot, and you regain the ability to cast it in that way when you finish a Long Rest. You can also cast the spell using any spell slots you have of the appropriate level. Intelligence, Wisdom, or Charisma is your spellcasting ability for the spells you cast with this trait (choose the ability when you select the lineage).\nElven Lineages\nDrow. Level 1: The range of your Darkvision increases to 120 feet. You also know the Dancing Lights cantrip. Level 3: Faerie Fire. Level 5: Darkness.\nHigh Elf. Level 1: You know the Prestidigitation cantrip. Whenever you finish a Long Rest, you can replace that cantrip with a different cantrip from the Wizard spell list. Level 3: Detect Magic. Level 5: Misty Step.\nWood Elf. Level 1: Your Speed increases to 35 feet. You also know the Druidcraft cantrip. Level 3: Longstrider. Level 5: Pass without Trace.",
     "grants": [
       {
         "kind": "choice",
@@ -1643,7 +1643,7 @@
       {
         "id": "g4",
         "kind": "spell",
-        "name": "Pass Without Trace",
+        "name": "Pass without Trace",
         "spell": "spell/pass-without-trace",
         "always": true,
         "castAb": "$ab",
@@ -1652,7 +1652,7 @@
       {
         "id": "g5",
         "kind": "resource",
-        "name": "Pass Without Trace (free cast)",
+        "name": "Pass without Trace (free cast)",
         "max": "1",
         "recharge": "long",
         "casts": "spell/pass-without-trace",
@@ -1979,6 +1979,13 @@
         "id": "g1",
         "kind": "carryUp",
         "name": "Counts as one size larger for carrying capacity"
+      },
+      {
+        "id": "g2",
+        "kind": "defense",
+        "name": "Advantage on saves to end Grappled",
+        "def": "adv",
+        "target": "to end Grappled"
       }
     ]
   },
@@ -2254,7 +2261,7 @@
       {
         "id": "g2",
         "kind": "spell",
-        "name": "Ray Of Sickness",
+        "name": "Ray of Sickness",
         "spell": "spell/ray-of-sickness",
         "always": true,
         "castAb": "$ab",
@@ -2263,7 +2270,7 @@
       {
         "id": "g3",
         "kind": "resource",
-        "name": "Ray Of Sickness (free cast)",
+        "name": "Ray of Sickness (free cast)",
         "max": "1",
         "recharge": "long",
         "casts": "spell/ray-of-sickness",
@@ -2286,6 +2293,13 @@
         "recharge": "long",
         "casts": "spell/hold-person",
         "lvl": 5
+      },
+      {
+        "id": "gth",
+        "kind": "spell",
+        "name": "Thaumaturgy",
+        "spell": "spell/thaumaturgy",
+        "castAb": "$ab"
       }
     ]
   },
@@ -2342,7 +2356,7 @@
       {
         "id": "g4",
         "kind": "spell",
-        "name": "Ray Of Enfeeblement",
+        "name": "Ray of Enfeeblement",
         "spell": "spell/ray-of-enfeeblement",
         "always": true,
         "castAb": "$ab",
@@ -2351,11 +2365,18 @@
       {
         "id": "g5",
         "kind": "resource",
-        "name": "Ray Of Enfeeblement (free cast)",
+        "name": "Ray of Enfeeblement (free cast)",
         "max": "1",
         "recharge": "long",
         "casts": "spell/ray-of-enfeeblement",
         "lvl": 5
+      },
+      {
+        "id": "gth",
+        "kind": "spell",
+        "name": "Thaumaturgy",
+        "spell": "spell/thaumaturgy",
+        "castAb": "$ab"
       }
     ]
   },
@@ -2385,7 +2406,7 @@
     "page": 86,
     "species": "tiefling",
     "lvl": 1,
-    "desc": "You are the recipient of a legacy that grants you supernatural abilities. Choose a legacy from the Fiendish Legacies table. You gain the level 1 benefit of the chosen legacy. When you reach character levels 3 and 5, you learn a higher-level spell, as shown on the table. You always have that spell prepared. You can cast it once without a spell slot, and you regain the ability to cast it in that way when you finish a Long Rest. You can also cast the spell using any spell slots you have of the appropriate level. Intelligence, Wisdom, or Charisma is your spellcasting ability for the spells you cast with this trait (choose the ability when you select the legacy).",
+    "desc": "You are the recipient of a legacy that grants you supernatural abilities. Choose a legacy from the Fiendish Legacies table. You gain the level 1 benefit of the chosen legacy. When you reach character levels 3 and 5, you learn a higher-level spell, as shown on the table. You always have that spell prepared. You can cast it once without a spell slot, and you regain the ability to cast it in that way when you finish a Long Rest. You can also cast the spell using any spell slots you have of the appropriate level. Intelligence, Wisdom, or Charisma is your spellcasting ability for the spells you cast with this trait (choose the ability when you select the legacy).\nFiendish Legacies\nAbyssal. Level 1: You have Resistance to Poison damage. You also know the Poison Spray cantrip. Level 3: Ray of Sickness. Level 5: Hold Person.\nChthonic. Level 1: You have Resistance to Necrotic damage. You also know the Chill Touch cantrip. Level 3: False Life. Level 5: Ray of Enfeeblement.\nInfernal. Level 1: You have Resistance to Fire damage. You also know the Fire Bolt cantrip. Level 3: Hellish Rebuke. Level 5: Darkness.",
     "grants": [
       {
         "kind": "choice",
@@ -2463,6 +2484,13 @@
         "recharge": "long",
         "casts": "spell/darkness",
         "lvl": 5
+      },
+      {
+        "id": "gth",
+        "kind": "spell",
+        "name": "Thaumaturgy",
+        "spell": "spell/thaumaturgy",
+        "castAb": "$ab"
       }
     ]
   },
@@ -2475,13 +2503,6 @@
     "species": "tiefling",
     "lvl": 1,
     "desc": "You know the Thaumaturgy cantrip. When you cast it with this trait, the spell uses the same spellcasting ability you use for your Fiendish Legacy trait.",
-    "grants": [
-      {
-        "id": "g1",
-        "kind": "spell",
-        "name": "Thaumaturgy",
-        "spell": "spell/thaumaturgy"
-      }
-    ]
+    "grants": []
   }
 ]

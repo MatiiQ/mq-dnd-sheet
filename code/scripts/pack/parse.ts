@@ -6,14 +6,18 @@ import {
 } from '../../src/catalog/schema.ts';
 import type { Ability, ArmorKind } from '../../src/types.ts';
 import { skillKey } from '../lib/skills.ts';
-import { profList } from '../srd/classes.ts';
+import { optionPrereq, profList } from '../srd/classes.ts';
 import { playName, pounds, weaponProps } from '../srd/items.ts';
 import { ABIL_ALT, DAMAGE_ALT } from '../srd/spells.ts';
 
 const ABILITY: Record<string, Ability> = { str: 'str', dex: 'dex', con: 'con', int: 'int', wis: 'wis', cha: 'cha' };
 const ab = (name: string) => ABILITY[name.trim().slice(0, 3).toLowerCase()];
 // Markdown markup and page citations out: bullets, bold, italics and "(PHB p.97)".
-const clean = (l: string) => l.replace(/^\s*- /, '').replace(/\*\*/g, '').replace(/\*/g, '').replace(/\s*\(PHB p\.[^)]*\)/g, '').trim();
+const clean = (l: string) => l.replace(/^\s*- /, '').replace(/^#+\s*/, '').replace(/\*\*/g, '').replace(/\*/g, '').replace(/\s*\(PHB p\.[^)]*\)/g, '').trim();
+
+// A block's lines as plain text lines: a table row's cells joined, its rule row dropped. The app shows text as typed.
+const plain = (lines: string[]) => lines.filter((l) => l.trim() && !/^\s*\|[\s|:-]+\|\s*$/.test(l) && l.trim() !== '---')
+  .map((l) => (l.trim().startsWith('|') ? l.trim().slice(1, -1).split('|').map((c) => clean(c)).join(' — ') : clean(l)));
 
 interface Block { title: string; page?: number; depth: number; lines: string[] }
 const HEAD = /^(#{1,4}) (.+?)(?: \(PHB p\.(\d+)[^)]*\))?\s*$/;
@@ -67,12 +71,16 @@ export function parseSpellsMd(md: string): SpellEntry[] {
     const upgrade = f['Cantrip Upgrade'] ?? (lvl === 0 ? f['Higher Levels / Cantrip Upgrade'] : undefined);
     const higher = f['Higher Levels'] ?? (lvl > 0 ? f['Higher Levels / Cantrip Upgrade'] : undefined);
     const effect = clean(f.Effect);
+    // What the Effect line leads into: stat blocks, tables and option lists, up to the next field.
+    const at = b.lines.findIndex((l) => l.startsWith('- **Effect:**'));
+    const after = b.lines.slice(at + 1), end = after.findIndex((l) => /^- \*\*/.test(l) || l.trim() === '---');
+    const extra = plain(end < 0 ? after : after.slice(0, end));
     const dmg = DAMAGE.exec(effect), heal = /regains? [^.]*?(\d+d\d+(?: ?\+ ?\d+)?)/.exec(effect);
     const fx = dmg && (!heal || dmg.index <= heal.index) ? 'damage' : heal ? 'healing' : 'other';
     const atk = /\b(melee|ranged) spell attack/i.exec(effect), save = saveOf(effect);
     const e: SpellEntry = {
       id: catalogId('spell', b.title), kind: 'spell', name: b.title, src: 'phb', page: b.page,
-      desc: [effect, upgrade && `Cantrip Upgrade: ${clean(upgrade)}`, higher && `Higher Levels: ${clean(higher)}`].filter(Boolean).join('\n'),
+      desc: [effect, ...extra, upgrade && `Cantrip Upgrade: ${clean(upgrade)}`, higher && `Higher Levels: ${clean(higher)}`].filter(Boolean).join('\n'),
       lvl, school: ls[2] ?? ls[3], classes: f.Classes.split(/,\s*/).map(slug).join(','), time: f['Casting Time'].replace(/ or Ritual$/, ''),
       range: f.Range, comp: f.Components, dur: f.Duration, conc: /^Concentration/.test(f.Duration), ritual: / or Ritual$/.test(f['Casting Time']) || !!ls[4], fx
     };
@@ -108,11 +116,16 @@ export function prereqMd(text: string | undefined): string | undefined {
 }
 
 export function parseFeatsMd(md: string): FeatEntry[] {
-  return blocks(md).filter((b) => b.depth === 3 && b.lines.some((l) => l.startsWith('- **Category:**'))).map((b) => named(b, () => {
+  const all = blocks(md);
+  return all.flatMap((b, i) => (b.depth === 3 && b.lines.some((l) => l.startsWith('- **Category:**')) ? [[b, i] as const] : [])).map(([b, i]) => named(b, () => {
     const f = fields(b.lines);
     const benefits = b.lines.filter((l) => /^ {2,}- /.test(l)).map(clean);
+    // Sub-headings under a feat hold its tables (Crafter's Fast Crafting, PHB p.200).
+    const next = all.findIndex((x, k) => k > i && x.depth <= 3);
+    const tables = all.slice(i + 1, next < 0 ? all.length : next).flatMap((x) => [x.title, ...plain(x.lines)]);
+    const benefit = f.Benefit || f.Benefits;
     const e: FeatEntry = { id: catalogId('feat', b.title), kind: 'feat', name: b.title, src: 'phb', page: b.page, cat: FEAT_CAT[f.Category],
-      desc: [...(none(f.ASI) ? [] : [`ASI: ${f.ASI}`]), ...(f.Benefit ? [clean(f.Benefit)] : []), ...benefits].join('\n'), grants: [] };
+      desc: [...(none(f.ASI) ? [] : [`ASI: ${f.ASI}`]), ...(benefit ? [clean(benefit)] : []), ...benefits, ...tables].join('\n'), grants: [] };
     const pre = prereqMd(f.Prerequisite);
     if (pre) e.prereq = pre;
     if (/^Yes/.test(f.Repeatable ?? '')) e.repeat = true;
@@ -167,6 +180,8 @@ export function parseOriginsMd(md: string): Entry[] {
   return out;
 }
 
+// Tables with a heading of their own, and the feature whose text they belong to.
+const TABLE_HOME: Record<string, string> = { 'Wild Magic Surge Table': 'Wild Magic Surge', 'Primal Companion Stat Blocks': 'Primal Companion' };
 export function parseClassMd(md: string): [ClassEntry, SubclassEntry[], FeatureEntry[]] {
   const all = blocks(md);
   const name = /^(\w+)/.exec(all[0].title)![1];
@@ -197,11 +212,13 @@ export function parseClassMd(md: string): [ClassEntry, SubclassEntry[], FeatureE
 
   const norm = (s: string) => s.replace(/’/g, "'").replace(/\s*\(.*\)$/, '').trim();
   const levelsOf = (fname: string) => rows.flatMap((r, i) => (r['Class Features'].split(/,\s*/).some((x) => norm(x) === norm(fname)) ? [i + 1] : []));
+  const option = (oname: string, of: FeatureEntry['of'], desc: string, lvl: number, page?: number, sub?: string): FeatureEntry => ({
+    id: catalogId('feature', oname, [name, sub]), kind: 'feature', name: oname, src: 'phb', ...(page ? { page } : {}), cls: slug(name), ...(sub ? { sub: slug(sub) } : {}), lvl, of, desc: clean(desc), grants: [] });
   const feature = (b: Block, sub?: string): FeatureEntry | null => {
     const m = /^Level (\d+): (.+)$/.exec(b.title);
     if (!m || /^subclass feature$/i.test(m[2])) return null; // a pointer to the subclass, not a feature
     const e: FeatureEntry = { id: catalogId('feature', m[2], [name, sub]), kind: 'feature', name: m[2], src: 'phb', page: b.page, cls: slug(name),
-      lvl: Number(m[1]), desc: b.lines.filter((l) => l.trim()).map(clean).join('\n'), grants: [] };
+      lvl: Number(m[1]), desc: plain(b.lines).join('\n'), grants: [] };
     if (sub) e.sub = slug(sub);
     else { const again = levelsOf(m[2]).filter((l) => l > e.lvl); if (again.length) e.again = again.join(','); }
     return e;
@@ -215,12 +232,29 @@ export function parseClassMd(md: string): [ClassEntry, SubclassEntry[], FeatureE
     if (b.depth === 3) {
       sub = b.title;
       subs.push({ id: catalogId('subclass', sub, [name]), kind: 'subclass', name: sub, src: 'phb', page: b.page, cls: slug(name),
-        desc: b.lines.filter((l) => l.trim()).map(clean).join('\n') });
+        desc: plain(b.lines).join('\n') });
     } else if (b.depth === 4 && sub) {
+      if (b.title === 'Maneuver Options') {
+        feats.push(...table(b.lines).map((r) => option(r.Maneuver, 'maneuver', `${r['Trigger / Action']}: ${r.Effect}`, 3, b.page, sub)));
+        continue;
+      }
+      const home = TABLE_HOME[b.title];
+      const owner = home && feats.find((x) => x.name === home && x.sub === slug(sub!));
+      if (owner) { owner.desc = [owner.desc, b.title, ...plain(b.lines)].join('\n'); continue; }
       const f = feature(b, sub);
       if (f && !feats.some((x) => x.id === f.id)) feats.push(f);
     }
   }
+  const inv = all.find((b) => b.depth === 2 && /^Eldritch Invocation Options/.test(b.title));
+  if (inv) {
+    for (const r of table(inv.lines)) {
+      const pre = none(r.Prerequisite) ? {} : optionPrereq(r.Prerequisite);
+      feats.push({ ...option(r.Invocation, 'invocation', [none(r.Prerequisite) ? '' : `Prerequisite: ${r.Prerequisite}`, r.Effect].filter(Boolean).join('\n'), pre.lvl ?? 1, inv.page), ...pre,
+        ...(/^Yes/.test(r.Repeatable) ? { repeat: true } : {}) });
+    }
+  }
+  const meta = all.find((b) => b.depth === 2 && /^Metamagic Options/.test(b.title));
+  if (meta) for (const r of table(meta.lines)) feats.push(option(r.Option, 'metamagic', `Cost: ${r['Cost (SP)']} Sorcery Point${r['Cost (SP)'] === '1' ? '' : 's'}\n${r.Effect}`, 2, meta.page));
   return [cls, subs, feats];
 }
 

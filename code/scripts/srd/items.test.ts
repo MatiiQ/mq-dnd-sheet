@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { capacityOf, copyBase, parseArmor, parseGear, parseMagicItems, parseTools, parseWeapons } from './items.ts';
+import { capacityOf, copyBase, parseArmor, parseGear, parseMagicItems, parseMounts, parseTools, parseWeapons } from './items.ts';
+import { validateEntry } from '../../src/catalog/schema.ts';
 import type { ItemEntry } from '../../src/catalog/schema.ts';
 import { srdLines } from './text.ts';
 
@@ -109,4 +110,32 @@ describe('magic items', () => {
   it('reads Bag of Holding’s capacity from its text', () => {
     expect(by(list, 'Bag of Holding')).toMatchObject({ rarity: 'Uncommon', xdim: true, cap: 500, capVol: '64 cubic feet', wt: 5 });
   });
+});
+
+it('reads focus forms, mounts, tack and large vehicles from their tables', () => {
+  const layout = [
+    '     Crystal                                 1 lb.           10 GP   Hooded Lantern, 7 flasks',
+    '     Sprig of mistletoe                           —     1 GP    feet of yourself.',
+    'A Torch burns      Emblem (borne on fabric or a Shield)         —         5 GP',
+    '     Lamp, Lantern      Elephant                   1,320 lb.            200 GP',
+    '     Torch      Carriage                           600 lb.       100 GP',
+    '     Saddle',
+    '     Vial      Exotic                               40 lb.     60 GP',
+    '     Vial      Horse, Riding               480 lb.            75 GP',
+    '      Airship          8 mph      10          20               1           13      300           —               40,000 GP'
+  ].join('\n');
+  const list = parseMounts(layout);
+  const by = (n: string) => list.find((e) => e.name === n);
+  expect(by('Arcane Focus (Crystal)')).toMatchObject({ id: 'item/arcane-focus-crystal', cat: 'focus', wt: 1, cost: '10 GP' });
+  expect(by('Druidic Focus (Sprig of Mistletoe)')).toMatchObject({ cat: 'focus', cost: '1 GP' });
+  expect(by('Druidic Focus (Sprig of Mistletoe)')!.wt).toBeUndefined();
+  expect(by('Holy Symbol (Emblem)')).toMatchObject({ cat: 'focus', cost: '5 GP', desc: 'Borne on fabric or a Shield. A Cleric or Paladin can use it as a Spellcasting Focus.' });
+  expect(by('Elephant')).toMatchObject({ cat: 'mount', cost: '200 GP', desc: 'Carrying capacity 1,320 lb.' });
+  expect(by('Elephant')!.wt).toBeUndefined();
+  expect(by('Carriage')).toMatchObject({ cat: 'mount', wt: 600, cost: '100 GP' });
+  expect(by('Saddle, Exotic')).toMatchObject({ cat: 'mount', wt: 40, cost: '60 GP' });
+  expect(by('Saddle, Riding')).toBeUndefined();
+  expect(by('Horse, Riding')).toMatchObject({ cat: 'mount', cost: '75 GP' });
+  expect(by('Airship')).toMatchObject({ cat: 'mount', cost: '40,000 GP', desc: 'Speed 8 mph; Crew 10; Passengers 20; Cargo 1 tons; AC 13; HP 300; Damage Threshold —.' });
+  for (const e of list) expect(validateEntry(e)).toEqual([]);
 });

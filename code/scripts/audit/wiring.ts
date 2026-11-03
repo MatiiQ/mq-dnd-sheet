@@ -1,7 +1,7 @@
 // Whether catalog data reaches the app. Imports the app's add flow, so it runs under Vitest, not plain node.
 // shortcut: these checks only catch names nothing mentions (field-unread stops at the copy to the character; the others
 // search the code for a word), so a green result doesn't prove a field works. logic.test.ts covers behaviour.
-import { addFromCatalog, choicesOf, featureCandidates, freeText, itemQuestions, itemStats, matchId, nestedEntries, optionGroups, poolOptions, type AddChoices, type FeatureType, type ItemAnswers } from '../../src/catalog/copy.ts';
+import { atLevel, addFromCatalog, choicesOf, featureCandidates, freeText, itemQuestions, itemStats, matchId, nestedEntries, optionGroups, poolOptions, type AddChoices, type FeatureType, type ItemAnswers } from '../../src/catalog/copy.ts';
 import type { Catalog } from '../../src/catalog/merge.ts';
 import type { Entry } from '../../src/catalog/schema.ts';
 import { blankCharacter } from '../../src/defaults.ts';
@@ -9,7 +9,8 @@ import type { Character } from '../../src/types.ts';
 import { flatGrants, type Finding } from './checks.ts';
 
 // Answers every choice of an entry and of the entries nested under it with the first options, so it can be added.
-function autoAnswers(cat: Catalog, c: Character, e: Entry, preset: Record<string, string[]> = {}, depth = 0): AddChoices {
+function autoAnswers(cat: Catalog, c: Character, entry: Entry, preset: Record<string, string[]> = {}, depth = 0): AddChoices {
+  const e = atLevel(c, entry);
   const picks: Record<string, string[]> = { ...preset };
   for (const ch of choicesOf(e)) {
     if (picks[ch.id]) continue;

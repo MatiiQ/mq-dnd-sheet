@@ -101,8 +101,11 @@ export const abilityMod = (c: Character, k: Ability) => mod(effScore(c, k));
 export function skillLevel(c: Character, key: string): { level: number; hand: number; by?: string } {
   const hand = c.skillProf[key] || 0;
   let level = hand, by: string | undefined;
-  for (const g of activeGrants(c, 'prof', true)) {
-    const lv = g.target !== key ? 0 : g.cat === 'skill' ? 1 : g.cat === 'expertise' ? 2 : 0;
+  const grants = activeGrants(c, 'prof', true);
+  // Keen Mind, Observant: proficiency, or Expertise if you already have it (PHB p.205).
+  const others = (g: Grant) => hand >= 1 || grants.some((x) => x !== g && x.target === key && x.cat === 'skill');
+  for (const g of grants) {
+    const lv = g.target !== key ? 0 : g.cat === 'skill' ? (g.orExpert && others(g) ? 2 : 1) : g.cat === 'expertise' ? 2 : 0;
     if (lv > level) { level = lv; by = sourceLabel(c, g); }
   }
   return by ? { level, hand, by } : { level, hand };
@@ -219,9 +222,11 @@ export const acSpellIdle = (c: Character, sp: Spell) => sp.acFx === 'base' && wo
 export function armorClass(c: Character): { total: number; parts: AcPart[] } {
   const dex = abilityMod(c, 'dex');
   const dexPart = (cap: number): AcPart => (dex > cap ? { label: 'Dexterity', value: cap, note: 'max +' + cap } : { label: 'Dexterity', value: dex });
+  // Medium Armor Master: +3 rather than +2 with Dexterity 16 or higher (PHB p.205). A +3 modifier needs that score anyway.
+  const medCap = Math.max(2, ...activeGrants(c, 'ac').filter((g) => g.acMode === 'dexCap').map((g) => num(c, g.val, g)));
   const armorParts = (it: Item): AcPart[] => [
     { label: it.name, value: armorValue(it), note: it.armor + ' armor' },
-    ...(it.armor === 'heavy' ? [] : [dexPart(it.armor === 'medium' ? 2 : Infinity)])
+    ...(it.armor === 'heavy' ? [] : [dexPart(it.armor === 'medium' ? medCap : Infinity)])
   ];
   const shields = c.inv.filter((i) => isEquipped(i) && i.armor === 'shield');
   const shield = shields.reduce<Item | null>((b, i) => (!b || armorValue(i) > armorValue(b) ? i : b), null);
@@ -438,7 +443,8 @@ export function modeSpeed(c: Character, k: SpeedKind): { base: number; hover: bo
   let base = typed, by: string | undefined;
   const mine = activeGrants(c, 'speed').filter((g) => g.mode === k);
   for (const g of mine) {
-    const v = g.val === 'walk' ? walkSpeed(c) : num(c, g.val, g);
+    // walk2: twice the Speed (Aquatic Adaptation, PHB p.146).
+    const v = g.val === 'walk' ? walkSpeed(c) : g.val === 'walk2' ? 2 * walkSpeed(c) : num(c, g.val, g);
     if (v > base) { base = v; by = sourceLabel(c, g) ?? g.name; }
   }
   const hover = mine.some((g) => g.hover);
@@ -447,7 +453,8 @@ export function modeSpeed(c: Character, k: SpeedKind): { base: number; hover: bo
 export const speedNow = (c: Character) => speedOf(c, walkSpeed(c));
 // The HP maximum every reader uses: the typed maxHp plus HP-per-level grants × level (Tough, PHB p.202). maxHp and
 // origHp stay typed (base) values, so a Long Rest restoring origHp never counts a grant twice.
-export const maxHpOf = (c: Character) => c.maxHp + activeGrants(c, 'hpLvl').reduce((t, g) => t + num(c, g.val, g) * c.level, 0);
+// A flat increase counts once (Boon of Fortitude, +40, PHB p.210).
+export const maxHpOf = (c: Character) => c.maxHp + activeGrants(c, 'hpLvl').reduce((t, g) => t + num(c, g.val, g) * c.level, 0) + activeGrants(c, 'hpFlat').reduce((t, g) => t + num(c, g.val, g), 0);
 // Current HP against max, temp HP ignored: green from 65%, yellow from 30%, red below.
 export const hpColor = (c: Character) =>
   (c.hp * 100 >= maxHpOf(c) * 65 ? 'var(--hp-high)' : c.hp * 100 >= maxHpOf(c) * 30 ? 'var(--hp-mid)' : 'var(--hp-low)');
@@ -812,8 +819,12 @@ const sourcesOf = (c: Character, all: Linked[]) => [...new Set(all.map((x) => so
 export function mergedSenses(c: Character): { key: string; name: string; range: string; ids: string[]; sources: string[] }[] {
   return merged(c, c.senses).map(({ key, first, all }) => {
     const n = (r: string) => r.match(/^\s*(\d+)/)?.[1];
+    // "If you already have Darkvision, its range increases by 60 feet" (Umbral Sight, PHB p.126; also p.55, p.105): a
+    // `plus` sense adds to the longest other range, and the first of them gives the range when there is none.
+    const plain = all.filter((x) => !x.plus), extra = all.filter((x) => x.plus).reduce((t, x) => t + Number(n(x.range) ?? 0), 0);
+    const best = plain.length ? plain.reduce((b, x) => (Number(n(x.range)) > Number(n(b.range)) ? x : b)).range : all[0].range.replace(/^\s*\d+/, '0');
     const range = all.every((x) => n(x.range) !== undefined)
-      ? all.reduce((b, x) => (Number(n(x.range)) > Number(n(b.range)) ? x : b)).range
+      ? best.replace(/^\s*\d+/, (d) => String(Number(d) + extra))
       : [...new Set(all.map((x) => x.range))].join(' / ');
     return { key, name: first.name, range, ids: all.map((x) => x.id), sources: sourcesOf(c, all) };
   });
@@ -884,7 +895,7 @@ export function addGrants(c: Character, from: string, inputs: GrantInput[]): Cha
   for (const input of inputs) {
     const s = input.spec, id = ids.get(input)!;
     if (s.kind === 'sense') {
-      out.senses = [...out.senses, { id, name: s.name.replace(/\s*\d+\s*ft\.?$/i, '').trim() || s.name, range: num(c, s.range) + ' ft', ...base, ...common(s) }];
+      out.senses = [...out.senses, { id, name: s.name.replace(/\s*\d+\s*ft\.?$/i, '').trim() || s.name, range: num(c, s.range) + ' ft', ...(s.plus ? { plus: true } : {}), ...base, ...common(s) }];
     } else if (s.kind === 'defense') {
       out.defenses = [...out.defenses, { id, kind: s.def!, name: s.target ?? s.name, ...base, ...common(s) }];
     } else if (s.kind === 'resource') {
@@ -1015,6 +1026,7 @@ export function removalSummary(c: Character, ref: Ref): { goes: string[]; keep: 
     else if (g.kind === 'speed' && g.mode) keep.push(`${capital(g.mode)} ${modeSpeed(c, g.mode as SpeedKind).base} ft still includes this grant`);
     else if (g.kind === 'init') keep.push(`Initiative ${fmt(initiative(c))} still includes ${fmt(v)} from ${src}${hand}`);
     else if (g.kind === 'hpLvl') keep.push(`Max HP ${maxHpOf(c)} still includes ${fmt(v * c.level)} from ${src}${hand}`);
+    else if (g.kind === 'hpFlat') keep.push(`Max HP ${maxHpOf(c)} still includes ${fmt(v)} from ${src}${hand}`);
     else if (g.kind === 'ac' && g.acMode === 'bonus') keep.push(`AC ${armorClass(c).total} still includes ${fmt(v)} from ${src} (in the custom AC bonuses)${hand}`);
   }
   const links = chain.map(refLink).filter((l): l is string => !!l);
@@ -1033,10 +1045,11 @@ function grantLabel(c: Character, g: Grant): string {
   switch (g.kind) {
     case 'abil': return fmt(v) + ' ' + (g.ab ?? '').toUpperCase();
     case 'prof': return g.target ? SKILLS.find(([k]) => k === g.target)?.[1] ?? ABILITIES.find(([k]) => k === g.target)?.[1] ?? g.target : g.name;
-    case 'speed': return g.mode === 'walk' ? 'Speed ' + fmt(v) + ' ft' : capital(g.mode ?? '') + (g.val === 'walk' ? ' = Speed' : ' ' + v + ' ft');
-    case 'ac': return g.acMode === 'bonus' ? fmt(v) + ' AC' : g.name;
+    case 'speed': return g.mode === 'walk' ? 'Speed ' + fmt(v) + ' ft' : capital(g.mode ?? '') + (g.val === 'walk' ? ' = Speed' : g.val === 'walk2' ? ' = 2 × Speed' : ' ' + v + ' ft');
+    case 'ac': return g.acMode === 'bonus' ? fmt(v) + ' AC' : g.acMode === 'dexCap' ? 'Medium armor Dex max ' + fmt(v) : g.name;
     case 'init': return 'Initiative ' + fmt(v);
     case 'hpLvl': return fmt(v) + ' HP per level';
+    case 'hpFlat': return fmt(v) + ' max HP';
     case 'saveBonus': return fmt(v) + ' ' + (g.ab === 'all' ? 'all' : (g.ab ?? '').toUpperCase()) + ' saves';
     case 'spellAtk': return fmt(v) + ' spell attack';
     case 'spellDc': return fmt(v) + ' spell save DC';
@@ -1050,7 +1063,7 @@ function grantTarget(g: Grant): PillTarget {
   if (ABILITY_GRANTS.includes(g.kind) || (g.kind === 'prof' && ['skill', 'save', 'expertise', 'half'].includes(g.cat ?? ''))) return { sec: 'sec-abilities' };
   if (g.kind === 'prof') return { tab: 'features' };
   if (VITAL_GRANTS.includes(g.kind)) return { sec: 'sec-vitals' };
-  if (g.kind === 'hpLvl') return { sec: 'sec-hp' };
+  if (g.kind === 'hpLvl' || g.kind === 'hpFlat') return { sec: 'sec-hp' };
   if (g.kind === 'casting' || g.kind === 'spell' || g.kind === 'spellAtk' || g.kind === 'spellDc') return { tab: 'spells' };
   return { tab: 'actions' };
 }

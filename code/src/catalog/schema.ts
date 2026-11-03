@@ -27,7 +27,7 @@ export interface SpellPart {
   dmgMod?: boolean; healMod?: boolean; scale?: string;
 }
 export interface ItemEntry extends EntryBase {
-  kind: 'item'; cat: 'weapon' | 'armor' | 'shield' | 'gear' | 'tool' | 'pack' | 'ammo' | 'focus' | 'magic';
+  kind: 'item'; cat: 'weapon' | 'armor' | 'shield' | 'gear' | 'tool' | 'pack' | 'ammo' | 'focus' | 'mount' | 'magic';
   cost?: string; wt?: number;
   wcat?: 'simple' | 'martial'; wrange?: 'melee' | 'ranged'; dmg?: string; dtype?: string; props?: string; thrown?: string; vers?: string; ammo?: string; mastery?: string;
   armor?: ArmorKind; acBase?: number; acBonus?: number; strReq?: number; stealthDis?: boolean;
@@ -55,7 +55,8 @@ export interface ClassEntry extends EntryBase {
 }
 export interface SubclassEntry extends EntryBase { kind: 'subclass'; cls: string }
 // again: later levels at which the same feature is gained again, as a comma list ('8,12,16').
-export interface FeatureEntry extends EntryBase { kind: 'feature'; cls: string; sub?: string; lvl: number; again?: string; grants: Spec[] }
+// of: an option a pool offers (Eldritch Invocations, Maneuvers, Metamagic), added as its own feature; prereq and repeat as on a feat.
+export interface FeatureEntry extends EntryBase { kind: 'feature'; cls: string; sub?: string; lvl: number; again?: string; of?: 'invocation' | 'maneuver' | 'metamagic'; prereq?: string; repeat?: boolean; grants: Spec[] }
 export interface ProfEntry extends EntryBase { kind: 'prof'; cat: 'armor' | 'weapon' | 'tool' | 'language'; short?: string }
 export interface RuleEntry extends EntryBase { kind: 'rule'; cat: 'action' | 'sense' | 'condition' }
 export type Entry = SpellEntry | ItemEntry | FeatEntry | BackgroundEntry | SpeciesEntry | TraitEntry | ClassEntry | SubclassEntry | FeatureEntry | ProfEntry | RuleEntry;
@@ -63,9 +64,10 @@ export type Entry = SpellEntry | ItemEntry | FeatEntry | BackgroundEntry | Speci
 export type Recharge4 = 'short' | 'long' | 'dawn' | 'none';
 export type Spec = GrantSpec | ChoiceSpec;
 // Pick N of the options, or of a generated pool ('<kind>:<filter>', such as 'spell:list=druid;lvl=0' or 'skill:any').
-export interface ChoiceSpec { kind: 'choice'; id: string; name: string; pick: number; repeat?: boolean; options?: GrantSpec[]; pool?: string }
+// pickAt: a Value that replaces `pick` for the character when the entry is added ('pb', a level table).
+export interface ChoiceSpec { kind: 'choice'; id: string; name: string; pick: number; pickAt?: string; orExpert?: boolean; repeat?: boolean; options?: GrantSpec[]; pool?: string }
 export type GrantKind = 'sense' | 'resource' | 'defense' | 'abil' | 'abilSet' | 'prof' | 'saveBonus' | 'checkBonus' | 'spell' | 'speed' | 'ac'
-  | 'init' | 'hpLvl' | 'size' | 'carryUp' | 'action' | 'xdmg' | 'attacks' | 'unarmed' | 'atkBonus' | 'dmgBonus' | 'lightExtra' | 'atkAbil'
+  | 'init' | 'hpLvl' | 'hpFlat' | 'size' | 'carryUp' | 'action' | 'xdmg' | 'attacks' | 'unarmed' | 'atkBonus' | 'dmgBonus' | 'lightExtra' | 'atkAbil'
   | 'casting' | 'crit' | 'spellAtk' | 'spellDc';
 // Every grant is flat, so a character can store it as a plain entry. Fields that take a Value also accept '$<choiceId>'.
 export interface GrantSpec {
@@ -73,14 +75,14 @@ export interface GrantSpec {
   when?: 'armor' | 'noHeavy' | 'noArmor' | 'noShield' | 'noArmorNoShield' | 'active';   // active: while the entry's effect is on (Rage, Starry Form)
   lvl?: number; needEq?: boolean; needAtt?: boolean;
   opt?: string;                                                                     // in choice options: grants with the same opt are one pick
-  range?: string;                                                                   // sense
+  range?: string; plus?: boolean;                                                   // sense; plus: adds to another range of the name
   max?: string; recharge?: Recharge4; regain?: string; regainOn?: 'short' | 'dawn'; casts?: string;   // resource
   def?: 'res' | 'vul' | 'imm' | 'adv'; target?: string;                              // defense, prof, checkBonus
   ab?: string; val?: string; cap?: 20 | 25 | 30;                                         // abil, abilSet, saveBonus, ac, atkAbil
-  cat?: 'armor' | 'weapon' | 'tool' | 'language' | 'skill' | 'save' | 'expertise' | 'mastery' | 'half';   // prof
+  cat?: 'armor' | 'weapon' | 'tool' | 'language' | 'skill' | 'save' | 'expertise' | 'mastery' | 'half'; orExpert?: boolean;   // prof; orExpert: Expertise if already proficient
   spell?: string; always?: boolean; castAb?: string;                                // spell
   mode?: 'walk' | 'climb' | 'swim' | 'fly' | 'burrow'; hover?: boolean;             // speed
-  acMode?: 'bonus' | 'unarmored'; shieldOk?: boolean;                               // ac
+  acMode?: 'bonus' | 'unarmored' | 'dexCap'; shieldOk?: boolean;                    // ac; dexCap: Medium armor's Dexterity cap
   size?: Size;                                                                      // size
   econ?: 'action' | 'bonus' | 'reaction' | 'free' | 'other'; res?: string; note?: string;   // action (also dice)
   dice?: string; dtype?: string; on?: string; perTurn?: boolean;                    // xdmg
@@ -100,7 +102,7 @@ export const AC_EFFECTS: AcEffect[] = ['bonus', 'base', 'floor'];
 // The damage types (PHB p.360-361). The only list: logic.ts re-exports it, the builders build their regex from it.
 export const DAMAGE_TYPES = ['Acid', 'Bludgeoning', 'Cold', 'Fire', 'Force', 'Lightning', 'Necrotic', 'Piercing', 'Poison', 'Psychic', 'Radiant', 'Slashing', 'Thunder'];
 export const SIZE_KEYS: Size[] = ['tiny', 'small', 'medium', 'large', 'huge', 'gargantuan'];
-export const ITEM_CATS: ItemEntry['cat'][] = ['weapon', 'armor', 'shield', 'gear', 'tool', 'pack', 'ammo', 'focus', 'magic'];
+export const ITEM_CATS: ItemEntry['cat'][] = ['weapon', 'armor', 'shield', 'gear', 'tool', 'pack', 'ammo', 'focus', 'mount', 'magic'];
 
 // PHB names that SRD releases publish under another name, mapped to the SRD name. Both builders apply it. Built from
 // scripts/srd/names-diff.ts (SRD 5.2.1 against reference/): only spells named after a person differ.
@@ -143,19 +145,20 @@ const WHEN = oneOf('armor', 'noHeavy', 'noArmor', 'noShield', 'noArmorNoShield',
 const RANGE_KIND = oneOf('melee', 'ranged');
 // Own fields per grant kind: [check, required].
 const GRANTS: Record<GrantKind, Record<string, [Check, boolean]>> = {
-  sense: { range: [value, true] },
+  sense: { range: [value, true], plus: [bool, false] },
   resource: { max: [value, false], recharge: [RECHARGE, true], regain: [value, false], regainOn: [oneOf('short', 'dawn'), false], casts: [str, false] },
   defense: { def: [oneOf('res', 'vul', 'imm', 'adv'), true], target: [str, true] },
   abil: { ab: [or(ability, ref), true], val: [value, true], cap: [oneOf(20, 25, 30), true] },
   abilSet: { ab: [or(ability, ref), true], val: [value, true] },
-  prof: { cat: [oneOf('armor', 'weapon', 'tool', 'language', 'skill', 'save', 'expertise', 'mastery', 'half'), true], target: [str, false], val: [value, false] },
+  prof: { cat: [oneOf('armor', 'weapon', 'tool', 'language', 'skill', 'save', 'expertise', 'mastery', 'half'), true], target: [str, false], orExpert: [bool, false], val: [value, false] },
   saveBonus: { ab: [or(ability, oneOf('all'), ref), true], val: [value, true] },
   checkBonus: { target: [str, true], val: [value, true] },
   spell: { spell: [str, true], always: [bool, false], castAb: [or(ability, ref), false] },
-  speed: { mode: [oneOf('walk', 'climb', 'swim', 'fly', 'burrow'), true], val: [or(value, oneOf('walk')), true], hover: [bool, false] },
-  ac: { acMode: [oneOf('bonus', 'unarmored'), true], val: [value, false], ab: [or(ability, ref), false], shieldOk: [bool, false] },
+  speed: { mode: [oneOf('walk', 'climb', 'swim', 'fly', 'burrow'), true], val: [or(value, oneOf('walk', 'walk2')), true], hover: [bool, false] },
+  ac: { acMode: [oneOf('bonus', 'unarmored', 'dexCap'), true], val: [value, false], ab: [or(ability, ref), false], shieldOk: [bool, false] },
   init: { val: [value, true] },
   hpLvl: { val: [value, true] },
+  hpFlat: { val: [value, true] },
   size: { size: [oneOf(...SIZE_KEYS), true] },
   carryUp: {},
   action: { econ: [oneOf('action', 'bonus', 'reaction', 'free', 'other'), true], res: [str, false], note: [str, false], dice: [value, false] },
@@ -230,7 +233,7 @@ const FIELDS: Record<Kind, Record<string, [Check, boolean]>> = {
     castAb: [ability, false], slots: [slotRows, false], pact: [bool, false], cantrips: [value, false], prepared: [value, false]
   },
   subclass: { cls: [str, true] },
-  feature: { cls: [str, true], sub: [str, false], lvl: [whole(1, 20), true], again: [str, false] },
+  feature: { cls: [str, true], sub: [str, false], lvl: [whole(1, 20), true], again: [str, false], of: [oneOf('invocation', 'maneuver', 'metamagic'), false], prereq: [str, false], repeat: [bool, false] },
   prof: { cat: [oneOf('armor', 'weapon', 'tool', 'language'), true], short: [str, false] },
   rule: { cat: [oneOf('action', 'sense', 'condition'), true] }
 };
@@ -271,7 +274,7 @@ function checkGrant(g: unknown, e: Record<string, unknown>, where: string, errs:
 }
 
 function checkChoice(c: Record<string, unknown>, e: Record<string, unknown>, where: string, errs: string[]) {
-  checkFields(c, { id: [str, true], name: [str, true], pick: [whole(1, 99), true], repeat: [bool, false], pool: [(v) => typeof v === 'string' && /^[a-z]+:.+$/.test(v), false] }, where, errs);
+  checkFields(c, { id: [str, true], name: [str, true], pick: [whole(1, 99), true], pickAt: [value, false], orExpert: [bool, false], repeat: [bool, false], pool: [(v) => typeof v === 'string' && /^[a-z]+:.+$/.test(v), false] }, where, errs);
   if (c.options === undefined && c.pool === undefined) errs.push(`${where}: needs options or a pool`);
   if (c.options !== undefined) {
     if (!Array.isArray(c.options)) errs.push(`${where}: options is not a list`);

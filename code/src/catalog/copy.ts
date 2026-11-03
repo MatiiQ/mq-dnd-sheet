@@ -1,7 +1,7 @@
 // Copying catalog entries onto a character, and the custom forms that build the same fields by hand. Pure functions:
 // the pickers and forms call them, then save through update().
 import { linkOf, srcKindOfLink } from '../links';
-import { ABILITIES, addGrants, capital, detectArmor, effScore, hasProf, maxFields, maxKindOf, maxOf, newId, normName, parseWeight, regainEvent, SKILLS, skillLevel, type GrantInput, type MaxKind } from '../logic';
+import { ABILITIES, addGrants, capital, detectArmor, effScore, hasProf, maxFields, maxKindOf, maxOf, newId, normName, num, parseWeight, regainEvent, SKILLS, skillLevel, type GrantInput, type MaxKind } from '../logic';
 import type { AcEffect, Ability, ArmorKind, Character, Feature, FeatureGroup, Item, Linked, Recharge, Size, Spell, SrcKind } from '../types';
 import { entriesOf, type Catalog } from './merge';
 import { slug, type ChoiceSpec, type Entry, type FeatEntry, type FeatureEntry, type GrantSpec, type ItemEntry, type ProfEntry, type SpellEntry, type SpellPart, type TraitEntry } from './schema';
@@ -250,7 +250,7 @@ export const TOOL_GROUPS: Record<string, string[]> = {
 export const GENERIC_TOOLS: string[] = ['prof/gaming-set', 'prof/musical-instrument'];
 // Pool kinds whose picks are names, so typed text still works when the pool offers nothing.
 const NAME_KINDS = ['spell', 'tool', 'language'];
-const KNOWN_KINDS = [...NAME_KINDS, 'skill', 'ability', 'list', 'prof', 'weapon', 'feat', 'trait', 'subclass'];
+const KNOWN_KINDS = [...NAME_KINDS, 'skill', 'ability', 'list', 'prof', 'weapon', 'feat', 'trait', 'subclass', 'feature'];
 // Weapon category entries in the proficiency list (not weapon kinds, so never a mastery pick).
 const WEAPON_CATEGORIES = ['prof/simple-weapons', 'prof/martial-weapons'];
 
@@ -358,6 +358,11 @@ export function poolOptions(cat: Catalog, c: Character, pool: string, picks: Rec
       return filtered(entriesOf(cat, 'feat'), filter, ['cat']).map((e) => {
         const { missing } = prereqMet(c, e.prereq, adding);
         return { ...ent(e, hasFeature(c, e)), ...(missing.length ? { unmet: missing } : {}) };
+      }).sort(byName);
+    case 'feature':
+      return filtered(entriesOf(cat, 'feature'), filter, ['of']).map((e) => {
+        const { missing } = prereqMet(c, e.prereq, adding);
+        return { ...ent(e, !e.repeat && hasFeature(c, e)), ...(missing.length ? { unmet: missing } : {}) };
       }).sort(byName);
     case 'subclass':
       return filtered(entriesOf(cat, 'subclass'), filter, ['cls']).map((e) => ent(e, hasFeature(c, e))).sort(byName);
@@ -477,7 +482,7 @@ export function resolveChoices(cat: Catalog, e: Entry, picks: Record<string, str
     if (!ch.pool || used.has(ch.id)) continue;
     const kind = poolKind(ch.pool), got = vp(ch.id);
     if (!got.length) continue;
-    if (kind === 'feat' || kind === 'trait' || kind === 'subclass') {
+    if (kind === 'feat' || kind === 'trait' || kind === 'subclass' || kind === 'feature') {
       for (const v of got) { const en = cat.byId.get(v); if (en) entries.push({ entry: en }); }
       continue;
     }
@@ -487,7 +492,7 @@ export function resolveChoices(cat: Catalog, e: Entry, picks: Record<string, str
       if (kind !== 'ability' && kind !== 'list') notes.push(`${ch.name}: ${got.join(', ')}`);
       continue;
     }
-    got.forEach((v, i) => specs.push({ id: `${ch.id}-${i}`, kind: 'prof', name: `${ch.name}: ${SKILL_NAME[v] && profCat(v) === 'skill' ? SKILL_NAME[v] : v}`, cat: profCat(v)!, target: v }));
+    got.forEach((v, i) => specs.push({ id: `${ch.id}-${i}`, kind: 'prof', name: `${ch.name}: ${SKILL_NAME[v] && profCat(v) === 'skill' ? SKILL_NAME[v] : v}`, cat: profCat(v)!, target: v, ...(ch.orExpert ? { orExpert: true } : {}) }));
   }
   return { specs, entries, notes };
 }
@@ -553,6 +558,11 @@ export function nestedEntries(cat: Catalog, e: Entry, picks: Record<string, stri
   }
   return out;
 }
+// The entry with its choices' pick counts set for this character (Ritual Caster: Proficiency Bonus, PHB p.206).
+export function atLevel<E extends Entry>(c: Character, e: E): E {
+  if (!('grants' in e) || !e.grants?.some((g) => g.kind === 'choice' && g.pickAt)) return e;
+  return { ...e, grants: e.grants.map((g) => (g.kind === 'choice' && g.pickAt ? { ...g, pick: Math.max(1, num(c, g.pickAt)) } : g)) } as E;
+}
 // The answers for a nested entry: its own answers merged over its preset picks.
 const answersFor = (ans: AddChoices, n: Nested): AddChoices => {
   const own = ans.nested?.[n.entry.id] ?? NO_ANSWERS;
@@ -560,7 +570,8 @@ const answersFor = (ans: AddChoices, n: Nested): AddChoices => {
 };
 
 // Throws when a choice of e, or of an entry nested under it, lacks its picks, so nothing is added half-way.
-function checkAnswers(cat: Catalog, c: Character, e: Entry, ans: AddChoices): void {
+function checkAnswers(cat: Catalog, c: Character, entry: Entry, ans: AddChoices): void {
+  const e = atLevel(c, entry);
   const missing = missingPicks(cat, c, e, ans.picks);
   if (missing.length) {
     const names = missing.map((id) => choicesOf(e).find((ch) => ch.id === id)?.name ?? id);
@@ -669,7 +680,8 @@ export function addFromCatalog(c: Character, cat: Catalog, e: Entry, ans: AddCho
   return addEntry(c, cat, e, ans);
 }
 
-function addEntry(c: Character, cat: Catalog, e: Entry, ans: AddChoices): Character {
+function addEntry(c: Character, cat: Catalog, entry: Entry, ans: AddChoices): Character {
+  const e = atLevel(c, entry);
   const r = resolveChoices(cat, e, ans.picks);
   const id = newId();
   const srcKind = ans.from ? srcKindOfLink(c, ans.from) : null;
@@ -780,17 +792,22 @@ export type FeatureType = 'class' | 'sub' | 'feat' | 'species' | 'background' | 
 export function featureCandidates(cat: Catalog, c: Character, t: FeatureType, featCat?: FeatEntry['cat']):
   { entry: Entry; note?: string; ok: boolean; taken: boolean }[] {
   const byLevel = <T extends { lvl: number; name: string }>(a: T, b: T) => a.lvl - b.lvl || a.name.localeCompare(b.name);
-  const leveled = (e: FeatureEntry | TraitEntry) => ({
-    entry: e as Entry, ok: e.lvl <= c.level, taken: hasFeature(c, e), ...(e.lvl > c.level ? { note: 'Level ' + e.lvl } : {})
-  });
+  const leveled = (e: FeatureEntry | TraitEntry) => {
+    if (e.kind === 'feature' && e.of) {
+      const { ok, missing } = prereqMet(c, e.prereq);
+      return { entry: e as Entry, ok, taken: !e.repeat && hasFeature(c, e), ...(missing.length ? { note: missing.join(', ') } : {}) };
+    }
+    return { entry: e as Entry, ok: e.lvl <= c.level, taken: hasFeature(c, e), ...(e.lvl > c.level ? { note: 'Level ' + e.lvl } : {}) };
+  };
+  const optionsLast = (a: FeatureEntry, b: FeatureEntry) => Number(!!a.of) - Number(!!b.of) || byLevel(a, b);
   switch (t) {
     case 'class': {
       const cls = classIdOf(cat, c).split('/')[1];
-      return entriesOf(cat, 'feature').filter((e) => cls && e.cls === cls && !e.sub).sort(byLevel).map(leveled);
+      return entriesOf(cat, 'feature').filter((e) => cls && e.cls === cls && !e.sub).sort(optionsLast).map(leveled);
     }
     case 'sub': {
       const sub = subclassIdOf(cat, c).split('/');
-      return entriesOf(cat, 'feature').filter((e) => sub.length === 3 && e.cls === sub[1] && e.sub === sub[2]).sort(byLevel).map(leveled);
+      return entriesOf(cat, 'feature').filter((e) => sub.length === 3 && e.cls === sub[1] && e.sub === sub[2]).sort(optionsLast).map(leveled);
     }
     case 'feat': {
       const rows = entriesOf(cat, 'feat').filter((e) => !featCat || e.cat === featCat).map((e) => {

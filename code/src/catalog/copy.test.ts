@@ -9,7 +9,7 @@ import type { Character, Item, Spell } from '../types';
 import { mergeCatalog } from './merge';
 import type { Entry, FeatureEntry, ItemEntry, SpellEntry } from './schema';
 import {
-  keepPrep,
+  keepPrep, atLevel,
   addFromCatalog, armorBaseMissing, draftFromItem, featureCandidates, grantSpellName, withDetectedArmor, BLANK_ITEM, BLANK_SPELL, catForKind, countedDefault, draftFromSpell, spellFromForm, type SpellDraft, choicesOf, classIdOf, matchId, nestedEntries, subclassIdOf, type AddChoices, freeText, itemFromEntry, itemFromForm, missingPicks, needed, optionGroups, poolOptions, prereqMet, resolveChoices,
   spellFromEntry, spellSummary, validPicks, itemQuestions, itemStats, answeredName, type ItemAnswers, type ItemDraft
 } from './copy';
@@ -380,9 +380,11 @@ describe('resolveChoices', () => {
     const skillful = cat.byId.get('trait/human/skillful')!;
     expect(resolveChoices(cat, skillful, { c1: ['stealth'] }).specs).toEqual([expect.objectContaining({ cat: 'skill', target: 'stealth' })]);
     const meta = cat.byId.get('feature/sorcerer/metamagic')!;
-    const m = resolveChoices(cat, meta, { meta: ['Quickened Spell', 'Twinned Spell'] });
+    const m = resolveChoices(cat, meta, { meta: ['feature/sorcerer/quickened-spell', 'feature/sorcerer/twinned-spell'] });
     expect(m.specs).toEqual([]);
-    expect(m.notes).toEqual(['Metamagic options: Quickened Spell, Twinned Spell']);
+    expect(m.entries.map((x) => x.entry.id)).toEqual(['feature/sorcerer/quickened-spell', 'feature/sorcerer/twinned-spell']);
+    const note: FeatureEntry = { id: 'feature/x/y', kind: 'feature', name: 'Y', src: 'srd', desc: '', cls: 'x', lvl: 1, grants: [{ kind: 'choice', id: 'c', name: 'Things', pick: 1, pool: 'other:any' }] };
+    expect(resolveChoices(cat, note, { c: ['Typed'] }).notes).toEqual(['Things: Typed']);
   });
   it('refuses a grant that copies over two multi-pick choices', () => {
     const e: FeatureEntry = { id: 'feature/test/two', kind: 'feature', name: 'Two', src: 'srd', desc: 'Invented.', cls: 'test', lvl: 1,
@@ -848,5 +850,42 @@ describe('form details', () => {
   });
   it('reads a decimal comma in Holds', () => {
     expect(itemFromForm({ ...BLANK_ITEM, name: 'Bag', kind: 'container', cap: '1,5' }).cap).toBe(1.5);
+  });
+});
+
+describe('scaled picks and option features', () => {
+  const opt = (name: string, of: FeatureEntry['of'], extra: Partial<FeatureEntry> = {}): FeatureEntry =>
+    ({ id: `feature/warlock/${name}`, kind: 'feature', name, src: 'srd', desc: '', cls: 'warlock', lvl: 1, of, grants: [], ...extra });
+  const host: FeatureEntry = { id: 'feature/warlock/host', kind: 'feature', name: 'Host', src: 'srd', desc: '', cls: 'warlock', lvl: 1,
+    grants: [{ kind: 'choice', id: 'c', name: 'Options', pick: 1, pickAt: '1:1,5:3', pool: 'feature:of=invocation' }] };
+  const low = opt('low', 'invocation'), high = opt('high', 'invocation', { lvl: 5, prereq: 'lvl>=5' }), other = opt('other', 'metamagic');
+  const one = opt('rep', 'invocation', { repeat: true });
+  const local = mergeCatalog([low, high, other, one, host], null);
+  it('offers only the pool\'s options, marking unmet prerequisites', () => {
+    const opts = poolOptions(local, { ...blankCharacter(), level: 1 }, 'feature:of=invocation', {});
+    expect(opts.map((o) => o.value).sort()).toEqual([high.id, low.id, one.id].sort());
+    expect(opts.find((o) => o.value === high.id)?.unmet).toEqual(['Level 5 or higher']);
+    expect(poolOptions(local, { ...blankCharacter(), level: 5 }, 'feature:of=invocation', {}).find((o) => o.value === high.id)?.unmet).toBeUndefined();
+  });
+  it('sets the number of picks from the character at the time of adding', () => {
+    const ch = (lv: number) => atLevel({ ...blankCharacter(), level: lv }, host);
+    expect((ch(1) as FeatureEntry).grants[0]).toMatchObject({ pick: 1 });
+    expect((ch(5) as FeatureEntry).grants[0]).toMatchObject({ pick: 3 });
+  });
+  it('adds a picked option as its own feature, and a repeatable one stays pickable', () => {
+    const c0 = { ...blankCharacter(), level: 1 };
+    const c1 = addFromCatalog(c0, local, host, { picks: { c: [low.id] }, counted: {}, links: {} });
+    expect(c1.feats.map((f) => f.cid)).toEqual(expect.arrayContaining([host.id, low.id]));
+    const opts = poolOptions(local, c1, 'feature:of=invocation', {});
+    expect(opts.find((o) => o.value === low.id)?.taken).toBe(true);
+    const c2 = addFromCatalog(c1, local, one, { picks: {}, counted: {}, links: {} });
+    expect(poolOptions(local, c2, 'feature:of=invocation', {}).find((o) => o.value === one.id)?.taken).toBeUndefined();
+  });
+  it('lists options with their prerequisites in the class features, after the rest', () => {
+    const c = { ...blankCharacter(), level: 1, ch: { ...blankCharacter().ch, cls: 'Warlock' } };
+    const classCat = mergeCatalog([...srdEntries.filter((e) => e.kind === 'class'), low, high, host], null);
+    const rows = featureCandidates(classCat, c, 'class');
+    expect(rows.map((r) => r.entry.id)).toEqual([host.id, low.id, high.id]);
+    expect(rows[2]).toMatchObject({ ok: false, note: 'Level 5 or higher' });
   });
 });

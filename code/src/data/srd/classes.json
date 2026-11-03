@@ -3622,17 +3622,32 @@
       {
         "id": "g1",
         "kind": "resource",
-        "name": "Natural Recovery",
+        "name": "Natural Recovery: free cast",
         "max": "1",
         "recharge": "long"
       },
       {
         "id": "g2",
         "kind": "action",
-        "name": "Natural Recovery",
+        "name": "Natural Recovery: free cast",
         "econ": "other",
         "res": "g1",
-        "note": "Cast a Circle spell without a slot, once per Long Rest; on a Short Rest, recover slots worth half your Druid level."
+        "note": "Cast a level 1+ Circle spell you have prepared without a slot."
+      },
+      {
+        "id": "g3",
+        "kind": "resource",
+        "name": "Natural Recovery: recover slots",
+        "max": "1",
+        "recharge": "long"
+      },
+      {
+        "id": "g4",
+        "kind": "action",
+        "name": "Natural Recovery: recover slots",
+        "econ": "other",
+        "res": "g3",
+        "note": "On a Short Rest, recover slots totalling half your Druid level, rounded up (none of level 6+)."
       }
     ],
     "sub": "circle-of-the-land"
@@ -3665,7 +3680,7 @@
     "page": 46,
     "cls": "druid",
     "lvl": 10,
-    "desc": "You are immune to the Poisoned condition, and you have Resistance to a damage type associated with your current land choice in the Circle Spells feature, as shown in the Nature’s Ward table.\nNature’s Ward Land Type Resistance Land Type Resistance Arid Fire Temperate Lightning Polar Cold Tropical Poison",
+    "desc": "You are immune to the Poisoned condition, and you have Resistance to a damage type associated with your current land choice in the Circle Spells feature, as shown in the Nature’s Ward table.\nNature’s Ward (land type: Resistance)\nArid: Fire\nPolar: Cold\nTemperate: Lightning\nTropical: Poison",
     "grants": [
       {
         "id": "g1",
@@ -6532,6 +6547,30 @@
     ]
   },
   {
+    "id": "feature/sorcerer/careful-spell",
+    "kind": "feature",
+    "name": "Careful Spell",
+    "src": "srd",
+    "page": 66,
+    "cls": "sorcerer",
+    "lvl": 2,
+    "of": "metamagic",
+    "desc": "Cost: 1 Sorcery Point\nWhen you cast a spell that forces other creatures to make a saving throw, you can protect some of those creatures from the spell’s full force. To do so, spend 1 Sorcery Point and choose a number of those creatures up to your Charisma modifier (minimum of one creature). A chosen creature automatically succeeds on its saving throw against the spell, and it takes no damage if it would normally take half damage on a successful save.",
+    "grants": []
+  },
+  {
+    "id": "feature/sorcerer/distant-spell",
+    "kind": "feature",
+    "name": "Distant Spell",
+    "src": "srd",
+    "page": 66,
+    "cls": "sorcerer",
+    "lvl": 2,
+    "of": "metamagic",
+    "desc": "Cost: 1 Sorcery Point\nWhen you cast a spell that has a range of at least 5 feet, you can spend 1 Sorcery Point to double the spell’s range. Or when you cast a spell that has a range of Touch, you can spend 1 Sorcery Point to make the spell’s range 30 feet.",
+    "grants": []
+  },
+  {
     "id": "feature/sorcerer/draconic-sorcery/draconic-resilience",
     "kind": "feature",
     "name": "Draconic Resilience",
@@ -6776,6 +6815,18 @@
     "sub": "draconic-sorcery"
   },
   {
+    "id": "feature/sorcerer/empowered-spell",
+    "kind": "feature",
+    "name": "Empowered Spell",
+    "src": "srd",
+    "page": 66,
+    "cls": "sorcerer",
+    "lvl": 2,
+    "of": "metamagic",
+    "desc": "Cost: 1 Sorcery Point\nWhen you roll damage for a spell, you can spend 1 Sorcery Point to reroll a number of the damage dice up to your Charisma modifier (minimum of one), and you must use the new rolls. You can use Empowered Spell even if you’ve already used a different Metamagic option during the casting of the spell.",
+    "grants": []
+  },
+  {
     "id": "feature/sorcerer/epic-boon",
     "kind": "feature",
     "name": "Epic Boon",
@@ -6795,6 +6846,18 @@
     ]
   },
   {
+    "id": "feature/sorcerer/extended-spell",
+    "kind": "feature",
+    "name": "Extended Spell",
+    "src": "srd",
+    "page": 66,
+    "cls": "sorcerer",
+    "lvl": 2,
+    "of": "metamagic",
+    "desc": "Cost: 1 Sorcery Point\nWhen you cast a spell that has a duration of 1 minute or longer, you can spend 1 Sorcery Point to double its duration to a maximum duration of 24 hours. If the affected spell requires Concentration, you have Advantage on any saving throw you make to maintain that Concentration.",
+    "grants": []
+  },
+  {
     "id": "feature/sorcerer/font-of-magic",
     "kind": "feature",
     "name": "Font of Magic",
@@ -6802,7 +6865,7 @@
     "page": 66,
     "cls": "sorcerer",
     "lvl": 2,
-    "desc": "You can tap into the wellspring of magic within yourself. This wellspring is represented by Sorcery Points, which allow you to create a variety of magical effects. You have 2 Sorcery Points, and you gain more as you reach higher levels, as shown in the Sorcery Points column of the Sorcerer Features table. You can’t have more Sorcery Points than the number shown in the table for your level. You regain all expended Sorcery Points when you finish a Long Rest. You can use your Sorcery Points to fuel the options below, along with other features, such as Metamagic, that use those points.\nConverting Spell Slots to Sorcery Points. You can expend a spell slot to gain a number of Sorcery Points equal to the slot’s level (no action required).\nCreating Spell Slots. As a Bonus Action, you can transform unexpended Sorcery Points into one spell slot. The Creating Spell Slots table shows the cost of creating a spell slot of a given level, and it lists the minimum Sorcerer level you must be to create a slot. You can create a spell slot no higher than level 5. Any spell slot you create with this feature vanishes when you finish a Long Rest.\nCreating Spell Slots Sorcery Point Cost Min. Sorcerer",
+    "desc": "You can tap into the wellspring of magic within yourself. This wellspring is represented by Sorcery Points, which allow you to create a variety of magical effects. You have 2 Sorcery Points, and you gain more as you reach higher levels, as shown in the Sorcery Points column of the Sorcerer Features table. You can’t have more Sorcery Points than the number shown in the table for your level. You regain all expended Sorcery Points when you finish a Long Rest. You can use your Sorcery Points to fuel the options below, along with other features, such as Metamagic, that use those points.\nConverting Spell Slots to Sorcery Points. You can expend a spell slot to gain a number of Sorcery Points equal to the slot’s level (no action required).\nCreating Spell Slots. As a Bonus Action, you can transform unexpended Sorcery Points into one spell slot. The Creating Spell Slots table shows the cost of creating a spell slot of a given level, and it lists the minimum Sorcerer level you must be to create a slot. You can create a spell slot no higher than level 5. Any spell slot you create with this feature vanishes when you finish a Long Rest.\nCreating Spell Slots (slot level: Sorcery Point cost, minimum Sorcerer level)\nLevel 1: 2 points, level 2\nLevel 2: 3 points, level 3\nLevel 3: 5 points, level 5\nLevel 4: 6 points, level 7\nLevel 5: 7 points, level 9",
     "grants": [
       {
         "id": "g1",
@@ -6820,6 +6883,18 @@
         "note": "Turn Sorcery Points into a spell slot of level 5 or lower (2/3/5/6/7 points); turn a slot into points equal to its level."
       }
     ]
+  },
+  {
+    "id": "feature/sorcerer/heightened-spell",
+    "kind": "feature",
+    "name": "Heightened Spell",
+    "src": "srd",
+    "page": 66,
+    "cls": "sorcerer",
+    "lvl": 2,
+    "of": "metamagic",
+    "desc": "Cost: 2 Sorcery Points\nWhen you cast a spell that forces a creature to make a saving throw, you can spend 2 Sorcery Points to give one target of the spell Disadvantage on saves against the spell.",
+    "grants": []
   },
   {
     "id": "feature/sorcerer/innate-sorcery",
@@ -6863,10 +6938,35 @@
         "id": "meta",
         "name": "Metamagic options",
         "pick": 2,
-        "pool": "metamagic:any"
+        "pool": "feature:of=metamagic",
+        "pickAt": "2:2,10:4,17:6"
       }
     ],
     "again": "10,17"
+  },
+  {
+    "id": "feature/sorcerer/quickened-spell",
+    "kind": "feature",
+    "name": "Quickened Spell",
+    "src": "srd",
+    "page": 66,
+    "cls": "sorcerer",
+    "lvl": 2,
+    "of": "metamagic",
+    "desc": "Cost: 2 Sorcery Points\nWhen you cast a spell that has a casting time of an action, you can spend 2 Sorcery Points to change the casting time to a Bonus Action for this casting. You can’t modify a spell in this way if you’ve already cast a level 1+ spell on the current turn, nor can you cast a level 1+ spell on this turn after modifying a spell in this way.",
+    "grants": []
+  },
+  {
+    "id": "feature/sorcerer/seeking-spell",
+    "kind": "feature",
+    "name": "Seeking Spell",
+    "src": "srd",
+    "page": 66,
+    "cls": "sorcerer",
+    "lvl": 2,
+    "of": "metamagic",
+    "desc": "Cost: 1 Sorcery Point\nIf you make an attack roll for a spell and miss, you can spend 1 Sorcery Point to reroll the d20, and you must use the new roll. You can use Seeking Spell even if you’ve already used a different Metamagic option during the casting of the spell.",
+    "grants": []
   },
   {
     "id": "feature/sorcerer/sorcerer-subclass",
@@ -6945,6 +7045,42 @@
     "grants": []
   },
   {
+    "id": "feature/sorcerer/subtle-spell",
+    "kind": "feature",
+    "name": "Subtle Spell",
+    "src": "srd",
+    "page": 66,
+    "cls": "sorcerer",
+    "lvl": 2,
+    "of": "metamagic",
+    "desc": "Cost: 1 Sorcery Point\nWhen you cast a spell, you can spend 1 Sorcery Point to cast it without any Verbal, Somatic, or Material components, except Material components that are consumed by the spell or that have a cost specified in the spell.",
+    "grants": []
+  },
+  {
+    "id": "feature/sorcerer/transmuted-spell",
+    "kind": "feature",
+    "name": "Transmuted Spell",
+    "src": "srd",
+    "page": 66,
+    "cls": "sorcerer",
+    "lvl": 2,
+    "of": "metamagic",
+    "desc": "Cost: 1 Sorcery Point\nWhen you cast a spell that deals a type of damage from the following list, you can spend 1 Sorcery Point to change that damage type to one of the other listed types: Acid, Cold, Fire, Lightning, Poison, Thunder.",
+    "grants": []
+  },
+  {
+    "id": "feature/sorcerer/twinned-spell",
+    "kind": "feature",
+    "name": "Twinned Spell",
+    "src": "srd",
+    "page": 66,
+    "cls": "sorcerer",
+    "lvl": 2,
+    "of": "metamagic",
+    "desc": "Cost: 1 Sorcery Point\nWhen you cast a spell, such as Charm Person, that can be cast with a higher-level spell slot to target an additional creature, you can spend 1 Sorcery Point to increase the spell’s effective level by 1.",
+    "grants": []
+  },
+  {
     "id": "feature/warlock/ability-score-improvement",
     "kind": "feature",
     "name": "Ability Score Improvement",
@@ -6963,6 +7099,45 @@
       }
     ],
     "again": "8,12,16"
+  },
+  {
+    "id": "feature/warlock/agonizing-blast",
+    "kind": "feature",
+    "name": "Agonizing Blast",
+    "src": "srd",
+    "page": 72,
+    "cls": "warlock",
+    "lvl": 2,
+    "of": "invocation",
+    "prereq": "lvl>=2",
+    "repeat": true,
+    "desc": "Prerequisite: Level 2+ Warlock, a Warlock Cantrip That Deals Damage\nChoose one of your known Warlock cantrips that deals damage. You can add your Charisma modifier to that spell’s damage rolls.\nRepeatable. You can gain this invocation more than once. Each time you do so, choose a different eligible cantrip.",
+    "grants": []
+  },
+  {
+    "id": "feature/warlock/armor-of-shadows",
+    "kind": "feature",
+    "name": "Armor of Shadows",
+    "src": "srd",
+    "page": 72,
+    "cls": "warlock",
+    "lvl": 1,
+    "of": "invocation",
+    "desc": "You can cast Mage Armor on yourself without expending a spell slot.",
+    "grants": []
+  },
+  {
+    "id": "feature/warlock/ascendant-step",
+    "kind": "feature",
+    "name": "Ascendant Step",
+    "src": "srd",
+    "page": 72,
+    "cls": "warlock",
+    "lvl": 5,
+    "of": "invocation",
+    "prereq": "lvl>=5",
+    "desc": "Prerequisite: Level 5+ Warlock\nYou can cast Levitate on yourself without expending a spell slot.",
+    "grants": []
   },
   {
     "id": "feature/warlock/contact-patron",
@@ -6992,6 +7167,32 @@
     ]
   },
   {
+    "id": "feature/warlock/devils-sight",
+    "kind": "feature",
+    "name": "Devil’s Sight",
+    "src": "srd",
+    "page": 72,
+    "cls": "warlock",
+    "lvl": 2,
+    "of": "invocation",
+    "prereq": "lvl>=2",
+    "desc": "Prerequisite: Level 2+ Warlock\nYou can see normally in Dim Light and Darkness— both magical and nonmagical—within 120 feet of yourself.",
+    "grants": []
+  },
+  {
+    "id": "feature/warlock/devouring-blade",
+    "kind": "feature",
+    "name": "Devouring Blade",
+    "src": "srd",
+    "page": 72,
+    "cls": "warlock",
+    "lvl": 12,
+    "of": "invocation",
+    "prereq": "lvl>=12;feature=thirsting-blade",
+    "desc": "Prerequisite: Level 12+ Warlock, Thirsting Blade Invocation\nThe Extra Attack of your Thirsting Blade invocation confers two extra attacks rather than one.",
+    "grants": []
+  },
+  {
     "id": "feature/warlock/eldritch-invocations",
     "kind": "feature",
     "name": "Eldritch Invocations",
@@ -7006,7 +7207,8 @@
         "id": "inv",
         "name": "Eldritch Invocations",
         "pick": 1,
-        "pool": "invocation:any"
+        "pool": "feature:of=invocation",
+        "pickAt": "1:1,2:3,5:5,7:6,9:7,12:8,15:9,18:10"
       },
       {
         "id": "g1",
@@ -7036,6 +7238,45 @@
         "note": "Magical Cunning regains all Pact Magic slots."
       }
     ]
+  },
+  {
+    "id": "feature/warlock/eldritch-mind",
+    "kind": "feature",
+    "name": "Eldritch Mind",
+    "src": "srd",
+    "page": 72,
+    "cls": "warlock",
+    "lvl": 1,
+    "of": "invocation",
+    "desc": "You have Advantage on Constitution saving throws that you make to maintain Concentration.",
+    "grants": []
+  },
+  {
+    "id": "feature/warlock/eldritch-smite",
+    "kind": "feature",
+    "name": "Eldritch Smite",
+    "src": "srd",
+    "page": 72,
+    "cls": "warlock",
+    "lvl": 5,
+    "of": "invocation",
+    "prereq": "lvl>=5;feature=pact-of-the-blade",
+    "desc": "Prerequisite: Level 5+ Warlock, Pact of the Blade Invocation\nOnce per turn when you hit a creature with your pact weapon, you can expend a Pact Magic spell slot to deal an extra 1d8 Force damage to the target, plus another 1d8 per level of the spell slot, and you can give the target the Prone condition if it is Huge or smaller.",
+    "grants": []
+  },
+  {
+    "id": "feature/warlock/eldritch-spear",
+    "kind": "feature",
+    "name": "Eldritch Spear",
+    "src": "srd",
+    "page": 72,
+    "cls": "warlock",
+    "lvl": 2,
+    "of": "invocation",
+    "prereq": "lvl>=2",
+    "repeat": true,
+    "desc": "Prerequisite: Level 2+ Warlock, a Warlock Cantrip That Deals Damage\nChoose one of your known Warlock cantrips that deals damage and has a range of 10+ feet. When you cast that spell, its range increases by a number of feet equal to 30 times your Warlock level.\nRepeatable. You can gain this invocation more than once. Each time you do so, choose a different eligible cantrip.",
+    "grants": []
   },
   {
     "id": "feature/warlock/epic-boon",
@@ -7329,6 +7570,98 @@
     "sub": "fiend-patron"
   },
   {
+    "id": "feature/warlock/fiendish-vigor",
+    "kind": "feature",
+    "name": "Fiendish Vigor",
+    "src": "srd",
+    "page": 72,
+    "cls": "warlock",
+    "lvl": 2,
+    "of": "invocation",
+    "prereq": "lvl>=2",
+    "desc": "Prerequisite: Level 2+ Warlock\nYou can cast False Life on yourself without expending a spell slot. When you cast the spell with this feature, you don’t roll the die for the Temporary Hit Points; you automatically get the highest number on the die.",
+    "grants": []
+  },
+  {
+    "id": "feature/warlock/gaze-of-two-minds",
+    "kind": "feature",
+    "name": "Gaze of Two Minds",
+    "src": "srd",
+    "page": 72,
+    "cls": "warlock",
+    "lvl": 5,
+    "of": "invocation",
+    "prereq": "lvl>=5",
+    "desc": "Prerequisite: Level 5+ Warlock\nYou can use a Bonus Action to touch a willing creature and perceive through its senses until the end of your next turn. As long as the creature is on the same plane of existence as you, you can take a Bonus Action on subsequent turns to maintain this connection, extending the duration until the end of your next turn. The connection ends if you don’t maintain it in this way. While perceiving through the other creature’s senses, you benefit from any special senses possessed by that creature, and you can cast spells as if you were in your space or the other creature’s space if the two of you are within 60 feet of each other.",
+    "grants": []
+  },
+  {
+    "id": "feature/warlock/gift-of-the-depths",
+    "kind": "feature",
+    "name": "Gift of the Depths",
+    "src": "srd",
+    "page": 72,
+    "cls": "warlock",
+    "lvl": 5,
+    "of": "invocation",
+    "prereq": "lvl>=5",
+    "desc": "Prerequisite: Level 5+ Warlock\nYou can breathe underwater, and you gain a Swim Speed equal to your Speed. You can also cast Water Breathing once without expending a spell slot. You regain the ability to cast it in this way again when you finish a Long Rest.",
+    "grants": []
+  },
+  {
+    "id": "feature/warlock/gift-of-the-protectors",
+    "kind": "feature",
+    "name": "Gift of the Protectors",
+    "src": "srd",
+    "page": 72,
+    "cls": "warlock",
+    "lvl": 9,
+    "of": "invocation",
+    "prereq": "lvl>=9;feature=pact-of-the-tome",
+    "desc": "Prerequisite: Level 9+ Warlock, Pact of the Tome Invocation\nA new page appears in your Book of Shadows when you conjure it. With your permission, a creature can take an action to write its name on that page, which can contain a number of names equal to your Charisma modifier (minimum of one name). When any creature whose name is on the page is reduced to 0 Hit Points but not killed outright, the creature magically drops to 1 Hit Point instead. Once this magic is triggered, no creature can benefit from it until you finish a Long Rest. As a Magic action, you can erase a name on the page by touching it.",
+    "grants": []
+  },
+  {
+    "id": "feature/warlock/investment-of-the-chain-master",
+    "kind": "feature",
+    "name": "Investment of the Chain Master",
+    "src": "srd",
+    "page": 72,
+    "cls": "warlock",
+    "lvl": 5,
+    "of": "invocation",
+    "prereq": "lvl>=5;feature=pact-of-the-chain",
+    "desc": "Prerequisite: Level 5+ Warlock, Pact of the Chain Invocation\nWhen you cast Find Familiar, you infuse the summoned familiar with a measure of your eldritch power, granting the creature the following benefits.\nAerial or Aquatic. The familiar gains either a Fly Speed or a Swim Speed (your choice) of 40 feet.\nQuick Attack. As a Bonus Action, you can command the familiar to take the Attack action.\nNecrotic or Radiant Damage. Whenever the familiar deals Bludgeoning, Piercing, or Slashing damage, you can make it deal Necrotic or Radiant damage instead.\nYour Save DC. If the familiar forces a creature to make a saving throw, it uses your spell save DC.\nResistance. When the familiar takes damage, you can take a Reaction to grant it Resistance against that damage.",
+    "grants": []
+  },
+  {
+    "id": "feature/warlock/lessons-of-the-first-ones",
+    "kind": "feature",
+    "name": "Lessons of the First Ones",
+    "src": "srd",
+    "page": 72,
+    "cls": "warlock",
+    "lvl": 2,
+    "of": "invocation",
+    "prereq": "lvl>=2",
+    "repeat": true,
+    "desc": "Prerequisite: Level 2+ Warlock\nYou have received knowledge from an elder entity of the multiverse, allowing you to gain one Origin feat of your choice (see “Feats”).\nRepeatable. You can gain this invocation more than once. Each time you do so, choose a different Origin feat.",
+    "grants": []
+  },
+  {
+    "id": "feature/warlock/lifedrinker",
+    "kind": "feature",
+    "name": "Lifedrinker",
+    "src": "srd",
+    "page": 72,
+    "cls": "warlock",
+    "lvl": 9,
+    "of": "invocation",
+    "prereq": "lvl>=9;feature=pact-of-the-blade",
+    "desc": "Prerequisite: Level 9+ Warlock, Pact of the Blade Invocation\nOnce per turn when you hit a creature with your pact weapon, you can deal an extra 1d6 Necrotic, Psychic, or Radiant damage (your choice) to the creature, and you can expend one of your Hit Point Dice to roll it and regain a number of Hit Points equal to the roll plus your Constitution modifier (minimum of 1 Hit Point).",
+    "grants": []
+  },
+  {
     "id": "feature/warlock/magical-cunning",
     "kind": "feature",
     "name": "Magical Cunning",
@@ -7354,6 +7687,45 @@
         "note": "1-minute rite: regain Pact Magic slots up to half your maximum (all at level 20)."
       }
     ]
+  },
+  {
+    "id": "feature/warlock/mask-of-many-faces",
+    "kind": "feature",
+    "name": "Mask of Many Faces",
+    "src": "srd",
+    "page": 72,
+    "cls": "warlock",
+    "lvl": 2,
+    "of": "invocation",
+    "prereq": "lvl>=2",
+    "desc": "Prerequisite: Level 2+ Warlock\nYou can cast Disguise Self without expending a spell slot.",
+    "grants": []
+  },
+  {
+    "id": "feature/warlock/master-of-myriad-forms",
+    "kind": "feature",
+    "name": "Master of Myriad Forms",
+    "src": "srd",
+    "page": 72,
+    "cls": "warlock",
+    "lvl": 5,
+    "of": "invocation",
+    "prereq": "lvl>=5",
+    "desc": "Prerequisite: Level 5+ Warlock\nYou can cast Alter Self without expending a spell slot.",
+    "grants": []
+  },
+  {
+    "id": "feature/warlock/misty-visions",
+    "kind": "feature",
+    "name": "Misty Visions",
+    "src": "srd",
+    "page": 72,
+    "cls": "warlock",
+    "lvl": 2,
+    "of": "invocation",
+    "prereq": "lvl>=2",
+    "desc": "Prerequisite: Level 2+ Warlock You can cast Silent Image without expending a spell slot.",
+    "grants": []
   },
   {
     "id": "feature/warlock/mystic-arcanum",
@@ -7390,6 +7762,32 @@
     "again": "13,15,17"
   },
   {
+    "id": "feature/warlock/one-with-shadows",
+    "kind": "feature",
+    "name": "One with Shadows",
+    "src": "srd",
+    "page": 72,
+    "cls": "warlock",
+    "lvl": 5,
+    "of": "invocation",
+    "prereq": "lvl>=5",
+    "desc": "Prerequisite: Level 5+ Warlock\nWhile you’re in an area of Dim Light or Darkness, you can cast Invisibility on yourself without expending a spell slot.",
+    "grants": []
+  },
+  {
+    "id": "feature/warlock/otherworldly-leap",
+    "kind": "feature",
+    "name": "Otherworldly Leap",
+    "src": "srd",
+    "page": 72,
+    "cls": "warlock",
+    "lvl": 2,
+    "of": "invocation",
+    "prereq": "lvl>=2",
+    "desc": "Prerequisite: Level 2+ Warlock\nYou can cast Jump on yourself without expending a spell slot.",
+    "grants": []
+  },
+  {
     "id": "feature/warlock/pact-magic",
     "kind": "feature",
     "name": "Pact Magic",
@@ -7398,6 +7796,82 @@
     "cls": "warlock",
     "lvl": 1,
     "desc": "Through occult ceremony, you have formed a pact with a mysterious entity to gain magical powers. The entity is a voice in the shadows—its identity unclear—but its boon to you is concrete: the ability to cast spells. See “Spells” for the rules on spellcasting. The information below details how you use those rules with Warlock spells, which appear in the Warlock spell list later in the class’s description.\nCantrips. You know two Warlock cantrips of your choice. Eldritch Blast and Prestidigitation are recommended. Whenever you gain a Warlock level, you can replace one of your cantrips from this feature with another Warlock cantrip of your choice. When you reach Warlock levels 4 and 10, you learn another Warlock cantrip of your choice, as shown in the Cantrips column of the Warlock Features table.\nSpell Slots. The Warlock Features table shows how many spell slots you have to cast your Warlock spells of levels 1–5. The table also shows the level of those slots, all of which are the same level. You regain all expended Pact Magic spell slots when you finish a Short or Long Rest. For example, when you’re a level 5 Warlock, you have two level 3 spell slots. To cast the level 1 spell Charm Person, you must spend one of those slots, and you cast it as a level 3 spell. Prepared Spells of Level 1+. You prepare the list of level 1+ spells that are available for you to cast with this feature. To start, choose two level 1 Warlock spells. Charm Person and Hex are recommended. The number of spells on your list increases as you gain Warlock levels, as shown in the Prepared Spells column of the Warlock Features table. Whenever that number increases, choose additional Warlock spells until the number of spells on your list matches the number in the table. The chosen spells must be of a level no higher than what’s shown in the table’s Slot Level column for your level. When you reach level 6, for example, you learn a new Warlock spell, which can be of levels 1–3. If another Warlock feature gives you spells that you always have prepared, those spells don’t count against the number of spells you can prepare with this feature, but those spells otherwise count as Warlock spells for you.\nChanging Your Prepared Spells. Whenever you gain a Warlock level, you can replace one spell on your list with another Warlock spell of an eligible level.\nSpellcasting Ability. Charisma is the spellcasting ability for your Warlock spells.\nSpellcasting Focus. You can use an Arcane Focus as a Spellcasting Focus for your Warlock spells.",
+    "grants": []
+  },
+  {
+    "id": "feature/warlock/pact-of-the-blade",
+    "kind": "feature",
+    "name": "Pact of the Blade",
+    "src": "srd",
+    "page": 72,
+    "cls": "warlock",
+    "lvl": 1,
+    "of": "invocation",
+    "desc": "As a Bonus Action, you can conjure a pact weapon in your hand—a Simple or Martial Melee weapon of your choice with which you bond—or create a bond with a magic weapon you touch; you can’t bond with a magic weapon if someone else is attuned to it or another Warlock is bonded with it. Until the bond ends, you have proficiency with the weapon, and you can use it as a Spellcasting Focus. Whenever you attack with the bonded weapon, you can use your Charisma modifier for the attack and damage rolls instead of using Strength or Dexterity; and you can cause the weapon to deal Necrotic, Psychic, or Radiant damage or its normal damage type. Your bond with the weapon ends if you use this feature’s Bonus Action again, if the weapon is more than 5 feet away from you for 1 minute or more, or if you die. A conjured weapon disappears when the bond ends.",
+    "grants": []
+  },
+  {
+    "id": "feature/warlock/pact-of-the-chain",
+    "kind": "feature",
+    "name": "Pact of the Chain",
+    "src": "srd",
+    "page": 72,
+    "cls": "warlock",
+    "lvl": 1,
+    "of": "invocation",
+    "desc": "You learn the Find Familiar spell and can cast it as a Magic action without expending a spell slot. When you cast the spell, you choose one of the normal forms for your familiar or one of the following special forms: Imp, Pseudodragon, Quasit, Skeleton, Sphinx of Wonder, Sprite, or Venomous Snake (see “Monsters” for the familiar’s stat block). Additionally, when you take the Attack action, you can forgo one of your own attacks to allow your familiar to make one attack of its own with its Reaction.",
+    "grants": []
+  },
+  {
+    "id": "feature/warlock/pact-of-the-tome",
+    "kind": "feature",
+    "name": "Pact of the Tome",
+    "src": "srd",
+    "page": 72,
+    "cls": "warlock",
+    "lvl": 1,
+    "of": "invocation",
+    "desc": "Stitching together strands of shadow, you conjure forth a book in your hand at the end of a Short or Long Rest. This Book of Shadows (you determine its appearance) contains eldritch magic that only you can access, granting you the benefits below. The book disappears if you conjure another book with this feature or if you die.\nCantrips and Rituals. When the book appears, choose three cantrips, and choose two level 1 spells that have the Ritual tag. The spells can be from any class’s spell list, and they must be spells you don’t already have prepared. While the book is on your person, you have the chosen spells prepared, and they function as Warlock spells for you.\nSpellcasting Focus. You can use the book as a Spellcasting Focus.",
+    "grants": []
+  },
+  {
+    "id": "feature/warlock/repelling-blast",
+    "kind": "feature",
+    "name": "Repelling Blast",
+    "src": "srd",
+    "page": 72,
+    "cls": "warlock",
+    "lvl": 2,
+    "of": "invocation",
+    "prereq": "lvl>=2",
+    "repeat": true,
+    "desc": "Prerequisite: Level 2+ Warlock, a Warlock Cantrip That Deals Damage via an Attack Roll\nChoose one of your known Warlock cantrips that requires an attack roll. When you hit a Large or smaller creature with that cantrip, you can push the creature up to 10 feet straight away from you.\nRepeatable. You can gain this invocation more than once. Each time you do so, choose a different eligible cantrip.",
+    "grants": []
+  },
+  {
+    "id": "feature/warlock/thirsting-blade",
+    "kind": "feature",
+    "name": "Thirsting Blade",
+    "src": "srd",
+    "page": 72,
+    "cls": "warlock",
+    "lvl": 5,
+    "of": "invocation",
+    "prereq": "lvl>=5;feature=pact-of-the-blade",
+    "desc": "Prerequisite: Level 5+ Warlock, Pact of the Blade Invocation\nYou gain the Extra Attack feature for your pact weapon only. With that feature, you can attack twice with the weapon instead of once when you take the Attack action on your turn.",
+    "grants": []
+  },
+  {
+    "id": "feature/warlock/visions-of-distant-realms",
+    "kind": "feature",
+    "name": "Visions of Distant Realms",
+    "src": "srd",
+    "page": 72,
+    "cls": "warlock",
+    "lvl": 9,
+    "of": "invocation",
+    "prereq": "lvl>=9",
+    "desc": "Prerequisite: Level 9+ Warlock\nYou can cast Arcane Eye without expending a spell slot.",
     "grants": []
   },
   {
@@ -7418,6 +7892,32 @@
         "pool": "subclass:cls=warlock"
       }
     ]
+  },
+  {
+    "id": "feature/warlock/whispers-of-the-grave",
+    "kind": "feature",
+    "name": "Whispers of the Grave",
+    "src": "srd",
+    "page": 72,
+    "cls": "warlock",
+    "lvl": 7,
+    "of": "invocation",
+    "prereq": "lvl>=7",
+    "desc": "Prerequisite: Level 7+ Warlock\nYou can cast Speak with Dead without expending a spell slot.",
+    "grants": []
+  },
+  {
+    "id": "feature/warlock/witch-sight",
+    "kind": "feature",
+    "name": "Witch Sight",
+    "src": "srd",
+    "page": 72,
+    "cls": "warlock",
+    "lvl": 15,
+    "of": "invocation",
+    "prereq": "lvl>=15",
+    "desc": "Prerequisite: Level 15+ Warlock\nYou have Truesight with a range of 30 feet.",
+    "grants": []
   },
   {
     "id": "feature/wizard/ability-score-improvement",
@@ -7737,7 +8237,7 @@
     "page": 77,
     "cls": "wizard",
     "lvl": 1,
-    "desc": "As a student of arcane magic, you have learned to cast spells. See “Spells” for the rules on spellcasting. The information below details how you use those rules with Wizard spells, which appear in the Wizard spell list later in the class’s description.\nCantrips. You know three Wizard cantrips of your choice. Light, Mage Hand, and Ray of Frost are recommended. Whenever you finish a Long Rest, you can replace one of your cantrips from this feature with another Wizard cantrip of your choice.\nWhen you reach Wizard levels 4 and 10, you learn another Wizard cantrip of your choice, as shown in the Cantrips column of the Wizard Features table.\nSpellbook. Your wizardly apprenticeship culminated in the creation of a unique book: your spellbook. It is a Tiny object that weighs 3 pounds, contains 100 pages, and can be read only by you or someone casting Identify. You determine the book’s appearance and materials, such as a gilt-edged tome or a collection of vellum bound with twine. The book contains the level 1+ spells you know. It starts with six level 1 Wizard spells of your choice. Detect Magic, Feather Fall, Mage Armor, Magic Missile, Sleep, and Thunderwave are recommended. Whenever you gain a Wizard level after 1, add two Wizard spells of your choice to your spellbook. Each of these spells must be of a level for which you have spell slots, as shown in the Wizard Features table. The spells are the culmination of arcane research you do regularly.\nSpell Slots. The Wizard Features table shows how many spell slots you have to cast your level 1+ spells. You regain all expended slots when you finish a Long Rest. Prepared Spells of Level 1+. You prepare the list of level 1+ spells that are available for you to cast with this feature. To do so, choose four spells from your spellbook. The chosen spells must be of a level for which you have spell slots. The number of spells on your list increases as you gain Wizard levels, as shown in the Prepared Spells column of the Wizard Features table. Whenever that number increases, choose additional Wizard spells until the number of spells on your list matches the number in the table. The chosen spells must be of a level for which you have spell slots. For example, if you’re a level 3 Wizard, your list of prepared spells can include six spells of levels 1 and 2 in any combination, chosen from your spellbook. If another Wizard feature gives you spells that you always have prepared, those spells don’t count against the number of spells you can prepare with this feature, but those spells otherwise count as Wizard spells for you.\nChanging Your Prepared Spells. Whenever you finish a Long Rest, you can change your list of prepared spells, replacing any of the spells there with spells from your spellbook.\nSpellcasting Ability. Intelligence is your spellcasting ability for your Wizard spells.\nSpellcasting Focus. You can use an Arcane Focus or your spellbook as a Spellcasting Focus for your Wizard spells.",
+    "desc": "As a student of arcane magic, you have learned to cast spells. See “Spells” for the rules on spellcasting. The information below details how you use those rules with Wizard spells, which appear in the Wizard spell list later in the class’s description.\nCantrips. You know three Wizard cantrips of your choice. Light, Mage Hand, and Ray of Frost are recommended. Whenever you finish a Long Rest, you can replace one of your cantrips from this feature with another Wizard cantrip of your choice.\nWhen you reach Wizard levels 4 and 10, you learn another Wizard cantrip of your choice, as shown in the Cantrips column of the Wizard Features table.\nSpellbook. Your wizardly apprenticeship culminated in the creation of a unique book: your spellbook. It is a Tiny object that weighs 3 pounds, contains 100 pages, and can be read only by you or someone casting Identify. You determine the book’s appearance and materials, such as a gilt-edged tome or a collection of vellum bound with twine. The book contains the level 1+ spells you know. It starts with six level 1 Wizard spells of your choice. Detect Magic, Feather Fall, Mage Armor, Magic Missile, Sleep, and Thunderwave are recommended. Whenever you gain a Wizard level after 1, add two Wizard spells of your choice to your spellbook. Each of these spells must be of a level for which you have spell slots, as shown in the Wizard Features table. The spells are the culmination of arcane research you do regularly.\nSpell Slots. The Wizard Features table shows how many spell slots you have to cast your level 1+ spells. You regain all expended slots when you finish a Long Rest. Prepared Spells of Level 1+. You prepare the list of level 1+ spells that are available for you to cast with this feature. To do so, choose four spells from your spellbook. The chosen spells must be of a level for which you have spell slots. The number of spells on your list increases as you gain Wizard levels, as shown in the Prepared Spells column of the Wizard Features table. Whenever that number increases, choose additional Wizard spells until the number of spells on your list matches the number in the table. The chosen spells must be of a level for which you have spell slots. For example, if you’re a level 3 Wizard, your list of prepared spells can include six spells of levels 1 and 2 in any combination, chosen from your spellbook. If another Wizard feature gives you spells that you always have prepared, those spells don’t count against the number of spells you can prepare with this feature, but those spells otherwise count as Wizard spells for you.\nChanging Your Prepared Spells. Whenever you finish a Long Rest, you can change your list of prepared spells, replacing any of the spells there with spells from your spellbook.\nSpellcasting Ability. Intelligence is your spellcasting ability for your Wizard spells.\nSpellcasting Focus. You can use an Arcane Focus or your spellbook as a Spellcasting Focus for your Wizard spells.\nExpanding and Replacing a Spellbook The spells you add to your spellbook as you gain levels reflect your ongoing magical research, but you might find other spells during your adventures that you can add to the book. You could discover a Wizard spell on a Spell Scroll, for example, and then copy it into your spellbook.\nCopying a Spell into the Book. When you find a level 1+ Wizard spell, you can copy it into your spellbook if it’s of a level you can prepare and if you have time to copy it. For each level of the spell, the transcription takes 2 hours and costs 50 GP. Afterward you can prepare the spell like the other spells in your spellbook.\nCopying the Book. You can copy a spell from your spellbook into another book. This is like copying a new spell into your spellbook but faster, since you already know how to cast the spell. You need spend only 1 hour and 10 GP for each level of the copied spell. If you lose your spellbook, you can use the same procedure to transcribe the Wizard spells that you have prepared into a new spellbook. Filling out the remainder of the new book requires you to find new spells to do so. For this reason, many wizards keep a backup spellbook.",
     "grants": []
   },
   {
@@ -7748,7 +8248,7 @@
     "page": 78,
     "cls": "wizard",
     "lvl": 3,
-    "desc": "You gain a Wizard subclass of your choice. The Evoker subclass is detailed after this class’s description. A subclass is a specialization that grants you features at certain Wizard levels. For the rest Expanding and Replacing a Spellbook The spells you add to your spellbook as you gain levels reflect your ongoing magical research, but you might find other spells during your adventures that you can add to the book. You could discover a Wizard spell on a Spell Scroll, for example, and then copy it into your spellbook.\nCopying a Spell into the Book. When you find a level 1+ Wizard spell, you can copy it into your spellbook if it’s of a level you can prepare and if you have time to copy it. For each level of the spell, the transcription takes 2 hours and costs 50 GP. Afterward you can prepare the spell like the other spells in your spellbook.\nCopying the Book. You can copy a spell from your spellbook into another book. This is like copying a new spell into your spellbook but faster, since you already know how to cast the spell. You need spend only 1 hour and 10 GP for each level of the copied spell. If you lose your spellbook, you can use the same procedure to transcribe the Wizard spells that you have prepared into a new spellbook. Filling out the remainder of the new book requires you to find new spells to do so. For this reason, many wizards keep a backup spellbook.\nof your career, you gain each of your subclass’s features that are of your Wizard level or lower.",
+    "desc": "You gain a Wizard subclass of your choice. The Evoker subclass is detailed after this class’s description. A subclass is a specialization that grants you features at certain Wizard levels. For the rest of your career, you gain each of your subclass’s features that are of your Wizard level or lower.",
     "grants": [
       {
         "kind": "choice",

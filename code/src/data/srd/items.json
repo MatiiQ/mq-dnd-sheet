@@ -23,6 +23,15 @@
     "baseOf": "item/breastplate,item/chain-mail,item/chain-shirt,item/half-plate-armor,item/plate-armor,item/ring-mail,item/scale-mail,item/splint-armor"
   },
   {
+    "id": "item/airship",
+    "kind": "item",
+    "name": "Airship",
+    "src": "srd",
+    "desc": "Speed 8 mph; Crew 10; Passengers 20; Cargo 1 tons; AC 13; HP 300; Damage Threshold —.",
+    "cat": "mount",
+    "cost": "40,000 GP"
+  },
+  {
     "id": "item/alchemists-fire",
     "kind": "item",
     "name": "Alchemist’s Fire",
@@ -154,6 +163,56 @@
     "desc": "An Arcane Focus takes one of the forms in the Arcane Focuses table and is bejeweled or carved to channel arcane magic. A Sorcerer, Warlock, or Wizard can use such an item as a Spellcasting Focus.\nArcane Focuses Focus Weight Cost Crystal 1 lb.\n10 GP Orb 3 lb.\n20 GP Rod 2 lb.\n10 GP Staff (also a Quarterstaff)\n4 lb.\n5 GP Wand 1 lb.\n10 GP",
     "cat": "focus",
     "page": 96
+  },
+  {
+    "id": "item/arcane-focus-crystal",
+    "kind": "item",
+    "name": "Arcane Focus (Crystal)",
+    "src": "srd",
+    "desc": "A Sorcerer, Warlock, or Wizard can use it as a Spellcasting Focus.",
+    "cat": "focus",
+    "cost": "10 GP",
+    "wt": 1
+  },
+  {
+    "id": "item/arcane-focus-orb",
+    "kind": "item",
+    "name": "Arcane Focus (Orb)",
+    "src": "srd",
+    "desc": "A Sorcerer, Warlock, or Wizard can use it as a Spellcasting Focus.",
+    "cat": "focus",
+    "cost": "20 GP",
+    "wt": 3
+  },
+  {
+    "id": "item/arcane-focus-rod",
+    "kind": "item",
+    "name": "Arcane Focus (Rod)",
+    "src": "srd",
+    "desc": "A Sorcerer, Warlock, or Wizard can use it as a Spellcasting Focus.",
+    "cat": "focus",
+    "cost": "10 GP",
+    "wt": 2
+  },
+  {
+    "id": "item/arcane-focus-staff",
+    "kind": "item",
+    "name": "Arcane Focus (Staff)",
+    "src": "srd",
+    "desc": "Also a Quarterstaff. A Sorcerer, Warlock, or Wizard can use it as a Spellcasting Focus.",
+    "cat": "focus",
+    "cost": "5 GP",
+    "wt": 4
+  },
+  {
+    "id": "item/arcane-focus-wand",
+    "kind": "item",
+    "name": "Arcane Focus (Wand)",
+    "src": "srd",
+    "desc": "A Sorcerer, Warlock, or Wizard can use it as a Spellcasting Focus.",
+    "cat": "focus",
+    "cost": "10 GP",
+    "wt": 1
   },
   {
     "id": "item/armor-1-2-or-3",
@@ -1026,6 +1085,15 @@
     "page": 96
   },
   {
+    "id": "item/camel",
+    "kind": "item",
+    "name": "Camel",
+    "src": "srd",
+    "desc": "Carrying capacity 450 lb.",
+    "cat": "mount",
+    "cost": "50 GP"
+  },
+  {
     "id": "item/candle",
     "kind": "item",
     "name": "Candle",
@@ -1076,6 +1144,26 @@
     "cat": "magic",
     "page": 215,
     "rarity": "Very Rare"
+  },
+  {
+    "id": "item/carriage",
+    "kind": "item",
+    "name": "Carriage",
+    "src": "srd",
+    "desc": "",
+    "cat": "mount",
+    "wt": 600,
+    "cost": "100 GP"
+  },
+  {
+    "id": "item/cart",
+    "kind": "item",
+    "name": "Cart",
+    "src": "srd",
+    "desc": "",
+    "cat": "mount",
+    "wt": 200,
+    "cost": "15 GP"
   },
   {
     "id": "item/cartographers-tools",
@@ -1134,6 +1222,16 @@
     "acBase": 13,
     "wt": 20,
     "cost": "50 GP"
+  },
+  {
+    "id": "item/chariot",
+    "kind": "item",
+    "name": "Chariot",
+    "src": "srd",
+    "desc": "",
+    "cat": "mount",
+    "wt": 100,
+    "cost": "250 GP"
   },
   {
     "id": "item/chest",
@@ -1767,6 +1865,35 @@
     "page": 97
   },
   {
+    "id": "item/druidic-focus-sprig-of-mistletoe",
+    "kind": "item",
+    "name": "Druidic Focus (Sprig of Mistletoe)",
+    "src": "srd",
+    "desc": "A Druid or Ranger can use it as a Spellcasting Focus.",
+    "cat": "focus",
+    "cost": "1 GP"
+  },
+  {
+    "id": "item/druidic-focus-wooden-staff",
+    "kind": "item",
+    "name": "Druidic Focus (Wooden Staff)",
+    "src": "srd",
+    "desc": "Also a Quarterstaff. A Druid or Ranger can use it as a Spellcasting Focus.",
+    "cat": "focus",
+    "cost": "5 GP",
+    "wt": 4
+  },
+  {
+    "id": "item/druidic-focus-yew-wand",
+    "kind": "item",
+    "name": "Druidic Focus (Yew Wand)",
+    "src": "srd",
+    "desc": "A Druid or Ranger can use it as a Spellcasting Focus.",
+    "cat": "focus",
+    "cost": "10 GP",
+    "wt": 1
+  },
+  {
     "id": "item/dungeoneers-pack",
     "kind": "item",
     "name": "Dungeoneer’s Pack",
@@ -1870,6 +1997,15 @@
     "cat": "magic",
     "page": 220,
     "rarity": "Uncommon"
+  },
+  {
+    "id": "item/elephant",
+    "kind": "item",
+    "name": "Elephant",
+    "src": "srd",
+    "desc": "Carrying capacity 1,320 lb.",
+    "cat": "mount",
+    "cost": "200 GP"
   },
   {
     "id": "item/elixir-of-health",
@@ -1982,6 +2118,16 @@
     "cat": "magic",
     "page": 221,
     "rarity": "Rarity Varies"
+  },
+  {
+    "id": "item/feed-per-day",
+    "kind": "item",
+    "name": "Feed per day",
+    "src": "srd",
+    "desc": "",
+    "cat": "mount",
+    "wt": 10,
+    "cost": "5 CP"
   },
   {
     "id": "item/figurine-of-wondrous-power",
@@ -2101,6 +2247,15 @@
     ],
     "base": "weapon",
     "baseOf": "item/glaive,item/greatsword,item/longsword,item/rapier,item/scimitar,item/shortsword"
+  },
+  {
+    "id": "item/galley",
+    "kind": "item",
+    "name": "Galley",
+    "src": "srd",
+    "desc": "Speed 4 mph; Crew 80; Passengers —; Cargo 150 tons; AC 15; HP 500; Damage Threshold 20.",
+    "cat": "mount",
+    "cost": "30,000 GP"
   },
   {
     "id": "item/gaming-set",
@@ -2625,6 +2780,35 @@
     "page": 97
   },
   {
+    "id": "item/holy-symbol-amulet",
+    "kind": "item",
+    "name": "Holy Symbol (Amulet)",
+    "src": "srd",
+    "desc": "Worn or held. A Cleric or Paladin can use it as a Spellcasting Focus.",
+    "cat": "focus",
+    "cost": "5 GP",
+    "wt": 1
+  },
+  {
+    "id": "item/holy-symbol-emblem",
+    "kind": "item",
+    "name": "Holy Symbol (Emblem)",
+    "src": "srd",
+    "desc": "Borne on fabric or a Shield. A Cleric or Paladin can use it as a Spellcasting Focus.",
+    "cat": "focus",
+    "cost": "5 GP"
+  },
+  {
+    "id": "item/holy-symbol-reliquary",
+    "kind": "item",
+    "name": "Holy Symbol (Reliquary)",
+    "src": "srd",
+    "desc": "Held. A Cleric or Paladin can use it as a Spellcasting Focus.",
+    "cat": "focus",
+    "cost": "5 GP",
+    "wt": 2
+  },
+  {
     "id": "item/holy-water",
     "kind": "item",
     "name": "Holy Water",
@@ -2665,6 +2849,24 @@
     "cat": "magic",
     "page": 226,
     "rarity": "Rare (Silver or Brass), Very Rare (Bronze), or Legendary (Iron)"
+  },
+  {
+    "id": "item/horse-draft",
+    "kind": "item",
+    "name": "Horse, Draft",
+    "src": "srd",
+    "desc": "Carrying capacity 540 lb.",
+    "cat": "mount",
+    "cost": "50 GP"
+  },
+  {
+    "id": "item/horse-riding",
+    "kind": "item",
+    "name": "Horse, Riding",
+    "src": "srd",
+    "desc": "Carrying capacity 480 lb.",
+    "cat": "mount",
+    "cost": "75 GP"
   },
   {
     "id": "item/horseshoes-of-a-zephyr",
@@ -2852,6 +3054,15 @@
     "capVol": "1 gallon"
   },
   {
+    "id": "item/keelboat",
+    "kind": "item",
+    "name": "Keelboat",
+    "src": "srd",
+    "desc": "Speed 1 mph; Crew 1; Passengers 6; Cargo 1/2 tons; AC 15; HP 100; Damage Threshold 10.",
+    "cat": "mount",
+    "cost": "3,000 GP"
+  },
+  {
     "id": "item/ladder",
     "kind": "item",
     "name": "Ladder",
@@ -2878,7 +3089,7 @@
     "kind": "item",
     "name": "Lance",
     "src": "srd",
-    "desc": "",
+    "desc": "Two-Handed unless mounted.",
     "cat": "weapon",
     "wcat": "martial",
     "wrange": "melee",
@@ -2983,6 +3194,15 @@
     "wt": 2,
     "ammo": "150/600;arrow",
     "props": "ammunition,heavy,two-handed"
+  },
+  {
+    "id": "item/longship",
+    "kind": "item",
+    "name": "Longship",
+    "src": "srd",
+    "desc": "Speed 3 mph; Crew 40; Passengers 150; Cargo 10 tons; AC 15; HP 300; Damage Threshold 15.",
+    "cat": "mount",
+    "cost": "10,000 GP"
   },
   {
     "id": "item/longsword",
@@ -3227,6 +3447,15 @@
     "wt": 8
   },
   {
+    "id": "item/mastiff",
+    "kind": "item",
+    "name": "Mastiff",
+    "src": "srd",
+    "desc": "Carrying capacity 195 lb.",
+    "cat": "mount",
+    "cost": "25 GP"
+  },
+  {
     "id": "item/maul",
     "kind": "item",
     "name": "Maul",
@@ -3307,6 +3536,15 @@
     "mastery": "sap",
     "cost": "15 GP",
     "wt": 4
+  },
+  {
+    "id": "item/mule",
+    "kind": "item",
+    "name": "Mule",
+    "src": "srd",
+    "desc": "Carrying capacity 420 lb.",
+    "cat": "mount",
+    "cost": "8 GP"
   },
   {
     "id": "item/musical-instrument",
@@ -3759,6 +3997,15 @@
     "wt": 7,
     "cost": "5 CP",
     "page": 99
+  },
+  {
+    "id": "item/pony",
+    "kind": "item",
+    "name": "Pony",
+    "src": "srd",
+    "desc": "Carrying capacity 225 lb.",
+    "cat": "mount",
+    "cost": "30 GP"
   },
   {
     "id": "item/portable-hole",
@@ -4743,6 +4990,15 @@
     "rarity": "Rare"
   },
   {
+    "id": "item/rowboat",
+    "kind": "item",
+    "name": "Rowboat",
+    "src": "srd",
+    "desc": "Speed 1½ mph; Crew 1; Passengers 3; Cargo — tons; AC 11; HP 50; Damage Threshold —.",
+    "cat": "mount",
+    "cost": "50 GP"
+  },
+  {
     "id": "item/sack",
     "kind": "item",
     "name": "Sack",
@@ -4754,6 +5010,45 @@
     "page": 99,
     "cap": 30,
     "capVol": "1 cubic foot"
+  },
+  {
+    "id": "item/saddle-exotic",
+    "kind": "item",
+    "name": "Saddle, Exotic",
+    "src": "srd",
+    "desc": "",
+    "cat": "mount",
+    "wt": 40,
+    "cost": "60 GP"
+  },
+  {
+    "id": "item/saddle-military",
+    "kind": "item",
+    "name": "Saddle, Military",
+    "src": "srd",
+    "desc": "",
+    "cat": "mount",
+    "wt": 30,
+    "cost": "20 GP"
+  },
+  {
+    "id": "item/saddle-riding",
+    "kind": "item",
+    "name": "Saddle, Riding",
+    "src": "srd",
+    "desc": "",
+    "cat": "mount",
+    "wt": 25,
+    "cost": "10 GP"
+  },
+  {
+    "id": "item/sailing-ship",
+    "kind": "item",
+    "name": "Sailing Ship",
+    "src": "srd",
+    "desc": "Speed 2 mph; Crew 20; Passengers 20; Cargo 100 tons; AC 15; HP 300; Damage Threshold 15.",
+    "cat": "mount",
+    "cost": "10,000 GP"
   },
   {
     "id": "item/scale-mail",
@@ -4981,6 +5276,16 @@
     "cat": "gear",
     "cost": "5 CP",
     "page": 99
+  },
+  {
+    "id": "item/sled",
+    "kind": "item",
+    "name": "Sled",
+    "src": "srd",
+    "desc": "",
+    "cat": "mount",
+    "wt": 300,
+    "cost": "20 GP"
   },
   {
     "id": "item/sling",
@@ -5842,6 +6147,16 @@
     "baseOf": "item/glaive,item/greatsword,item/longsword,item/scimitar"
   },
   {
+    "id": "item/wagon",
+    "kind": "item",
+    "name": "Wagon",
+    "src": "srd",
+    "desc": "",
+    "cat": "mount",
+    "wt": 400,
+    "cost": "35 GP"
+  },
+  {
     "id": "item/wand-of-binding",
     "kind": "item",
     "name": "Wand of Binding",
@@ -6073,6 +6388,24 @@
     "wt": 5,
     "vers": "1d10",
     "props": "versatile"
+  },
+  {
+    "id": "item/warhorse",
+    "kind": "item",
+    "name": "Warhorse",
+    "src": "srd",
+    "desc": "Carrying capacity 540 lb.",
+    "cat": "mount",
+    "cost": "400 GP"
+  },
+  {
+    "id": "item/warship",
+    "kind": "item",
+    "name": "Warship",
+    "src": "srd",
+    "desc": "Speed 2½ mph; Crew 60; Passengers 60; Cargo 200 tons; AC 15; HP 500; Damage Threshold 20.",
+    "cat": "mount",
+    "cost": "25,000 GP"
   },
   {
     "id": "item/waterskin",

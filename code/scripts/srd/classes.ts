@@ -74,6 +74,35 @@ export function featuresTable(layout: string, cls: string): Table {
 // '1:2,2:3,…' from a column, one step wherever the value changes.
 const levelTable = (vals: string[]) => vals.map((v, i) => [i + 1, v] as const).filter(([, v], i) => v !== '—' && v !== vals[i - 1]).map(([l, v]) => `${l}:${v}`).join(',');
 
+// What an option's prerequisite line asks that the app can test: a level and other features. The rest stays in the text.
+export function optionPrereq(text: string): { lvl?: number; prereq?: string } {
+  const lvl = /Level (\d+)\+/.exec(text)?.[1];
+  const feats = text.split(/[,;]/).flatMap((p) => { const m = /^\s*([A-Z][\w’' ]+?) Invocation\s*$/i.exec(p); return m ? [`feature=${slug(m[1])}`] : []; });
+  const prereq = [...(lvl ? [`lvl>=${lvl}`] : []), ...feats].join(';');
+  return { ...(lvl ? { lvl: Number(lvl) } : {}), ...(prereq ? { prereq } : {}) };
+}
+
+// The options of a section, each under a line that is exactly its name: "Prerequisite:" up to the first blank line, a
+// "Repeatable." paragraph, and the rest as text. Names not in the text are skipped.
+export function parseOptions(lines: string[], names: string[], o: { cls: string; of: FeatureEntry['of']; lvl: number; page?: number }): FeatureEntry[] {
+  const heads = lines.flatMap((l, i) => (names.includes(l) ? [i] : []));
+  return heads.map((at, k) => {
+    const body = lines.slice(at + 1, heads[k + 1] ?? lines.length);
+    while (body.length && !body[0]) body.shift();
+    let pre = '';
+    if (body[0]?.startsWith('Prerequisite:')) { const n = body.findIndex((l) => !l); pre = body.splice(0, n < 0 ? body.length : n).join(' '); }
+    if (body[0]?.startsWith('Cost:')) pre = body.shift()!;
+    const { lvl, prereq } = optionPrereq(pre);
+    return { id: catalogId('feature', lines[at], [o.cls]), kind: 'feature', name: lines[at], src: 'srd', ...(o.page ? { page: o.page } : {}), cls: slug(o.cls), lvl: lvl ?? o.lvl, of: o.of,
+      ...(prereq ? { prereq } : {}), ...(body.some((l) => l.startsWith('Repeatable.')) ? { repeat: true } : {}),
+      desc: [...(pre ? [pre] : []), ...paragraphs(body)].join('\n'), grants: [] };
+  });
+}
+const METAMAGIC = ['Careful Spell', 'Distant Spell', 'Empowered Spell', 'Extended Spell', 'Heightened Spell', 'Quickened Spell', 'Seeking Spell', 'Subtle Spell', 'Transmuted Spell', 'Twinned Spell'];
+const INVOCATIONS = ['Agonizing Blast', 'Armor of Shadows', 'Ascendant Step', 'Devil’s Sight', 'Devouring Blade', 'Eldritch Mind', 'Eldritch Smite', 'Eldritch Spear', 'Fiendish Vigor', 'Gaze of Two Minds',
+  'Gift of the Depths', 'Gift of the Protectors', 'Investment of the Chain Master', 'Lessons of the First Ones', 'Lifedrinker', 'Mask of Many Faces', 'Master of Myriad Forms', 'Misty Visions', 'One with Shadows',
+  'Otherworldly Leap', 'Pact of the Blade', 'Pact of the Chain', 'Pact of the Tome', 'Repelling Blast', 'Thirsting Blade', 'Visions of Distant Realms', 'Whispers of the Grave', 'Witch Sight'];
+
 export function parseClass(text: string, layout: string): [ClassEntry, SubclassEntry[], FeatureEntry[]] {
   const raw = srdLines(text);
   const name = /^Core (\w+) Traits$/.exec(raw.find((l) => l.text.trim())!.text.trim())![1];
@@ -139,5 +168,11 @@ export function parseClass(text: string, layout: string): [ClassEntry, SubclassE
     }
     feats.push(e);
   });
+  for (const [title, names, of, lvl] of [['Metamagic Options', METAMAGIC, 'metamagic', 2], ['Eldritch Invocation Options', INVOCATIONS, 'invocation', 1]] as const) {
+    const a = lines.indexOf(title);
+    if (a < 0) continue;
+    const z = lines.findIndex((l, i) => i > a && (/^\w+ Spell List$/.test(l) || SUB.test(l)));
+    feats.push(...parseOptions(lines.slice(a + 1, z < 0 ? lines.length : z), [...names], { cls: name, of, lvl, page: L[a].page }));
+  }
   return [c, subs, feats];
 }

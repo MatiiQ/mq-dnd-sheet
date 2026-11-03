@@ -70,7 +70,7 @@ describe('source notes', () => {
   it('leaves a PHB page citation out of a feature description', () => {
     const [, , feats] = parseClassMd(fx('class.md').replace('### Level 1: Kindle (PHB p.902)\n', '### Level 1: Kindle (PHB p.902)\n##### Kindle Table (PHB p.97)\nSee page (PHB p.98-99).\n'));
     const desc = feats.find((f) => f.name === 'Kindle')!.desc;
-    expect(desc).toContain('##### Kindle Table\nSee page.');
+    expect(desc).toContain('Kindle Table\nSee page.');
     expect(desc).not.toContain('PHB p.');
   });
 });
@@ -102,5 +102,47 @@ describe('feats, backgrounds, species, equipment', () => {
     expect(list.find((e) => e.id === 'item/lamplighters-clothes')).toMatchObject({ name: 'Lamplighter’s Clothes', cat: 'gear', wt: 4, cost: '2 GP', desc: 'Smells of wax.' });
     expect(list.find((e) => e.name === 'Ammunition')).toBeUndefined(); // a row that only points to its own table
     for (const e of list) expect(validateEntry(e)).toEqual([]);
+  });
+});
+
+describe('text the parser used to drop', () => {
+  const spellMd = (rest: string) => '### Summon Thing (PHB p.322)\n- **Level/School:** 2 Conjuration\n- **Classes:** Druid\n- **Casting Time:** Action\n- **Range:** 90 feet\n' +
+    `- **Components:** V, S\n- **Duration:** 1 hour\n- **Effect:** A spirit manifests.\n${rest}`;
+  it('keeps what follows a spell\'s Effect line, such as a stat block', () => {
+    const e = parseSpellsMd(spellMd('\n  **THING SPIRIT** — Small Beast\n  - AC 11; HP 20\n  | d4 | Result |\n  |---|---|\n  | 1 | Good |\n- **Higher Levels:** More.\n'))[0];
+    expect(e.desc).toBe('A spirit manifests.\nTHING SPIRIT — Small Beast\nAC 11; HP 20\nd4 — Result\n1 — Good\nHigher Levels: More.');
+  });
+  it('reads a feat whose benefit is on the Benefits line', () => {
+    const md = '### Tough (PHB p.202)\n- **Category:** Origin\n- **Prerequisite:** —\n- **Repeatable:** No\n- **ASI:** —\n- **Benefits:** HP max increases.\n';
+    expect(parseFeatsMd(md)[0].desc).toBe('HP max increases.');
+  });
+  it('keeps a table under a feat\'s heading, as plain lines', () => {
+    const md = '### Crafter (PHB p.200)\n- **Category:** Origin\n- **Prerequisite:** —\n- **Repeatable:** No\n- **ASI:** —\n- **Benefits:**\n  - **Tool.** Three tools.\n\n#### Fast Crafting\n\n| Tools | Gear |\n|---|---|\n| Mason | Block |\n\n### Next (PHB p.201)\n';
+    expect(parseFeatsMd(md).find((e) => e.name === 'Crafter')!.desc).toBe('Tool. Three tools.\nFast Crafting\nTools — Gear\nMason — Block');
+  });
+  const classMd = (body: string) => `# Warlock (PHB 2024)\n\n## Core Traits (PHB p.153)\n\n| Trait | Value |\n|---|---|\n| Primary Ability | Charisma |\n| Hit Point Die | d8 per level |\n| Saving Throw Proficiencies | Wisdom, Charisma |\n| Skill Proficiencies | Choose 2: Arcana, History |\n| Weapon Proficiencies | Simple weapons |\n| Tool Proficiencies | None |\n| Armor Training | Light armor |\n\n## Warlock Features Table (PHB p.154)\n\n| Level | Class Features |\n|---|---|\n| 1 | Pact |\n\n## Class Features\n\n### Level 1: Pact (PHB p.153)\n| A | B |\n|---|---|\n| 1 | Two |\n\n${body}`;
+  it('writes a feature\'s table rows as plain lines', () => {
+    const feats = parseClassMd(classMd(''))[2];
+    expect(feats.find((f) => f.name === 'Pact')!.desc).toBe('A — B\n1 — Two');
+  });
+  it('reads Eldritch Invocations as option features with their prerequisites', () => {
+    const md = classMd('## Eldritch Invocation Options (PHB p.155-157)\n\n| Invocation | Prerequisite | Repeatable | Effect |\n|---|---|---|---|\n| Armor of Shadows | None | No | Cast Mage Armor. |\n| Devouring Blade | Level 12+ Warlock; Thirsting Blade invocation | No | Two attacks. |\n| Agonizing Blast | Level 2+ Warlock; a Warlock cantrip that deals damage | Yes (different eligible cantrip) | Add Cha. |\n');
+    const opts = parseClassMd(md)[2].filter((f) => f.of);
+    expect(opts.map((f) => f.id)).toEqual(['feature/warlock/armor-of-shadows', 'feature/warlock/devouring-blade', 'feature/warlock/agonizing-blast']);
+    expect(opts[0]).toMatchObject({ of: 'invocation', cls: 'warlock', lvl: 1, desc: 'Cast Mage Armor.' });
+    expect(opts[0].prereq).toBeUndefined();
+    expect(opts[1]).toMatchObject({ lvl: 12, prereq: 'lvl>=12;feature=thirsting-blade', desc: 'Prerequisite: Level 12+ Warlock; Thirsting Blade invocation\nTwo attacks.' });
+    expect(opts[2]).toMatchObject({ repeat: true, prereq: 'lvl>=2' });
+  });
+  it('reads Maneuvers into their subclass and joins the trigger to the effect', () => {
+    const md = classMd('## Subclasses (PHB p.1)\n\n### Battle Master (PHB p.93)\nTheme.\n\n#### Level 3: Combat Superiority (PHB p.93)\nDice.\n\n#### Maneuver Options (PHB p.94-95)\nSD means die.\n\n| Maneuver | Trigger / Action | Effect |\n|---|---|---|\n| Ambush | On a Stealth check | Add the die. |\n');
+    const m = parseClassMd(md)[2].find((f) => f.of)!;
+    expect(m).toMatchObject({ id: 'feature/warlock/battle-master/ambush', of: 'maneuver', sub: 'battle-master', lvl: 3, desc: 'On a Stealth check: Add the die.' });
+  });
+  it('moves a named table onto the feature that uses it', () => {
+    const md = classMd('## Subclasses (PHB p.1)\n\n### Wild Magic Sorcery (PHB p.149)\nTheme.\n\n#### Level 3: Wild Magic Surge (PHB p.149)\nRoll.\n\n#### Level 18: Tamed Surge (PHB p.149)\nChoose.\n\n#### Wild Magic Surge Table (PHB p.150-151)\n\n| d100 | Effect |\n|---|---|\n| 01-04 | Again. |\n');
+    const feats = parseClassMd(md)[2];
+    expect(feats.find((f) => f.name === 'Wild Magic Surge')!.desc).toBe('Roll.\nWild Magic Surge Table\nd100 — Effect\n01-04 — Again.');
+    expect(feats.find((f) => f.name === 'Tamed Surge')!.desc).toBe('Choose.');
   });
 });

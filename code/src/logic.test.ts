@@ -1748,3 +1748,43 @@ describe('pinned rules', () => {
     expect(applyDamage(c).concCheck).toContain('DC 30');
   });
 });
+
+describe('PHB second-print cross-check fixes', () => {
+  const g = (p: Partial<Grant> & { kind: Grant['kind'] }): Grant => ({ id: 'g' + p.kind, name: p.kind, from: 'feature:f10', ...p } as Grant);
+  it('adds a flat Hit Point bonus once, not per level (Boon of Fortitude, PHB p.210)', () => {
+    const c = make({ level: 19, maxHp: 100, origHp: 100, hp: 100, grants: [g({ kind: 'hpFlat', val: '40' })] });
+    expect(maxHpOf(c)).toBe(140);
+    expect(maxHpOf({ ...c, grants: [{ ...c.grants[0], counted: true }] })).toBe(100);
+  });
+  it('adds a "+60 if you already have it" sense to the longest other range (Umbral Sight, PHB p.126)', () => {
+    const se = (id: string, range: string, plus?: boolean) => ({ id, name: 'Darkvision', range, ...(plus ? { plus } : {}) });
+    expect(mergedSenses(make({ senses: [se('a', '60 ft'), se('b', '60 ft', true)] }))[0].range).toBe('120 ft');
+    expect(mergedSenses(make({ senses: [se('b', '60 ft', true)] }))[0].range).toBe('60 ft');
+    expect(mergedSenses(make({ senses: [se('a', '120 ft'), se('b', '60 ft', true)] }))[0].range).toBe('180 ft');
+    expect(mergedSenses(make({ senses: [se('b', '60 ft', true), se('c', '60 ft', true)] }))[0].range).toBe('120 ft');
+  });
+  it('raises the Medium armor Dexterity cap (Medium Armor Master, PHB p.205)', () => {
+    const scale = { id: 'i', name: 'Scale Mail', qty: 1, eq: true, armor: 'medium', acBase: 14 } as unknown as Item;
+    const c = make({ abil: { ...make().abil, dex: 16 }, abilAdj: {}, grants: [], inv: [scale] });
+    expect(armorClass(c).total).toBe(16);
+    expect(armorClass({ ...c, grants: [g({ kind: 'ac', acMode: 'dexCap', val: '3' })] }).total).toBe(17);
+    expect(armorClass({ ...c, abil: { ...c.abil, dex: 14 }, grants: [g({ kind: 'ac', acMode: 'dexCap', val: '3' })] }).total).toBe(16);
+  });
+  it('gives Expertise instead when the skill is already proficient (Keen Mind, PHB p.205)', () => {
+    const k = g({ kind: 'prof', cat: 'skill', target: 'arcana', orExpert: true });
+    expect(skillLevel(make({ grants: [k] }), 'arcana').level).toBe(1);
+    expect(skillLevel(make({ grants: [k], skillProf: { arcana: 1 } }), 'arcana').level).toBe(2);
+    expect(skillLevel(make({ grants: [k, g({ kind: 'prof', cat: 'skill', target: 'arcana', id: 'other' })] }), 'arcana').level).toBe(2);
+  });
+  it('reads a speed of twice the walking Speed (Revelation in Flesh, PHB p.146)', () => {
+    const c = make({ speedBase: 30, grants: [g({ kind: 'speed', mode: 'swim', val: 'walk2' })] });
+    expect(modeSpeed(c, 'swim').base).toBe(60);
+  });
+});
+
+it('keeps a sense\'s plus flag and a skill grant\'s orExpert through a save', () => {
+  const c = migrate({ ...sampleCharacter(), senses: [{ id: 's', name: 'Darkvision', range: '60 ft', plus: true }],
+    grants: [{ id: 'g', kind: 'prof', name: 'Keen', cat: 'skill', target: 'arcana', orExpert: true, from: 'feature:f10' }] });
+  expect(c.senses[0].plus).toBe(true);
+  expect(c.grants[0].orExpert).toBe(true);
+});

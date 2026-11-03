@@ -19,7 +19,7 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
   // 40 with original 44 and Tough at level 5 reads "/ 50 … max −4 (original 54)".
   const delta = c.maxHp - c.origHp;
   const max = maxHpOf(c), origShown = maxHpOf({ ...c, maxHp: c.origHp });
-  const perLevel = activeGrants(c, 'hpLvl');
+  const perLevel = [...activeGrants(c, 'hpLvl'), ...activeGrants(c, 'hpFlat')];
   const [maxOpen, setMaxOpen] = useState(false);
   const hdUsed = hdSpent(c);
   const hdLeft = c.level - hdUsed;

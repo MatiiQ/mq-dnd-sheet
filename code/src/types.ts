@@ -39,7 +39,7 @@ export type Grant = Omit<GrantSpec, 'opt' | 'lvl'> & { from: string; srcKind?: S
 export interface Prof { id: string; cat: ProfCat; name: string }
 // A resistance, vulnerability, immunity or Advantage on saves. Several with one name show once (mergedDefenses).
 export interface Defense extends Linked { id: string; kind: DefenseKind; name: string }
-export interface Sense extends Linked { id: string; name: string; range: string; desc?: string }
+export interface Sense extends Linked { id: string; name: string; range: string; desc?: string; plus?: boolean }
 // A counter that refills. No max and no maxV = no maximum; a computed 0 (maxV) is a real maximum of 0. regain: a Value
 // (number or die) added on regainOn instead of a full refill.
 export interface Counter { count: number; max?: number; maxV?: string; recharge?: Recharge; regain?: string; regainOn?: RegainOn }

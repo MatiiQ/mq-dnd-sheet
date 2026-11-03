@@ -1281,5 +1281,8 @@
   },
   "item/weapon-of-warning": {
     "base": "weapon"
+  },
+  "item/lance": {
+    "desc": "Two-Handed unless mounted."
   }
 }

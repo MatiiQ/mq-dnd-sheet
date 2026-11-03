@@ -13,7 +13,7 @@ import { firstNew, PickerFrame, scrollToEntry, usePickerFlow } from './usePicker
 
 const CATS: [string, string, ItemEntry['cat'][]][] = [
   ['weapon', 'Weapons', ['weapon']], ['armor', 'Armor', ['armor', 'shield']], ['gear', 'Gear', ['gear', 'ammo', 'focus']],
-  ['tool', 'Tools', ['tool']], ['pack', 'Packs', ['pack']], ['magic', 'Magic items', ['magic']]
+  ['tool', 'Tools', ['tool']], ['pack', 'Packs', ['pack']], ['mount', 'Mounts & vehicles', ['mount']], ['magic', 'Magic items', ['magic']]
 ];
 
 // Items by category, or by name across all of them. Adding goes through ChoiceFlow (Armor of Resistance asks its type),
