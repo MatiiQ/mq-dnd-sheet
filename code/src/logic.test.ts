@@ -1874,3 +1874,23 @@ describe('armor columns', () => {
     expect(stealthDisBy(at(10, { inv: [{ ...chain, eq: false }] }))).toBeUndefined();
   });
 });
+
+describe('grants that do what they say', () => {
+  const stone: Item = { id: 'l', name: 'Luckstone', qty: 1, eq: true, attune: true };
+  it('adds a check bonus for all to every check', () => {
+    const off = { ...blankCharacter(), inv: [stone], attuneIds: ['l', '', ''] };
+    const on: Character = { ...off, grants: [{ id: 'g', kind: 'checkBonus', name: 'Luck', target: 'all', val: '1', needAtt: true, from: 'item:l' }] };
+    expect(skillMod(on, 'arcana', 'int')).toBe(skillMod(off, 'arcana', 'int') + 1);
+    expect(initiative(on)).toBe(initiative(off) + 1);
+    expect(passiveScore(on, 'perception')).toBe(passiveScore(off, 'perception') + 1);
+  });
+  const feat = { id: 'f', g: 'class' as const, name: 'Spellcasting', desc: '' };
+  const casting = { id: 'g', kind: 'casting' as const, name: 'Spellcasting', ab: 'int', list: 'wizard' };
+  it('sets the casting ability from a casting grant', () => {
+    const none = addGrants({ ...blankCharacter(), feats: [feat] }, 'feature:f', [{ spec: casting }]);
+    expect(none.castAb).toBe('int');
+    const wis = addGrants({ ...blankCharacter(), castAb: 'wis', feats: [feat] }, 'feature:f', [{ spec: casting }]);
+    expect(wis.castAb).toBe('wis');
+    expect(grantChips(none, 'feature:f')[0].label).toContain('set slots by hand');
+  });
+});

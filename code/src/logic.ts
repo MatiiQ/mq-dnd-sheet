@@ -108,9 +108,10 @@ export function skillLevel(c: Character, key: string): { level: number; hand: nu
   }
   return by ? { level, hand, by } : { level, hand };
 }
-// Check bonus grants for a skill, or for every check of its ability (Magician: WIS modifier on Arcana and Nature).
+// Check bonus grants for a skill, for every check of its ability (Magician: WIS modifier on Arcana and Nature), or for
+// all checks (Luckstone).
 const checkBonus = (c: Character, targets: string[]) =>
-  activeGrants(c, 'checkBonus').filter((g) => targets.includes(g.target ?? '')).reduce((t, g) => t + num(c, g.val, g), 0);
+  activeGrants(c, 'checkBonus').filter((g) => g.target === 'all' || targets.includes(g.target ?? '')).reduce((t, g) => t + num(c, g.val, g), 0);
 // Skill check: ability modifier + PB × level. Jack of All Trades adds half PB, rounded down, to a check with a skill
 // you aren't proficient in (PHB p.60).
 export function skillMod(c: Character, key: string, ab: Ability): number {
@@ -1228,6 +1229,9 @@ export function addGrants(c: Character, from: string, inputs: GrantInput[]): Cha
     } else if (s.kind === 'action' && input.link) {
       out = linkTo('attacks', id);
     } else {
+      // A subclass's Spellcasting names the ability (Eldritch Knight, Arcane Trickster): set it unless one is already
+      // there. Its slots are typed by hand, as its chip says.
+      if (s.kind === 'casting' && out.castAb === 'none' && Object.hasOwn(CAST_NAMES, s.ab ?? '')) out.castAb = s.ab as CastAbility;
       const { lvl, res, ...rest } = s;
       const resId = res === undefined ? undefined : ids.get(inputs.find((x) => x.spec.id === res && x.spec.kind === 'resource')!) ?? res;
       out.grants = [...out.grants, { ...rest, id, ...base, ...(lvl ? { minLvl: lvl } : {}), ...(resId ? { res: resId } : {}), ...(input.counted ? { counted: true } : {}) } as Grant];
@@ -1333,6 +1337,7 @@ function grantLabel(c: Character, g: Grant): string {
     case 'saveBonus': return fmt(v) + ' ' + (g.ab === 'all' ? 'all' : (g.ab ?? '').toUpperCase()) + ' saves';
     case 'spellAtk': return fmt(v) + ' spell attack';
     case 'spellDc': return fmt(v) + ' spell save DC';
+    case 'casting': return g.name + ' (set slots by hand)';
     default: return g.name;
   }
 }

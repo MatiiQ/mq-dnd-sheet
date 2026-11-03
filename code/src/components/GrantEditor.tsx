@@ -23,7 +23,7 @@ export const GRANT_KINDS: [GrantKind, string][] = [
   ['speed', 'Speed'], ['ac', 'Armor Class'], ['init', 'Initiative bonus'], ['hpLvl', 'HP per level'], ['size', 'Size'],
   ['carryUp', 'Carry as one size larger'], ['action', 'Action'], ['xdmg', 'Extra damage on a hit'], ['attacks', 'Attacks per Attack action'],
   ['unarmed', 'Unarmed Strike'], ['atkBonus', 'Attack bonus'], ['dmgBonus', 'Damage bonus'], ['lightExtra', 'Light weapon extra attack'],
-  ['atkAbil', 'Attack ability'], ['casting', 'Spellcasting (subclass)'], ['crit', 'Critical hit range'],
+  ['atkAbil', 'Attack ability'], ['crit', 'Critical hit range'],
   ['spellAtk', 'Spell attack bonus'], ['spellDc', 'Spell save DC bonus']
 ];
 const WEAPON_FIELDS = [v('val', 'Bonus'), sel('wrange', 'Weapon', RANGE), sel('amode', 'Attack', RANGE), t('prop', 'Weapon property'), t('weapon', 'Weapon name'), b('oneHand', 'One-handed only')];

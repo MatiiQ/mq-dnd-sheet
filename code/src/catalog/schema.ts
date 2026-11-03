@@ -1,7 +1,7 @@
 // Catalog schema shared by the app and both builders (SRD in the repo, PHB pack on the device). Node runs this
 // file directly from the build scripts, so it uses erasable TypeScript only and imports types with `import type`.
 import type { AcEffect, Ability, ArmorKind, Size } from '../types';
-import { isValue } from './value.ts';
+import { hasDice, isValue } from './value.ts';
 
 export const SRD_VERSION: string = '5.2.1';
 
@@ -365,5 +365,6 @@ export function grantErrors(g: unknown, from: Kind): string[] {
   if ('lvl' in spec) errs.push('grant: stores its level as minLvl');
   checkGrant(minLvl === undefined ? spec : { ...spec, lvl: minLvl }, { kind: from }, 'grant', errs);
   for (const [k, v] of Object.entries(spec)) if (ref(v)) errs.push(`grant: ${k} is an unresolved choice`);
+  if (spec.kind === 'resource' && typeof spec.max === 'string' && hasDice(spec.max)) errs.push('grant: a maximum can’t be dice');
   return errs;
 }

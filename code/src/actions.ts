@@ -92,7 +92,7 @@ function grantFits(c: Character, g: Grant, it: Item, use: Use): boolean {
   if (g.cantrip) return false;
   if (g.wrange && g.wrange !== it.wrange) return false;
   if (g.amode && g.amode !== attackMode(use)) return false;
-  if (g.prop && !hasProp(it, g.prop)) return false;
+  if (g.prop && !hasProp(it, slug(g.prop))) return false;
   if (g.weapon && !weaponMatches(it, g.weapon)) return false;
   if (g.oneHand && (use === 'two-handed' || !aloneInOneHand(c, it))) return false;
   return true;
@@ -176,7 +176,7 @@ export function unarmedStrike(c: Character): WeaponAttack & { dc: number } {
     const d = valueAt(g.die ?? '', ctx);
     if (typeof d === 'string' && average(d) > Math.max(1, average(die))) { die = d; dtype = g.dtype || 'Bludgeoning'; }
   }
-  const fits = (g: Grant) => !!g.weapon && g.weapon.split(',').map((x) => x.trim()).includes('unarmed-strike') && !g.wrange && !g.prop && !g.oneHand && g.amode !== 'ranged';
+  const fits = (g: Grant) => !!g.weapon && g.weapon.split(',').map(slug).includes('unarmed-strike') && !g.wrange && !g.prop && !g.oneHand && g.amode !== 'ranged';
   const bonus = (kind: 'atkBonus' | 'dmgBonus') => activeGrants(c, kind).filter(fits).map((g) => ({ label: g.name, value: num(c, g.val, g) }));
   const hitParts = [{ label: abilityName(ab), value: mod }, { label: 'Proficiency Bonus', value: pb }, ...bonus('atkBonus')].filter((p) => p.value !== 0);
   const dmgParts = [...(die ? [] : [{ label: 'Unarmed Strike', value: 1 }]), { label: abilityName(ab), value: mod }, ...bonus('dmgBonus')].filter((p) => p.value !== 0);

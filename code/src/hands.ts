@@ -32,7 +32,8 @@ export function weaponKind(it: Item): string {
 // A comma list of weapon kinds ('club,quarterstaff') and categories: 'simple', 'martial-melee', 'simple-ranged', and
 // with a property after it, 'martial-melee-light' = a Martial Melee weapon that has the Light property.
 export function weaponMatches(it: Item, list: string): boolean {
-  return list.split(',').map((x) => x.trim()).filter(Boolean).some((term) => {
+  // As slugs, so a typed 'Longsword' or 'Martial Melee' matches.
+  return list.split(',').map(slug).filter(Boolean).some((term) => {
     const m = /^(simple|martial)(?:-(melee|ranged))?(?:-([a-z-]+))?$/.exec(term);
     if (!m) return term === weaponKind(it);
     return it.wcat === m[1] && (!m[2] || it.wrange === m[2]) && (!m[3] || hasProp(it, m[3]));

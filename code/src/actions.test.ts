@@ -508,3 +508,16 @@ it('survives a spell named Constructor', () => {
   expect(() => spellActions(c)).not.toThrow();
   expect(spellActions(c)[0].note).toBeUndefined();
 });
+
+describe('typed grant filters', () => {
+  const sword = longsword({ id: 'w' });
+  const c = (g: Grant): Character => ({ ...blankCharacter(), inv: [sword], hands: ['w'], feats: [{ id: 'f', g: 'feat', name: 'Feat', desc: '' }], grants: [{ ...g, from: 'feature:f' }] });
+  it('matches a typed property', () => {
+    const on = c({ id: 'g', kind: 'atkBonus', name: 'Bonus', val: '1', prop: 'Versatile', from: '' });
+    expect(weaponAttacks(on, sword)[0].hit).toBe(weaponAttacks({ ...on, grants: [] }, sword)[0].hit + 1);
+  });
+  it('matches a typed Unarmed Strike', () => {
+    const u = unarmedStrike(c({ id: 'g', kind: 'dmgBonus', name: 'Claws', val: '2', weapon: 'Unarmed Strike', from: '' }));
+    expect(u.dmgParts.map((p) => p.label)).toContain('Claws');
+  });
+});

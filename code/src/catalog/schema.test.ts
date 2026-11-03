@@ -205,3 +205,8 @@ describe('grants on catalog spells', () => {
 it.each(['constructor', 'toString', '__proto__', 'hasOwnProperty'])('makes an id from %s', (n) => {
   expect(catalogId('spell', n)).toBe('spell/' + slug(n));
 });
+
+it('refuses dice as a resource maximum', () => {
+  expect(grantErrors({ id: 'g', kind: 'resource', name: 'X', recharge: 'long', max: '1d4' }, 'feature')).not.toEqual([]);
+  expect(grantErrors({ id: 'g', kind: 'resource', name: 'X', recharge: 'long', max: 'pb' }, 'feature')).toEqual([]);
+});

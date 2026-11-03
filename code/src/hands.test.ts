@@ -208,3 +208,11 @@ describe('ammunition types (plan 7, Task 9b)', () => {
     expect(canLoad({ ...longbow({ id: 'lb' }), props: 'heavy,two-handed' }, arrows)).toBe(false);
   });
 });
+
+it('matches typed weapon names', () => {
+  const sword = longsword({ id: 'a' }), xbow: Item = { id: 'x', name: 'Hand Crossbow', qty: 1, eq: true, cat: 'weapon', cid: 'item/hand-crossbow', wcat: 'martial', wrange: 'ranged' };
+  expect(weaponMatches(sword, 'Longsword')).toBe(true);
+  expect(weaponMatches(xbow, 'hand crossbow')).toBe(true);
+  expect(weaponMatches(sword, 'Martial Melee')).toBe(true);
+  expect(weaponMatches(longbow({ id: 'b' }), 'Longsword')).toBe(false);
+});
