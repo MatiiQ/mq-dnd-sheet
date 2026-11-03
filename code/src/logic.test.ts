@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { newId } from './logic';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import {
-  ABILITIES, SKILLS, grantChips, addGrants, findUnlinked, removalChain, removalSummary, removeFeature, removeResource, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, toggleEffect, dawn, refillFor, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, splitTraining, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, removeItem, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
+  ABILITIES, SKILLS, acSpellIdle, untrainedArmor, grantChips, addGrants, findUnlinked, removalChain, removalSummary, removeFeature, removeResource, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, toggleEffect, dawn, refillFor, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, splitTraining, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, migrate, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, removeItem, removeSpell, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft,
   num, setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, undoHp
 } from './logic';
 import { spellActions } from './actions';
@@ -15,7 +15,7 @@ import { activeGrants, isActive } from './links';
 import { inventoryGroups } from './inventory';
 import { applyPatch } from './storage';
 import { oldIlyra, oldSeren } from './test-fixtures';
-import type { Character, Grant, Item, Spell } from './types';
+import type { Character, Feature, Grant, Item, Spell } from './types';
 
 const make = (p: Partial<Character> = {}): Character => ({ ...sampleCharacter(), ...p });
 const sp = (p: Partial<Spell> = {}): Spell => ({ id: 's1', name: 'Bless', lvl: 1, time: 'Action', range: '30 ft', srcName: 'Cleric', ...p });
@@ -1625,7 +1625,7 @@ describe('a magic armor or Shield bonus chosen when added (plan 7, Task 9)', () 
     return { ...n, inv: n.inv.map((x) => (x.id === it.id ? { ...x, eq: true } : x)) };
   };
   it('counts Armor +1 with its chosen Plate Armor, and Shield +3 on top of the Shield’s 2', () => {
-    const base = { ...blankCharacter(), inv: [] };
+    const base: Character = { ...blankCharacter(), inv: [], profs: [{ id: 'p', cat: 'armor', name: 'Shields' }] };
     const plate = add(base, 'item/armor-1-2-or-3', { base: 'item/plate-armor', bonus: 1 });
     expect(armorClass(plate).total).toBe(19);
     expect(armorClass(add(plate, 'item/shield-1-2-or-3', { bonus: 3 })).total).toBe(24);
@@ -1814,3 +1814,39 @@ describe('review fixes', () => {
 });
 
 it('finds no AC effect for constructor', () => expect(detectAcSpell('constructor')).toBeNull());
+
+describe('armor training', () => {
+  const base = (p: Partial<Character> = {}): Character => ({ ...blankCharacter(), abil: { ...blankCharacter().abil, dex: 14 }, ...p });
+  const robe: Grant = { id: 'g', kind: 'ac', name: 'Robe', acMode: 'unarmored', val: '5', when: 'noArmor', needEq: true, needAtt: true, from: 'item:r' };
+  const robeItem: Item = { id: 'r', name: 'Robe of the Archmagi', qty: 1, eq: true, attune: true };
+  const leather: Item = { id: 'l', name: 'Leather Armor', qty: 1, eq: true, armor: 'light', acBase: 11 };
+  const shield: Item = { id: 's', name: 'Shield', qty: 1, eq: true, armor: 'shield', acBase: 2 };
+  it('takes a numeric unarmored base (Robe of the Archmagi)', () => {
+    const on = base({ inv: [robeItem], grants: [robe], attuneIds: ['r', '', ''] });
+    expect(armorClass(on).total).toBe(17);
+    expect(armorClass({ ...on, attuneIds: ['', '', ''] }).total).toBe(12);
+    expect(armorClass({ ...on, inv: [robeItem, leather] }).total).toBe(13);
+  });
+  it('gives a Shield nothing without training (PHB p.219)', () => {
+    const c = base({ abil: blankCharacter().abil, inv: [shield] });
+    expect(armorClass(c).total).toBe(10);
+    expect(armorClass(c).parts).toContainEqual({ label: 'Shield', value: 0, note: 'no Shield training' });
+    expect(armorClass({ ...c, profs: [{ id: 'p', cat: 'armor', name: 'Shields' }] }).total).toBe(12);
+    const f: Feature = { id: 'f', g: 'feat', name: 'Armor Training', desc: '' };
+    expect(armorClass({ ...c, feats: [f], grants: [{ id: 'x', kind: 'prof', name: 'Shields', cat: 'armor', target: 'Shields', from: 'feature:f' }] }).total).toBe(12);
+    expect(armorClass({ ...c, inv: [{ ...shield, acBonus: 1 }] }).total).toBe(10);
+  });
+  it('names worn armor without training', () => {
+    const mail: Item = { id: 'm', name: 'Chain Mail', qty: 1, eq: true, armor: 'heavy', acBase: 16 };
+    expect(untrainedArmor(base({ inv: [mail] }))?.id).toBe('m');
+    expect(untrainedArmor(base({ inv: [mail], profs: [{ id: 'p', cat: 'armor', name: 'Heavy armor' }] }))).toBeUndefined();
+    expect(untrainedArmor(base({ inv: [shield] }))).toBeUndefined();
+  });
+  it('marks Mage Armor idle under armor', () => {
+    const sp: Spell = { id: 'ma', name: 'Mage Armor', lvl: 1, time: 'Action', range: 'Touch', prep: true, acFx: 'base', acVal: 13 };
+    const on = base({ spells: [sp], acOn: ['ma'] });
+    expect(acSpellIdle(on, sp)).toBe(false);
+    expect(acSpellIdle({ ...on, inv: [leather] }, sp)).toBe(true);
+    expect(acSpellIdle({ ...on, inv: [leather] }, { ...sp, acFx: 'bonus' })).toBe(false);
+  });
+});

@@ -201,7 +201,14 @@ export const acSpellActive = (c: Character, sp: Spell) => !!sp.acFx && (sp.c ? c
 // Armor Class and the parts it is made of. Base AC is 10 + DEX; armor, spells and features give other base
 // calculations, and only one applies (PHB p.12, p.361). The sheet picks the highest legal one.
 // Light armor adds DEX, medium at most +2, heavy none (PHB p.219). Parts worth 0 are left out.
+const NO_SHIELD_TRAINING = 'no Shield training';
 const armorValue = (i: Item) => (i.acBase || 0) + (i.acBonus || 0);
+const wornArmor = (c: Character) => c.inv.filter((i) => isEquipped(i) && i.armor && i.armor !== 'shield');
+// Worn armor the character has no training with: Disadvantage on D20 Tests using Strength or Dexterity, and no
+// spellcasting (PHB p.219). The sheet says so and changes no number.
+export const untrainedArmor = (c: Character): Item | undefined => wornArmor(c).find((it) => !hasProf(c, 'armor', capital(it.armor!) + ' armor'));
+// A base AC spell does nothing while armor is worn (Mage Armor, PHB p.293). It can still be ended.
+export const acSpellIdle = (c: Character, sp: Spell) => sp.acFx === 'base' && wornArmor(c).length > 0;
 export function armorClass(c: Character): { total: number; parts: AcPart[] } {
   const dex = abilityMod(c, 'dex');
   const dexPart = (cap: number): AcPart => (dex > cap ? { label: 'Dexterity', value: cap, note: 'max +' + cap } : { label: 'Dexterity', value: dex });
@@ -211,7 +218,9 @@ export function armorClass(c: Character): { total: number; parts: AcPart[] } {
   ];
   const shields = c.inv.filter((i) => isEquipped(i) && i.armor === 'shield');
   const shield = shields.reduce<Item | null>((b, i) => (!b || armorValue(i) > armorValue(b) ? i : b), null);
-  const worn = c.inv.filter((i) => isEquipped(i) && i.armor && i.armor !== 'shield');
+  const worn = wornArmor(c);
+  // A Shield without training gives no AC (PHB p.219). Its part stays, worth 0, to say why.
+  const shieldTrained = hasProf(c, 'armor', 'Shields');
   const spells = c.spells.filter((sp) => acSpellActive(c, sp));
   const spellPart = (sp: Spell): AcPart => ({ label: sp.name, value: sp.acVal || 0, note: 'spell', active: true });
   const bare: AcPart[] = [{ label: 'Unarmored', value: 10 }, dexPart(Infinity)];
@@ -221,9 +230,10 @@ export function armorClass(c: Character): { total: number; parts: AcPart[] } {
     if (ab && (shieldOk || !shield)) {
       candidates.push([...bare, { label: abilityName(ab), value: abilityMod(c, ab), note }]);
     }
-    // Unarmored base grants work like UNARMORED: 10 + DEX + an ability, lost with a Shield unless shieldOk.
-    for (const g of activeGrants(c, 'ac').filter((x) => x.acMode === 'unarmored' && x.ab && (x.shieldOk !== false || !shield))) {
-      candidates.push([...bare, { label: ABILITIES.find(([k]) => k === g.ab)?.[1] ?? g.ab!, value: abilityMod(c, g.ab as Ability), note: g.name }]);
+    // Unarmored base grants work like UNARMORED: 10 + DEX + an ability, or a fixed number (Robe of the Archmagi, 15 + DEX),
+    // lost with a Shield unless shieldOk.
+    for (const g of activeGrants(c, 'ac').filter((x) => x.acMode === 'unarmored' && (x.ab || x.val !== undefined) && (x.shieldOk !== false || !shield))) {
+      candidates.push([...bare, g.ab ? { label: ABILITIES.find(([k]) => k === g.ab)?.[1] ?? g.ab, value: abilityMod(c, g.ab as Ability), note: g.name } : { label: g.name, value: num(c, g.val, g) }]);
     }
     // Mage Armor sets a base AC on a creature not wearing armor (PHB p.293).
     for (const sp of spells.filter((x) => x.acFx === 'base')) candidates.push([spellPart(sp), dexPart(Infinity)]);
@@ -233,13 +243,13 @@ export function armorClass(c: Character): { total: number; parts: AcPart[] } {
   const base = candidates.reduce((b, p) => (partsTotal(p) > partsTotal(b) ? p : b));
   const parts: AcPart[] = [
     ...base,
-    ...(shield ? [{ label: shield.name, value: armorValue(shield), note: 'shield' }] : []),
+    ...(shield ? [shieldTrained ? { label: shield.name, value: armorValue(shield), note: 'shield' } : { label: shield.name, value: 0, note: NO_SHIELD_TRAINING }] : []),
     // AC bonus grants (Ring of Protection, Defense): they follow equip, attunement and armor conditions through
     // activeGrants. acBonus counts only on armor and Shields, inside their own part above.
     ...activeGrants(c, 'ac').filter((g) => g.acMode === 'bonus').map((g) => ({ label: g.name, value: num(c, g.val, g), ...(sourceLabel(c, g) ? { note: sourceLabel(c, g) } : {}) })),
     ...spells.filter((sp) => sp.acFx === 'bonus').map(spellPart),
     ...c.acMods.map((m) => ({ label: m.name, value: m.val, note: 'custom' }))
-  ].filter((p) => p.value !== 0);
+  ].filter((p) => p.value !== 0 || p.note === NO_SHIELD_TRAINING);
   // Barkskin: AC can't be lower than its value, so it comes last and adds only what is missing (PHB p.245).
   const floor = Math.max(0, ...spells.filter((sp) => sp.acFx === 'floor').map((sp) => sp.acVal || 0));
   const fl = spells.find((sp) => sp.acFx === 'floor' && sp.acVal === floor);

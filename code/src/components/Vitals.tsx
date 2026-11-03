@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { armorClass, fmt, initiative, modeSpeed, profBonus, speedNow, speedOf, UNARMORED, walkSpeed, zeroSpeedBy } from '../logic';
+import { armorClass, fmt, untrainedArmor, initiative, modeSpeed, profBonus, speedNow, speedOf, UNARMORED, walkSpeed, zeroSpeedBy } from '../logic';
 import { removeEntry, saveEntry, useEntryForm, useSheet } from '../sheet';
 import type { AcMod, SpeedKind, Unarmored } from '../types';
 import { AddButton, Caret, EntryActions, EntryForm, NumInput, PartTiles, Step, TextField } from './ui';
@@ -9,6 +9,7 @@ const SPEEDS: ['walk' | SpeedKind, string][] = [['walk', 'Walk'], ['climb', 'Cli
 export function Vitals() {
   const { c, update, edit } = useSheet();
   const ac = armorClass(c);
+  const untrained = untrainedArmor(c);
   // The first part is the base AC and shows as a bare number; every other part is a signed bonus.
   const acValue = (v: number, i: number) => (i === 0 ? String(v) : fmt(v));
   const acHint = ac.parts.flatMap((p, i) => (p.active ? [p.label + ' ' + acValue(p.value, i)] : [])).join(' · ');
@@ -48,6 +49,7 @@ export function Vitals() {
         <div id="ac-panel" className="block">
           <h2 className="block-title">Armor class</h2>
           <PartTiles parts={ac.parts} />
+          {untrained && <span className="small">No training with {untrained.name}: Disadvantage on D20 Tests using Strength or Dexterity, and no spellcasting.</span>}
           {edit && (
             <div className="col gap-8">
               <label className="field">Unarmored base
