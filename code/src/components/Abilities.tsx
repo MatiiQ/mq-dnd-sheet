@@ -75,7 +75,7 @@ function AbilityCard({ k, name }: { k: Ability; name: string }) {
             <span style={{ minWidth: 28, textAlign: 'center', fontSize: 18, fontWeight: 700, color: scoreColor }}>{cur}</span>
             <Step label={'Raise current ' + lower + ' score'} onClick={() => adjust(1)}>+</Step>
           </div>
-          {changed && (
+          {!!c.abilAdj[k] && (
             <button type="button" className="btn" style={{ fontSize: 13, padding: '0 10px' }} aria-label={'Reset ' + lower + ' to original ' + base}
               onClick={() => update((p) => ({ abilAdj: { ...p.abilAdj, [k]: 0 } }))}>Reset</button>
           )}

@@ -146,6 +146,11 @@ export interface ItemDraft {
   charges: boolean; chMaxKind: MaxKind; chMaxText: string; chCount: number; chRecharge: Recharge; chRegain: string;
   cat: ItemEntry['cat']; cost?: string; rarity?: string; cid?: string; base?: string;
 }
+// Unticking Always prepared leaves a spell with neither flag, which loads as prepared (migrate). So an edit that isn't
+// always prepared states its prepared flag. existing: the spell before the edit.
+export const keepPrep = (existing: Spell | undefined, always: boolean): Partial<Pick<Spell, 'prep'>> =>
+  (!existing || always ? {} : { prep: !!existing.prep });
+
 export const BLANK_ITEM: ItemDraft = {
   kind: 'none', name: '', desc: '', wt: '', qty: 1, attune: false,
   wcat: 'simple', wrange: 'melee', dmg: '', dtype: '', props: [], thrownRange: '', versDie: '', ammoRange: '', ammoType: '', mastery: '', magic: '',
@@ -191,7 +196,7 @@ export function itemFromForm(d: ItemDraft): Omit<Item, 'id' | 'eq'> {
     mastery: w ? text(d.mastery) : undefined, magic: nonZero(d.magic),
     armor: a ? d.armor : undefined, acBase: a ? number(d.acBase) ?? (d.armor === 'shield' ? 2 : undefined) : undefined, acBonus: a ? nonZero(d.acBonus) : undefined,
     strReq: a ? nonZero(d.strReq) : undefined, stealthDis: (a && d.stealthDis) || undefined,
-    xdim: (box && d.xdim) || undefined, cap: box ? number(d.cap) : undefined, capVol: box ? text(d.capVol) : undefined,
+    xdim: (box && d.xdim) || undefined, cap: box ? parseWeight(d.cap) : undefined, capVol: box ? text(d.capVol) : undefined,
     count: d.charges ? d.chCount : undefined, max: max.max, maxV: max.maxV, recharge: d.charges ? d.chRecharge : undefined,
     regain, regainOn: regain ? regainOn : undefined
   };

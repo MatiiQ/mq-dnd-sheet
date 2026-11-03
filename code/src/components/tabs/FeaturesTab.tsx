@@ -1,12 +1,12 @@
-import { useState, type CSSProperties, type ReactNode } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { PROF_NAMES, type ProfCat } from '../../catalog/names';
 import { entriesOf } from '../../catalog/merge';
 import { useCatalog } from '../../catalog/useCatalog';
 import { hasActiveEffect, linkOf, sourceLabel } from '../../links';
-import { addGrants, grantChips, newId, normName, profList, removalSummary, removeFeature, type GrantInput } from '../../logic';
+import { addGrants, grantChips, newId, normName, profList, removeFeature, type GrantInput } from '../../logic';
 import { removeEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { Character, Feature, FeatureGroup, SrcKind } from '../../types';
-import { GrantList, SourceChips } from '../Chips';
+import { GrantList, removalNote, SourceChips } from '../Chips';
 import { FeaturePicker } from '../pickers/FeaturePicker';
 import { SourcePicker } from '../SourcePicker';
 import { AddButton, EffectSwitch, EntryForm, EntryRow, RemoveButton, TextField } from '../ui';
@@ -14,13 +14,6 @@ import { AddButton, EffectSwitch, EntryForm, EntryRow, RemoveButton, TextField }
 const PROF_CATS: [ProfCat, string][] = [['armor', 'Armor'], ['weapon', 'Weapons'], ['tool', 'Tools'], ['language', 'Languages']];
 
 const BLANK = { g: 'class' as FeatureGroup, name: '', desc: '', from: undefined as string | undefined, srcKind: undefined as SrcKind | undefined, srcName: undefined as string | undefined, pending: [] as GrantInput[] };
-
-// What a removal confirm lists: everything else that goes, and what stays for the player to fix.
-function removalNote(c: Character, id: string): ReactNode {
-  const { goes, keep } = removalSummary(c, { kind: 'feature', id });
-  if (!goes.length && !keep.length) return undefined;
-  return <>{goes.length > 0 && <span>Also removes: {goes.join(', ')}</span>}{keep.map((k) => <span key={k}>{k}</span>)}</>;
-}
 
 export function FeaturesTab() {
   const { c, update, form: openForm, setForm } = useSheet();
@@ -53,7 +46,9 @@ export function FeaturesTab() {
           </select>
         </label>
         <TextField label="Name" value={d.name} placeholder="e.g. Roving" onChange={(v) => f.set({ name: v })} />
-        <TextField label="Description" style={{ gridColumn: '1 / -1' }} value={d.desc} placeholder="Short summary of what it does" onChange={(v) => f.set({ desc: v })} />
+        <label className="field" style={{ gridColumn: '1 / -1' }}>Description
+          <textarea className="input textarea" value={d.desc} placeholder="Short summary of what it does" onChange={(e) => f.set({ desc: e.target.value })} />
+        </label>
         <SourcePicker self={f.editingId ? linkOf('feature', f.editingId) : undefined} value={d} onChange={(v) => f.set(v)} />
         <GrantList link={f.editingId ? linkOf('feature', f.editingId) : null} fromKind="feature" pending={d.pending} setPending={(pending) => f.set({ pending })} />
       </div>
@@ -85,7 +80,7 @@ export function FeaturesTab() {
                     </> : undefined}
                     onEdit={() => f.openEdit(x.id, { g: x.g || 'other', name: x.name, desc: x.desc || '', from: x.from, srcKind: x.srcKind, srcName: x.srcName, pending: [] })}
                     onRemove={() => update((p) => removeFeature(p, x.id))}
-                    removeConfirm={removalNote(c, x.id)}>
+                    removeConfirm={removalNote(c, { kind: 'feature', id: x.id })}>
                     {grantChips(c, link).length > 0 && <SourceChips link={link} />}
                   </EntryRow>
                 );

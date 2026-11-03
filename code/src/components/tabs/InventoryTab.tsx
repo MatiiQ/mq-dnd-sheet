@@ -7,13 +7,13 @@ import {
   setItemSection, takeOut
 } from '../../inventory';
 import { equipShield, setHands } from '../../hands';
-import { isEquipped, linkOf } from '../../links';
-import { GrantList, SourceChips } from '../Chips';
+import { hasActiveEffect, isEquipped, linkOf } from '../../links';
+import { GrantList, removalNote, SourceChips } from '../Chips';
 import { ItemPicker } from '../pickers/ItemPicker';
 import { scrollToEntry } from '../pickers/usePicker';
 import { patchEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { ArmorKind, Character, Coin, Item, Recharge, Section } from '../../types';
-import { AddButton, DamageTypeField, EntryForm, EntryRow, MenuIcon, NumInput, TextField, useArmed, useNoteUntilChange } from '../ui';
+import { AddButton, DamageTypeField, EffectSwitch, EntryForm, EntryRow, MenuIcon, NumInput, TextField, useArmed, useNoteUntilChange } from '../ui';
 
 const COINS: [Coin, string, string][] = [['cp', 'CP', 'var(--coin-cp)'], ['sp', 'SP', 'var(--coin-sp)'], ['ep', 'EP', 'var(--coin-ep)'], ['gp', 'GP', 'var(--accent)'], ['pp', 'PP', 'var(--coin-pp)']];
 // The item form's draft (catalog/copy.ts) plus the grants of a new item (pending), added once it exists.
@@ -217,6 +217,7 @@ export function InventoryTab() {
               fontSize: 13, fontWeight: 600, cursor: 'pointer', minHeight: 44, minWidth: 92, padding: '0 10px', borderRadius: 22,
               border: '1px solid ' + (it.eq ? 'var(--accent)' : 'var(--line-2)'), background: 'transparent', color: it.eq ? 'var(--accent)' : 'var(--muted)'
             }}>{it.eq ? 'Equipped' : 'Carried'}</button>}
+            {hasActiveEffect(c, linkOf('item', it.id)) && <EffectSwitch link={linkOf('item', it.id)} name={it.name} />}
             {/* An item with charges counts its charges here instead of its quantity (charged items come one at a time). */}
             {it.count !== undefined ? (
               <div className="row gap-4">
@@ -236,7 +237,7 @@ export function InventoryTab() {
           body={info || moves ? <>{info && <span className="entry-desc">{info}</span>}{moves}</> : undefined}
           onEdit={() => f.openEdit(it.id, { ...draftFromItem(it), pending: [] })}
           onRemove={() => update((p) => (isContainer(it) ? removeContainer(p, it.id, removeMode(it)) : removeItem(p, it.id)))}
-          removeConfirm={isContainer(it) && holds(it) ? bagConfirm(it) : undefined}>
+          removeConfirm={isContainer(it) && holds(it) ? bagConfirm(it) : removalNote(c, { kind: 'item', id: it.id })}>
           {(gives || away) && <>
             {gives && <SourceChips link={linkOf('item', it.id)} />}
             {away && <span role="status" className="small muted">Put away: {awayMsg.names.join(', ')}</span>}

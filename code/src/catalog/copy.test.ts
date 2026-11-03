@@ -8,6 +8,7 @@ import type { Character, Item, Spell } from '../types';
 import { mergeCatalog } from './merge';
 import type { Entry, FeatureEntry, ItemEntry, SpellEntry } from './schema';
 import {
+  keepPrep,
   addFromCatalog, armorBaseMissing, draftFromItem, featureCandidates, grantSpellName, withDetectedArmor, BLANK_ITEM, BLANK_SPELL, catForKind, countedDefault, draftFromSpell, spellFromForm, type SpellDraft, choicesOf, classIdOf, matchId, nestedEntries, subclassIdOf, type AddChoices, freeText, itemFromEntry, itemFromForm, missingPicks, needed, optionGroups, poolOptions, prereqMet, resolveChoices,
   spellFromEntry, spellSummary, validPicks, itemQuestions, itemStats, answeredName, type ItemAnswers, type ItemDraft
 } from './copy';
@@ -921,5 +922,19 @@ describe('armor base AC in the custom item form', () => {
     expect(armorBaseMissing(armorDraft({ armor: 'heavy', acBase: '18' }))).toBe(false);
     expect(armorBaseMissing(armorDraft({ armor: 'shield' }))).toBe(false);
     expect(armorBaseMissing({ ...BLANK_ITEM, name: 'Rope' })).toBe(false);
+  });
+});
+
+describe('form details', () => {
+  const sp: Spell = { id: 's', name: 'Bless', lvl: 1, time: 'Action', range: '30 ft', always: true };
+  it('keeps a spell unprepared after unticking Always prepared', () => {
+    const edited: Spell = { ...sp, always: undefined, ...keepPrep(sp, false) };
+    expect(edited.prep).toBe(false);
+    expect(migrate(JSON.parse(JSON.stringify({ ...blankCharacter(), spells: [edited] }))).spells[0].prep).toBe(false);
+    expect(keepPrep({ ...sp, prep: true }, false)).toEqual({ prep: true });
+    expect(keepPrep(sp, true)).toEqual({});
+  });
+  it('reads a decimal comma in Holds', () => {
+    expect(itemFromForm({ ...BLANK_ITEM, name: 'Bag', kind: 'container', cap: '1,5' }).cap).toBe(1.5);
   });
 });
