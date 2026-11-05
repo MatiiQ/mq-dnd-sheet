@@ -130,12 +130,14 @@ A choice offers `options` (grants) or a `pool` (`<kind>:<filter>`) the app gener
 | `tool:any`, `tool:gaming-set` | any tool, or a variant of the named tool |
 | `prof:skill\|tool` | any skill or tool (Skilled) |
 | `language:any`, `weapon:any` | any language; any weapon kind (Weapon Mastery) |
-| `feat:cat=origin` | a feat of a category |
+| `feat:cat=origin`, `feat:any` | a feat of a category, or any feat ("or another feat you qualify for") |
 | `spell:list=druid;lvl=0`, `spell:list=$list;lvl=1` | spells of a class list and level; `$list` names another choice |
 | `list:cleric\|druid\|wizard` | one of the named class spell lists (Magic Initiate) |
+| `list:feat\|blessed-warrior` | a way to take the feature (Fighting Style); later choices name it in `ifPick`, and the feature isn't named after it |
+| `spell:lvl=0`, `spell:lvl=1;ritual=true` | spells of any class list (Book of Shadows) |
 | `ability:int\|wis\|cha` | one ability, usually the spellcasting ability for the entry's spells (`castAb: '$ab'`) |
 | `trait:of=<trait id>` | one of the lineage options that name that trait in `of` |
-| `skill:proficient` | a skill the character is proficient in (Expertise) |
+| `skill:proficient` | a skill the character is proficient in (Expertise), or one the entry itself grants |
 | `subclass:cls=ranger` | a subclass of the class |
 | `tool:artisan` | one kind of Artisan’s Tools |
 | `feature:of=maneuver`, `feature:of=metamagic`, `feature:of=invocation` | Battle Master maneuvers, Metamagic options, Eldritch Invocations: `feature` entries with `of`, each added as its own feature |
@@ -256,6 +258,26 @@ Source text cut short and other notes stay under "Items checked" above. The audi
   speeds aren't turned off. A rider counts while the weapon is equipped, not only while it is in hand. Casting
   Longstrider, Freedom of Movement, Protection from Poison or Wind Walk switches the effect on, even on an ally, until
   the player taps Off. Summon Dragon's resistance is one row with the type unnamed.
+
+## Data changes from the catalog feature gaps (2026-11-05)
+
+- `ifPick: '<choiceId>=<value>'` on a choice asks it only while that earlier choice holds the value (an option group's
+  label, or a pool pick): Divine Order's Thaumaturge and Primal Order's Magician cantrip, the Paladin's Blessed Warrior
+  and the Ranger's Druidic Warrior cantrips.
+- Ability Score Improvement and Epic Boon offer `feat:any`. Mystic Arcanum's spell is always prepared.
+- Rows that spend another feature's counter name it in `uses` (Channel Divinity, Focus Points, Bardic Inspiration,
+  Wild Shape, Sorcery Points); `regainTo` adds a Regain button for the roll-Initiative refills (Persistent Rage,
+  Superior Inspiration, Archdruid, Perfect Focus, Uncanny Metabolism). The "when you roll Initiative" condition stays
+  the player's tap.
+- Save DCs on rows (`dc: '8+pb'`, `dcAb`): Monk's Focus has its own Focus Save DC row. Poisoner's ability increase is a
+  pool, so its DC can follow it.
+- Rage adds its damage bonus to Strength attacks only (`useAb`). Innate Sorcery `spellDc`, Sacred Weapon `atkBonus`
+  (Melee weapons), Unarmed Fighting's d8 (`when: 'empty'`), Foe Slayer's `swap` of Hunter's Mark.
+- Invocations: at-will spells are always prepared (the sheet has no slot-free cast state); Pact of the Blade's
+  Charisma attacks and proficiency apply to any weapon while its switch is on; Thirsting and Devouring Blade too.
+- Every background has packages A and B as data.
+- Simplifications: Agonizing Blast's pool lists every Warlock cantrip, damaging or not; ritual-only spells are always
+  prepared; Arcane Ward HP refills on a Long Rest rather than when the ward is made.
 
 ## What check-phb does not catch
 
