@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import App from './App';
 import { blankCharacter } from './defaults';
 import { modeSpeed, speedNow } from './logic';
+import { haAura, holyAvenger, paladin } from './test-fixtures';
 import type { Character, Feature, Item } from './types';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -216,6 +217,51 @@ describe('bag removal choice', () => {
     expect(label('If Bag of Holding is removed')).toBeNull();
     editMode();
     expect(label('If Bag of Holding is removed')).not.toBeNull();
+  });
+});
+
+describe('Active effects', () => {
+  const render = (c: Character) => renderSheet(c);
+  const list = () => document.querySelector('[aria-label="Active effects"]');
+  const chip = () => [...document.querySelectorAll('a.cond-chip')].find((a) => a.textContent?.startsWith('Aura of Protection'));
+  it('lists an active aura with its source shortcut', () => {
+    render(paladin(6));
+    const l = list()!;
+    expect(l.textContent).toContain('Aura of Protection');
+    expect(l.textContent).toContain('10-ft Emanation');
+    expect(l.textContent).toContain('allies add your save bonus');
+    tap([...l.querySelectorAll('button')].find((b) => b.textContent?.startsWith('Source:')));
+    expect(saved().tab).toBe('features');
+    expect(document.querySelector('#feat-p .entry-head')?.getAttribute('aria-expanded')).toBe('true');
+  });
+  it('greys an aura stopped by Unconscious, with no top-bar chip', () => {
+    render(paladin(10, { conds: { Unconscious: true } }));
+    const row = list()!.querySelector('li')!;
+    expect(row.className).toContain('inactive');
+    expect(row.textContent).toContain('Incapacitated');
+    expect(row.textContent).toContain('With: Aura of Courage');
+    expect(chip()).toBeUndefined();
+  });
+  it('names what rides on Protection', () => {
+    render(paladin(10));
+    expect(list()!.textContent).toContain('With: Aura of Courage');
+  });
+  it('lists a switched-on effect with its switch', () => {
+    render({ ...blankCharacter(), feats: [{ id: 'r', g: 'class', name: 'Rage', desc: '' }], effectsOn: ['feature:r'],
+      grants: [{ id: 'g', kind: 'dmgBonus', name: 'Rage', val: '2', when: 'active', from: 'feature:r' }] });
+    const sw = list()!.querySelector('[aria-label="Switch off Rage"]');
+    tap(sw);
+    expect(saved().effectsOn).not.toContain('feature:r');
+  });
+  it('shows one top-bar chip for two active auras', () => {
+    const c = paladin(6);
+    render({ ...c, inv: [holyAvenger()], attuneIds: ['ha', '', ''], hands: ['ha'], grants: [...c.grants, haAura] });
+    expect(chip()?.textContent).toBe('Aura of Protection · 10 ft +1');
+    expect(chip()?.getAttribute('href')).toBe('#sec-conditions');
+  });
+  it('shows nothing when nothing is active', () => {
+    render(blankCharacter());
+    expect(list()).toBeNull();
   });
 });
 
