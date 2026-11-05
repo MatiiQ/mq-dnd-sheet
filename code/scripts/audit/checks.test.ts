@@ -317,3 +317,14 @@ it('accepts a regain on Initiative held by an action with regainTo', () => {
     grants: [{ id: 'g', kind: 'action', name: 'G', econ: 'free', uses: 'feature/wizard/b', regainTo: 'all' }] } as unknown as Entry;
   expect(mechanicChecks([f])).toEqual([]);
 });
+
+it('accepts a save DC held by an action with dc', () => {
+  const f = { id: 'feature/wizard/a', kind: 'feature', name: 'A', cls: 'wizard', lvl: 1, src: 'srd', desc: 'The target saves against DC 8 + your bonus.',
+    grants: [{ id: 'g', kind: 'action', name: 'G', econ: 'other', dc: '8+pb', dcAb: 'wis' }] } as unknown as Entry;
+  expect(mechanicChecks([f])).toEqual([]);
+});
+it('takes the Light extra attack row for the Bonus Action its text names', () => {
+  const f = { id: 'feat/a', kind: 'feat', name: 'A', cat: 'general', src: 'srd', desc: 'You attack as a Bonus Action.',
+    grants: [{ id: 'g', kind: 'lightExtra', name: 'G', addMod: false, anyMelee: true }] } as unknown as Entry;
+  expect(rowChecks([f])).toEqual([]);
+});

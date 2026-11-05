@@ -541,3 +541,11 @@ describe('a feature row that spends another feature\'s counter', () => {
     expect(featureActions(sheet).map((f) => f.regainTo)).toEqual([2, 'all']);
   });
 });
+
+describe('a feature row\'s save DC', () => {
+  it('shows the DC when the grant has one', () => {
+    const c: Character = { ...blankCharacter(), level: 5, abil: { ...blankCharacter().abil, wis: 16 }, feats: [{ id: 'a', g: 'class', name: 'A', desc: '' }],
+      grants: [{ id: 'x', kind: 'action', name: 'Stun', econ: 'other', dc: '8+pb', dcAb: 'wis', from: 'feature:a' }, { id: 'y', kind: 'action', name: 'Run', econ: 'other', from: 'feature:a' }] };
+    expect(featureActions(c).map((f) => f.dc)).toEqual([14, undefined]);
+  });
+});

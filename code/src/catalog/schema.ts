@@ -89,6 +89,7 @@ export interface GrantSpec {
   econ?: 'action' | 'bonus' | 'reaction' | 'free' | 'other'; res?: string; note?: string;   // action (also dice)
   uses?: string;                                                                    // action: the feature whose counter it shows (a catalog id); res names one of the entry's own
   regainTo?: string;                                                                // action: tap to regain the counter up to this Value, or 'all'
+  dc?: string; dcAb?: string;                                                       // action: a save DC, a Value ('8+pb') plus the best of these abilities (a comma list, or '$<choiceId>')
   dice?: string; dtype?: string; on?: string; perTurn?: boolean;                    // xdmg
   die?: string; abs?: string;                                                       // unarmed (also dtype), atkAbil
   wrange?: 'melee' | 'ranged'; amode?: 'melee' | 'ranged'; prop?: string; weapon?: string; oneHand?: boolean;   // atkBonus, dmgBonus
@@ -166,7 +167,8 @@ const GRANTS: Record<GrantKind, Record<string, [Check, boolean]>> = {
   size: { size: [oneOf(...SIZE_KEYS), true] },
   carryUp: {},
   action: { econ: [oneOf('action', 'bonus', 'reaction', 'free', 'other'), true], res: [str, false], note: [str, false], dice: [value, false],
-    uses: [(v) => typeof v === 'string' && /^feature\/[a-z0-9-]+(\/[a-z0-9-]+){1,2}$/.test(v), false], regainTo: [or(value, oneOf('all')), false] },
+    uses: [(v) => typeof v === 'string' && /^feature\/[a-z0-9-]+(\/[a-z0-9-]+){1,2}$/.test(v), false], regainTo: [or(value, oneOf('all')), false],
+    dc: [value, false], dcAb: [or(list(ability), ref), false] },
   xdmg: { dice: [value, true], dtype: [str, false], on: [str, true], perTurn: [bool, false] },
   attacks: { val: [value, true] },
   // dtype: the damage type when not Bludgeoning (Demon Armor: "your unarmed strikes deal 1d8 Slashing").

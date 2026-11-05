@@ -321,7 +321,7 @@ const MECHANICS: { check: string; label: string; cue: RegExp; done: (e: Entry, m
   { check: 'mechanic-no-grant', label: 'Light extra attack', cue: /\bextra attack of the Light property|\bextra attack as a Bonus Action/i, done: has('lightExtra') },
   { check: 'mechanic-no-grant', label: 'feat pick', cue: /\bOrigin feat of your choice/i, done: hasPool('feat:') },
   { check: 'mechanic-no-grant', label: 'save Advantage', cue: /\bAdvantage on [^.\n]*\bsaving throws?/i, done: has('defense') },
-  { check: 'mechanic-no-field', label: 'save DC', cue: /\bDC (?:equal to |equals |= ?)?8 ?(?:plus|\+)|\bFocus Save DC\b/i, done: nothingHoldsIt },
+  { check: 'mechanic-no-field', label: 'save DC', cue: /\bDC (?:equal to |equals |= ?)?8 ?(?:plus|\+)|\bFocus Save DC\b/i, done: (e) => flatGrants(e).some((g) => g.dc !== undefined) },
   { check: 'mechanic-no-field', label: 'half a number', cue: /\bhalf (?:your )?(?:[A-Z]\w+ level|Proficiency Bonus)/, done: (e) => flatGrants(e).some((g) => g.cat === 'half') },
   { check: 'mechanic-no-field', label: 'regain on Initiative', cue: /\broll Initiative[^.\n]*\bregain|\bregain[^.\n]*\broll Initiative|\brecharges? when you roll Initiative/i, done: (e) => flatGrants(e).some((g) => g.regainTo !== undefined) },
   { check: 'mechanic-no-field', label: 'stat block', cue: /\bstat block\b|\bFind (?:Familiar|Steed)\b/, done: nothingHoldsIt },
@@ -345,7 +345,7 @@ export function rowChecks(entries: Entry[]): Finding[] {
   for (const e of entries.filter((x) => isGranter(x) && !isPoolOption(x) && !isClassSetup(x))) {
     const timing = descOf(e).match(/\b(?:Bonus Action|Reaction)\b/)?.[0], gs = flatGrants(e);
     if (gs.every((g) => g.kind === 'abil') && !grantsOf(e).some((s) => s.kind === 'choice' && s.pool)) out.push({ check: 'text-only', id: e.id, note: `no row or number${gs.length ? ' past its ability increase' : ''}${timing ? `; the text names a ${timing}` : ''}` });
-    else if (timing && !gs.some((g) => g.kind === 'action')) out.push({ check: 'timing-no-row', id: e.id, note: `the text names a ${timing}; no action grant` });
+    else if (timing && !gs.some((g) => g.kind === 'action' || g.kind === 'lightExtra')) out.push({ check: 'timing-no-row', id: e.id, note: `the text names a ${timing}; no action grant` });
   }
   return out;
 }

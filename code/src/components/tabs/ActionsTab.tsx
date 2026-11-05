@@ -276,11 +276,14 @@ export function ActionsTab() {
     const r = f.resId ? c.res.find((x) => x.id === f.resId) : undefined;
     return shows(f.econ) && (
       <ActRow key={f.grantId} econ={f.econ} name={f.name} sub={[f.dice, f.note].filter(Boolean).join(' · ') || undefined}
-        side={r && <div className="row gap-4">
+        side={(r || f.dc !== undefined) && <div className="row gap-4">
+          {f.dc !== undefined && <span className="act-dc">DC {f.dc}</span>}
+          {r && <>
           {f.regainTo !== undefined && <button type="button" className="btn btn-sm" aria-label={'Regain ' + r.name} onClick={() => update((p) => regainTo(p, r.id, f.regainTo!))}>Regain</button>}
           <Step label={'Use ' + r.name} onClick={() => update((p) => ({ res: patchEntry(p.res, r.id, (x) => ({ count: Math.max(0, x.count - 1) })) }))}>−</Step>
           <span style={{ fontWeight: 700, minWidth: 36, textAlign: 'center' }} aria-label={r.name + ' uses left'}>{r.count}</span>
           <Step label={'Restore ' + r.name} onClick={() => update((p) => ({ res: patchEntry(p.res, r.id, (x) => ({ count: x.count + 1 })) }))}>+</Step>
+          </>}
         </div>}
         body={(f.source || r) ? <>
           {f.source && <span className="muted">Source: {f.source}</span>}

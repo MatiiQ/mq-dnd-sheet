@@ -116,7 +116,9 @@
         "name": "Intimidating Presence",
         "econ": "bonus",
         "res": "g1",
-        "note": "30-ft Emanation: WIS save (DC 8 + STR + PB) or Frightened for 1 minute. Or expend a Rage use to restore it."
+        "note": "30-ft Emanation: WIS save (DC 8 + STR + PB) or Frightened for 1 minute. Or expend a Rage use to restore it.",
+        "dc": "8+pb",
+        "dcAb": "str"
       }
     ]
   },
@@ -1806,6 +1808,15 @@
         "econ": "bonus",
         "res": "g1",
         "note": "Dash; or spend 1 Focus Point to Disengage and Dash with a doubled jump."
+      },
+      {
+        "id": "g5",
+        "kind": "action",
+        "name": "Focus Save DC",
+        "econ": "other",
+        "note": "For Focus Point features that force a save.",
+        "dc": "8+pb",
+        "dcAb": "wis"
       }
     ]
   },
@@ -1828,7 +1839,9 @@
         "name": "Stunning Strike",
         "econ": "other",
         "note": "Once per turn on a hit, spend 1 Focus Point: CON save or Stunned until your next turn.",
-        "uses": "feature/monk/monks-focus"
+        "uses": "feature/monk/monks-focus",
+        "dc": "8+pb",
+        "dcAb": "wis"
       }
     ]
   },
@@ -2710,7 +2723,9 @@
         "kind": "action",
         "name": "Cunning Strike",
         "econ": "other",
-        "note": "Forgo Sneak Attack dice for Poison, Trip or Withdraw (DC 8 + DEX + PB)."
+        "note": "Forgo Sneak Attack dice for Poison, Trip or Withdraw (DC 8 + DEX + PB).",
+        "dc": "8+pb",
+        "dcAb": "dex"
       }
     ]
   },

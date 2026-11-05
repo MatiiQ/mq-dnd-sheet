@@ -620,6 +620,12 @@ export function maxOf(c: Character, x: Partial<Counter>): number | null {
   if (x.maxV !== undefined) return Math.max(0, num(c, x.maxV));
   return x.max && x.max >= 1 ? x.max : null;
 }
+// A feature row's save DC: 8 + the ability modifier + PB in the PHB (Stunning Strike's Focus Save DC, p.103; Cunning Strike,
+// p.130), written as a Value plus the best of a list of abilities (Battle Master: STR or DEX, p.93).
+export function saveDc(c: Character, g: Pick<Grant, 'dc' | 'dcAb' | 'from'>): number {
+  const abs = (g.dcAb ?? '').split(',').filter((a): a is Ability => ABILITIES.some(([k]) => k === a));
+  return num(c, g.dc, g) + (abs.length ? Math.max(...abs.map((a) => abilityMod(c, a))) : 0);
+}
 // "Regain up to this many" (Superior Inspiration, PHB p.61; Perfect Focus, p.103): raises a resource's count to `to` or its
 // maximum, never lowers it; 'all' is the maximum. A counter with no maximum stays. Only "when you roll Initiative" and its
 // conditions stay the player's call: a manual tap, as the whole sheet is.
