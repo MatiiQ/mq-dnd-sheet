@@ -2695,7 +2695,8 @@
         "def": "adv",
         "target": "vs spells and magical effects",
         "needEq": true,
-        "needAtt": true
+        "needAtt": true,
+        "needHand": true
       },
       {
         "id": "g2",
@@ -2706,6 +2707,16 @@
         "on": "hits on a Fiend or Undead with this weapon",
         "needEq": true,
         "needAtt": true
+      },
+      {
+        "id": "g3",
+        "kind": "aura",
+        "name": "Holy Avenger",
+        "range": "1:10,17:30",
+        "needEq": true,
+        "needAtt": true,
+        "needHand": true,
+        "note": "You and friendly creatures in it have Advantage on saves against spells and magical effects."
       }
     ],
     "base": "weapon"

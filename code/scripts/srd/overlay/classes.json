@@ -2039,7 +2039,8 @@
         "kind": "defense",
         "name": "Frightened Immunity",
         "def": "imm",
-        "target": "Frightened"
+        "target": "Frightened",
+        "needAura": "feature/paladin/aura-of-protection"
       }
     ]
   },
@@ -2050,7 +2051,16 @@
         "kind": "saveBonus",
         "name": "Aura of Protection",
         "ab": "all",
-        "val": "cha>=1"
+        "val": "cha>=1",
+        "needAura": "feature/paladin/aura-of-protection"
+      },
+      {
+        "id": "g2",
+        "kind": "aura",
+        "name": "Aura of Protection",
+        "range": "6:10,18:30",
+        "incap": true,
+        "note": "You and your allies in it add your save bonus."
       }
     ]
   },
@@ -2175,7 +2185,8 @@
         "kind": "defense",
         "name": "Charmed Immunity",
         "def": "imm",
-        "target": "Charmed"
+        "target": "Charmed",
+        "needAura": "feature/paladin/aura-of-protection"
       }
     ]
   },

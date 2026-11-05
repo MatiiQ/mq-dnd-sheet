@@ -219,7 +219,17 @@
     "dur": "Concentration, up to 1 hour",
     "conc": true,
     "ritual": false,
-    "fx": "other"
+    "fx": "other",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "aura",
+        "name": "Antilife Shell",
+        "range": "10",
+        "when": "active",
+        "note": "Creatures other than Undead and Constructs can't move or reach into it."
+      }
+    ]
   },
   {
     "id": "spell/antimagic-field",
@@ -236,7 +246,17 @@
     "dur": "Concentration, up to 1 hour",
     "conc": true,
     "ritual": false,
-    "fx": "other"
+    "fx": "other",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "aura",
+        "name": "Antimagic Field",
+        "range": "10",
+        "when": "active",
+        "note": "No spells or magic work inside it."
+      }
+    ]
   },
   {
     "id": "spell/antipathy-sympathy",
@@ -409,7 +429,17 @@
     "dur": "Concentration, up to 10 minutes",
     "conc": true,
     "ritual": false,
-    "fx": "other"
+    "fx": "other",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "aura",
+        "name": "Aura of Life",
+        "range": "30",
+        "when": "active",
+        "note": "Allies in it resist Necrotic damage and can't have their HP maximum reduced; at 0 HP they regain 1 HP."
+      }
+    ]
   },
   {
     "id": "spell/awaken",
@@ -1190,6 +1220,14 @@
         "dtype": "Acid/Cold/Fire/Lightning",
         "on": "hits on a creature in the Emanation; type chosen at the table",
         "when": "active"
+      },
+      {
+        "id": "g2",
+        "kind": "aura",
+        "name": "Conjure Minor Elementals",
+        "range": "15",
+        "when": "active",
+        "note": "Your attacks add damage to creatures in it; Difficult Terrain for your enemies."
       }
     ]
   },
@@ -1213,7 +1251,17 @@
     "dice": "5d8",
     "dtype": "Force",
     "scale": "1d8/slot",
-    "higher": "The damage increases by 1d8 for each spell slot level above 4."
+    "higher": "The damage increases by 1d8 for each spell slot level above 4.",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "aura",
+        "name": "Conjure Woodland Beings",
+        "range": "10",
+        "when": "active",
+        "note": "Creatures it touches or that start or end a turn in it can take Force damage."
+      }
+    ]
   },
   {
     "id": "spell/contact-other-plane",
@@ -2851,7 +2899,17 @@
     "conc": true,
     "ritual": false,
     "fx": "other",
-    "higher": "The barrier blocks spells of 1 level higher for each spell slot level above 6."
+    "higher": "The barrier blocks spells of 1 level higher for each spell slot level above 6.",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "aura",
+        "name": "Globe of Invulnerability",
+        "range": "10",
+        "when": "active",
+        "note": "Spells of the level you choose or lower cast from outside can't affect anything inside."
+      }
+    ]
   },
   {
     "id": "spell/glyph-of-warding",
@@ -3332,7 +3390,17 @@
     "conc": true,
     "ritual": false,
     "fx": "other",
-    "save": "con"
+    "save": "con",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "aura",
+        "name": "Holy Aura",
+        "range": "30",
+        "when": "active",
+        "note": "Chosen creatures in it have Advantage on saves; attacks against them have Disadvantage."
+      }
+    ]
   },
   {
     "id": "spell/hunters-mark",
@@ -4372,7 +4440,17 @@
     "dur": "Concentration, up to 1 hour",
     "conc": true,
     "ritual": false,
-    "fx": "other"
+    "fx": "other",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "aura",
+        "name": "Pass without Trace",
+        "range": "30",
+        "when": "active",
+        "note": "You and allies in it add +10 to Stealth checks and leave no tracks."
+      }
+    ]
   },
   {
     "id": "spell/passwall",
@@ -5673,7 +5751,17 @@
     "dice": "3d8",
     "dtypes": "Radiant,Necrotic",
     "scale": "1d8/slot",
-    "higher": "The damage increases by 1d8 for each spell slot level above 3."
+    "higher": "The damage increases by 1d8 for each spell slot level above 3.",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "aura",
+        "name": "Spirit Guardians",
+        "range": "15",
+        "when": "active",
+        "note": "Enemies in it have their Speed halved and take damage, or half on a save."
+      }
+    ]
   },
   {
     "id": "spell/spiritual-weapon",
