@@ -107,6 +107,12 @@ describe('SRD origins', () => {
       if (e.kind === 'trait' && e.of) expect([e.id, ids.has(e.of)]).toEqual([e.id, true]);
     }
   });
+  // An id the catalog lacks would add a plain named item with no weight or stats (equipItems).
+  it('name only items that exist in a background\'s equipment package A', () => {
+    const missing = list.flatMap((e) => (e.kind === 'background' ? (e.equipA ?? '').split(';') : [])
+      .map((t) => t.trim().replace(/\*\d+$/, '')).filter((t) => t.startsWith('item/') && !ids.has(t)));
+    expect(missing).toEqual([]);
+  });
 });
 
 describe('SRD classes', () => {
