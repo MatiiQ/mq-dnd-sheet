@@ -300,8 +300,8 @@ describe('what a feature or feat says against what the sheet gets', () => {
   });
 
   const cast = { kind: 'resource', id: 'r', name: 'Free cast', max: '1', recharge: 'long', casts: 'spell/burning-tune' };
-  it('finds a free cast that loses its link to a spell already on the sheet, not one granted with its spell', () => {
-    expect(keys(freeCastLinkChecks(mergeCatalog([spell('Burning Tune'), feature('A', { grants: [cast] })], null)))).toEqual(['free-cast-unlinked|feature/wizard/a:r']);
+  it('finds no lost link on a free cast of a spell already on the sheet, or of one granted with it', () => {
+    expect(freeCastLinkChecks(mergeCatalog([spell('Burning Tune'), feature('A', { grants: [cast] })], null))).toEqual([]);
     expect(freeCastLinkChecks(mergeCatalog([spell('Burning Tune'), feature('A', { grants: [spellGrant(), cast] })], null))).toEqual([]);
   });
   it('finds a granted levelled spell that needs preparing, not an always-prepared one or a cantrip', () => {
