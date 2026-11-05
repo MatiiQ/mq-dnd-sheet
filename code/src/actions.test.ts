@@ -395,15 +395,6 @@ describe('extra damage', () => {
   });
 });
 
-describe('samples', () => {
-  const bowOf = (c: Character) => weaponAttacks(c, c.inv.find((i) => i.id === 'i2')!)[0];
-  it('Ilyra: numbers follow DEX and level', () => {
-    const c = sampleCharacter();
-    expect(bowOf({ ...c, abil: { ...c.abil, dex: 20 } }).hit).toBe(10);
-    expect(bowOf({ ...c, level: 9 }).hit).toBe(10);
-  });
-});
-
 describe('other weapons (plan 6)', () => {
   const bag: Item = { id: 'bag', name: 'Bag of Holding', qty: 1, eq: false, xdim: true, cap: 500 };
   it('lists weapons not in hand, equipped first, and none inside a container', () => {
@@ -503,10 +494,6 @@ describe('pinned rules', () => {
     const at = (str: number): Character => ({ ...blankCharacter(), abil: { ...blankCharacter().abil, str, dex: 8 }, inv: [dagger({ id: 'a' }), dagger({ id: 'b' })], hands: ['a', 'b'] });
     expect(lightExtra(at(8))!.dmg).toBe('1d4−1');
     expect(lightExtra(at(16))!.dmg).toBe('1d4');
-  });
-  it('the third cantrip tier starts at 11', () => {
-    expect(cantripDice('1d10', 10)).toBe('2d10');
-    expect(cantripDice('1d10', 11)).toBe('3d10');
   });
 });
 

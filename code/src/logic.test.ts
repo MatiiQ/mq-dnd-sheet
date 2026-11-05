@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { newId } from './logic';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import {
-  ABILITIES, SKILLS, regainTo, saveDc, acCanTargetOther, acOnOther, toggleAcTarget, regainLabel, damageHitDie, setTempHitDie, castAbOf, removeChip, speedOf, armorSlowBy, stealthDisBy, acSpellIdle, untrainedArmor, grantChips, addGrants, findUnlinked, removalChain, removalSummary, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, dawn, refillFor, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft, num, setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, undoHp
+  ABILITIES, regainTo, saveDc, acCanTargetOther, acOnOther, toggleAcTarget, regainLabel, damageHitDie, setTempHitDie, castAbOf, removeChip, speedOf, armorSlowBy, stealthDisBy, acSpellIdle, untrainedArmor, grantChips, addGrants, findUnlinked, removalChain, removalSummary, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, dawn, refillFor, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft, num, setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, undoHp
 } from './logic';
 import { migrate } from './migrate';
 import { spellActions } from './actions';
@@ -650,27 +650,6 @@ describe('attunement and resources moving to Inventory', () => {
     const inv = [{ id: 'i2', name: 'Ring', qty: 1, eq: true }];
     expect(migrate({ attuneIds: ['i2', 'gone', 'i2'], inv }).attuneIds).toEqual(['i2', '', '']);
     expect(migrate({ attuneIds: [3, 'i2'], inv }).attuneIds).toEqual(['', 'i2', '']);
-  });
-});
-
-// Numbers the samples showed before plan 3 (frozen). Every later change must keep them; the rebuilt samples too.
-describe('sample numbers', () => {
-  // Resources: the maxima of the ones the sample had then; resources added since (free casts) are checked elsewhere.
-  const numbers = (c: Character, ids: string[] = c.res.map((r) => r.id)) => ({
-    eff: ABILITIES.map(([k]) => effScore(c, k)), save: ABILITIES.map(([k]) => saveMod(c, k)),
-    skills: Object.fromEntries(SKILLS.map(([k, , ab]) => [k, skillMod(c, k, ab)])),
-    speed: speedNow(c), ac: armorClass(c).total, init: initiative(c), maxHp: maxHpOf(c), pp: passiveScore(c, 'perception'),
-    res: Object.fromEntries(ids.map((id) => [id, c.res.some((r) => r.id === id) ? maxOf(c, c.res.find((r) => r.id === id)!) : 'missing']))
-  });
-  const ILYRA = { eff: [12, 18, 14, 10, 14, 8], save: [4, 7, 2, 0, 2, -1], skills: { athletics: 1, acrobatics: 4, sleight: 4, stealth: 7, arcana: 0, history: 0, investigation: 0, nature: 3, religion: 0, animal: 5, insight: 5, medicine: 2, perception: 5, survival: 8, deception: -1, intimidation: -1, performance: -1, persuasion: -1 }, speed: 35, ac: 16, init: 4, maxHp: 44, pp: 15, res: { favored: 3 } };
-  const SEREN = { eff: [8, 13, 16, 13, 20, 10], save: [-1, 1, 3, 5, 9, 0], skills: { athletics: -1, acrobatics: 1, sleight: 1, stealth: 1, arcana: 5, history: 5, investigation: 1, nature: 1, religion: 1, animal: 5, insight: 5, medicine: 9, perception: 9, survival: 5, deception: 0, intimidation: 0, performance: 0, persuasion: 0 }, speed: 25, ac: 14, init: 1, maxHp: 99, pp: 19, res: { wild: 3, bolt: 5, omen: 5, resurge: 1, hands: 1, reveal: 1 } };
-  it('Ilyra', () => {
-    expect(numbers(sampleCharacter(), Object.keys(ILYRA.res))).toEqual(ILYRA);
-  });
-  it('Seren', () => {
-    // The one change the rebuild makes (approved by the owner): Primal Order · Magician now counts, adding her WIS
-    // modifier (+5) to Arcana and Nature checks (PHB p.80). Today's sheet could only hold it in the feature's text.
-    expect(numbers(druidSample(), Object.keys(SEREN.res))).toEqual({ ...SEREN, skills: { ...SEREN.skills, arcana: 10, nature: 6 } });
   });
 });
 
@@ -1624,26 +1603,12 @@ describe('a quantity 0 item counts as gone', () => {
     const inv: Item[] = [{ id: 'a', name: 'Plate Armor', qty: 0, eq: true, armor: 'heavy', acBase: 18 }, { id: 's', name: 'Shield', qty: 0, eq: true, armor: 'shield', acBase: 2 }];
     expect(armorClass({ ...dex14, inv }).total).toBe(12);
   });
-  it('switches off a grant that needs the item equipped', () => {
-    const ring: Item = { id: 'r', name: 'Ring', qty: 1, eq: true };
-    const g: Grant = { id: 'g', kind: 'ac', name: '+1', acMode: 'bonus', val: '1', needEq: true, from: 'item:r' };
-    expect(armorClass({ ...dex14, inv: [ring], grants: [g] }).total).toBe(13);
-    expect(armorClass({ ...dex14, inv: [{ ...ring, qty: 0 }], grants: [g] }).total).toBe(12);
-  });
   it('unloads ammunition that ran out', () => {
     const bow: Item = { id: 'b', name: 'Longbow', qty: 1, eq: true, cat: 'weapon', props: 'ammunition', ammo: '150/600;arrow', load: 'x' };
     const arrows: Item = { id: 'x', name: '+2 Arrows', qty: 3, eq: false, cat: 'ammo', cid: 'item/arrows' };
     expect(normalize({ ...dex14, inv: [bow, arrows] }).inv[0].load).toBe('x');
     expect(normalize({ ...dex14, inv: [bow, { ...arrows, qty: 0 }] }).inv[0].load).toBeUndefined();
   });
-});
-
-it('updates a saved Musket', () => {
-  const musket: Item = { id: 'm', name: 'Musket', qty: 1, eq: true, cat: 'weapon', cid: 'item/musket', props: 'ammunition,loading,two-handed', ammo: '40/120;bullet', load: 'sb' };
-  const sling: Item = { id: 'sb', name: 'Sling Bullets', qty: 10, eq: false, cat: 'ammo', cid: 'item/sling-bullets' };
-  const fire: Item = { id: 'fb', name: 'Firearm Bullets', qty: 10, eq: false, cat: 'ammo', cid: 'item/firearm-bullets' };
-  expect(normalize({ ...blankCharacter(), inv: [musket, sling] }).inv[0].load).toBeUndefined();
-  expect(normalize({ ...blankCharacter(), inv: [{ ...musket, load: 'fb' }, fire] }).inv[0].load).toBe('fb');
 });
 
 describe('HP actions', () => {

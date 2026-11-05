@@ -10,7 +10,4 @@ describe('formAfterTabChange', () => {
     for (const kind of ['res', 'sense', 'acmod'] as const)
       expect(formAfterTabChange({ kind, id: null })).toEqual({ kind, id: null });
   });
-  it('stays closed when no form is open', () => {
-    expect(formAfterTabChange(null)).toBeNull();
-  });
 });

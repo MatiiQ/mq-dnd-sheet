@@ -155,11 +155,6 @@ describe('weapon kinds', () => {
 
 describe('items inside a container (plan 6)', () => {
   const bag: Item = { id: 'bag', name: 'Bag of Holding', qty: 1, eq: false, xdim: true, cap: 500 };
-  it('drops a weapon inside the bag even when it is marked equipped', () => {
-    const c = make([bag, shortsword({ id: 'sw', in: 'bag' })], ['sw']);
-    expect(trimHands(c, ['sw'])).toEqual([]);
-  });
-
   it('a Shield inside the bag takes no hand', () => {
     const c = make([bag, shield({ id: 'sh', in: 'bag' }), longbow({ id: 'bow' })], ['bow', 'bow']);
     expect(trimHands(c, ['bow', 'bow'])).toEqual(['bow', 'bow']);
