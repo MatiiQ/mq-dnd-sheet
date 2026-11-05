@@ -6,11 +6,12 @@ import { SourcePicker } from './SourcePicker';
 import type { Character, Defense, DefenseKind } from '../types';
 import { RemoveButton, XIcon, useArmed } from './ui';
 
-// Choices for Advantage on saves; free text can be added too.
+// Choices for Advantage on saves; Custom… (CUSTOM) opens a text field for any other.
+const CUSTOM = '__custom';
 const ADV_OPTIONS: [string, string[]][] = [
   ['Conditions', CONDITION_OPTIONS.map((n) => 'vs ' + n)],
   ['Abilities', ABILITIES.map(([, n]) => n + ' saves')],
-  ['Other', ['vs spells']]
+  ['Other', ['vs spells', CUSTOM]]
 ];
 
 export function Defenses() {
@@ -28,19 +29,20 @@ export function Defenses() {
         <DefenseGroup kind="imm" title="Immunities" noun="immunity" color="var(--accent)" addLabel="Add an immunity"
           options={[['Damage types', DAMAGE_TYPES], ['Conditions', CONDITION_OPTIONS]]} placeholder="+ Add damage type or condition" />
         <DefenseGroup kind="adv" title="Advantage on saves" noun="save advantage" color="var(--hp-high)" addLabel="Add an advantage on saves"
-          options={ADV_OPTIONS} placeholder="+ Add advantage on saves" freeText />
+          options={ADV_OPTIONS} placeholder="+ Add advantage on saves" />
       </div>
     </section>
   );
 }
 
 // options: [optgroup label, values]; an empty label lists the values without a group.
-function DefenseGroup({ kind, title, noun, color, addLabel, options, placeholder, freeText }: {
+function DefenseGroup({ kind, title, noun, color, addLabel, options, placeholder }: {
   kind: DefenseKind; title: string; noun: string; color: string; addLabel: string;
-  options: [string, string[]][]; placeholder: string; freeText?: boolean;
+  options: [string, string[]][]; placeholder: string;
 }) {
   const { c, update, edit } = useSheet();
   const [text, setText] = useState('');
+  const [custom, setCustom] = useState(false);
   const list = mergedDefenses(c, kind);
   // A hand entry, unless this kind already has one with that name.
   const add = (v: string) => update((p) => (p.defenses.some((d) => !d.from && d.kind === kind && normName(d.name) === normName(v)) ? {}
@@ -50,8 +52,9 @@ function DefenseGroup({ kind, title, noun, color, addLabel, options, placeholder
     const own = p.defenses.filter((d) => ids.includes(d.id) && !d.from).map((d) => d.id);
     return (own.length ? own : ids).reduce<Character>((x, id) => removeRef(x, { kind: 'defense', id }), p);
   });
-  const addText = () => { const v = text.trim(); if (v) add(v); setText(''); };
-  const opts = (vals: string[]) => vals.map((d) => <option key={d} value={d}>{d}</option>);
+  const addText = () => { const v = text.trim(); if (!v) return; add(v); setText(''); setCustom(false); };
+  const cancel = () => { setText(''); setCustom(false); };
+  const opts = (vals: string[]) => vals.map((d) => <option key={d} value={d}>{d === CUSTOM ? 'Custom…' : d}</option>);
   return (
     <div className="col gap-6">
       <span style={{ fontWeight: 700, fontSize: 14, color }}>{title}</span>
@@ -62,16 +65,21 @@ function DefenseGroup({ kind, title, noun, color, addLabel, options, placeholder
             entry={c.defenses.find((x) => r.ids.includes(x.id) && !x.from) ?? c.defenses.find((x) => x.id === r.ids[0])} />)}
         {list.length === 0 && <span className="muted">None</span>}
       </div>
-      <select className="input" aria-label={addLabel} value="" onChange={(e) => { if (e.target.value) add(e.target.value); }}>
-        <option value="">{placeholder}</option>
-        {options.map(([label, vals]) => (label ? <optgroup key={label} label={label}>{opts(vals)}</optgroup> : opts(vals)))}
-      </select>
-      {freeText && (
+      {custom ? (
         <div className="row gap-6">
-          <input type="text" className="input" aria-label="Advantage on saves, free text" placeholder="Other, e.g. vs traps"
+          <input type="text" className="input" aria-label={title + ', custom'} placeholder="e.g. vs traps" autoFocus
             value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') addText(); }} />
           <button type="button" className="btn" onClick={addText}>Add</button>
+          <button type="button" className="btn" onClick={cancel}>Cancel</button>
         </div>
+      ) : (
+        <select className="input" aria-label={addLabel} value="" onChange={(e) => {
+          const v = e.target.value;
+          if (v === CUSTOM) setCustom(true); else if (v) add(v);
+        }}>
+          <option value="">{placeholder}</option>
+          {options.map(([label, vals]) => (label ? <optgroup key={label} label={label}>{opts(vals)}</optgroup> : opts(vals)))}
+        </select>
       )}
     </div>
   );

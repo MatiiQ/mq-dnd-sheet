@@ -122,6 +122,36 @@ describe('entry forms and rows', () => {
   });
 });
 
+describe('custom Advantage on saves', () => {
+  const sec = () => document.getElementById('sec-defenses')!;
+  const choose = (v: string) => {
+    const select = sec().querySelector('[aria-label="Add an advantage on saves"]') as HTMLSelectElement;
+    act(() => { select.value = v; select.dispatchEvent(new Event('change', { bubbles: true })); });
+  };
+  const field = () => sec().querySelector('[aria-label="Advantage on saves, custom"]') as HTMLInputElement | null;
+  const type = (v: string) => act(() => {
+    const el = field()!;
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(el, v);
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  const addBtn = () => [...sec().querySelectorAll('button')].find((b) => b.textContent === 'Add');
+  it('adds a custom Advantage on saves from the dropdown', () => {
+    renderSheet({});
+    choose('__custom');
+    type('vs traps');
+    tap(addBtn());
+    expect(saved().defenses).toContainEqual(expect.objectContaining({ kind: 'adv', name: 'vs traps' }));
+    expect(field()).toBeNull();
+  });
+  it('adds nothing for an empty custom Advantage', () => {
+    renderSheet({});
+    choose('__custom');
+    tap(addBtn());
+    expect(saved().defenses).toEqual([]);
+    expect(field()).not.toBeNull();
+  });
+});
+
 describe('reveal', () => {
   it.todo('reveal opens a spell hidden by the Prepared filter');
   it.todo('a used reveal does not reopen');
