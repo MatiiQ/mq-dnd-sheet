@@ -1,19 +1,17 @@
 import { hasSenseRule, senseRule } from '../catalog/copy';
 import { RuleNotes } from './RuleNotes';
 import { SourcePicker } from './SourcePicker';
-import { mergedSenses, passiveScore, removeRef } from '../logic';
+import { useState } from 'react';
+import { mergedSenses, passiveNotes, passiveParts, passiveScore, removeRef } from '../logic';
 import { saveEntry, useEntryForm, useSheet } from '../sheet';
 import type { Sense, SrcKind } from '../types';
-import { AddButton, EntryForm, EntryRow } from './ui';
+import { AddButton, EntryForm, EntryRow, PartTiles } from './ui';
 
 const BLANK = { name: '', range: '', desc: '', from: undefined as string | undefined, srcKind: undefined as SrcKind | undefined, srcName: undefined as string | undefined };
 
 export function Senses() {
   const { c, update } = useSheet();
   const f = useEntryForm('sense', BLANK, 'sense', 'Add a sense');
-  const passive = (label: string, value: number) => (
-    <div className="well tight"><span>{label}</span><strong style={{ fontSize: 17 }}>{value}</strong></div>
-  );
   const save = () => {
     const name = f.draft.name.trim();
     if (!name) return;
@@ -53,9 +51,9 @@ export function Senses() {
       {(!f.isOpen || f.editingId) && <AddButton always onClick={f.openAdd}>+ Add sense</AddButton>}
       {f.isOpen && !f.editingId && form}
       <div className="row wrap gap-8">
-        {passive('Passive Perception', passiveScore(c, 'perception'))}
-        {passive('Passive Investigation', passiveScore(c, 'investigation'))}
-        {passive('Passive Insight', passiveScore(c, 'insight'))}
+        <Passive label="Passive Perception" skill="perception" />
+        <Passive label="Passive Investigation" skill="investigation" />
+        <Passive label="Passive Insight" skill="insight" />
         {rows.map(({ key, name, range, sources, own: se, hand, all }) => (f.editingId === se.id ? <div key={key} className="sense-form">{form}</div> : (
           <EntryRow key={key} name={name} className="sense-entry"
             head={<span className="row gap-8"><span>{name}</span><strong style={{ fontSize: 17 }}>{range}</strong></span>}
@@ -71,5 +69,21 @@ export function Senses() {
         )))}
       </div>
     </section>
+  );
+}
+
+// A passive score: tap to see how it is built (passiveParts) and what changes it only sometimes (passiveNotes).
+function Passive({ label, skill }: { label: string; skill: string }) {
+  const { c } = useSheet();
+  const [open, setOpen] = useState(false);
+  const notes = open ? passiveNotes(c, skill) : [];
+  return (
+    <div className={'well tight passive' + (open ? ' open' : '')}>
+      <button type="button" className="passive-head" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <span>{label}</span><strong style={{ fontSize: 17 }}>{passiveScore(c, skill)}</strong>
+      </button>
+      {open && <PartTiles parts={passiveParts(c, skill)} />}
+      {notes.map((n) => <span key={n} className="small">{n}</span>)}
+    </div>
   );
 }

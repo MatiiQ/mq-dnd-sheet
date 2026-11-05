@@ -100,22 +100,24 @@ export const effScore = (c: Character, k: Ability) =>
 export const abilityMod = (c: Character, k: Ability) => mod(effScore(c, k));
 // Skill proficiency level (0 none, 1 proficient, 2 Expertise): the higher of the hand value and the active grants.
 // `by` names the grant's source when a grant raises it above the hand value.
-export function skillLevel(c: Character, key: string): { level: number; hand: number; by?: string } {
+// `from`: that grant's source link.
+export function skillLevel(c: Character, key: string): { level: number; hand: number; by?: string; from?: string } {
   const hand = c.skillProf[key] || 0;
-  let level = hand, by: string | undefined;
+  let level = hand, by: string | undefined, from: string | undefined;
   const grants = activeGrants(c, 'prof', true);
   // Keen Mind, Observant: proficiency, or Expertise if you already have it (PHB p.205).
   const others = (g: Grant) => hand >= 1 || grants.some((x) => x !== g && x.target === key && x.cat === 'skill');
   for (const g of grants) {
     const lv = g.target !== key ? 0 : g.cat === 'skill' ? (g.orExpert && others(g) ? 2 : 1) : g.cat === 'expertise' ? 2 : 0;
-    if (lv > level) { level = lv; by = sourceLabel(c, g); }
+    if (lv > level) { level = lv; by = sourceLabel(c, g); from = g.from; }
   }
-  return by ? { level, hand, by } : { level, hand };
+  return by ? { level, hand, by, from } : { level, hand };
 }
 // Check bonus grants for a skill, for every check of its ability (Magician: WIS modifier on Arcana and Nature), or for
 // all checks (Luckstone).
-const checkBonus = (c: Character, targets: string[]) =>
-  activeGrants(c, 'checkBonus').filter((g) => g.target === 'all' || targets.includes(g.target ?? '')).reduce((t, g) => t + num(c, g.val, g), 0);
+const checkGrants = (c: Character, kind: 'checkBonus' | 'checkAdv', targets: string[]) =>
+  activeGrants(c, kind).filter((g) => g.target === 'all' || targets.includes(g.target ?? ''));
+const checkBonus = (c: Character, targets: string[]) => checkGrants(c, 'checkBonus', targets).reduce((t, g) => t + num(c, g.val, g), 0);
 // Skill check: ability modifier + PB × level. Jack of All Trades adds half PB, rounded down, to a check with a skill
 // you aren't proficient in (PHB p.60).
 export function skillMod(c: Character, key: string, ab: Ability): number {
@@ -123,8 +125,35 @@ export function skillMod(c: Character, key: string, ab: Ability): number {
   const half = lv === 0 && activeGrants(c, 'prof', true).some((g) => g.cat === 'half') ? Math.floor(pb / 2) : 0;
   return abilityMod(c, ab) + pb * lv + half + checkBonus(c, [key, ab]);
 }
-// Passive Perception = 10 + the Perception check bonus (PHB p.372). The sheet uses the same formula for Investigation and Insight, which the rules don't define.
-export const passiveScore = (c: Character, key: string) => 10 + skillMod(c, key, SKILLS.find(([k]) => k === key)![2]);
+// Passive Perception = 10 + the Perception check bonus, +5 with Advantage, −5 with Disadvantage (PHB p.372). The sheet
+// uses the same formula for Investigation and Insight, which the rules don't define. The parts, in order: base, ability
+// modifier, proficiency, half proficiency, check bonuses, Exhaustion (−2 per level on every D20 Test, PHB p.366; skillMod
+// leaves it out, the concentration roll subtracts it on its own), then ±5 from always-on Advantage or Disadvantage:
+// checkAdv grants with `always` and Poisoned (Disadvantage on ability checks, PHB p.372). One of each cancels (PHB p.360).
+export function passiveParts(c: Character, key: string): AcPart[] {
+  const ab = SKILLS.find(([k]) => k === key)![2], pb = profBonus(c.level), lv = skillLevel(c, key);
+  const at = (g: Grant) => ({ from: g.from, src: sourceLabel(c, g) });
+  const parts: AcPart[] = [{ label: 'Base', value: 10 }, { label: ABILITIES.find(([k]) => k === ab)![1] + ' modifier', value: abilityMod(c, ab) }];
+  if (lv.level) parts.push({ label: lv.level === 2 ? 'Expertise' : 'Proficiency', value: pb * lv.level, ...(lv.from ? { from: lv.from, src: lv.by } : {}) });
+  const half = lv.level === 0 && activeGrants(c, 'prof', true).find((g) => g.cat === 'half');
+  if (half) parts.push({ label: 'Half proficiency', value: Math.floor(pb / 2), ...at(half) });
+  for (const g of checkGrants(c, 'checkBonus', [key, ab])) parts.push({ label: g.name, value: num(c, g.val, g), ...at(g) });
+  if (c.exh > 0 && c.exh < 6) parts.push({ label: 'Exhaustion', value: -2 * c.exh });
+  const always = checkGrants(c, 'checkAdv', [key, ab]).filter((g) => g.always);
+  const adv = always.some((g) => g.adv === 'adv'), dis = always.some((g) => g.adv === 'dis') || !!c.conds.Poisoned;
+  if (adv && !dis) parts.push({ label: 'Advantage', value: 5 });
+  if (dis && !adv) parts.push({ label: 'Disadvantage', value: -5 });
+  return parts;
+}
+// The situational ones: checkAdv grants without `always`, and Frightened (only while the source is in sight, PHB p.367).
+export function passiveNotes(c: Character, key: string): string[] {
+  const ab = SKILLS.find(([k]) => k === key)![2];
+  const notes = checkGrants(c, 'checkAdv', [key, ab]).filter((g) => !g.always)
+    .map((g) => (g.adv === 'dis' ? '−5' : '+5') + ' when ' + (g.note || 'it applies') + (sourceLabel(c, g) ? ' (' + sourceLabel(c, g) + ')' : ''));
+  if (c.conds.Frightened) notes.push('−5 while the source of your fear is in sight (Frightened)');
+  return notes;
+}
+export const passiveScore = (c: Character, key: string) => passiveParts(c, key).reduce((t, p) => t + p.value, 0);
 // Saving throw: d20 + ability modifier, + Proficiency Bonus if proficient (PHB p.11).
 export function saveProficient(c: Character, k: Ability): { on: boolean; by?: string } {
   if (c.saveProf[k]) return { on: true };
@@ -1083,6 +1112,7 @@ function grantLabel(c: Character, g: Grant): string {
     case 'saveBonus': return fmt(v) + ' ' + (g.ab === 'all' ? 'all' : (g.ab ?? '').toUpperCase()) + ' saves';
     case 'spellAtk': return fmt(v) + ' spell attack';
     case 'spellDc': return fmt(v) + ' spell save DC';
+    case 'checkAdv': return (g.adv === 'dis' ? 'Disadvantage' : 'Advantage') + ' on ' + g.target + ' checks' + (g.note ? ' (' + g.note + ')' : '');
     case 'casting': return g.name + ' (set slots by hand)';
     default: return g.name;
   }
@@ -1093,6 +1123,7 @@ function grantTarget(g: Grant): PillTarget {
   if (ABILITY_GRANTS.includes(g.kind) || (g.kind === 'prof' && ['skill', 'save', 'expertise', 'half'].includes(g.cat ?? ''))) return { sec: 'sec-abilities' };
   if (g.kind === 'prof') return { tab: 'features' };
   if (VITAL_GRANTS.includes(g.kind)) return { sec: 'sec-vitals' };
+  if (g.kind === 'checkAdv') return { sec: 'sec-senses' };
   if (g.kind === 'hpLvl' || g.kind === 'hpFlat') return { sec: 'sec-hp' };
   if (g.kind === 'casting' || g.kind === 'spell' || g.kind === 'spellAtk' || g.kind === 'spellDc') return { tab: 'spells' };
   return { tab: 'actions' };

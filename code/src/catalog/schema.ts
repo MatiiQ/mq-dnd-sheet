@@ -72,7 +72,7 @@ export type Spec = GrantSpec | ChoiceSpec;
 export interface ChoiceSpec { kind: 'choice'; id: string; name: string; pick: number; pickAt?: string; orExpert?: boolean; repeat?: boolean; options?: GrantSpec[]; pool?: string; ifPick?: string }
 export type GrantKind = 'sense' | 'resource' | 'defense' | 'abil' | 'abilSet' | 'prof' | 'saveBonus' | 'checkBonus' | 'spell' | 'speed' | 'ac'
   | 'init' | 'hpLvl' | 'hpFlat' | 'size' | 'carryUp' | 'action' | 'xdmg' | 'attacks' | 'unarmed' | 'atkBonus' | 'dmgBonus' | 'lightExtra' | 'atkAbil'
-  | 'casting' | 'crit' | 'spellAtk' | 'spellDc';
+  | 'casting' | 'crit' | 'spellAtk' | 'spellDc' | 'checkAdv';
 // Every grant is flat, so a character can store it as a plain entry. Fields that take a Value also accept '$<choiceId>'.
 export interface GrantSpec {
   id: string; kind: GrantKind; name: string;
@@ -81,7 +81,8 @@ export interface GrantSpec {
   opt?: string;                                                                     // in choice options: grants with the same opt are one pick
   range?: string; plus?: boolean;                                                   // sense; plus: adds to another range of the name
   max?: string; recharge?: Recharge4; regain?: string; regainOn?: 'short' | 'dawn'; casts?: string;   // resource
-  def?: 'res' | 'vul' | 'imm' | 'adv'; target?: string;                              // defense, prof, checkBonus
+  def?: 'res' | 'vul' | 'imm' | 'adv'; target?: string;                              // defense, prof, checkBonus, checkAdv
+  adv?: 'adv' | 'dis';                                                              // checkAdv (also always: counts in passives; note: the situation)
   ab?: string; val?: string; cap?: 20 | 25 | 30;                                         // abil, abilSet, saveBonus, ac, atkAbil
   cat?: 'armor' | 'weapon' | 'tool' | 'language' | 'skill' | 'save' | 'expertise' | 'mastery' | 'half'; orExpert?: boolean;   // prof; orExpert: Expertise if already proficient
   spell?: string; always?: boolean; castAb?: string;                                // spell
@@ -161,6 +162,8 @@ const GRANTS: Record<GrantKind, Record<string, [Check, boolean]>> = {
   prof: { cat: [oneOf('armor', 'weapon', 'tool', 'language', 'skill', 'save', 'expertise', 'mastery', 'half'), true], target: [str, false], orExpert: [bool, false], val: [value, false] },
   saveBonus: { ab: [or(ability, oneOf('all'), ref), true], val: [value, true] },
   checkBonus: { target: [str, true], val: [value, true] },
+  // Advantage or Disadvantage on checks of a skill, an ability or all; always: in passive scores, else a note.
+  checkAdv: { target: [str, true], adv: [oneOf('adv', 'dis'), true], always: [bool, false], note: [str, false] },
   spell: { spell: [str, true], always: [bool, false], castAb: [or(ability, ref), false] },
   speed: { mode: [oneOf('walk', 'climb', 'swim', 'fly', 'burrow'), true], val: [or(value, oneOf('walk', 'walk2')), true], hover: [bool, false] },
   ac: { acMode: [oneOf('bonus', 'unarmored', 'dexCap'), true], val: [value, false], ab: [or(ability, ref), false], shieldOk: [bool, false] },

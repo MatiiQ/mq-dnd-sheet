@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { newId } from './logic';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import {
-  ABILITIES, regainTo, saveDc, acCanTargetOther, acOnOther, toggleAcTarget, regainLabel, damageHitDie, setTempHitDie, castAbOf, removeChip, speedOf, armorSlowBy, stealthDisBy, acSpellIdle, untrainedArmor, grantChips, addGrants, findUnlinked, removalChain, removalSummary, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, dawn, refillFor, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft, num, setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, undoHp
+  ABILITIES, regainTo, saveDc, acCanTargetOther, acOnOther, toggleAcTarget, regainLabel, damageHitDie, setTempHitDie, castAbOf, removeChip, speedOf, armorSlowBy, stealthDisBy, acSpellIdle, untrainedArmor, grantChips, addGrants, findUnlinked, removalChain, removalSummary, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, dawn, refillFor, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, parseWeight, passiveScore, passiveParts, passiveNotes, pillView, resPill, setPill, preparedCount, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft, num, setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, undoHp
 } from './logic';
 import { migrate } from './migrate';
 import { spellActions } from './actions';
-import { grantErrors, type GrantSpec } from './catalog/schema';
+import { grantErrors, validateEntry, type GrantSpec } from './catalog/schema';
 import { addFromCatalog, type ItemAnswers } from './catalog/copy';
 import { mergeCatalog } from './catalog/merge';
 import { valueAt } from './catalog/value';
@@ -698,7 +698,7 @@ describe('proficiencies', () => {
     ({ id, kind: 'prof', name: 'Prof ' + id, cat, ...(target ? { target } : {}), from: 'feature:f4', ...p });
   it('takes the higher of the hand level and the grants, and names the grant that raised it', () => {
     const c = make({ skillProf: { stealth: 1, survival: 2 }, grants: [pg('a', 'expertise', 'stealth'), pg('b', 'skill', 'survival')] });
-    expect(skillLevel(c, 'stealth')).toEqual({ level: 2, hand: 1, by: 'Class · Deft Explorer' });
+    expect(skillLevel(c, 'stealth')).toEqual({ level: 2, hand: 1, by: 'Class · Deft Explorer', from: 'feature:f4' });
     expect(skillLevel(c, 'survival')).toEqual({ level: 2, hand: 2 });
     expect(skillLevel({ ...c, grants: [] }, 'stealth')).toEqual({ level: 1, hand: 1 });
     expect(skillMod(c, 'stealth', 'dex')).toBe(4 + 6);
@@ -1882,5 +1882,57 @@ describe('ability bonus sources', () => {
     expect(str[0]).not.toHaveProperty('src');
     expect(str[1]).toMatchObject({ from: 'feature:f', src: 'Feat · Athlete' });
     expect(abilityParts(c, 'con')[1]).toMatchObject({ from: 'item:i' });
+  });
+});
+
+// Passive score = 10 + the check bonus, ±5 for Advantage/Disadvantage (PHB p.372); the two cancel (PHB p.360);
+// Exhaustion −2 per level on D20 Tests (PHB p.366); Poisoned: Disadvantage on ability checks (PHB p.372); Frightened only
+// while the source is in sight (PHB p.367), so a note.
+describe('passive scores', () => {
+  const feat = { id: 'f', g: 'feat' as const, name: 'X', desc: '' };
+  const base = (p: Partial<Character> = {}): Character => ({ ...blankCharacter(), abil: { ...blankCharacter().abil, wis: 14, int: 12 }, feats: [feat], ...p });
+  const adv = (p: Partial<Grant>): Grant => ({ id: 'a', kind: 'checkAdv', name: 'Keen', target: 'perception', adv: 'adv', from: 'feature:f', ...p });
+  it('equals 10 + the skill modifier with nothing else', () => {
+    const c = base();
+    for (const [k, ab] of [['perception', 'wis'], ['investigation', 'int'], ['insight', 'wis']] as const) expect(passiveScore(c, k)).toBe(10 + skillMod(c, k, ab));
+  });
+  it('lists proficiency and a check bonus with their sources', () => {
+    const c = base({ grants: [
+      { id: 'p', kind: 'prof', name: 'Perception', cat: 'skill', target: 'perception', from: 'feature:f' },
+      { id: 'b', kind: 'checkBonus', name: 'Lucky', target: 'perception', val: '1', from: 'feature:f' }
+    ] });
+    const parts = passiveParts(c, 'perception');
+    expect(parts.find((p) => p.label === 'Proficiency')).toMatchObject({ value: 2, from: 'feature:f' });
+    expect(parts.find((p) => p.label === 'Lucky')).toMatchObject({ value: 1, src: 'Feat · X' });
+    expect(passiveScore(c, 'perception')).toBe(10 + 2 + 2 + 1);
+  });
+  it('takes 2 per Exhaustion level', () => {
+    expect(passiveParts(base({ exh: 2 }), 'perception').find((p) => p.label === 'Exhaustion')?.value).toBe(-4);
+  });
+  it('takes 5 while Poisoned; Frightened only adds a note', () => {
+    expect(passiveScore(base({ conds: { Poisoned: true } }), 'perception')).toBe(passiveScore(base(), 'perception') - 5);
+    const fr = base({ conds: { Frightened: true } });
+    expect(passiveScore(fr, 'perception')).toBe(passiveScore(base(), 'perception'));
+    expect(passiveNotes(fr, 'perception')).toContain('−5 while the source of your fear is in sight (Frightened)');
+  });
+  it('adds 5 for an always Advantage, a note for a situational one', () => {
+    expect(passiveScore(base({ grants: [adv({ always: true })] }), 'perception')).toBe(passiveScore(base(), 'perception') + 5);
+    const sit = base({ grants: [adv({ note: 'relies on sight' })] });
+    expect(passiveScore(sit, 'perception')).toBe(passiveScore(base(), 'perception'));
+    expect(passiveNotes(sit, 'perception')).toEqual(['+5 when relies on sight (Feat · X)']);
+  });
+  it('cancels Advantage with Poisoned', () => {
+    const parts = passiveParts(base({ grants: [adv({ always: true })], conds: { Poisoned: true } }), 'perception');
+    expect(parts.some((p) => p.label === 'Advantage' || p.label === 'Disadvantage')).toBe(false);
+  });
+  it('validates a checkAdv grant', () => {
+    const e = (g: object) => validateEntry({ id: 'feat/x', kind: 'feat', name: 'X', src: 'srd', desc: '', cat: 'general', grants: [{ id: 'a', kind: 'checkAdv', name: 'A', target: 'perception', ...g }] });
+    expect(e({ adv: 'adv', always: true, note: 'n' })).toEqual([]);
+    expect(e({ adv: 'maybe' })).not.toEqual([]);
+  });
+  it('gives a checkAdv chip pointing at Senses', () => {
+    const chip = grantChips(base({ grants: [adv({ note: 'relies on sight' })] }), 'feature:f')[0];
+    expect(chip.label).toMatch(/^Advantage on perception checks/);
+    expect(chip.target).toEqual({ sec: 'sec-senses' });
   });
 });

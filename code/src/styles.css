@@ -429,6 +429,10 @@ button.mod-token { border: none; color: inherit; cursor: pointer; padding: 0; }
 button.link-btn { background: none; border: none; padding: 0; cursor: pointer; text-align: left; color: inherit; min-height: 44px; display: inline-flex; align-items: center; }
 /* A shortcut that goes to another entry and opens it (reveal). */
 button.go-link { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; align-self: flex-start; }
+/* A passive score opens its breakdown; open, it takes the whole row. */
+.passive.open { flex: 1 1 100%; flex-direction: column; align-items: stretch; padding-bottom: 10px; }
+.passive-head { display: flex; align-items: center; gap: 8px; min-height: 44px; border: none; background: none; font: inherit; color: inherit; cursor: pointer; padding: 0; text-align: left; }
+.passive.open .passive-head { justify-content: space-between; }
 /* A breakdown tile whose source opens on tap. */
 button.tile-btn { font: inherit; color: inherit; text-align: left; cursor: pointer; border: none; }
 .go-text { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }

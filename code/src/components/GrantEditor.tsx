@@ -24,7 +24,7 @@ export const GRANT_KINDS: [GrantKind, string][] = [
   ['carryUp', 'Carry as one size larger'], ['action', 'Action'], ['xdmg', 'Extra damage on a hit'], ['attacks', 'Attacks per Attack action'],
   ['unarmed', 'Unarmed Strike'], ['atkBonus', 'Attack bonus'], ['dmgBonus', 'Damage bonus'], ['lightExtra', 'Light weapon extra attack'],
   ['atkAbil', 'Attack ability'], ['crit', 'Critical hit range'],
-  ['spellAtk', 'Spell attack bonus'], ['spellDc', 'Spell save DC bonus']
+  ['spellAtk', 'Spell attack bonus'], ['spellDc', 'Spell save DC bonus'], ['checkAdv', 'Advantage on checks']
 ];
 const WEAPON_FIELDS = [v('val', 'Bonus'), sel('wrange', 'Weapon', RANGE), sel('amode', 'Attack', RANGE), t('prop', 'Weapon property'), t('weapon', 'Weapon name'), b('oneHand', 'One-handed only')];
 export const GRANT_FIELDS: Record<GrantKind, FieldDef[]> = {
@@ -57,12 +57,13 @@ export const GRANT_FIELDS: Record<GrantKind, FieldDef[]> = {
   casting: [sel('ab', 'Ability', ABIL), t('list', 'Spell list'), v('cantrips', 'Cantrips'), v('prepared', 'Prepared'), v('s1', 'Level 1 slots'), v('s2', 'Level 2 slots'), v('s3', 'Level 3 slots'), v('s4', 'Level 4 slots'), v('s5', 'Level 5 slots')],
   crit: [v('val', 'Critical on')],
   spellAtk: [v('val', 'Bonus')],
-  spellDc: [v('val', 'Bonus')]
+  spellDc: [v('val', 'Bonus')],
+  checkAdv: [t('target', 'Skill or ability'), sel('adv', 'Kind', [['adv', 'Advantage'], ['dis', 'Disadvantage']]), b('always', 'Always applies'), t('note', 'When (e.g. relies on sight)')]
 };
 export const LINKABLE: Partial<Record<GrantKind, 'resource' | 'spell' | 'action'>> = { resource: 'resource', spell: 'spell', action: 'action' };
 const WHEN: [string, string][] = [['', 'Always'], ['armor', 'While wearing armor'], ['noHeavy', 'Not in Heavy armor'], ['noArmor', 'Without armor'],
   ['noShield', 'Without a Shield'], ['noArmorNoShield', 'Without armor or a Shield'], ['active', 'While switched on'], ['empty', 'With empty hands']];
-const DEFAULTS: Record<string, string | boolean> = { shieldOk: true, recharge: 'long', def: 'res', ab: 'str', cap: '20', cat: 'skill', mode: 'walk', acMode: 'bonus', size: 'medium', econ: 'action', spellLvl: '0' };
+const DEFAULTS: Record<string, string | boolean> = { shieldOk: true, recharge: 'long', def: 'res', ab: 'str', cap: '20', cat: 'skill', mode: 'walk', acMode: 'bonus', size: 'medium', econ: 'action', spellLvl: '0', adv: 'adv' };
 
 // One form for every grant kind, driven by GRANT_FIELDS. Gives a spec ready for addGrants; Add stays off while
 // grantErrors reports a problem.
@@ -75,7 +76,7 @@ export function GrantEditor({ fromKind, onAdd, onCancel }: { fromKind: SourceKin
   const [choice, setChoice] = useState<'link' | 'new' | null>(null);
   const set = (k: string, val: string | boolean) => setD((x) => ({ ...x, [k]: val }));
   // A skill or save target must be the rules' key ('arcana', 'int'): a typed name would match nothing, so pick it.
-  const target = kind === 'checkBonus' ? sel('target', 'Skill or ability', [...SKILL_OPTS, ...ABIL_CHECKS])
+  const target = kind === 'checkBonus' || kind === 'checkAdv' ? sel('target', 'Skill or ability', [...SKILL_OPTS, ...ABIL_CHECKS])
     : kind === 'prof' && (d.cat === 'skill' || d.cat === 'expertise') ? sel('target', 'Skill', SKILL_OPTS)
       : kind === 'prof' && d.cat === 'save' ? sel('target', 'Saving throw', ABIL) : null;
   const fields = GRANT_FIELDS[kind].map((f) => (f.key === 'target' && target ? target : f));

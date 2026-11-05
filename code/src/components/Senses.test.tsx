@@ -13,3 +13,8 @@ it('renders known and typed sense rows', () => {
   expect(html).toContain('Darkvision');
   expect(html).toContain('Keen Hearing');
 });
+
+it('makes each passive score a button that opens its breakdown', () => {
+  const html = render(blankCharacter()).replace(/<!-- -->/g, '');
+  for (const label of ['Passive Perception', 'Passive Investigation', 'Passive Insight']) expect(html).toMatch(new RegExp('<button[^>]*aria-expanded="false"[^>]*>(?:(?!</button>).)*' + label + '(?:(?!</button>).)*>10<'));
+});
