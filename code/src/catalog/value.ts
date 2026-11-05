@@ -2,7 +2,7 @@
 // ('wis>=1'), dice ('1d6+1'), or a level table ('2:2,6:3,17:4', '1:1d8,5:1d10'). Stored as flat strings.
 import type { Ability } from '../types';
 
-// hlvl: half the level, rounded down (PHB p.15; the sheet is single-class, so level is the class level).
+// hlvl: half the level, rounded down (PHB p.8; the sheet is single-class, so level is the class level).
 // magic: the +N of the item a grant comes from (Wand of the War Mage), 0 when none; a grant-only term.
 export interface ValueCtx { level: number; pb: number; mod: (a: Ability) => number; magic?: number }
 
