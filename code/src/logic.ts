@@ -882,12 +882,13 @@ export function addGrants(c: Character, from: string, inputs: GrantInput[]): Cha
   // Ids first, so a resource's casts and an action's res can name entries made later in the batch.
   const ids = new Map<GrantInput, string>(inputs.map((x) => [x, x.link ?? newId()]));
   const spellInputs = inputs.filter((x) => x.spec.kind === 'spell');
-  // casts: a spell spec of the batch by its spec id, then by its catalog spell id, then a spell the character has.
+  // casts: a spell spec of the batch by its spec id, then by its catalog spell id, then a spell the character has, by id
+  // or by catalog id.
   const castsOf = (v: string | undefined): [string | undefined, GrantInput | undefined] => {
     if (!v) return [undefined, undefined];
     const hit = spellInputs.find((x) => x.spec.id === v) ?? spellInputs.find((x) => x.spec.spell === v);
     if (hit) return [ids.get(hit), hit];
-    return [c.spells.some((sp) => sp.id === v) ? v : undefined, undefined];
+    return [c.spells.find((sp) => sp.id === v || sp.cid === v)?.id, undefined];
   };
   let out: Character = { ...c };
   const linkTo = <K extends 'res' | 'spells' | 'attacks'>(k: K, id: string) =>

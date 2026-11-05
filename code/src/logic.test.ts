@@ -1837,3 +1837,22 @@ describe('a drunk potion', () => {
     expect(modeSpeed(longRest(potion()), 'climb').base).toBe(0);
   });
 });
+
+describe('a free cast finds its spell (addGrants)', () => {
+  const cast = { id: 'g1', kind: 'resource' as const, name: 'Misty Step (free casts)', max: '1', recharge: 'long' as const, casts: 'spell/misty-step' };
+  const misty = { id: 's1', cid: 'spell/misty-step', name: 'Misty Step', lvl: 2, time: 'Bonus Action', range: '30 ft', prep: true };
+  it('a free cast links a sheet spell by its catalog id', () => {
+    const out = addGrants({ ...blankCharacter(), spells: [misty] }, 'feature:f1', [{ spec: cast }]);
+    expect(out.res[0].casts).toBe('s1');
+  });
+  it('a free cast of a spell the sheet lacks keeps the counter with no link', () => {
+    const out = addGrants(blankCharacter(), 'feature:f1', [{ spec: cast }]);
+    expect(out.res).toHaveLength(1);
+    expect(out.res[0].casts).toBeUndefined();
+  });
+  it('a batch spell still wins over a free cast of a sheet spell with the same catalog id', () => {
+    const out = addGrants({ ...blankCharacter(), spells: [misty] }, 'feature:f1', [{ spec: { id: 'g0', kind: 'spell', name: 'Misty Step', spell: 'spell/misty-step' } }, { spec: cast }]);
+    expect(out.res[0].casts).toBe(out.spells[out.spells.length - 1].id);
+    expect(out.res[0].casts).not.toBe('s1');
+  });
+});
