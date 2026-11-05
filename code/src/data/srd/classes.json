@@ -2441,6 +2441,23 @@
         "def": "adv",
         "target": "Strength saves",
         "when": "active"
+      },
+      {
+        "id": "g7",
+        "kind": "dmgBonus",
+        "name": "Rage",
+        "val": "1:2,9:3,16:4",
+        "useAb": "str",
+        "when": "active"
+      },
+      {
+        "id": "g8",
+        "kind": "dmgBonus",
+        "name": "Rage (Unarmed Strike)",
+        "val": "1:2,9:3,16:4",
+        "useAb": "str",
+        "weapon": "unarmed-strike",
+        "when": "active"
       }
     ]
   },

@@ -549,3 +549,25 @@ describe('a feature row\'s save DC', () => {
     expect(featureActions(c).map((f) => f.dc)).toEqual([14, undefined]);
   });
 });
+
+describe('Rage damage, Strength attacks only (PHB p.51)', () => {
+  // STR 16 (+3), DEX 18 (+4), level 9, so the Rage Damage bonus is +3.
+  const rage = (on: boolean, inv: Item[], hands: string[]): Character => ({
+    ...fighter({ str: 16, dex: 18 }, inv, undefined, { level: 9, hands }), feats: [{ id: 'r', g: 'class', name: 'Rage', desc: '' }], effectsOn: on ? ['feature:r'] : [],
+    grants: [{ id: 'a', kind: 'dmgBonus', name: 'Rage', val: '1:2,9:3,16:4', useAb: 'str', when: 'active', from: 'feature:r' },
+      { id: 'b', kind: 'dmgBonus', name: 'Rage', val: '1:2,9:3,16:4', useAb: 'str', weapon: 'unarmed-strike', when: 'active', from: 'feature:r' }]
+  });
+  const rageOf = (parts: { label: string; value: number }[]) => parts.find((p) => p.label === 'Rage')?.value;
+  it('adds to a Strength weapon attack while on', () => {
+    expect(rageOf(weaponAttacks(rage(true, [longsword({ id: 'ls' })], ['ls']), longsword({ id: 'ls' }))[0].dmgParts)).toBe(3);
+  });
+  it('adds nothing to a Finesse attack that uses Dexterity, or a ranged one', () => {
+    expect(rageOf(weaponAttacks(rage(true, [rapier({ id: 'x' })], ['x']), rapier({ id: 'x' }))[0].dmgParts)).toBeUndefined();
+    expect(rageOf(weaponAttacks(rage(true, [longbow({ id: 'b' })], ['b']), longbow({ id: 'b' }))[0].dmgParts)).toBeUndefined();
+  });
+  it('adds to an Unarmed Strike with Strength, and to nothing while off', () => {
+    expect(rageOf(unarmedStrike(rage(true, [], [])).dmgParts)).toBe(3);
+    expect(rageOf(unarmedStrike(rage(false, [], [])).dmgParts)).toBeUndefined();
+    expect(rageOf(weaponAttacks(rage(false, [longsword({ id: 'ls' })], ['ls']), longsword({ id: 'ls' }))[0].dmgParts)).toBeUndefined();
+  });
+});

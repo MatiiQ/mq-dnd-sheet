@@ -87,9 +87,10 @@ function aloneInOneHand(c: Character, it: Item): boolean {
 }
 // An attack or damage bonus grant counts when every filter it has holds: the weapon's type, the attack's mode (thrown
 // and ranged uses are ranged attacks), a property, a list of weapons, and Dueling's one hand, never for the
-// two-handed use of a Versatile weapon ("in one hand", PHB p.209). Cantrip damage bonuses are for spells.
-function grantFits(c: Character, g: Grant, it: Item, use: Use): boolean {
-  if (g.cantrip) return false;
+// two-handed use of a Versatile weapon ("in one hand", PHB p.209). Cantrip damage bonuses are for spells. useAb: only on an
+// attack using that ability (Rage Damage: "an attack using Strength", PHB p.51).
+function grantFits(c: Character, g: Grant, it: Item, use: Use, ab: Ability): boolean {
+  if (g.cantrip || (g.useAb && g.useAb !== ab)) return false;
   if (g.wrange && g.wrange !== it.wrange) return false;
   if (g.amode && g.amode !== attackMode(use)) return false;
   if (g.prop && !hasProp(it, slug(g.prop))) return false;
@@ -97,8 +98,8 @@ function grantFits(c: Character, g: Grant, it: Item, use: Use): boolean {
   if (g.oneHand && (use === 'two-handed' || !aloneInOneHand(c, it))) return false;
   return true;
 }
-const grantParts = (c: Character, kind: 'atkBonus' | 'dmgBonus', it: Item, use: Use): AcPart[] =>
-  activeGrants(c, kind).filter((g) => grantFits(c, g, it, use)).map((g) => ({ label: g.name, value: num(c, g.val, g) }));
+const grantParts = (c: Character, kind: 'atkBonus' | 'dmgBonus', it: Item, use: Use, ab: Ability): AcPart[] =>
+  activeGrants(c, kind).filter((g) => grantFits(c, g, it, use, ab)).map((g) => ({ label: g.name, value: num(c, g.val, g) }));
 
 const USE_NOTE: Record<Use, string | undefined> = { melee: undefined, thrown: 'Thrown', ranged: undefined, 'two-handed': 'Two hands' };
 function rangeOf(it: Item, use: Use): string {
@@ -139,8 +140,8 @@ function attackFor(c: Character, it: Item, use: Use): { attack: WeaponAttack; di
   const magic = [...(it.magic ? [{ label: 'Magic', value: it.magic }] : []), ...(loaded ? [{ label: 'Ammunition', value: loaded }] : [])];
   const profPart: AcPart = weaponProficient(c, it) ? { label: 'Proficiency Bonus', value: pb } : { label: 'Proficiency Bonus', value: 0, note: 'no training' };
   const hitParts: AcPart[] = [{ label: abilityName(ab), value: mod }, profPart,
-    ...magic, ...grantParts(c, 'atkBonus', it, use)].filter((p: AcPart) => p.value !== 0 || p.note);
-  const dmgParts: AcPart[] = [{ label: abilityName(ab), value: mod }, ...magic, ...grantParts(c, 'dmgBonus', it, use)].filter((p) => p.value !== 0);
+    ...magic, ...grantParts(c, 'atkBonus', it, use, ab)].filter((p: AcPart) => p.value !== 0 || p.note);
+  const dmgParts: AcPart[] = [{ label: abilityName(ab), value: mod }, ...magic, ...grantParts(c, 'dmgBonus', it, use, ab)].filter((p) => p.value !== 0);
   // An override's die (evaluated at the level with valueAt: num would read dice as 0) replaces the grip's die when its
   // average is larger, on either grip: Shillelagh's d12 beats a Quarterstaff's d6 and its two-handed d8.
   let die = (use === 'two-handed' ? it.vers || it.dmg : it.dmg) ?? '';
@@ -177,7 +178,7 @@ export function unarmedStrike(c: Character): WeaponAttack & { dc: number } {
     const d = valueAt(g.die ?? '', ctx);
     if (typeof d === 'string' && average(d) > Math.max(1, average(die))) { die = d; dtype = g.dtype || 'Bludgeoning'; }
   }
-  const fits = (g: Grant) => !!g.weapon && g.weapon.split(',').map(slug).includes('unarmed-strike') && !g.wrange && !g.prop && !g.oneHand && g.amode !== 'ranged';
+  const fits = (g: Grant) => !!g.weapon && g.weapon.split(',').map(slug).includes('unarmed-strike') && !g.wrange && !g.prop && !g.oneHand && g.amode !== 'ranged' && (!g.useAb || g.useAb === ab);
   const bonus = (kind: 'atkBonus' | 'dmgBonus') => activeGrants(c, kind).filter(fits).map((g) => ({ label: g.name, value: num(c, g.val, g) }));
   const hitParts = [{ label: abilityName(ab), value: mod }, { label: 'Proficiency Bonus', value: pb }, ...bonus('atkBonus')].filter((p) => p.value !== 0);
   const dmgParts = [...(die ? [] : [{ label: 'Unarmed Strike', value: 1 }]), { label: abilityName(ab), value: mod }, ...bonus('dmgBonus')].filter((p) => p.value !== 0);
