@@ -7510,7 +7510,8 @@
         "id": "g1",
         "kind": "spell",
         "name": "Mystic Arcanum",
-        "spell": "$arc"
+        "spell": "$arc",
+        "always": true
       },
       {
         "id": "g2",

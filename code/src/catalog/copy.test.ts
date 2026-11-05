@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import srdEntries from '../data/srd/index';
 import { blankCharacter, sampleCharacter } from '../defaults';
-import { removeRef, armorClass } from '../logic';
+import { removeRef, armorClass, spellUsable } from '../logic';
 import { migrate } from '../migrate';
 import { inactiveReason, isActive } from '../links';
 import { saveEntry } from '../sheet';
@@ -917,5 +917,16 @@ describe('effect grants through the add flow (catalog audit)', () => {
   it('adds both of the Air ring’s grants from one pick', () => {
     const c = addFromCatalog(blank, cat, cat.byId.get('item/ring-of-elemental-command')!, { picks: { c1: ['o1'] }, counted: {}, links: {}, nested: {} });
     expect([c.defenses.map((d) => d.name), c.grants.filter((g) => g.kind === 'speed').map((g) => g.mode)]).toEqual([['Lightning'], ['fly']]);
+  });
+});
+
+describe('granted spells with prepared tracking on', () => {
+  it('Mystic Arcanum adds a spell the player can cast with prepared tracking on', () => {
+    const c: Character = { ...blankCharacter(), level: 20, usePrep: true, ch: { ...blankCharacter().ch, cls: 'Warlock' } };
+    const id = poolOptions(cat, c, 'spell:list=warlock;lvl=6|7|8|9', {})[0].value;
+    const sheet = addFromCatalog(c, cat, cat.byId.get('feature/warlock/mystic-arcanum')!, { picks: { arc: [id] }, counted: {}, links: {} });
+    const sp = sheet.spells.find((x) => x.cid === id)!;
+    expect(spellUsable(sheet, sp)).toBe(true);
+    expect(sheet.res.find((r) => r.name.includes('free cast'))!.casts).toBe(sp.id);
   });
 });
