@@ -266,15 +266,15 @@ a cloud session) are not checked at all; the hook says so.
 
 | Kind | SRD 5.2.1 (committed) | PHB pack (local) |
 |---|---|---|
-| spell | 339 | 52 |
-| item | 420 | 0 |
+| spell | 339 | 56 |
+| item | 455 | 0 |
 | feat | 17 | 58 |
 | background | 4 | 12 |
 | species | 9 | 1 |
 | trait | 47 | 5 |
 | class | 12 | 0 |
 | subclass | 12 | 36 |
-| feature | 231 | 183 |
+| feature | 269 | 203 |
 | prof | 102 | 0 |
 | rule | 34 | 0 |
 
