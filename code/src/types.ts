@@ -73,7 +73,8 @@ export interface Item extends Partial<Counter> {
   load?: string;
 }
 // A section of the item list the player named (Weapons, Armour…), in display order.
-export interface Section { id: string; name: string }
+// in: the container (an extradimensional item's id) the section sits in; none = the main list.
+export interface Section { id: string; name: string; in?: string }
 export interface AcMod { id: string; name: string; val: number }
 // castAb: this spell's own spellcasting ability (Light Bearer casts with CHA), else the character's.
 export interface Spell extends Linked {

@@ -10,9 +10,11 @@ export const DEFAULT_SECTION = 'Other items';
 
 const hasSection = (c: Character, id: string) => c.sections.some((s) => s.id === id);
 
-export function addSection(c: Character, name: string): Character {
-  const n = name.trim();
-  return n ? { ...c, sections: [...c.sections, { id: newId(), name: n }] } : c;
+// bagId: a section inside that container; refused when it names no container.
+export function addSection(c: Character, name: string, bagId?: string): Character {
+  const n = name.trim(), bag = bagId === undefined ? undefined : itemOf(c, bagId);
+  if (!n || (bagId !== undefined && (!bag || !isContainer(bag)))) return c;
+  return { ...c, sections: [...c.sections, { id: newId(), name: n, ...(bagId !== undefined ? { in: bagId } : {}) }] };
 }
 
 // A blank name is refused: migrate() drops blank-named sections, so the section would be lost on reload.
@@ -22,46 +24,61 @@ export function renameSection(c: Character, id: string, name: string): Character
   return { ...c, sections: c.sections.map((s) => (s.id === id ? { ...s, name: n } : s)) };
 }
 
+// Swaps with the nearest section in that direction in the same place (the main list or the same bag).
 export function moveSection(c: Character, id: string, dir: -1 | 1): Character {
-  const i = c.sections.findIndex((s) => s.id === id), j = i + dir;
-  if (i < 0 || j < 0 || j >= c.sections.length) return c;
+  const i = c.sections.findIndex((s) => s.id === id);
+  if (i < 0) return c;
+  let j = i + dir;
+  while (j >= 0 && j < c.sections.length && c.sections[j].in !== c.sections[i].in) j += dir;
+  if (j < 0 || j >= c.sections.length) return c;
   const sections = [...c.sections];
   [sections[i], sections[j]] = [sections[j], sections[i]];
   return { ...c, sections };
 }
 
-// Its items go back to the default list.
+// Its items go back to the default list (a bag section's items stay in the bag, unsectioned).
 export function removeSection(c: Character, id: string): Character {
   if (!hasSection(c, id)) return c;
   return { ...c, sections: c.sections.filter((s) => s.id !== id), inv: c.inv.map((i) => (i.sec === id ? withoutKeys(i, ['sec']) : i)) };
 }
 
-// Puts an item in a section (null: the default list). Picking a section also takes the item out of its container.
+// Puts an item in a section (null: the default list). A main-list section takes the item out of its container; a
+// bag's section puts it in that bag (refused when moveInto refuses).
 export function setItemSection(c: Character, itemId: string, sec: string | null): Character {
-  if (!itemOf(c, itemId) || (sec !== null && !hasSection(c, sec))) return c;
+  const s = sec === null ? undefined : c.sections.find((x) => x.id === sec);
+  if (!itemOf(c, itemId) || (sec !== null && !s)) return c;
+  if (s?.in) {
+    const inside = itemOf(c, itemId)!.in === s.in ? c : moveInto(c, itemId, s.in);
+    if (inside === c && itemOf(c, itemId)!.in !== s.in) return c;
+    return { ...inside, inv: inside.inv.map((i) => (i.id === itemId ? { ...i, sec: s.id } : i)) };
+  }
   return { ...c, inv: c.inv.map((i) => (i.id !== itemId ? i : sec === null ? withoutKeys(i, ['in', 'sec']) : { ...withoutKeys(i, ['in']), sec })) };
 }
 
-// The sections in order, then the default list (sec null) last, each with its items in list order.
+const ownSec = (c: Character, i: Item) => (i.sec !== undefined && hasSection(c, i.sec) ? i.sec : null);
+// The main list's sections in order, then the default list (sec null) last, each with its items in list order.
 export function inventoryGroups(c: Character): { sec: Section | null; items: Item[] }[] {
-  const own = (i: Item) => (i.sec !== undefined && hasSection(c, i.sec) ? i.sec : null);
-  return [...c.sections, null].map((sec) => ({ sec, items: c.inv.filter((i) => !i.in && own(i) === (sec?.id ?? null)) }));
+  return [...c.sections.filter((s) => !s.in), null].map((sec) => ({ sec, items: c.inv.filter((i) => !i.in && ownSec(c, i) === (sec?.id ?? null)) }));
+}
+// A bag's sections in order, then its unsectioned contents (sec null).
+export function bagGroups(c: Character, bagId: string): { sec: Section | null; items: Item[] }[] {
+  return [...c.sections.filter((s) => s.in === bagId), null].map((sec) => ({ sec, items: c.inv.filter((i) => i.in === bagId && ownSec(c, i) === (sec?.id ?? null)) }));
 }
 
 // Puts an item into an extradimensional container (straight across from another one). The item is no longer equipped
-// or in hand; an attunement slot keeps it and shows "not equipped". The whole row moves (no partial-quantity split).
+// or in hand, and leaves its section (a section belongs to one place); an attunement slot keeps it and shows "not equipped". The whole row moves (no partial-quantity split).
 // Refused (c itself) for a missing item or container, a container target that isn't one, a container item, or itself.
 export function moveInto(c: Character, itemId: string, bagId: string): Character {
   const it = itemOf(c, itemId), bag = itemOf(c, bagId);
   if (!it || !bag || !isContainer(bag) || isContainer(it) || itemId === bagId) return c;
-  const next = { ...c, inv: c.inv.map((i) => (i.id === itemId ? { ...i, in: bagId, eq: false } : i)) };
+  const next = { ...c, inv: c.inv.map((i) => (i.id === itemId ? { ...withoutKeys(i, ['sec']), in: bagId, eq: false } : i)) };
   return setHands(next, next.hands.filter((id) => id !== itemId));
 }
 
-// Takes an item out of its container, back to its section (or the default list).
+// Takes an item out of its container, to the default list (its bag section stays in the bag).
 export function takeOut(c: Character, itemId: string): Character {
   const it = itemOf(c, itemId);
-  return it?.in ? { ...c, inv: c.inv.map((i) => (i.id === itemId ? withoutKeys(i, ['in']) : i)) } : c;
+  return it?.in ? { ...c, inv: c.inv.map((i) => (i.id === itemId ? withoutKeys(i, ['in', 'sec']) : i)) } : c;
 }
 
 const contentsOf = (c: Character, bagId: string) => c.inv.filter((i) => i.in === bagId);

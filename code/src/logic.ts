@@ -407,6 +407,10 @@ export const withoutKeys = <T extends object>(x: T, keys: string[]): T => Object
 export function fixContainers(c: Character): Character {
   let changed = false;
   const coins = { ...c.coins };
+  // A section inside a bag goes when its bag is gone or no longer extradimensional (judged on the incoming inv).
+  const keep = c.sections.filter((s) => { const bag = s.in === undefined ? null : c.inv.find((x) => x.id === s.in); return bag === null || (!!bag && isContainer(bag)); });
+  const sections = keep.length === c.sections.length ? c.sections : keep;
+  if (sections !== c.sections) changed = true;
   const inv = c.inv.map((i0) => {
     let it = i0;
     if ('in' in it) {
@@ -414,6 +418,11 @@ export function fixContainers(c: Character): Character {
       if (!bag || !isContainer(bag) || bag.id === it.id || isContainer(it)) it = withoutKeys(it, ['in']);
     }
     if (it.in && it.eq) it = { ...it, eq: false };
+    // An item's section names a section of the place it sits in (the main list or its bag), or it clears.
+    if (it.sec !== undefined) {
+      const s = sections.find((x) => x.id === it.sec);
+      if (!s || s.in !== it.in) it = withoutKeys(it, ['sec']);
+    }
     const held = isContainer(it) ? [] : COINS.filter((k) => k in it);
     if (held.length) {
       for (const k of held) coins[k] += typeof it[k] === 'number' ? it[k]! : 0;
@@ -422,7 +431,7 @@ export function fixContainers(c: Character): Character {
     if (it !== i0) changed = true;
     return it;
   });
-  return changed ? { ...c, inv, coins } : c;
+  return changed ? { ...c, inv, coins, sections } : c;
 }
 // A typed weight in lb. A Polish keyboard types a decimal comma, so "0,5" is 0.5. Anything else is no weight.
 export function parseWeight(s: string): number | undefined {
@@ -1005,7 +1014,9 @@ export function removeRef(c0: Character, ref: Ref): Character {
   }
   // A removed container's contents come out (to their section, or the default list) and its coins go to the purse
   // (plan 6). Only a root item can be removed (items are never in a removal chain), so only its contents need this.
-  out.inv = c.inv.filter((i) => !items.includes(i.id)).map((i) => (i.in && items.includes(i.in) ? withoutKeys(i, ['in']) : i));
+  out.inv = c.inv.filter((i) => !items.includes(i.id)).map((i) => (i.in && items.includes(i.in) ? withoutKeys(i, ['in', 'sec']) : i));
+  // A removed bag's sections go with it.
+  if (c.sections.some((s) => s.in && items.includes(s.in))) out.sections = c.sections.filter((s) => !s.in || !items.includes(s.in));
   const bagCoins = c.inv.filter((i) => items.includes(i.id));
   if (bagCoins.some((i) => COINS.some((k) => i[k]))) out.coins = Object.fromEntries(COINS.map((k) => [k, c.coins[k] + bagCoins.reduce((t, i) => t + (i[k] || 0), 0)])) as Character['coins'];
   out.attuneIds = c.attuneIds.map((x) => (items.includes(x) ? '' : x));

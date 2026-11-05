@@ -210,6 +210,15 @@ describe('ability bonus source', () => {
   });
 });
 
+describe('bag removal choice', () => {
+  it('shows only in Edit mode', () => {
+    renderSheet({ tab: 'inventory', inv: [{ id: 'bag', name: 'Bag of Holding', qty: 1, eq: false, xdim: true }, { id: 'r', name: 'Rope', qty: 1, eq: false, in: 'bag' }] });
+    expect(label('If Bag of Holding is removed')).toBeNull();
+    editMode();
+    expect(label('If Bag of Holding is removed')).not.toBeNull();
+  });
+});
+
 describe('Resources', () => {
   const head = (id: string) => document.querySelector(`#${id} .entry-head`);
   it('resource body falls back to its feature description', () => {

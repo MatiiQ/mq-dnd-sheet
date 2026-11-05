@@ -134,7 +134,9 @@ export function migrate(data: unknown): Character {
   c.inv = c.inv.map((i) => cleanFields(cleanCid(i), ITEM_FIELDS));
   // Item sections (plan 6): a named section once per id (the first stays); then an item's section that is gone clears,
   // so the item shows in the default list.
-  c.sections = c.sections.filter((x, i, all) => typeof x.name === 'string' && x.name.trim() !== '' && all.findIndex((y) => y.id === x.id) === i);
+  c.sections = c.sections.filter((x, i, all) => typeof x.name === 'string' && x.name.trim() !== '' && all.findIndex((y) => y.id === x.id) === i)
+    .map((x) => (x.in === undefined || typeof x.in === 'string' ? x : withoutKeys(x, ['in'])));
+  // A bag's section whose bag is gone, and an item's section of another place, go in fixContainers (normalize, below).
   c.inv = c.inv.map((i) => (i.sec === undefined || c.sections.some((x) => x.id === i.sec) ? i : withoutKeys(i, ['sec'])));
   // A typed damage type wins over a chosen one's list (spellFromForm), so dtypes never stays next to it.
   c.spells = c.spells.map((x) => cleanFields(x, SPELL_FIELDS)).map((x) => (x.dtype && x.dtypes !== undefined ? withoutKeys(x, ['dtypes']) : x)).map(cleanParts);

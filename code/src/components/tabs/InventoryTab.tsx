@@ -3,7 +3,7 @@ import { armorBaseMissing, BLANK_ITEM, catForKind, draftFromItem, itemFromForm, 
 import { isValue } from '../../catalog/value';
 import { removeRef, CARRY_MULT, SIZES, regainLabel, capital, coinWeight, maxFields, maxOf, rechargeOf, regainEvent, carriedWeight, carryCapacity, carryUpOf, sizeOf, effScore, fmt, addGrants, grantChips, isContainer, newId, type GrantInput } from '../../logic';
 import {
-  addSection, containerLoad, DEFAULT_SECTION, inventoryGroups, moveInto, moveSection, removeContainer, removeContainerSummary, removeSection, renameSection,
+  addSection, bagGroups, containerLoad, DEFAULT_SECTION, inventoryGroups, moveInto, moveSection, removeContainer, removeContainerSummary, removeSection, renameSection,
   setItemSection, takeOut
 } from '../../inventory';
 import { equipShield, equipWeapon, isWeapon, NO_SHIELD, setHands, shieldOn, twoHanded } from '../../hands';
@@ -63,7 +63,7 @@ const weaponNote = (it: Item) => !it.dmg ? '' : [
 ].filter(Boolean).join(' · ');
 
 export function InventoryTab() {
-  const { c, update, form: openForm, setForm } = useSheet();
+  const { c, update, edit: editOn, form: openForm, setForm } = useSheet();
   const f = useEntryForm('item', BLANK, 'item', 'Add a custom item');
   const picking = openForm?.kind === 'pick-item';
   const [carryOpen, setCarryOpen] = useState(false);
@@ -73,12 +73,14 @@ export function InventoryTab() {
   const [bagRemove, setBagRemove] = useState<Record<string, 'out' | 'remove'>>({});
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
   const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(null);
-  const [newSec, setNewSec] = useState<string | null>(null);
+  // newSec.bag: the container the new section goes in (null: the main list).
+  const [newSec, setNewSec] = useState<{ bag: string | null; name: string } | null>(null);
   // A section removed while its add form is open: the form falls back to the default list.
   const target = addSec && c.sections.some((x) => x.id === addSec) ? addSec : null;
   const containers = c.inv.filter(isContainer);
   const holds = (bag: Item) => c.inv.some((i) => i.in === bag.id) || COINS.some(([k]) => (bag[k] ?? 0) > 0);
-  const removeMode = (bag: Item) => (holds(bag) ? bagRemove[bag.id] ?? 'out' : 'out');
+  // The choice shows only in Edit mode; outside it, a bag's removal takes its contents and coins out.
+  const removeMode = (bag: Item) => (editOn && holds(bag) ? bagRemove[bag.id] ?? 'out' : 'out');
   const cap = carryCapacity(c), carried = carriedWeight(c), over = carried > cap.carry;
   const patch = (id: string, p: Partial<Item>) => { update((s) => ({ inv: patchEntry(s.inv, id, p) })); };
   // The equip toggle: a Shield takes a hand (equipShield trims hands); unequipping lets go of it.
@@ -120,7 +122,7 @@ export function InventoryTab() {
   );
 
   // ---- sections ----
-  const groups = inventoryGroups(c);
+  const groups = inventoryGroups(c), mainSecs = groups.length - 1;
   const adding = (f.isOpen && !f.editingId) || picking;
   const addButtons = (sec: Section | null) => !adding && (
     <div className="row wrap gap-8">
@@ -135,7 +137,8 @@ export function InventoryTab() {
   </>;
   const sectionHead = (sec: Section | null, n: number) => {
     if (!sec) return <h3 className="block-title">{DEFAULT_SECTION} <span className="muted">· {n}</span></h3>;
-    const i = c.sections.findIndex((x) => x.id === sec.id);
+    // First and last within its own place (the main list or its bag): moveSection skips the other places.
+    const scope = c.sections.filter((x) => x.in === sec.in), i = scope.findIndex((x) => x.id === sec.id);
     return <>
       <div className="sec-head">
         {renaming?.id === sec.id ? (
@@ -149,39 +152,42 @@ export function InventoryTab() {
           onClick={() => setMenuOpen(menuOpen === sec.id ? null : sec.id)}><MenuIcon /></button>
       </div>
       {menuOpen === sec.id && (
-        <SectionMenu first={i === 0} last={i === c.sections.length - 1}
+        <SectionMenu first={i === 0} last={i === scope.length - 1}
           onRename={() => { setRenaming({ id: sec.id, name: sec.name }); setMenuOpen(null); }}
           onMove={(dir) => update((p) => moveSection(p, sec.id, dir))}
           onRemove={() => { setMenuOpen(null); update((p) => removeSection(p, sec.id)); }} />
       )}
     </>;
   };
-  const newSectionField = newSec === null ? (
-    <div className="row wrap gap-8"><AddButton always onClick={() => setNewSec('')}>+ New section</AddButton></div>
+  const newSectionField = (bag: Item | null) => newSec?.bag !== (bag?.id ?? null) ? (
+    <div className="row wrap gap-8"><AddButton always onClick={() => setNewSec({ bag: bag?.id ?? null, name: '' })}>{bag ? '+ New section in ' + bag.name : '+ New section'}</AddButton></div>
   ) : (
-    <form className="row wrap gap-6 dashed-box" onSubmit={(e) => { e.preventDefault(); update((p) => addSection(p, newSec)); setNewSec(null); }}>
-      <TextField label="New section" value={newSec} placeholder="e.g. Weapons, Armour, Magic items" style={{ flex: '1 1 200px' }} onChange={setNewSec} />
-      <button type="submit" className="btn btn-sm btn-primary" disabled={!newSec.trim()}>Add</button>
+    <form className="row wrap gap-6 dashed-box" onSubmit={(e) => { e.preventDefault(); update((p) => addSection(p, newSec!.name, bag?.id)); setNewSec(null); }}>
+      <TextField label={bag ? 'New section in ' + bag.name : 'New section'} value={newSec!.name} placeholder={bag ? 'e.g. Potions, Scrolls' : 'e.g. Weapons, Armour, Magic items'}
+        style={{ flex: '1 1 200px' }} onChange={(name) => setNewSec({ bag: bag?.id ?? null, name })} />
+      <button type="submit" className="btn btn-sm btn-primary" disabled={!newSec!.name.trim()}>Add</button>
       <button type="button" className="btn btn-sm" onClick={() => setNewSec(null)}>Cancel</button>
     </form>
   );
 
   // ---- items ----
-  // "Move to": a section, the default list, or into a container (not for a container itself, never into its own one).
-  // An item inside a container shows where it is as a first, disabled option, so picking any section takes it out.
+  // "Move to": a section, the default list, into a container or one of its sections (not for a container itself, never
+  // "Into" its own one). An item in a container but in none of its sections shows where it is as a first, disabled option.
   const moveTo = (it: Item, v: string) => update((p) => (v.startsWith('in:') ? moveInto(p, it.id, v.slice(3)) : setItemSection(p, it.id, v.slice(4) || null)));
   const moveControls = (it: Item) => {
-    const into = isContainer(it) ? [] : containers.filter((b) => b.id !== it.in);
+    const bags = isContainer(it) ? [] : containers, into = bags.filter((b) => b.id !== it.in);
+    const bagSecs = bags.flatMap((b) => c.sections.filter((x) => x.in === b.id).map((x) => ({ x, label: b.name + ' › ' + x.name })));
     if (!c.sections.length && !into.length && !it.in) return null;
     const own = it.sec && c.sections.some((x) => x.id === it.sec) ? it.sec : '';
     return (
       <div className="row wrap gap-8 move-to">
         <label className="field" style={{ flex: '1 1 200px' }}>Move to
-          <select className="input" value={it.in ? 'here' : 'sec:' + own} onChange={(e) => moveTo(it, e.target.value)}>
-            {it.in && <option value="here" disabled>In {c.inv.find((b) => b.id === it.in)?.name ?? 'a container'}</option>}
-            {c.sections.map((x) => <option key={x.id} value={'sec:' + x.id}>{x.name}</option>)}
+          <select className="input" value={it.in && !own ? 'here' : 'sec:' + own} onChange={(e) => moveTo(it, e.target.value)}>
+            {it.in && !own && <option value="here" disabled>In {c.inv.find((b) => b.id === it.in)?.name ?? 'a container'}</option>}
+            {c.sections.filter((x) => !x.in).map((x) => <option key={x.id} value={'sec:' + x.id}>{x.name}</option>)}
             <option value="sec:">{DEFAULT_SECTION}</option>
             {into.map((b) => <option key={b.id} value={'in:' + b.id}>Into {b.name}</option>)}
+            {bagSecs.map(({ x, label }) => <option key={x.id} value={'sec:' + x.id}>{label}</option>)}
           </select>
         </label>
         {it.in && <button type="button" className="btn btn-sm" onClick={() => update((p) => takeOut(p, it.id))}>Take out</button>}
@@ -250,7 +256,7 @@ export function InventoryTab() {
   // ---- containers ----
   // One block per extradimensional container: its load against its capacity, its own coins and its contents.
   const bagBlock = (bag: Item) => {
-    const load = containerLoad(c, bag.id), contents = c.inv.filter((i) => i.in === bag.id);
+    const load = containerLoad(c, bag.id), contents = c.inv.filter((i) => i.in === bag.id), bagSections = bagGroups(c, bag.id);
     const full = load.cap !== null && load.total > load.cap;
     return (
       <div key={bag.id} className="col gap-8">
@@ -267,14 +273,21 @@ export function InventoryTab() {
           <span className="small muted">Its contents and coins don’t count toward your load; the {bag.name} itself does.</span>
         </div>
         <CoinGrid coins={bag} of={bag.name} onChange={(k, v) => update((p) => ({ inv: patchEntry(p.inv, bag.id, { [k]: v } as Partial<Item>) }))} />
-        {holds(bag) && (
+        {editOn && holds(bag) && (
           <div role="group" aria-label={'If ' + bag.name + ' is removed'} className="row wrap gap-4">
             <span className="label" style={{ flex: '1 1 100%' }}>If this bag is removed</span>
             <button type="button" className="filter-btn tall" aria-pressed={removeMode(bag) === 'out'} onClick={() => setBagRemove({ ...bagRemove, [bag.id]: 'out' })}>Take contents and coins out</button>
             <button type="button" className="filter-btn tall" aria-pressed={removeMode(bag) === 'remove'} onClick={() => setBagRemove({ ...bagRemove, [bag.id]: 'remove' })}>Remove them too</button>
           </div>
         )}
-        {contents.length > 0 ? <ul className="col gap-6 inv-list">{contents.map(row)}</ul> : <span className="muted small">Empty. Put an item in with “Move to” on its row.</span>}
+        {bagSections.map(({ sec, items }) => (sec || items.length > 0) && (
+          <div key={sec?.id ?? 'loose'} className="col gap-8">
+            {sec && <div className="block">{sectionHead(sec, items.length)}</div>}
+            {items.length > 0 ? <ul className="col gap-6 inv-list">{items.map(row)}</ul> : sec && <span className="muted small">No items yet.</span>}
+          </div>
+        ))}
+        {contents.length === 0 && <span className="muted small">Empty. Put an item in with “Move to” on its row.</span>}
+        {newSectionField(bag)}
       </div>
     );
   };
@@ -450,12 +463,12 @@ export function InventoryTab() {
 
       {groups.map(({ sec, items }, gi) => (
         <div key={sec?.id ?? 'default'} className="col gap-8">
-          {(sec || c.sections.length > 0) && <div className="block">{sectionHead(sec, items.length)}</div>}
+          {(sec || mainSecs > 0) && <div className="block">{sectionHead(sec, items.length)}</div>}
           {addButtons(sec)}
           {addHere(sec)}
           {items.length > 0 ? <ul className="col gap-6 inv-list">{items.map(row)}</ul> : sec && <span className="muted small">No items yet.</span>}
           {/* New sections go under the last one, or under the list while there are none. */}
-          {gi === groups.length - (c.sections.length ? 2 : 1) && newSectionField}
+          {gi === groups.length - (mainSecs ? 2 : 1) && newSectionField(null)}
         </div>
       ))}
 

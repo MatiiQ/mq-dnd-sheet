@@ -159,8 +159,8 @@ export function druidSample(): Character {
       { id: 'i5', name: 'Sickle', qty: 1, eq: false, wt: 2, cid: 'item/sickle', cat: 'weapon', cost: '1 GP', wcat: 'simple', wrange: 'melee', dmg: '1d4', dtype: 'Slashing', props: 'light', mastery: 'nick', sec: 's1' },
       { id: 'i6', name: 'Herbalism Kit', qty: 1, eq: false, wt: 3, cid: 'item/herbalism-kit', cat: 'tool', cost: '5 GP', sec: 's4' },
       { id: 'i7', name: 'Calligrapher’s Supplies', qty: 1, eq: false, wt: 5, cid: 'item/calligraphers-supplies', cat: 'tool', cost: '10 GP', sec: 's4' },
-      { id: 'i8', name: 'Book (history)', qty: 1, eq: false, wt: 5, sec: 's4', in: 'i14' },
-      { id: 'i9', name: 'Parchment', qty: 8, eq: false, cid: 'item/parchment', cat: 'gear', cost: '1 SP', sec: 's4', in: 'i14' },
+      { id: 'i8', name: 'Book (history)', qty: 1, eq: false, wt: 5, in: 'i14' },
+      { id: 'i9', name: 'Parchment', qty: 8, eq: false, cid: 'item/parchment', cat: 'gear', cost: '1 SP', in: 'i14' },
       { id: 'i10', name: 'Robe', qty: 1, eq: false, wt: 4, cid: 'item/robe', cat: 'gear', cost: '1 GP', sec: 's4' },
       { id: 'i11', name: 'Explorer’s Pack', qty: 1, eq: false, wt: 55, cid: 'item/explorers-pack', cat: 'pack', cost: '10 GP', sec: 's4' },
       { id: 'i12', name: 'Potion of Healing', qty: 3, eq: false, wt: 0.5, desc: 'Bonus Action · roll 2d4 +2, then Heal', cid: 'item/potion-of-healing', cat: 'gear', cost: '50 GP', sec: 's4' },
@@ -246,7 +246,7 @@ export function druidSample(): Character {
     ],
     // The Quarterstaff in one hand (the Shield takes the other); Shillelagh off until cast.
     effectsOn: [], hands: ['i3'], mastery: [],
-    // Item sections; the Book and the Parchment sit in the Bag of Holding (their Gear section is where they come out).
+    // Item sections; the Book and the Parchment sit in the Bag of Holding (taken out, they go to Other items).
     sections: [{ id: 's1', name: 'Weapons' }, { id: 's2', name: 'Armour' }, { id: 's3', name: 'Magic items' }, { id: 's4', name: 'Gear' }],
     profs: [
       { id: 'p1', cat: 'armor', name: 'Light armor' }, { id: 'p2', cat: 'armor', name: 'Shields' }, { id: 'p3', cat: 'weapon', name: 'Simple weapons' },

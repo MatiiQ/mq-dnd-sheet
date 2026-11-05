@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { blankCharacter } from './defaults';
 import { draftFromItem, itemFromForm } from './catalog/copy';
 import {
-  addSection, containerLoad, DEFAULT_SECTION, inventoryGroups, moveInto, moveSection, removeContainer, removeContainerSummary, removeSection, renameSection,
+  addSection, bagGroups, containerLoad, DEFAULT_SECTION, inventoryGroups, moveInto, moveSection, removeContainer, removeContainerSummary, removeSection, renameSection,
   setItemSection, takeOut
 } from './inventory';
 import { removeRef, carriedWeight, fixContainers, normalize } from './logic';
@@ -152,10 +152,10 @@ describe('containers', () => {
     expect(find(moveInto(c, 'rock', 'sack'), 'rock').in).toBe('sack');
   });
 
-  it('takeOut keeps the section; nothing to take out returns the same character', () => {
+  it('takeOut clears the section; nothing to take out returns the same character', () => {
     const c = make({ sections: [{ id: 's1', name: 'Gear' }], inv: [bag(), rock({ sec: 's1' }), rope()] });
     const out = takeOut(c, 'rock');
-    expect(find(out, 'rock')).toEqual({ id: 'rock', name: 'Rock', qty: 1, eq: false, wt: 20, sec: 's1' });
+    expect(find(out, 'rock')).toEqual({ id: 'rock', name: 'Rock', qty: 1, eq: false, wt: 20 });
     expect(takeOut(c, 'rope')).toBe(c);
     expect(takeOut(c, 'nope')).toBe(c);
   });
@@ -219,5 +219,86 @@ describe('containers', () => {
   it('fixContainers returns the same character when nothing is wrong', () => {
     const c = make({ inv: [bag({ gp: 5 }), rock()] });
     expect(fixContainers(c)).toBe(c);
+  });
+});
+
+describe('sections inside a bag', () => {
+  const bagChar = () => make({
+    inv: [item({ id: 'bag', name: 'Bag of Holding', xdim: true }), item({ id: 'potion', name: 'Potion' }), item({ id: 'rope', name: 'Rope' }), item({ id: 'box', name: 'Box' })]
+  });
+  const withBagSec = () => {
+    const c = addSection(bagChar(), 'Potions', 'bag');
+    return { c, sid: c.sections[0].id };
+  };
+  it('adds a section to a container only', () => {
+    const { c } = withBagSec();
+    expect(c.sections[0]).toMatchObject({ name: 'Potions', in: 'bag' });
+    const plain = bagChar();
+    expect(addSection(plain, 'X', 'rope')).toBe(plain);
+  });
+  it('putting an item in a bag section puts it in the bag', () => {
+    const { c, sid } = withBagSec();
+    const out = setItemSection({ ...c, inv: c.inv.map((i) => (i.id === 'potion' ? { ...i, eq: true } : i)) }, 'potion', sid);
+    expect(out.inv.find((i) => i.id === 'potion')).toMatchObject({ in: 'bag', sec: sid, eq: false });
+  });
+  it('taking out or moving in clears the section', () => {
+    const { c, sid } = withBagSec();
+    const out = takeOut(setItemSection(c, 'potion', sid), 'potion');
+    const p = out.inv.find((i) => i.id === 'potion')!;
+    expect(p.in).toBeUndefined();
+    expect(p.sec).toBeUndefined();
+    const main = addSection(c, 'Gear');
+    const gear = main.sections[1].id;
+    expect(moveInto(setItemSection(main, 'rope', gear), 'rope', 'bag').inv.find((i) => i.id === 'rope')!.sec).toBeUndefined();
+  });
+  it('lists bag sections in the bag, not the main list', () => {
+    const { c, sid } = withBagSec();
+    const two = addSection(c, 'Scrolls', 'bag');
+    const scrolls = two.sections[1].id;
+    const x = setItemSection(moveInto(setItemSection(two, 'potion', sid), 'box', 'bag'), 'rope', scrolls);
+    expect(bagGroups(x, 'bag').map((g) => [g.sec?.name ?? null, g.items.map((i) => i.id)])).toEqual([['Potions', ['potion']], ['Scrolls', ['rope']], [null, ['box']]]);
+    expect(inventoryGroups(x).map((g) => g.sec?.name ?? null)).toEqual([null]);
+  });
+  it('moves a section past sections of another scope', () => {
+    const c = addSection(addSection(addSection(bagChar(), 'A'), 'In bag', 'bag'), 'B');
+    const [a, , b] = c.sections.map((s) => s.id);
+    expect(moveSection(c, b, -1).sections.map((s) => s.name)).toEqual(['B', 'In bag', 'A']);
+    expect(moveSection(c, a, 1).sections.map((s) => s.name)).toEqual(['B', 'In bag', 'A']);
+  });
+  it('drops a bag’s sections when the bag goes, either way', () => {
+    const { c, sid } = withBagSec();
+    const x = setItemSection(c, 'potion', sid);
+    for (const mode of ['out', 'remove'] as const) expect(removeContainer(x, 'bag', mode).sections).toEqual([]);
+    expect(removeContainer(x, 'bag', 'out').inv.find((i) => i.id === 'potion')!.sec).toBeUndefined();
+  });
+  it('removing a bag section keeps its items in the bag', () => {
+    const { c, sid } = withBagSec();
+    const out = removeSection(setItemSection(c, 'potion', sid), sid);
+    expect(out.inv.find((i) => i.id === 'potion')).toMatchObject({ in: 'bag' });
+    expect(out.inv.find((i) => i.id === 'potion')!.sec).toBeUndefined();
+  });
+  it('fixContainers drops a section whose bag is gone or no longer a container', () => {
+    const { c, sid } = withBagSec();
+    const x = setItemSection(c, 'potion', sid);
+    const unticked = fixContainers({ ...x, inv: x.inv.map((i) => (i.id === 'bag' ? { ...i, xdim: false } : i)) });
+    expect(unticked.sections).toEqual([]);
+    const p = unticked.inv.find((i) => i.id === 'potion')!;
+    expect(p.in).toBeUndefined();
+    expect(p.sec).toBeUndefined();
+  });
+  it('fixContainers clears a section of another scope or one that is gone', () => {
+    const { c, sid } = withBagSec();
+    const wrongScope = fixContainers({ ...c, inv: c.inv.map((i) => (i.id === 'rope' ? { ...i, sec: sid } : i)) });
+    expect(wrongScope.inv.find((i) => i.id === 'rope')!.sec).toBeUndefined();
+    const gone = fixContainers({ ...c, inv: c.inv.map((i) => (i.id === 'rope' ? { ...i, sec: 'nope' } : i)) });
+    expect(gone.inv.find((i) => i.id === 'rope')!.sec).toBeUndefined();
+    const fine = setItemSection(c, 'potion', sid);
+    expect(fixContainers(fine)).toBe(fine);
+  });
+  it('migrate drops a section naming a missing bag and clears its items', () => {
+    const c = make({ sections: [{ id: 's', name: 'Lost', in: 'gone' }], inv: [item({ id: 'rope', name: 'Rope', sec: 's' })] });
+    const out = migrate(raw(c));
+    expect(out.sections).toEqual([]);
+    expect(out.inv[0].sec).toBeUndefined();
   });
 });
