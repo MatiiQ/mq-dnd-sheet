@@ -11,7 +11,7 @@ import type { Entry, FeatureEntry, ItemEntry, SpellEntry } from './schema';
 import {
   keepPrep, atLevel,
   addFromCatalog, armorBaseMissing, draftFromItem, featureCandidates, grantSpellName, withDetectedArmor, BLANK_ITEM, BLANK_SPELL, catForKind, countedDefault, draftFromSpell, spellFromForm, type SpellDraft, choicesOf, classIdOf, matchId, nestedEntries, subclassIdOf, type AddChoices, freeText, itemFromEntry, itemFromForm, missingPicks, needed, optionGroups, poolOptions, prereqMet, resolveChoices,
-  spellFromEntry, spellSummary, validPicks, itemQuestions, itemStats, answeredName, weaponRules, type ItemAnswers, type ItemDraft
+  spellFromEntry, spellSummary, validPicks, itemQuestions, itemStats, answeredName, hasSenseRule, senseRule, weaponRules, type ItemAnswers, type ItemDraft
 } from './copy';
 
 const cat = mergeCatalog(srdEntries, null);
@@ -895,5 +895,13 @@ describe('weaponRules', () => {
     expect(weaponRules(cat, 'finesse,two-handed', 'nick').map((e) => e.name)).toEqual(['Finesse', 'Two-Handed', 'Nick']);
     expect(weaponRules(cat, 'silvered', 'Whirl').map((e) => e.name)).toEqual([]);
     expect(weaponRules(cat, undefined, undefined)).toEqual([]);
+  });
+});
+
+describe('senseRule', () => {
+  it('finds a sense’s rule whatever its case, and none for a typed sense', () => {
+    expect(senseRule(cat, ' darkvision ')?.id).toBe('rule/darkvision');
+    expect(senseRule(cat, 'Keen Hearing')).toBeUndefined();
+    expect([hasSenseRule('Truesight'), hasSenseRule('Keen Hearing')]).toEqual([true, false]);
   });
 });

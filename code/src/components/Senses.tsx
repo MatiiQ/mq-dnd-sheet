@@ -1,3 +1,5 @@
+import { hasSenseRule, senseRule } from '../catalog/copy';
+import { RuleNotes } from './RuleNotes';
 import { SourcePicker } from './SourcePicker';
 import { mergedSenses, passiveScore, removeRef } from '../logic';
 import { saveEntry, useEntryForm, useSheet } from '../sheet';
@@ -57,8 +59,9 @@ export function Senses() {
         {rows.map(({ key, name, range, sources, own: se, hand, all }) => (f.editingId === se.id ? <div key={key} className="sense-form">{form}</div> : (
           <EntryRow key={key} name={name} className="sense-entry"
             head={<span className="row gap-8"><span>{name}</span><strong style={{ fontSize: 17 }}>{range}</strong></span>}
-            body={(se.desc || sources.length > 0) && <>
+            body={(se.desc || sources.length > 0 || hasSenseRule(name)) && <>
               {se.desc && <span>{se.desc}</span>}
+              {hasSenseRule(name) && <RuleNotes pick={(cat) => { const r = senseRule(cat, name); return r ? [r] : []; }} />}
               {sources.length > 0 && <span className="muted">Source: {sources.join(', ')}</span>}
             </>}
             onEdit={() => f.openEdit(se.id, {

@@ -836,3 +836,9 @@ export function weaponRules(cat: Catalog, props: string | undefined, mastery: st
     ...(mastery ? rules.filter((e) => e.cat === 'mastery' && slug(e.name) === slug(mastery)) : [])
   ];
 }
+
+const senseKey = (name: string) => name.trim().toLowerCase();
+export const senseRule = (cat: Catalog, name: string): RuleEntry | undefined =>
+  entriesOf(cat, 'rule').find((e) => e.cat === 'sense' && senseKey(e.name) === senseKey(name));
+// Without the catalog: the Senses panel is always on screen, and must not load it until a row opens.
+export const hasSenseRule = (name: string) => ['blindsight', 'darkvision', 'tremorsense', 'truesight'].includes(senseKey(name));
