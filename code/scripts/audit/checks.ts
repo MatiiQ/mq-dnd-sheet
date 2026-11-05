@@ -296,3 +296,98 @@ export function effectChecks(entries: Entry[]): Finding[] {
   }
   return out;
 }
+
+// The rest looks at class features and feats only: what their text says against what the sheet gets from them.
+const isGranter = (e: Entry) => e.kind === 'feature' || e.kind === 'feat';
+const has = (...kinds: GrantSpec['kind'][]) => (e: Entry) => flatGrants(e).some((g) => kinds.includes(g.kind));
+const hasPool = (prefix: string) => (e: Entry) => grantsOf(e).some((s) => s.kind === 'choice' && !!s.pool?.startsWith(prefix));
+// Options a pool offers are listed under the feature that offers them, whose row spends them: text is all they need.
+const isPoolOption = (e: Entry) => e.kind === 'feature' && (e.of === 'maneuver' || e.of === 'metamagic');
+// What these say belongs to setting up the class (slots, cantrips, prepared counts), a separate piece of work.
+const isClassSetup = (e: Entry) => e.kind === 'feature' && /^(Spellcasting|Pact Magic)$/.test(e.name);
+const nothingHoldsIt = () => false;
+// Each cue with what would carry it. check names the gap: mechanic-no-grant has a grant kind waiting; the others have no
+// field or kind in the schema yet, so nothing can satisfy them (give `done` a real test when one comes).
+const MECHANICS: { check: string; label: string; cue: RegExp; done: (e: Entry, m: RegExpMatchArray) => boolean }[] = [
+  { check: 'mechanic-no-grant', label: 'cantrip', cue: /\b(?:learn|know)\b[^.\n]*\bcantrips?\b/i, done: (e) => has('spell')(e) || hasPool('spell:')(e) },
+  { check: 'mechanic-no-grant', label: 'free cast', cue: /\bcast [^.\n]{0,60}?without (?:expending )?a (?:spell )?slot/i, done: (e) => flatGrants(e).some((g) => g.kind === 'resource' && !!g.casts) },
+  { check: 'mechanic-no-grant', label: 'sense', cue: /\b(?:have|gain) (?:Truesight|Blindsight|Tremorsense|Darkvision)\b|\bTruesight \d+ ft|\bsee normally in Dim Light/i, done: has('sense') },
+  { check: 'mechanic-no-grant', label: 'extra attacks', cue: /\bExtra Attack feature\b|\battack twice\b|\btwo extra attacks\b/i, done: has('attacks') },
+  { check: 'mechanic-no-grant', label: 'attack ability', cue: /\buse your \w+ modifier[^.\n]*\battack|\binstead of (?:using )?(?:your )?(?:Strength|Dexterity)[^.\n]*\battack/i, done: has('atkAbil', 'unarmed') },
+  { check: 'mechanic-no-grant', label: 'damage bonus', cue: /\badd your (?:Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma) modifier to [^.\n(]*\bdamage|\bbonus to the damage\b/i, done: has('dmgBonus', 'xdmg') },
+  { check: 'mechanic-no-grant', label: 'attack bonus', cue: /\badd your \w+ modifier to (?:the )?attack rolls?|\bbonus to (?:your )?attack rolls?/i, done: has('atkBonus', 'spellAtk') },
+  { check: 'mechanic-no-grant', label: 'spell save DC', cue: /\bspell save DC[^.\n]*\bincreases? by \d/i, done: has('spellDc') },
+  { check: 'mechanic-no-grant', label: 'damage die', cue: /\b(?:becomes|is now|are now|is) (?:a )?(d\d+)\b/i, done: (e, m) => flatGrants(e).some((g) => new RegExp(`\\b\\d*${m[1]}\\b`).test(`${g.die ?? ''},${g.dice ?? ''}`)) },
+  { check: 'mechanic-no-grant', label: 'Light extra attack', cue: /\bextra attack of the Light property|\bextra attack as a Bonus Action/i, done: has('lightExtra') },
+  { check: 'mechanic-no-grant', label: 'feat pick', cue: /\bOrigin feat of your choice/i, done: hasPool('feat:') },
+  { check: 'mechanic-no-grant', label: 'save Advantage', cue: /\bAdvantage on [^.\n]*\bsaving throws?/i, done: has('defense') },
+  { check: 'mechanic-no-field', label: 'save DC', cue: /\bDC (?:equal to |equals |= ?)?8 ?(?:plus|\+)|\bFocus Save DC\b/i, done: nothingHoldsIt },
+  { check: 'mechanic-no-field', label: 'half a number', cue: /\bhalf (?:your )?(?:[A-Z]\w+ level|Proficiency Bonus)/, done: (e) => flatGrants(e).some((g) => g.cat === 'half') },
+  { check: 'mechanic-no-field', label: 'regain on Initiative', cue: /\broll Initiative[^.\n]*\bregain|\bregain[^.\n]*\broll Initiative|\brecharges? when you roll Initiative/i, done: nothingHoldsIt },
+  { check: 'mechanic-no-field', label: 'stat block', cue: /\bstat block\b|\bFind (?:Familiar|Steed)\b/, done: nothingHoldsIt },
+  { check: 'mechanic-no-field', label: 'state to track', cue: /\bward\b[^.\n]*\b(?:Hit Points|HP)\b|\bforetelling|\broll two d20s/i, done: nothingHoldsIt }
+];
+export function mechanicChecks(entries: Entry[]): Finding[] {
+  const out: Finding[] = [];
+  for (const e of entries.filter((x) => isGranter(x) && !isPoolOption(x) && !isClassSetup(x))) {
+    for (const { check, label, cue, done } of MECHANICS) {
+      const m = descOf(e).match(cue);
+      if (m && !done(e, m)) out.push({ check, id: `${e.id}:${label}`, note: `"${m[0].slice(0, 70)}" and nothing on the sheet holds it` });
+    }
+  }
+  return out;
+}
+
+// A feature or feat that gives the sheet nothing past ability scores, or that says it takes a Bonus Action or Reaction
+// and has no row in the Actions tab.
+export function rowChecks(entries: Entry[]): Finding[] {
+  const out: Finding[] = [];
+  for (const e of entries.filter((x) => isGranter(x) && !isPoolOption(x) && !isClassSetup(x))) {
+    const timing = descOf(e).match(/\b(?:Bonus Action|Reaction)\b/)?.[0], gs = flatGrants(e);
+    if (gs.every((g) => g.kind === 'abil') && !grantsOf(e).some((s) => s.kind === 'choice' && s.pool)) out.push({ check: 'text-only', id: e.id, note: `no row or number${gs.length ? ' past its ability increase' : ''}${timing ? `; the text names a ${timing}` : ''}` });
+    else if (timing && !gs.some((g) => g.kind === 'action')) out.push({ check: 'timing-no-row', id: e.id, note: `the text names a ${timing}; no action grant` });
+  }
+  return out;
+}
+
+const SPENDS = /\b(?:spend|expend)\b[^.;:]*/i;
+// An action row whose note says it spends something, with no `res`: tapping it spends nothing. `res` can only name a
+// resource of the same entry, so a row that spends another feature's counter always comes up here.
+export function actionCostChecks(entries: Entry[]): Finding[] {
+  return entries.filter(isGranter).flatMap((e) => flatGrants(e).filter((g) => g.kind === 'action' && !g.res && SPENDS.test(g.note ?? ''))
+    .map((g) => ({ check: 'action-cost-unlinked', id: `${e.id}:${g.id}`, note: `"${g.note!.match(SPENDS)![0].trim().slice(0, 60)}" with no res` })));
+}
+
+// A pool of skills the character is proficient in, on an entry that grants skills itself: the pool reads the sheet before
+// those are added, so it can offer too little, or nothing, and then asks for no pick.
+export function ownPoolChecks(entries: Entry[]): Finding[] {
+  return entries.filter(isGranter).flatMap((e) => {
+    const grantsSkill = flatGrants(e).some((g) => g.kind === 'prof' && g.cat === 'skill') || grantsOf(e).some((s) => s.kind === 'choice' && !!s.pool && s.pool !== 'skill:proficient' && s.pool.startsWith('skill:'));
+    return grantsSkill && grantsOf(e).some((s) => s.kind === 'choice' && s.pool === 'skill:proficient')
+      ? [{ check: 'pool-before-own-grants', id: e.id, note: 'skill:proficient is read before the skills this entry grants' }] : [];
+  });
+}
+
+// One spell granted by two entries of a class: the sheet lists it twice. A subclass counts with its class, two subclasses
+// never meet.
+export function repeatedSpellChecks(entries: Entry[]): Finding[] {
+  const features = entries.filter((e) => e.kind === 'feature'), out: Finding[] = [];
+  for (const e of features) {
+    if (e.kind !== 'feature') continue;
+    const mine = new Set(flatGrants(e).flatMap((g) => (g.kind === 'spell' && g.spell?.startsWith('spell/') ? [g.spell] : [])));
+    for (const f of features) {
+      if (f.kind !== 'feature' || f.id <= e.id || f.cls !== e.cls || (f.sub && e.sub && f.sub !== e.sub)) continue;
+      for (const g of new Set(flatGrants(f).map((x) => x.spell))) if (g && mine.has(g)) out.push({ check: 'spell-granted-twice', id: `${e.id}+${f.id}:${g}`, note: 'both grant it, so it shows twice' });
+    }
+  }
+  return out;
+}
+
+// A feature whose text allows "another feat" with a pool of one feat category: the rest of the feats can't be picked there.
+export function featPoolChecks(entries: Entry[]): Finding[] {
+  const users = new Map<string, string[]>();
+  for (const e of entries.filter((x) => x.kind === 'feature' && /\bor another feat\b/i.test(descOf(x)))) {
+    for (const s of grantsOf(e)) if (s.kind === 'choice' && /^feat:cat=/.test(s.pool ?? '')) users.set(s.pool!, [...(users.get(s.pool!) ?? []), e.id]);
+  }
+  return [...users].map(([id, ids]) => ({ check: 'feat-pool-narrow', id, note: `${ids.sort().join(', ')}: the text allows another feat` }));
+}

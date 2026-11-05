@@ -138,7 +138,7 @@ A choice offers `options` (grants) or a `pool` (`<kind>:<filter>`) the app gener
 | `skill:proficient` | a skill the character is proficient in (Expertise) |
 | `subclass:cls=ranger` | a subclass of the class |
 | `tool:artisan` | one kind of Artisan’s Tools |
-| `maneuver:any`, `metamagic:any`, `invocation:any` | Battle Master maneuvers, Metamagic options, Eldritch Invocations (named in the descriptions; not catalog entries yet) |
+| `feature:of=maneuver`, `feature:of=metamagic`, `feature:of=invocation` | Battle Master maneuvers, Metamagic options, Eldritch Invocations: `feature` entries with `of`, each added as its own feature |
 | `spell:list=wizard;school=evocation;lvl<=2`, `spell:list=warlock;lvl=6\|7\|8\|9` | spells filtered by school and a level range or set |
 
 `repeat: true` on a choice means one option may be picked more than once: Ability Score Improvement picks two `+1`
@@ -164,22 +164,24 @@ The app applies all three.
 
 ## Vocabulary changes found by the class batches
 
-The app applies all of these except `casting`.
+The app applies all of these; of `casting`, only `ab` and the name.
 
 - `when: 'active'` (Task 14): the grant counts only while the entry's effect is switched on, like an AC spell in
   `acOn`: Rage's resistances, Frenzy, Rage of the Gods' flight. A new value of the existing condition field.
 - `cap: 25` on `abil` (Task 14): Primal Champion raises STR and CON by 4 to a maximum of 25.
 - New kind `casting` (Task 15): a subclass that casts from a class list with its own table (Eldritch Knight, Arcane
   Trickster): `ab`, `list`, `cantrips`, `prepared` and the slots of each spell level `s1`…`s5`, each a level-table Value
-  by class level. Not applied yet: the grant can be stored and edited, but nothing reads its tables.
+  by class level. Adding it sets the casting ability when the sheet has none, and its chip says to set slots by hand;
+  nothing reads its tables.
 - New kind `crit` (Task 15): Critical Hit on a d20 roll of `val` or higher with weapons and Unarmed Strikes (Champion),
   shown on those rows of the Actions tab.
 - `atkAbil.weapons` may name categories as well as weapons: `simple-melee`, `martial-melee-light` (Monk weapons).
 
 Features without grants: the class Spellcasting and Pact Magic features (the class entry holds the slots and counts)
-and effects no kind describes, such as Advantage on Initiative (Feral Instinct), Evasion, Indomitable Might.
+and effects no kind describes, such as Advantage on Initiative (Feral Instinct), the Monk's Evasion, Indomitable Might.
+Invocations have none either, except Gift of the Depths' swim speed.
 
-Effects that stay text: changes to another feature's numbers or recharge (Font of Inspiration, Improved Warding Flare),
+Effects that stay text: changes to another feature's numbers (Foe Slayer's d10 for Hunter's Mark),
 rerolls and minimum rolls (Supreme Healing), damage that adds half a level (Divine Fury's dice carry only the 1d6).
 
 ## Vocabulary changes found by the Actions tab (plan 5)
@@ -214,7 +216,8 @@ rerolls and minimum rolls (Supreme Healing), damage that adds half a level (Divi
 - Upcast data (`scale`), closed: the Actions tab states the dice a higher slot adds (the printed text, or from `scale` when a
   spell has none) and doesn't compute a total, by choice. "for every slot level above" is read (Spiritual Weapon). SRD 5.2.1 prints 1d8,
   1d12 and 1d8 per slot for Conjure Elemental, Conjure Fey and Conjure Minor Elementals where the PHB prints 2d8, 2d12
-  and 2d8 (PHB pp.254-255); the SRD data keeps what the SRD prints.
+  and 2d8 (PHB pp.254-255); the SRD data keeps what the SRD prints, and the pack replaces the three spells with the PHB's
+  dice (`replace`). So only an app without the pack shows the lower die.
 - Conjure Minor Elementals and Elemental Weapon (pack) add damage to your attacks as `xdmg` grants while the spell is on,
   with no Actions row of their own. Elemental Weapon is simplified to the lowest slot: 1d4 and +1 to attack rolls with
   any weapon; the chosen weapon, the chosen type and a higher slot's bonus are the player's to apply.
@@ -225,13 +228,12 @@ rerolls and minimum rolls (Supreme Healing), damage that adds half a level (Divi
 - Grants: `spellAtk` and `spellDc` (`val`), and the grant-only value term `magic` (the +N of the item the grant comes
   from; 0 without one; a counter's maximum never reads it).
 - Pools: `spell:…;ritual=true` (Ritual Caster) and `tool:artisan` (the 17 Artisan's Tools).
-- PHB pack (`reference/authored/`, local): the 11 backgrounds' ability, skill and tool grants; the feats' ability score
+- PHB pack (`reference/authored/`, local): the 12 backgrounds' ability, skill and tool grants; the feats' ability score
   increases (cap from each feat's own ASI line), armor and weapon training, senses, speeds, spells with free casts and
-  resources; Resilient pairs each ability with its saving throw. Text by design there: Keen Mind's, Observant's and
-  Skill Expert's Expertise when already proficient (the grant gives the proficiency), Boon of Fortitude's +40 HP (no
-  flat HP grant), Unarmed Fighting's d8 with no weapon or Shield (a 1d6 grant), Healer, Interception, Protection, Heavy
-  and Medium Armor Master, Revelation in Flesh's swim speed, War God's Blessing and Bewitching Magic (their spells are
-  already prepared), Blessing of the Trickster and Bastion of Law (no uses per rest).
+  resources; Resilient pairs each ability with its saving throw. Text there: Unarmed Fighting's d8 with no weapon or
+  Shield (a 1d6 grant), Healer, Interception, Protection, Heavy Armor Master, War God's Blessing and Bewitching Magic
+  (their spells are already prepared), Blessing of the Trickster and Bastion of Law (no uses per rest). The catalog
+  audit's known list says which of these are still to do.
 
 Source text cut short and other notes stay under "Items checked" above. The audit's plan was a local working note
 (`docs/superpowers/plans/2026-10-31-07-catalog-data-fixes.md`, gitignored), so it isn't in the repo or on every machine.

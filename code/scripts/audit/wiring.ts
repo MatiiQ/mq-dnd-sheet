@@ -5,6 +5,7 @@ import { atLevel, addFromCatalog, choicesOf, featureCandidates, freeText, itemQu
 import type { Catalog } from '../../src/catalog/merge.ts';
 import type { Entry } from '../../src/catalog/schema.ts';
 import { blankCharacter } from '../../src/defaults.ts';
+import { spellUsable } from '../../src/logic.ts';
 import type { Character } from '../../src/types.ts';
 import { flatGrants, type Finding } from './checks.ts';
 
@@ -100,4 +101,42 @@ export function grantSourceChecks(entries: Entry[], src: string): Finding[] {
 export function ruleCatChecks(entries: Entry[], src: string): Finding[] {
   const cats = new Set(entries.flatMap((e) => (e.kind === 'rule' ? [e.cat] : [])));
   return [...cats].filter((c) => !new RegExp(`\\.cat === '${c}'`).test(src)).map((c) => ({ check: 'rule-cat-unread', id: c, note: `rule entries of category ${c} are never shown` }));
+}
+
+const granters = (cat: Catalog) => cat.list.filter((e) => e.kind === 'feature' || e.kind === 'feat');
+
+// A free cast that names a catalog spell the character already has (from another feature, say) and ends up pointing at
+// nothing: the counter shows, the spell gets no button.
+export function freeCastLinkChecks(cat: Catalog): Finding[] {
+  const out: Finding[] = [], base = { ...blankCharacter(), level: 20 };
+  for (const e of granters(cat)) {
+    for (const g of flatGrants(e).filter((x) => x.kind === 'resource' && x.casts?.startsWith('spell/'))) {
+      const sp = cat.byId.get(g.casts!);
+      if (!sp) continue;
+      const c = addFromCatalog(addFromCatalog(base, cat, sp, autoAnswers(cat, base, sp)), cat, e, autoAnswers(cat, base, e));
+      if (c.res.some((r) => r.name === g.name && !r.casts)) out.push({ check: 'free-cast-unlinked', id: `${e.id}:${g.id}`, note: `${g.casts} is on the sheet; the resource doesn't cast it` });
+    }
+  }
+  return out;
+}
+
+// A levelled spell a feature or feat adds that can't be cast with prepared-spell tracking on until the player prepares it.
+export function grantedSpellChecks(cat: Catalog): Finding[] {
+  const base = { ...blankCharacter(), level: 20, usePrep: true }, out: Finding[] = [];
+  for (const e of granters(cat)) {
+    if (!flatGrants(e).some((g) => g.kind === 'spell')) continue;
+    const sheet = addFromCatalog(base, cat, e, autoAnswers(cat, base, e));
+    const stuck = sheet.spells.filter((sp) => sp.from && sp.lvl > 0 && !spellUsable(sheet, sp));
+    if (stuck.length) out.push({ check: 'granted-spell-unprepared', id: e.id, note: `${stuck.length} spell(s) added not always prepared` });
+  }
+  return out;
+}
+
+// A background adds its equipment only as text: no item, no coins.
+export function backgroundEquipChecks(cat: Catalog): Finding[] {
+  const base = blankCharacter(), plain = cat.list.filter((e) => e.kind === 'background' && e.equip).filter((e) => {
+    const c = addFromCatalog(base, cat, e, autoAnswers(cat, base, e));
+    return c.inv.length === base.inv.length && JSON.stringify(c.coins) === JSON.stringify(base.coins);
+  });
+  return plain.length ? [{ check: 'background-equipment-text', id: 'background', note: `${plain.map((e) => e.id).sort().join(', ')}: equipment is only text` }] : [];
 }

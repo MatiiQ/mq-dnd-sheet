@@ -2,8 +2,8 @@
 import { describe, expect, it } from 'vitest';
 import { mergeCatalog } from '../../src/catalog/merge.ts';
 import type { Entry } from '../../src/catalog/schema.ts';
-import { compareKnown, coverageChecks, effectChecks, featureHeadingChecks, grantChecks, grantHashes, itemNumberChecks, keyOf, lookupTableChecks, referenceChecks, ruleSourceChecks, ruleTextChecks, spellListChecks, spellNumberChecks, srdHeadingChecks, standaloneHeadings, textChecks, updateKnown, type Finding } from './checks.ts';
-import { grantSourceChecks, poolChecks, ruleCatChecks, unreadFieldChecks } from './wiring.ts';
+import { actionCostChecks, compareKnown, coverageChecks, effectChecks, featPoolChecks, featureHeadingChecks, grantChecks, grantHashes, itemNumberChecks, keyOf, lookupTableChecks, mechanicChecks, ownPoolChecks, referenceChecks, repeatedSpellChecks, rowChecks, ruleSourceChecks, ruleTextChecks, spellListChecks, spellNumberChecks, srdHeadingChecks, standaloneHeadings, textChecks, updateKnown, type Finding } from './checks.ts';
+import { backgroundEquipChecks, freeCastLinkChecks, grantedSpellChecks, grantSourceChecks, poolChecks, ruleCatChecks, unreadFieldChecks } from './wiring.ts';
 
 const spell = (name: string, extra: object = {}) => ({ id: `spell/${name.toLowerCase().replace(/ /g, '-')}`, kind: 'spell', name, src: 'srd', desc: 'Some text.', lvl: 1, school: 'Evocation', classes: 'wizard', time: 'Action', range: '60 feet', comp: 'V', dur: 'Instantaneous', conc: false, ritual: false, fx: 'other', ...extra }) as unknown as Entry;
 const item = (name: string, extra: object = {}) => ({ id: `item/${name.toLowerCase().replace(/ /g, '-')}`, kind: 'item', name, src: 'srd', desc: 'Some text.', cat: 'magic', ...extra }) as unknown as Entry;
@@ -233,5 +233,85 @@ describe('checks after the second-print fixes', () => {
   it('accepts a table written as plain lines without digits', () => {
     const e = { id: 'feature/x/y', kind: 'feature', name: 'Y', src: 'srd', cls: 'x', lvl: 1, grants: [], desc: 'As shown in the Land Ward table.\nLand Ward (land: Resistance)\nArid: Fire' } as unknown as Entry;
     expect(textChecks([e]).filter((f) => f.check === 'table-cut')).toEqual([]);
+  });
+});
+
+describe('what a feature or feat says against what the sheet gets', () => {
+  const action = (extra: object = {}) => ({ id: 'a', kind: 'action', name: 'Row', econ: 'other', ...extra });
+  const spellGrant = (extra: object = {}) => ({ id: 's', kind: 'spell', name: 'Spell', spell: 'spell/burning-tune', ...extra });
+  const feat = (name: string, extra: object = {}) => ({ id: `feat/${name.toLowerCase()}`, kind: 'feat', name, src: 'srd', desc: 'Some text.', cat: 'general', grants: [], ...extra }) as unknown as Entry;
+  const skillPool = { kind: 'choice', id: 'exp', name: 'Expertise', pick: 1, pool: 'skill:proficient' };
+
+  it.each([
+    ['mechanic-no-grant|feature/wizard/a:free cast', 'You can cast Test Spell without expending a spell slot.', { kind: 'resource', id: 'r', name: 'R', recharge: 'long', casts: 'spell/x' }],
+    ['mechanic-no-grant|feature/wizard/a:cantrip', 'You learn two Wizard cantrips.', { kind: 'spell', id: 's', name: 'S', spell: 'spell/x' }],
+    ['mechanic-no-grant|feature/wizard/a:sense', 'You have Truesight with a range of 30 feet.', { kind: 'sense', id: 's', name: 'S', range: '30' }],
+    ['mechanic-no-grant|feature/wizard/a:extra attacks', 'You gain the Extra Attack feature for this weapon.', { kind: 'attacks', id: 'x', name: 'X', val: '2' }],
+    ['mechanic-no-grant|feature/wizard/a:attack ability', 'You can use your Charisma modifier for the attack rolls.', { kind: 'atkAbil', id: 'x', name: 'X', ab: 'cha' }],
+    ['mechanic-no-grant|feature/wizard/a:damage bonus', 'You add your Charisma modifier to that damage.', { kind: 'dmgBonus', id: 'x', name: 'X', val: 'cha' }],
+    ['mechanic-no-grant|feature/wizard/a:attack bonus', 'You add your Charisma modifier to attack rolls with it.', { kind: 'atkBonus', id: 'x', name: 'X', val: 'cha' }],
+    ['mechanic-no-grant|feature/wizard/a:spell save DC', 'The spell save DC of your spells increases by 1.', { kind: 'spellDc', id: 'x', name: 'X', val: '1' }],
+    ['mechanic-no-grant|feature/wizard/a:damage die', 'The die becomes a d8.', { kind: 'unarmed', id: 'x', name: 'X', die: '1d8', abs: 'str' }],
+    ['mechanic-no-grant|feature/wizard/a:Light extra attack', 'You can make one extra attack as a Bonus Action.', { kind: 'lightExtra', id: 'x', name: 'X', addMod: false }],
+    ['mechanic-no-grant|feature/wizard/a:feat pick', 'You gain an Origin feat of your choice.', { kind: 'choice', id: 'c', name: 'C', pick: 1, pool: 'feat:cat=origin' }],
+    ['mechanic-no-grant|feature/wizard/a:save Advantage', 'You have Advantage on Constitution saving throws.', { kind: 'defense', id: 'x', name: 'X', def: 'adv', target: 'Con' }]
+  ])('%s, until a grant carries it', (key, desc, grant) => {
+    expect(keys(mechanicChecks([feature('A', { desc })]))).toEqual([key]);
+    expect(mechanicChecks([feature('A', { desc, grants: [grant] })])).toEqual([]);
+  });
+  it('reads a die only from the grant\'s die or dice, not from its name', () => {
+    expect(keys(mechanicChecks([feature('A', { desc: 'The die becomes a d8.', grants: [{ kind: 'unarmed', id: 'x', name: 'd6, or 1d8 bare handed', die: '1d6', abs: 'str' }] })]))).toEqual(['mechanic-no-grant|feature/wizard/a:damage die']);
+  });
+  it.each([
+    ['save DC', 'The DC equals 8 plus your Wisdom modifier.'], ['half a number', 'You gain half your Wizard level.'],
+    ['regain on Initiative', 'When you roll Initiative, you regain all uses.'], ['stat block', 'It uses the stat block below.'], ['state to track', 'Record the foretelling rolls.'], ['state to track', 'The ward has Hit Points equal to your level.']
+  ])('%s has no field to hold it', (label, desc) => expect(keys(mechanicChecks([feature('A', { desc })]))).toEqual([`mechanic-no-field|feature/wizard/a:${label}`]));
+  it('lets a half-proficiency grant answer the half cue, and skips class setup and pool options', () => {
+    expect(mechanicChecks([feature('A', { desc: 'Add half your Proficiency Bonus.', grants: [{ kind: 'prof', id: 'x', name: 'X', cat: 'half' }] })])).toEqual([]);
+    expect(mechanicChecks([feature('Spellcasting', { desc: 'You know two cantrips.' }), feature('B', { of: 'metamagic', desc: 'You know two cantrips.' })])).toEqual([]);
+    expect(rowChecks([feature('Spellcasting'), feature('B', { of: 'maneuver' })])).toEqual([]);
+  });
+
+  it('finds an entry that gives nothing past its ability increase, and timing with no row', () => {
+    const abil = { kind: 'abil', id: 'x', name: 'X', ab: 'str', val: '1', cap: 20 };
+    expect(rowChecks([feat('A', { grants: [abil] }), feature('B', { desc: 'As a Reaction, do it.' }), feat('C', { desc: 'As a Bonus Action, do it.', grants: [abil, { kind: 'speed', id: 's', name: 'S', mode: 'walk', val: '10' }] })]).map((f) => [keyOf(f), f.note])).toEqual([
+      ['text-only|feat/a', 'no row or number past its ability increase'], ['text-only|feature/wizard/b', 'no row or number; the text names a Reaction'], ['timing-no-row|feat/c', 'the text names a Bonus Action; no action grant']
+    ]);
+    expect(rowChecks([feat('A', { desc: 'As a Reaction, do it.', grants: [action()] }), feat('B', { grants: [{ kind: 'choice', id: 'c', name: 'C', pick: 1, pool: 'skill:any' }] })])).toEqual([]);
+  });
+  it('finds an action row that says it spends something and has no res', () => {
+    expect(keys(actionCostChecks([feature('A', { grants: [action({ note: 'Spend 1 point to run.' })] })]))).toEqual(['action-cost-unlinked|feature/wizard/a:a']);
+    expect(actionCostChecks([feature('A', { grants: [action({ note: 'Spend 1 point.', res: 'r' }), action({ id: 'b', note: 'Run fast.' })] })])).toEqual([]);
+  });
+  it('finds a proficient-skill pool on an entry that grants skills itself', () => {
+    expect(keys(ownPoolChecks([feat('A', { grants: [{ kind: 'prof', id: 'p', name: 'P', cat: 'skill', target: 'arcana' }, skillPool] }), feat('B', { grants: [{ kind: 'choice', id: 'c', name: 'C', pick: 1, pool: 'skill:any' }, skillPool] })]))).toEqual(['pool-before-own-grants|feat/a', 'pool-before-own-grants|feat/b']);
+    expect(ownPoolChecks([feat('A', { grants: [skillPool] })])).toEqual([]);
+  });
+  it('finds a spell two entries of a class grant, not two subclasses or classes that happen to share it', () => {
+    const f = (id: string, extra: object) => feature(id, { grants: [spellGrant()], ...extra });
+    expect(keys(repeatedSpellChecks([f('A', { sub: 'x' }), f('B', { sub: 'x' })]))).toEqual(['spell-granted-twice|feature/wizard/a+feature/wizard/b:spell/burning-tune']);
+    expect(keys(repeatedSpellChecks([f('A', {}), f('B', { sub: 'x' })]))).toHaveLength(1);
+    expect(repeatedSpellChecks([f('A', { sub: 'x' }), f('B', { sub: 'y' }), f('C', { cls: 'bard' })])).toEqual([]);
+  });
+  it('finds a one-category feat pool on a feature whose text allows another feat', () => {
+    const pool = { kind: 'choice', id: 'c', name: 'C', pick: 1, pool: 'feat:cat=general' };
+    expect(keys(featPoolChecks([feature('A', { desc: 'Gain this feat or another feat you qualify for.', grants: [pool] })]))).toEqual(['feat-pool-narrow|feat:cat=general']);
+    expect(featPoolChecks([feature('A', { grants: [pool] })])).toEqual([]);
+  });
+
+  const cast = { kind: 'resource', id: 'r', name: 'Free cast', max: '1', recharge: 'long', casts: 'spell/burning-tune' };
+  it('finds a free cast that loses its link to a spell already on the sheet, not one granted with its spell', () => {
+    expect(keys(freeCastLinkChecks(mergeCatalog([spell('Burning Tune'), feature('A', { grants: [cast] })], null)))).toEqual(['free-cast-unlinked|feature/wizard/a:r']);
+    expect(freeCastLinkChecks(mergeCatalog([spell('Burning Tune'), feature('A', { grants: [spellGrant(), cast] })], null))).toEqual([]);
+  });
+  it('finds a granted levelled spell that needs preparing, not an always-prepared one or a cantrip', () => {
+    expect(keys(grantedSpellChecks(mergeCatalog([spell('Burning Tune'), feature('A', { grants: [spellGrant()] })], null)))).toEqual(['granted-spell-unprepared|feature/wizard/a']);
+    expect(grantedSpellChecks(mergeCatalog([spell('Burning Tune'), feature('A', { grants: [spellGrant({ always: true })] })], null))).toEqual([]);
+    expect(grantedSpellChecks(mergeCatalog([spell('Burning Tune', { lvl: 0 }), feature('A', { grants: [spellGrant()] })], null))).toEqual([]);
+  });
+  it('finds a background whose equipment adds no item or coin', () => {
+    const bg = { id: 'background/test', kind: 'background', name: 'Test', src: 'srd', desc: 'Text.', feat: 'feat/none', equip: 'A: Rope; B: 50 GP', grants: [] } as unknown as Entry;
+    expect(keys(backgroundEquipChecks(mergeCatalog([bg], null)))).toEqual(['background-equipment-text|background']);
+    expect(backgroundEquipChecks(mergeCatalog([{ ...bg, equip: '' } as Entry], null))).toEqual([]);
   });
 });

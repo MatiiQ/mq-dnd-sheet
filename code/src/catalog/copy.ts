@@ -398,7 +398,7 @@ export function poolOptions(cat: Catalog, c: Character, pool: string, picks: Rec
 }
 
 const poolKind = (pool: string) => pool.slice(0, Math.max(0, pool.indexOf(':')));
-// True when the choice is answered by typing: an unknown pool kind (metamagic, invocation), or a name pool (spell,
+// True when the choice is answered by typing: a pool kind the app doesn't know (no catalog entry has one), or a name pool (spell,
 // tool, language) that offers nothing here. Other kinds need a key or an id, so they are never typed.
 export function freeText(cat: Catalog, c: Character, pool: string, picks: Record<string, string[]>): boolean {
   const kind = poolKind(pool);
