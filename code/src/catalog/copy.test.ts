@@ -6,7 +6,7 @@ import { migrate } from '../migrate';
 import { inactiveReason, isActive } from '../links';
 import { saveEntry } from '../sheet';
 import type { Character, Item, Spell } from '../types';
-import { mergeCatalog } from './merge';
+import { entriesOf, mergeCatalog } from './merge';
 import type { Entry, FeatureEntry, ItemEntry, SpellEntry } from './schema';
 import {
   keepPrep, atLevel,
@@ -957,5 +957,28 @@ describe('a skill:proficient pool reads the entry\'s own skills', () => {
     expect(missingPicks(cat, c, featB, picks)).toEqual(['exp']);
     expect(resolveChoices(cat, featB, picks, c).specs.filter((s) => s.cat === 'expertise')).toEqual([]);
     expect(resolveChoices(cat, featB, { c2: ['stealth'], exp: ['stealth'] }, c).specs.filter((s) => s.cat === 'expertise')).toHaveLength(1);
+  });
+});
+
+describe('a feat:any pool', () => {
+  const lvl = (level: number): Character => ({ ...blankCharacter(), level });
+  const opt = (c: Character, id: string) => poolOptions(cat, c, 'feat:any', {}).find((o) => o.value === id)!;
+  it('lists every feat, whatever its category', () => {
+    expect(poolOptions(cat, lvl(5), 'feat:any', {})).toHaveLength(entriesOf(cat, 'feat').length);
+    expect(opt(lvl(5), 'feat/alert')).toBeTruthy();
+    expect(opt(lvl(5), 'feat/ability-score-improvement')).toBeTruthy();
+  });
+  it('marks a boon the level misses, and keeps it selectable', () => {
+    const boon = entriesOf(cat, 'feat').find((e) => e.cat === 'boon')!;
+    expect(opt(lvl(1), boon.id).unmet).toBeTruthy();
+    expect(opt(lvl(19), boon.id).unmet).toBeUndefined();
+  });
+  it('marks a feat on the sheet, but never a repeatable one', () => {
+    const none = { picks: {}, counted: {}, links: {} };
+    const alert = addFromCatalog(lvl(5), cat, cat.byId.get('feat/alert')!, none);
+    expect(opt(alert, 'feat/alert').taken).toBe(true);
+    const asi = cat.byId.get('feat/ability-score-improvement')!;
+    const c: Character = { ...lvl(5), feats: [{ id: 'f', g: 'feat', name: asi.name, desc: '', cid: asi.id }] };
+    expect(opt(c, asi.id).taken).toBeUndefined();
   });
 });

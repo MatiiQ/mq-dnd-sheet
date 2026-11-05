@@ -6,7 +6,7 @@
         "id": "feat",
         "name": "Feat",
         "pick": 1,
-        "pool": "feat:cat=general"
+        "pool": "feat:any"
       }
     ]
   },
@@ -51,7 +51,7 @@
         "id": "feat",
         "name": "Epic Boon feat",
         "pick": 1,
-        "pool": "feat:cat=boon"
+        "pool": "feat:any"
       }
     ]
   },
@@ -315,7 +315,7 @@
         "id": "feat",
         "name": "Feat",
         "pick": 1,
-        "pool": "feat:cat=general"
+        "pool": "feat:any"
       }
     ]
   },
@@ -428,7 +428,7 @@
         "id": "feat",
         "name": "Epic Boon feat",
         "pick": 1,
-        "pool": "feat:cat=boon"
+        "pool": "feat:any"
       }
     ]
   },
@@ -507,7 +507,7 @@
         "id": "feat",
         "name": "Feat",
         "pick": 1,
-        "pool": "feat:cat=general"
+        "pool": "feat:any"
       }
     ]
   },
@@ -650,7 +650,7 @@
         "id": "feat",
         "name": "Epic Boon feat",
         "pick": 1,
-        "pool": "feat:cat=boon"
+        "pool": "feat:any"
       }
     ]
   },
@@ -774,7 +774,7 @@
         "id": "feat",
         "name": "Feat",
         "pick": 1,
-        "pool": "feat:cat=general"
+        "pool": "feat:any"
       }
     ]
   },
@@ -1204,7 +1204,7 @@
         "id": "feat",
         "name": "Epic Boon feat",
         "pick": 1,
-        "pool": "feat:cat=boon"
+        "pool": "feat:any"
       }
     ]
   },
@@ -1321,7 +1321,7 @@
         "id": "feat",
         "name": "Feat",
         "pick": 1,
-        "pool": "feat:cat=general"
+        "pool": "feat:any"
       }
     ]
   },
@@ -1415,7 +1415,7 @@
         "id": "feat",
         "name": "Epic Boon feat",
         "pick": 1,
-        "pool": "feat:cat=boon"
+        "pool": "feat:any"
       }
     ]
   },
@@ -1575,7 +1575,7 @@
         "id": "feat",
         "name": "Feat",
         "pick": 1,
-        "pool": "feat:cat=general"
+        "pool": "feat:any"
       }
     ]
   },
@@ -1671,7 +1671,7 @@
         "id": "feat",
         "name": "Epic Boon feat",
         "pick": 1,
-        "pool": "feat:cat=boon"
+        "pool": "feat:any"
       }
     ]
   },
@@ -1906,7 +1906,7 @@
         "id": "feat",
         "name": "Feat",
         "pick": 1,
-        "pool": "feat:cat=general"
+        "pool": "feat:any"
       }
     ]
   },
@@ -1982,7 +1982,7 @@
         "id": "feat",
         "name": "Epic Boon feat",
         "pick": 1,
-        "pool": "feat:cat=boon"
+        "pool": "feat:any"
       }
     ]
   },
@@ -2250,7 +2250,7 @@
         "id": "feat",
         "name": "Feat",
         "pick": 1,
-        "pool": "feat:cat=general"
+        "pool": "feat:any"
       }
     ]
   },
@@ -2293,7 +2293,7 @@
         "id": "feat",
         "name": "Epic Boon feat",
         "pick": 1,
-        "pool": "feat:cat=boon"
+        "pool": "feat:any"
       }
     ]
   },
@@ -2578,7 +2578,7 @@
         "id": "feat",
         "name": "Feat",
         "pick": 1,
-        "pool": "feat:cat=general"
+        "pool": "feat:any"
       }
     ]
   },
@@ -2633,7 +2633,7 @@
         "id": "feat",
         "name": "Epic Boon feat",
         "pick": 1,
-        "pool": "feat:cat=boon"
+        "pool": "feat:any"
       }
     ]
   },
@@ -2875,7 +2875,7 @@
         "id": "feat",
         "name": "Feat",
         "pick": 1,
-        "pool": "feat:cat=general"
+        "pool": "feat:any"
       }
     ]
   },
@@ -3096,7 +3096,7 @@
         "id": "feat",
         "name": "Epic Boon feat",
         "pick": 1,
-        "pool": "feat:cat=boon"
+        "pool": "feat:any"
       }
     ]
   },
@@ -3199,7 +3199,7 @@
         "id": "feat",
         "name": "Feat",
         "pick": 1,
-        "pool": "feat:cat=general"
+        "pool": "feat:any"
       }
     ]
   },
@@ -3260,7 +3260,7 @@
         "id": "feat",
         "name": "Epic Boon feat",
         "pick": 1,
-        "pool": "feat:cat=boon"
+        "pool": "feat:any"
       }
     ]
   },
@@ -3554,7 +3554,7 @@
         "id": "feat",
         "name": "Feat",
         "pick": 1,
-        "pool": "feat:cat=general"
+        "pool": "feat:any"
       }
     ]
   },
@@ -3584,7 +3584,7 @@
         "id": "feat",
         "name": "Epic Boon feat",
         "pick": 1,
-        "pool": "feat:cat=boon"
+        "pool": "feat:any"
       }
     ]
   },

@@ -364,9 +364,11 @@ export function poolOptions(cat: Catalog, c: Character, pool: string, picks: Rec
     case 'spell':
       return filtered(entriesOf(cat, 'spell'), filter, ['list', 'lvl', 'school', 'ritual']).map((e) => ent(e, hasSpell(c, e))).sort(byName);
     case 'feat':
-      return filtered(entriesOf(cat, 'feat'), filter, ['cat']).map((e) => {
+      // feat:any: "another feat you qualify for" names no category, so any counts (PHB p.199). Taken and unmet feats
+      // stay selectable, marked, as in every pool; a repeatable feat is never "on the sheet".
+      return (filter === 'any' ? entriesOf(cat, 'feat') : filtered(entriesOf(cat, 'feat'), filter, ['cat'])).map((e) => {
         const { missing } = prereqMet(c, e.prereq, adding);
-        return { ...ent(e, hasFeature(c, e)), ...(missing.length ? { unmet: missing } : {}) };
+        return { ...ent(e, !e.repeat && hasFeature(c, e)), ...(missing.length ? { unmet: missing } : {}) };
       }).sort(byName);
     case 'feature':
       return filtered(entriesOf(cat, 'feature'), filter, ['of']).map((e) => {

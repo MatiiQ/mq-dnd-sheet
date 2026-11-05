@@ -28,10 +28,10 @@ describe('vertical slice (SRD)', () => {
   it('has every SRD entry the samples use, valid', () => {
     for (const id of new Set(SLICE)) expect([id, byId.has(id) && validateEntry(byId.get(id))]).toEqual([id, []]);
   });
-  it('Ability Score Improvement: one feature per class, again at later levels, a General feat', () => {
+  it('Ability Score Improvement: one feature per class, again at later levels, any feat', () => {
     const asi = srdEntries.filter((e) => e.kind === 'feature' && e.name === 'Ability Score Improvement');
     expect(asi).toHaveLength(12);
     expect(get('feature/ranger/ability-score-improvement')).toMatchObject({ lvl: 4, again: '8,12,16' });
-    for (const e of asi) expect([e.id, choices(e.id)[0]?.pool]).toEqual([e.id, 'feat:cat=general']);
+    for (const e of asi) expect([e.id, choices(e.id)[0]?.pool]).toEqual([e.id, 'feat:any']);
   });
 });
