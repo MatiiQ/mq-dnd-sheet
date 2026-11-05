@@ -1,4 +1,5 @@
-// SRD Rules Glossary → RuleEntry for the 12 actions, Opportunity Attack and the four senses; and the language tables.
+// SRD Rules Glossary → RuleEntry for the 12 actions, Opportunity Attack and the four senses; the weapon properties and
+// masteries; and the language tables.
 import { catalogId, type RuleEntry } from '../../src/catalog/schema.ts';
 import { paragraphs, srdLines } from './text.ts';
 
@@ -24,10 +25,24 @@ export function parseRules(text: string): RuleEntry[] {
       if (!lines[k]) stray = false;
       if (!stray) body.push(lines[k]);
     }
-    out.push({ id: catalogId('rule', name), kind: 'rule', name, src: 'srd', page: L[i].page, cat: SENSES.includes(name) ? 'sense' : 'action',
+    out.push({ id: catalogId('rule', name), kind: 'rule', name, src: 'srd', cat: SENSES.includes(name) ? 'sense' : 'action',
       desc: paragraphs(body).join('\n') });
   });
   return out;
+}
+
+const PROPERTIES = ['Ammunition', 'Finesse', 'Heavy', 'Light', 'Loading', 'Reach', 'Thrown', 'Two-Handed', 'Versatile'];
+const MASTERIES = ['Cleave', 'Graze', 'Nick', 'Push', 'Sap', 'Slow', 'Topple', 'Vex'];
+// The Equipment section's Properties text. Range is explained in the weapon's own row, and the two last headings aren't rules.
+export function parseWeaponRules(text: string): RuleEntry[] {
+  const lines = srdLines(text).map((l) => l.text.trim()), names = [...PROPERTIES, ...MASTERIES];
+  const stops = [...names, 'Range', 'Mastery Properties', 'Improvised Weapons'];
+  return lines.flatMap((name, i) => {
+    if (!names.includes(name)) return [];
+    const end = lines.findIndex((l, k) => k > i && stops.includes(l));
+    const body = lines.slice(i + 1, end < 0 ? lines.length : end);
+    return [{ id: catalogId('rule', name), kind: 'rule', name, src: 'srd', cat: PROPERTIES.includes(name) ? 'property' : 'mastery', desc: paragraphs(body).join('\n') } satisfies RuleEntry];
+  });
 }
 
 // The Standard and Rare Languages tables: every line that is only capitalised words, without dice ranges and footnote marks.

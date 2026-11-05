@@ -19,6 +19,11 @@ describe('committed SRD data', () => {
     expect(all.filter((e) => e.src !== 'srd').map((e) => e.id)).toEqual([]);
     expect(new Set(all.map((e) => e.id)).size).toBe(all.length);
   });
+  it('hold no page, abils, skills on a background, tool or short', () => {
+    expect(all.filter((e) => 'page' in e).map((e) => e.id)).toEqual([]);
+    expect(all.filter((e) => e.kind === 'background' && ('abils' in e || 'skills' in e || 'tool' in e)).map((e) => e.id)).toEqual([]);
+    expect(all.filter((e) => 'short' in e).map((e) => e.id)).toEqual([]);
+  });
 });
 
 describe('SRD spells', () => {
@@ -76,11 +81,17 @@ describe('SRD origins', () => {
     const bgs = list.filter((e): e is BackgroundEntry => e.kind === 'background');
     expect(bgs).toHaveLength(4);
     const keys = SKILLS.map(([k]) => k);
+    const TABLE: Record<string, [string, string]> = {
+      'background/acolyte': ['int,wis,cha', 'insight,religion'], 'background/criminal': ['dex,con,int', 'sleight,stealth'],
+      'background/sage': ['con,int,wis', 'arcana,history'], 'background/soldier': ['str,dex,con', 'athletics,intimidation']
+    };
     for (const b of bgs) {
       const abil = specs(b).find((s): s is ChoiceSpec => s.kind === 'choice' && !!s.options?.every((o) => o.kind === 'abil'));
-      expect([b.id, abil?.pick, abil?.options?.map((o) => o.ab).join(',')]).toEqual([b.id, 3, b.abils]);
+      expect([b.id, abil?.pick, abil?.options?.map((o) => o.ab).join(',')]).toEqual([b.id, 3, TABLE[b.id][0]]);
       expect(ids.has(b.feat.split(':')[0])).toBe(true);
-      for (const k of b.skills.split(',')) expect(keys).toContain(k);
+      const skills = specs(b).filter((s): s is GrantSpec => s.kind === 'prof' && s.cat === 'skill').map((s) => s.target);
+      expect([b.id, skills.join(',')]).toEqual([b.id, TABLE[b.id][1]]);
+      for (const k of skills) expect(keys).toContain(k);
     }
   });
   it('point every grant at entries that exist', () => {
@@ -215,4 +226,30 @@ describe('the examples match the catalog in the fields plan 7 changed', () => {
       }
     });
   }
+});
+
+describe('effect grants from the catalog audit', () => {
+  const GRANTS: [string, string, string, string][] = [
+    ['spell/alter-self', 'speed', 'val', 'walk'], ['spell/fly', 'speed', 'val', '60'], ['spell/freedom-of-movement', 'speed', 'val', 'walk'],
+    ['spell/gaseous-form', 'speed', 'val', '10'], ['spell/gaseous-form', 'defense', 'target', 'Slashing'], ['spell/longstrider', 'speed', 'val', '10'],
+    ['spell/protection-from-poison', 'defense', 'target', 'Poison'], ['spell/spider-climb', 'speed', 'val', 'walk'],
+    ['spell/wind-walk', 'speed', 'val', '300'], ['spell/wind-walk', 'defense', 'target', 'Slashing'],
+    ['spell/summon-dragon', 'defense', 'target', 'Chosen when cast: Acid, Cold, Fire, Lightning or Poison'],
+    ['spell/divine-favor', 'xdmg', 'dice', '1d4'], ['spell/hex', 'xdmg', 'dice', '1d6'],
+    ['feat/boon-of-the-night-spirit', 'defense', 'target', 'All damage except Psychic and Radiant'], ['feature/monk/superior-defense', 'defense', 'target', 'All damage except Force'],
+    ['feature/warlock/gift-of-the-depths', 'speed', 'val', 'walk'], ['trait/dragonborn/draconic-flight', 'speed', 'val', 'walk'], ['trait/goliath/large-form', 'speed', 'val', '10'],
+    ['item/cloak-of-the-bat', 'speed', 'val', '40'], ['item/helm-of-brilliance', 'defense', 'target', 'Fire'], ['item/shield-of-missile-attraction', 'defense', 'target', 'Ranged weapon attacks'],
+    ['item/potion-of-climbing', 'speed', 'val', 'walk'], ['item/potion-of-flying', 'speed', 'val', 'walk'], ['item/potion-of-invulnerability', 'defense', 'target', 'All damage'],
+    ['item/potion-of-resistance', 'defense', 'target', 'Thunder'], ['item/ring-of-elemental-command', 'defense', 'target', 'Lightning'], ['item/ring-of-elemental-command', 'speed', 'val', '60'],
+    ['item/dragon-slayer', 'xdmg', 'dice', '3d6'], ['item/dwarven-thrower', 'xdmg', 'dice', '1d8'], ['item/flame-tongue', 'xdmg', 'dice', '2d6'], ['item/frost-brand', 'xdmg', 'dice', '1d6'],
+    ['item/giant-slayer', 'xdmg', 'dice', '2d6'], ['item/holy-avenger', 'xdmg', 'dice', '2d10'], ['item/mace-of-disruption', 'xdmg', 'dice', '2d6'], ['item/oathbow', 'xdmg', 'dice', '3d6'],
+    ['item/rod-of-lordly-might', 'xdmg', 'dice', '2d6'], ['item/staff-of-striking', 'xdmg', 'dice', '1d6'], ['item/staff-of-thunder-and-lightning', 'xdmg', 'dice', '2d6'], ['item/staff-of-withering', 'xdmg', 'dice', '2d10'],
+    ['item/sun-blade', 'xdmg', 'dice', '1d8'], ['item/sword-of-wounding', 'xdmg', 'dice', '2d6'], ['item/thunderous-greatclub', 'xdmg', 'dice', '1d8'], ['item/vicious-weapon', 'xdmg', 'dice', '2d6']
+  ];
+  it.each(GRANTS)('gives %s its %s grant', (id, kind, f, v) => {
+    expect(flat(all.find((e) => e.id === id)!).find((g) => g.kind === kind && (g as unknown as Record<string, unknown>)[f] === v), id).toBeTruthy();
+  });
+  it('keeps Frost Brand’s Fire Resistance beside its new damage', () => {
+    expect(flat(all.find((e) => e.id === 'item/frost-brand')!).map((g) => g.kind).sort()).toEqual(['defense', 'xdmg']);
+  });
 });

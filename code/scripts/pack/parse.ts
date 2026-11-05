@@ -19,14 +19,14 @@ const clean = (l: string) => l.replace(/^\s*- /, '').replace(/^#+\s*/, '').repla
 const plain = (lines: string[]) => lines.filter((l) => l.trim() && !/^\s*\|[\s|:-]+\|\s*$/.test(l) && l.trim() !== '---')
   .map((l) => (l.trim().startsWith('|') ? l.trim().slice(1, -1).split('|').map((c) => clean(c)).join(' — ') : clean(l)));
 
-interface Block { title: string; page?: number; depth: number; lines: string[] }
-const HEAD = /^(#{1,4}) (.+?)(?: \(PHB p\.(\d+)[^)]*\))?\s*$/;
+interface Block { title: string; depth: number; lines: string[] }
+const HEAD = /^(#{1,4}) (.+?)(?: \(PHB p\.\d+[^)]*\))?\s*$/;
 // The document split at every heading; each block holds the lines up to the next heading of any depth.
 function blocks(md: string): Block[] {
   const out: Block[] = [];
   for (const l of md.split('\n')) {
     const m = HEAD.exec(l);
-    if (m) out.push({ title: m[2].trim(), page: m[3] ? Number(m[3]) : undefined, depth: m[1].length, lines: [] });
+    if (m) out.push({ title: m[2].trim(), depth: m[1].length, lines: [] });
     else out[out.length - 1]?.lines.push(l);
   }
   return out;
@@ -63,6 +63,14 @@ function saveOf(effect: string): { index: number; ab: string } | null {
   }
   return null;
 }
+// Named exceptions, so no other spell's parse changes.
+// Its per-slot line lists the Clenched Fist's die first, and that row is the spell's damage (PHB p.246). A wider regex
+// would give Animate Objects, whose die depends on size, a wrong 1d4/slot.
+const SLOT_DICE: Record<string, string> = { "Bigby's Hand": '2d8' };
+// Healing comes first in its text, but its damage is what the SRD's fields describe.
+const DAMAGE_FIRST = ['Conjure Celestial'];
+// The first save in its text is the Blinded one; the damage is against the layers' save.
+const SAVE_OF: Record<string, Ability> = { 'Prismatic Wall': 'dex' };
 export function parseSpellsMd(md: string): SpellEntry[] {
   return blocks(md).filter((b) => b.depth === 3 && b.lines.some((l) => l.startsWith('- **Level/School:**'))).map((b) => named(b, () => {
     const f = fields(b.lines);
@@ -76,19 +84,19 @@ export function parseSpellsMd(md: string): SpellEntry[] {
     const after = b.lines.slice(at + 1), end = after.findIndex((l) => /^- \*\*/.test(l) || l.trim() === '---');
     const extra = plain(end < 0 ? after : after.slice(0, end));
     const dmg = DAMAGE.exec(effect), heal = /regains? [^.]*?(\d+d\d+(?: ?\+ ?\d+)?)/.exec(effect);
-    const fx = dmg && (!heal || dmg.index <= heal.index) ? 'damage' : heal ? 'healing' : 'other';
+    const fx = dmg && (!heal || dmg.index <= heal.index || DAMAGE_FIRST.includes(b.title)) ? 'damage' : heal ? 'healing' : 'other';
     const atk = /\b(melee|ranged) spell attack/i.exec(effect), save = saveOf(effect);
     const e: SpellEntry = {
-      id: catalogId('spell', b.title), kind: 'spell', name: b.title, src: 'phb', page: b.page,
+      id: catalogId('spell', b.title), kind: 'spell', name: b.title, src: 'phb',
       desc: [effect, ...extra, upgrade && `Cantrip Upgrade: ${clean(upgrade)}`, higher && `Higher Levels: ${clean(higher)}`].filter(Boolean).join('\n'),
       lvl, school: ls[2] ?? ls[3], classes: f.Classes.split(/,\s*/).map(slug).join(','), time: f['Casting Time'].replace(/ or Ritual$/, ''),
       range: f.Range, comp: f.Components, dur: f.Duration, conc: /^Concentration/.test(f.Duration), ritual: / or Ritual$/.test(f['Casting Time']) || !!ls[4], fx
     };
     if (atk && (!save || atk.index < save.index)) e.atk = atk[1].toLowerCase() as 'melee' | 'ranged';
-    else if (save) e.save = ab(save.ab);
+    else if (save) e.save = SAVE_OF[b.title] ?? ab(save.ab);
     if (fx === 'damage') { e.dice = dmg![1].replace(/ /g, ''); e.dtype = dmg![2]; }
     if (fx === 'healing') e.dice = heal![1].replace(/ /g, '');
-    const slotDice = higher && /(\d+d\d+) per (?:spell )?slot level/.exec(higher)?.[1];
+    const slotDice = higher && (SLOT_DICE[b.title] ?? /(\d+d\d+) per (?:spell )?slot level/.exec(higher)?.[1]);
     if (lvl === 0 && upgrade && /\b5\b/.test(upgrade)) e.scale = 'cantrip';
     else if (slotDice) e.scale = `${slotDice}/slot`;
     if (higher) e.higher = clean(higher);
@@ -124,7 +132,7 @@ export function parseFeatsMd(md: string): FeatEntry[] {
     const next = all.findIndex((x, k) => k > i && x.depth <= 3);
     const tables = all.slice(i + 1, next < 0 ? all.length : next).flatMap((x) => [x.title, ...plain(x.lines)]);
     const benefit = f.Benefit || f.Benefits;
-    const e: FeatEntry = { id: catalogId('feat', b.title), kind: 'feat', name: b.title, src: 'phb', page: b.page, cat: FEAT_CAT[f.Category],
+    const e: FeatEntry = { id: catalogId('feat', b.title), kind: 'feat', name: b.title, src: 'phb', cat: FEAT_CAT[f.Category],
       desc: [...(none(f.ASI) ? [] : [`ASI: ${f.ASI}`]), ...(benefit ? [clean(benefit)] : []), ...benefits, ...tables].join('\n'), grants: [] };
     const pre = prereqMd(f.Prerequisite);
     if (pre) e.prereq = pre;
@@ -133,17 +141,26 @@ export function parseFeatsMd(md: string): FeatEntry[] {
   }));
 }
 
+// What each background's table row names. Only tests read it: they check every background's grants against the PHB table.
+export function parseBackgroundFields(md: string): { id: string; abils: string; skills: string; tool: string }[] {
+  return under(blocks(md), /^Backgrounds/).filter((b) => b.depth === 3).flatMap((b) => {
+    const f = fields(b.lines);
+    if (!f['Ability Scores']) return [];
+    const tool = f['Tool Proficiency'].replace(/^Choose one kind of /, '').replace(/\s*\(.*\)$/, '');
+    return [{ id: catalogId('background', b.title), abils: f['Ability Scores'].split(/,\s*/).map(ab).join(','),
+      skills: f['Skill Proficiencies'].split(/,\s*|\s+and\s+/).map(skillKey).join(','), tool: slug(tool) }];
+  });
+}
+
 export function parseOriginsMd(md: string): Entry[] {
   const all = blocks(md), out: Entry[] = [];
   for (const b of under(all, /^Backgrounds/).filter((x) => x.depth === 3)) {
     const f = fields(b.lines);
     if (!f['Ability Scores']) continue;
     const feat = /^(.+?)(?: \((\w+)\))?$/.exec(f.Feat)!;
-    const tool = f['Tool Proficiency'].replace(/^Choose one kind of /, '').replace(/\s*\(.*\)$/, '');
-    out.push({ id: catalogId('background', b.title), kind: 'background', name: b.title, src: 'phb', page: b.page,
-      desc: b.lines.filter((l) => l.trim()).map(clean).join('\n'),
-      abils: f['Ability Scores'].split(/,\s*/).map(ab).join(','), feat: catalogId('feat', feat[1]) + (feat[2] ? `:${slug(feat[2])}` : ''),
-      skills: f['Skill Proficiencies'].split(/,\s*|\s+and\s+/).map(skillKey).join(','), tool: slug(tool),
+    out.push({ id: catalogId('background', b.title), kind: 'background', name: b.title, src: 'phb',
+      desc: b.lines.filter((l) => l.trim() && l.trim() !== '---').map(clean).join('\n'),
+      feat: catalogId('feat', feat[1]) + (feat[2] ? `:${slug(feat[2])}` : ''),
       equip: [f['Equipment A'] && `A: ${f['Equipment A']}`, f['Equipment B'] && `B: ${f['Equipment B']}`].filter(Boolean).join('; '), grants: [] } satisfies BackgroundEntry);
   }
   const species = under(all, /^Species/);
@@ -152,7 +169,7 @@ export function parseOriginsMd(md: string): Entry[] {
     const f = fields(b.lines);
     if (!f.Speed) return;
     const name = b.title;
-    out.push({ id: catalogId('species', name), kind: 'species', name, src: 'phb', page: b.page,
+    out.push({ id: catalogId('species', name), kind: 'species', name, src: 'phb',
       sizes: ['tiny', 'small', 'medium', 'large'].filter((z) => new RegExp(`\\b${z}\\b`, 'i').test(f.Size.replace(/\([^)]*\)/g, ''))).join(','),
       speed: Number(/(\d+)/.exec(f.Speed)![1]), desc: b.lines.filter((l) => l.trim() && !/^ {2,}- /.test(l) && !l.startsWith('- **Traits')).map(clean).join('\n') } satisfies SpeciesEntry);
     const traits: TraitEntry[] = [];
@@ -161,7 +178,7 @@ export function parseOriginsMd(md: string): Entry[] {
       if (m) {
         const lv = /^(.+?) \(character level (\d+)\)$/.exec(m[1]);
         const tname = lv ? lv[1] : m[1];
-        traits.push({ id: catalogId('trait', tname, [name]), kind: 'trait', name: tname, src: 'phb', page: b.page, species: slug(name),
+        traits.push({ id: catalogId('trait', tname, [name]), kind: 'trait', name: tname, src: 'phb', species: slug(name),
           lvl: lv ? Number(lv[2]) : 1, desc: clean(m[2]), grants: [] });
       } else if (/^ {4,}- /.test(l) && traits.length) traits[traits.length - 1].desc += '\n' + clean(l);
     }
@@ -171,7 +188,7 @@ export function parseOriginsMd(md: string): Entry[] {
       if (!parent) continue;
       for (const r of table(t.lines).filter((x) => 'Level 1' in x)) {
         const [first, ...cols] = Object.values(r);
-        traits.push({ id: catalogId('trait', first, [name]), kind: 'trait', name: first, src: 'phb', page: b.page, species: slug(name), lvl: 1, of: parent.id,
+        traits.push({ id: catalogId('trait', first, [name]), kind: 'trait', name: first, src: 'phb', species: slug(name), lvl: 1, of: parent.id,
           desc: [clean(cols[0]), `Level 3: ${clean(cols[1])}`, `Level 5: ${clean(cols[2])}`].join('\n'), grants: [] });
       }
     }
@@ -197,7 +214,7 @@ export function parseClassMd(md: string): [ClassEntry, SubclassEntry[], FeatureE
     pool: skill[1] ? 'skill:any' : `skill:${skill[3].split(/,\s*(?:or\s+)?|\s+or\s+/).map(skillKey).join('|')}` };
   const cast = new RegExp(`(${ABIL_ALT}) is (?:your|the) spellcasting ability`).exec(md);
   const cls: ClassEntry = {
-    id: catalogId('class', name), kind: 'class', name, src: 'phb', page: all.find((b) => /^Core Traits/.test(b.title))!.page,
+    id: catalogId('class', name), kind: 'class', name, src: 'phb',
     desc: `Primary Ability: ${core['Primary Ability']}`, hd: Number(/d(\d+)/i.exec(core['Hit Point Die'])![1]),
     saves: core['Saving Throw Proficiencies'].split(/,\s*|\s+and\s+/).map(ab).join(','), skills,
     armor: profList(core['Armor Training']), weapons: profList(core['Weapon Proficiencies']),
@@ -212,12 +229,12 @@ export function parseClassMd(md: string): [ClassEntry, SubclassEntry[], FeatureE
 
   const norm = (s: string) => s.replace(/’/g, "'").replace(/\s*\(.*\)$/, '').trim();
   const levelsOf = (fname: string) => rows.flatMap((r, i) => (r['Class Features'].split(/,\s*/).some((x) => norm(x) === norm(fname)) ? [i + 1] : []));
-  const option = (oname: string, of: FeatureEntry['of'], desc: string, lvl: number, page?: number, sub?: string): FeatureEntry => ({
-    id: catalogId('feature', oname, [name, sub]), kind: 'feature', name: oname, src: 'phb', ...(page ? { page } : {}), cls: slug(name), ...(sub ? { sub: slug(sub) } : {}), lvl, of, desc: clean(desc), grants: [] });
+  const option = (oname: string, of: FeatureEntry['of'], desc: string, lvl: number, sub?: string): FeatureEntry => ({
+    id: catalogId('feature', oname, [name, sub]), kind: 'feature', name: oname, src: 'phb', cls: slug(name), ...(sub ? { sub: slug(sub) } : {}), lvl, of, desc: clean(desc), grants: [] });
   const feature = (b: Block, sub?: string): FeatureEntry | null => {
     const m = /^Level (\d+): (.+)$/.exec(b.title);
     if (!m || /^subclass feature$/i.test(m[2])) return null; // a pointer to the subclass, not a feature
-    const e: FeatureEntry = { id: catalogId('feature', m[2], [name, sub]), kind: 'feature', name: m[2], src: 'phb', page: b.page, cls: slug(name),
+    const e: FeatureEntry = { id: catalogId('feature', m[2], [name, sub]), kind: 'feature', name: m[2], src: 'phb', cls: slug(name),
       lvl: Number(m[1]), desc: plain(b.lines).join('\n'), grants: [] };
     if (sub) e.sub = slug(sub);
     else { const again = levelsOf(m[2]).filter((l) => l > e.lvl); if (again.length) e.again = again.join(','); }
@@ -231,11 +248,11 @@ export function parseClassMd(md: string): [ClassEntry, SubclassEntry[], FeatureE
   for (const b of under(all, /^Subclasses/)) {
     if (b.depth === 3) {
       sub = b.title;
-      subs.push({ id: catalogId('subclass', sub, [name]), kind: 'subclass', name: sub, src: 'phb', page: b.page, cls: slug(name),
+      subs.push({ id: catalogId('subclass', sub, [name]), kind: 'subclass', name: sub, src: 'phb', cls: slug(name),
         desc: plain(b.lines).join('\n') });
     } else if (b.depth === 4 && sub) {
       if (b.title === 'Maneuver Options') {
-        feats.push(...table(b.lines).map((r) => option(r.Maneuver, 'maneuver', `${r['Trigger / Action']}: ${r.Effect}`, 3, b.page, sub)));
+        feats.push(...table(b.lines).map((r) => option(r.Maneuver, 'maneuver', `${r['Trigger / Action']}: ${r.Effect}`, 3, sub)));
         continue;
       }
       const home = TABLE_HOME[b.title];
@@ -249,22 +266,24 @@ export function parseClassMd(md: string): [ClassEntry, SubclassEntry[], FeatureE
   if (inv) {
     for (const r of table(inv.lines)) {
       const pre = none(r.Prerequisite) ? {} : optionPrereq(r.Prerequisite);
-      feats.push({ ...option(r.Invocation, 'invocation', [none(r.Prerequisite) ? '' : `Prerequisite: ${r.Prerequisite}`, r.Effect].filter(Boolean).join('\n'), pre.lvl ?? 1, inv.page), ...pre,
+      feats.push({ ...option(r.Invocation, 'invocation', [none(r.Prerequisite) ? '' : `Prerequisite: ${r.Prerequisite}`, r.Effect].filter(Boolean).join('\n'), pre.lvl ?? 1), ...pre,
         ...(/^Yes/.test(r.Repeatable) ? { repeat: true } : {}) });
     }
   }
   const meta = all.find((b) => b.depth === 2 && /^Metamagic Options/.test(b.title));
-  if (meta) for (const r of table(meta.lines)) feats.push(option(r.Option, 'metamagic', `Cost: ${r['Cost (SP)']} Sorcery Point${r['Cost (SP)'] === '1' ? '' : 's'}\n${r.Effect}`, 2, meta.page));
+  if (meta) for (const r of table(meta.lines)) feats.push(option(r.Option, 'metamagic', `Cost: ${r['Cost (SP)']} Sorcery Point${r['Cost (SP)'] === '1' ? '' : 's'}\n${r.Effect}`, 2));
   return [cls, subs, feats];
 }
 
+// A focus row names only its form ("Orb"); the table's heading gives the rest of the catalog name.
+const FOCUS_TABLE = /^(Arcane Focus|Druidic Focus|Holy Symbol)/;
 const ARMOR_KIND: Record<string, ArmorKind> = { Light: 'light', Medium: 'medium', Heavy: 'heavy', Shield: 'shield' };
 export function parseEquipmentMd(md: string): ItemEntry[] {
   const out: ItemEntry[] = [];
-  const add = (name: string, f: Omit<ItemEntry, 'id' | 'kind' | 'name' | 'src' | 'desc'> & { desc?: string }, page?: number) => {
+  const add = (name: string, f: Omit<ItemEntry, 'id' | 'kind' | 'name' | 'src' | 'desc'> & { desc?: string }) => {
     const n = playName(name.replace(/'/g, '’'));
     if (out.some((e) => e.id === catalogId('item', n))) return;
-    out.push({ id: catalogId('item', n), kind: 'item', name: n, src: 'phb', desc: '', ...(page ? { page } : {}), ...f });
+    out.push({ id: catalogId('item', n), kind: 'item', name: n, src: 'phb', desc: '', ...f });
   };
   const wt = (w: string | undefined) => { const p = pounds(w ?? ''); return p === undefined ? {} : { wt: p }; };
   const cost = (c: string | undefined) => (c && /\d/.test(c) ? { cost: c } : {});
@@ -275,14 +294,18 @@ export function parseEquipmentMd(md: string): ItemEntry[] {
         weaponProps(e, r.Properties);
         add(r.Name, { cat: 'weapon', wcat: r.Category.toLowerCase() as 'simple' | 'martial', wrange: r.Type.toLowerCase() as 'melee' | 'ranged', dmg: r.Damage,
           dtype: r['Damage Type'], mastery: slug(r.Mastery), ...wt(r.Weight), ...cost(r.Cost),
-          ...Object.fromEntries(Object.entries(e).filter(([k]) => ['props', 'thrown', 'vers', 'ammo'].includes(k))) }, b.page);
+          ...Object.fromEntries(Object.entries(e).filter(([k]) => ['props', 'thrown', 'vers', 'ammo'].includes(k))) });
       } else if (r.Armor && r.AC) {
         const kind = ARMOR_KIND[r.Category] ?? (r.Armor === 'Shield' ? 'shield' : 'light');
         add(r.Armor, { cat: kind === 'shield' ? 'shield' : 'armor', armor: kind, acBase: Number(/\d+/.exec(r.AC)![0]), ...wt(r.Weight), ...cost(r.Cost),
-          ...(none(r.Strength) ? {} : { strReq: Number(/\d+/.exec(r.Strength)![0]) }), ...(r.Stealth === 'Disadvantage' ? { stealthDis: true } : {}) }, b.page);
-      } else if (r.Tool) add(r.Tool, { cat: 'tool', ...wt(r.Weight), ...cost(r.Cost), desc: [r.Ability && `Ability: ${r.Ability}`, r['Utilize (DC)'] && `Utilize: ${r['Utilize (DC)']}`].filter(Boolean).join('\n') }, b.page);
-      else if (r.Pack) add(r.Pack, { cat: 'pack', ...wt(r.Weight), ...cost(r.Cost), desc: r.Contents ?? '' }, b.page);
-      else if (r.Item && 'Mechanical use' in r && r.Item !== 'Ammunition') add(r.Item, { cat: /Pack$/.test(r.Item) ? 'pack' : 'gear', ...wt(r.Weight), ...cost(r.Cost), desc: clean(r['Mechanical use'] ?? '') }, b.page);
+          ...(none(r.Strength) ? {} : { strReq: Number(/\d+/.exec(r.Strength)![0]) }), ...(r.Stealth === 'Disadvantage' ? { stealthDis: true } : {}) });
+      } else if (r.Tool) add(r.Tool, { cat: 'tool', ...wt(r.Weight), ...cost(r.Cost), desc: [r.Ability && `Ability: ${r.Ability}`, r['Utilize (DC)'] && `Utilize: ${r['Utilize (DC)']}`].filter(Boolean).join('\n') });
+      else if (r.Pack) add(r.Pack, { cat: 'pack', ...wt(r.Weight), ...cost(r.Cost), desc: r.Contents ?? '' });
+      else if (r.Type && r.Storage) add(r.Type, { cat: 'ammo', ...wt(r.Weight), ...cost(r.Cost) });
+      else if ((r.Focus || r.Symbol) && FOCUS_TABLE.test(b.title)) {
+        const form = (r.Focus || r.Symbol).replace(/\s*\(.*\)$/, '').replace(/\b(?!of\b)\w/g, (ch) => ch.toUpperCase());
+        add(`${FOCUS_TABLE.exec(b.title)![1]} (${form})`, { cat: 'focus', ...wt(r.Weight), ...cost(r.Cost) });
+      } else if (r.Item && 'Mechanical use' in r && r.Item !== 'Ammunition') add(r.Item, { cat: /Pack$/.test(r.Item) ? 'pack' : 'gear', ...wt(r.Weight), ...cost(r.Cost), desc: clean(r['Mechanical use'] ?? '') });
     }
   }
   return out;

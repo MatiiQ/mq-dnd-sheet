@@ -3,9 +3,10 @@ import {
   attacksPerAction, extraDamage, extraText, featureActions, lightExtra, masterySlots, otherWeapons, spellActions, unarmedStrike, weaponAttacks,
   type SpellAction, type WeaponAttack
 } from '../../actions';
-import { capWords, dtypeText, titled } from '../../catalog/copy';
+import { capWords, dtypeText, titled, weaponRules } from '../../catalog/copy';
 import { entriesOf } from '../../catalog/merge';
 import { useCatalog } from '../../catalog/useCatalog';
+import { RuleNotes } from '../RuleNotes';
 import { canLoad, hasProp, isWeapon, putAway, putInHand, shieldOn as shieldOf, twoHanded, versatile, weaponKind, weaponsHeld } from '../../hands';
 import { linkOf, sourceLabel } from '../../links';
 import { castSpell, COMBAT_ACTIONS, fmt, freeCastsOf, ORDINAL, removeRef, slotsLeft, spellUsable, toggled, type AcPart } from '../../logic';
@@ -141,6 +142,7 @@ export function ActionsTab() {
         <Parts label="To hit" parts={a.hitParts} />
         <Parts label="Damage" parts={a.dmgParts} />
         {it.desc && <span className="entry-desc">{it.desc}</span>}
+        <RuleNotes pick={(cat) => weaponRules(cat, a.props, a.mastery)} />
       </>} />
   );
 

@@ -89,12 +89,20 @@ export function fixLinks(c: Character): Character {
   return out;
 }
 
-// Whether a source's effect is switched on. A Concentration spell's is on exactly while concentrating on it; any other
-// source's while its link is in effectsOn.
+// A Touch Concentration spell whose speed or defense can go on someone else (Fly PHB p.276, Gaseous Form p.277, Spider
+// Climb p.319). Speed and defense only: extra damage goes on your own hits, whoever the spell touches.
+export function effectCanTargetOther(c: Character, sp: Spell): boolean {
+  if (!sp.c || !/^touch/i.test((sp.range || '').trim())) return false;
+  const link = linkOf('spell', sp.id), mine = (x: Linked) => x.from === link && x.when === 'active';
+  return c.grants.some((g) => g.kind === 'speed' && mine(g)) || c.defenses.some(mine);
+}
+
+// Whether a source's effect is switched on. A Concentration spell's is on exactly while concentrating on it, unless it
+// was cast on someone else; any other source's while its link is in effectsOn.
 export function isOn(c: Character, link: string): boolean {
   const p = parseLink(link);
   const sp = p?.kind === 'spell' ? c.spells.find((x) => x.id === p.id) : undefined;
-  return sp?.c ? c.conc?.id === sp.id : c.effectsOn.includes(link);
+  return sp?.c ? c.conc?.id === sp.id && !(sp.acOther && effectCanTargetOther(c, sp)) : c.effectsOn.includes(link);
 }
 
 // Worn or wielded: equipped and not inside a container (plan 6). The one test every rule reads; the row's equip toggle
@@ -110,7 +118,8 @@ export function inactiveReason(c: Character, x: Linked, seen: Set<string> = new 
     const item = c.inv.find((i) => i.id === p.id);
     // Nothing from an item inside a container counts, whatever its item checks (plan 6).
     if (item?.in) return 'in ' + (c.inv.find((i) => i.id === item.in)?.name ?? 'a container');
-    if (item && item.qty < 1) return 'none left';
+    // A potion's effect outlives the potion: a switched-on grant still counts at quantity 0, and a Long Rest clears effectsOn.
+    if (item && item.qty < 1 && !(x.when === 'active' && isOn(c, x.from!))) return 'none left';
     if (x.needEq && !(item && isEquipped(item))) return 'not equipped';
     if (x.needAtt && !c.attuneIds.includes(p.id)) return 'not attuned';
   }

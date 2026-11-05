@@ -18,3 +18,29 @@
 |---|---|---|---|
 | Ammunition | Varies | Varies | See the Ammunition table. |
 | Clothes, Lamplighter's | 4 lb. | 2 GP | Smells of wax. |
+
+### Ammunition (PHB p.902)
+
+| Type | Amount | Storage | Weight | Cost |
+|---|---|---|---|---|
+| Pellets, Wax | 20 | Pouch | 1½ lb. | 4 CP |
+
+### Spellcasting focuses (PHB p.903)
+
+#### Arcane Focuses (Wizard)
+
+| Focus | Weight | Cost |
+|---|---|---|
+| Wick (also a Taper Knife) | 1 lb. | 10 GP |
+
+#### Druidic Focuses (Druid)
+
+| Focus | Weight | Cost |
+|---|---|---|
+| Sprig of tallow | — | 1 GP |
+
+#### Holy Symbols (Cleric)
+
+| Symbol | Weight | Cost |
+|---|---|---|
+| Sconce (held) | 2 lb. | 5 GP |

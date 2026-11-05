@@ -490,3 +490,13 @@ describe('pinned rules', () => {
     expect(cantripDice('1d10', 11)).toBe('3d10');
   });
 });
+
+describe('spell row notes (catalog audit)', () => {
+  it('says when a spell’s damage comes, on rows that would read as damage on casting', () => {
+    const row = (cid: string) => spellActions({ ...sampleCharacter(), spells: [{ id: 'x', name: 'X', cid, lvl: 1, time: 'Bonus Action', range: 'Self', prep: true, fx: 'damage', dmg: '1d6' }] as Character['spells'] })[0].note;
+    expect(row('spell/hex')).toBe('Extra damage on your hits while it lasts');
+    expect(row('spell/divine-favor')).toBe('Extra damage on your hits while it lasts');
+    for (const s of ['banishing', 'blinding', 'divine', 'searing', 'shining', 'staggering', 'thunderous', 'wrathful'])
+      expect(row(`spell/${s}-smite`)).toBe('Cast after a hit: the damage comes with that hit');
+  });
+});

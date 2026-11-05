@@ -11,6 +11,8 @@ Walked every road.
 - **Equipment A:** Walking Stick, 3 GP
 - **Equipment B:** 50 GP
 
+---
+
 ## Species (PHB p.902)
 
 ### Mothfolk (PHB p.902)

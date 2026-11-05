@@ -11,7 +11,7 @@ import { addFromCatalog, type ItemAnswers } from './catalog/copy';
 import { mergeCatalog } from './catalog/merge';
 import { valueAt } from './catalog/value';
 import srdEntries from './data/srd/index';
-import { isActive } from './links';
+import { effectCanTargetOther, inactiveReason, isActive } from './links';
 import { inventoryGroups } from './inventory';
 import { applyPatch } from './storage';
 import type { FeatureEntry } from './catalog/schema';
@@ -1787,4 +1787,53 @@ it('keeps a sense\'s plus flag and a skill grant\'s orExpert through a save', ()
     grants: [{ id: 'g', kind: 'prof', name: 'Keen', cat: 'skill', target: 'arcana', orExpert: true, from: 'feature:f10' }] });
   expect(c.senses[0].plus).toBe(true);
   expect(c.grants[0].orExpert).toBe(true);
+});
+
+describe('a Touch spell on another creature', () => {
+  const fly = (extra = {}) => ({ id: 's', name: 'Fly', lvl: 3, time: 'Action', range: 'Touch', c: true, ...extra }) as unknown as Spell;
+  const flying = (sp: Spell) => ({ ...blankCharacter(), spells: [sp], conc: { id: 's', name: 'Fly' },
+    grants: [{ id: 'g', kind: 'speed', name: 'Fly', mode: 'fly', val: '60', when: 'active', from: 'spell:s' }] }) as unknown as Character;
+  it('counts a Touch Concentration spell’s speed only when cast on you', () => {
+    expect(modeSpeed(flying(fly()), 'fly').base).toBe(60);
+    expect(modeSpeed(flying(fly({ acOther: true })), 'fly').base).toBe(0);
+    expect(modeSpeed({ ...flying(fly()), conc: null }, 'fly').base).toBe(0);
+  });
+  it('ignores acOther on a spell that no longer offers the switch', () => {
+    expect(modeSpeed(flying(fly({ acOther: true, range: 'Self' })), 'fly').base).toBe(60);
+    expect(modeSpeed(flying(fly({ acOther: true, range: '60 feet', acFx: 'bonus' })), 'fly').base).toBe(60);
+  });
+  it('offers the target switch only on a Touch Concentration spell with a speed or defense', () => {
+    const c = flying(fly());
+    expect(effectCanTargetOther(c, c.spells[0])).toBe(true);
+    expect(effectCanTargetOther(c, { ...c.spells[0], range: '90 feet' })).toBe(false);
+    expect(effectCanTargetOther(c, { ...c.spells[0], c: false })).toBe(false);
+    const xdmg = { ...c, grants: [{ ...c.grants[0], kind: 'xdmg', dice: '1d6', on: 'hits' }] } as unknown as Character;
+    expect(effectCanTargetOther(xdmg, c.spells[0])).toBe(false);
+    const warded = { ...c, grants: [], defenses: [{ id: 'd', kind: 'res', name: 'Fire', when: 'active', from: 'spell:s' }] } as unknown as Character;
+    expect(effectCanTargetOther(warded, c.spells[0])).toBe(true);
+    expect(modeSpeed({ ...warded, grants: c.grants, spells: [{ ...c.spells[0], acOther: true }] }, 'fly').base).toBe(0);
+  });
+});
+
+describe('a drunk potion', () => {
+  const potion = (over = {}, grant = {}) => ({ ...blankCharacter(), speedBase: 30, effectsOn: ['item:p'],
+    inv: [{ id: 'p', name: 'Potion of Climbing', qty: 0, eq: false, ...over }],
+    grants: [{ id: 'g', kind: 'speed', name: 'Climb', mode: 'climb', val: 'walk', when: 'active', from: 'item:p', ...grant }] }) as unknown as Character;
+  it('keeps a drunk potion’s switched-on effect at quantity 0', () => {
+    expect(modeSpeed(potion(), 'climb').base).toBe(30);
+    const off = { ...potion(), effectsOn: [] };
+    expect(modeSpeed(off, 'climb').base).toBe(0);
+    expect(inactiveReason(off, off.grants[0])).toBe('none left');
+  });
+  it('still turns off what a switch doesn’t cover at quantity 0', () => {
+    const plain = potion({}, { when: undefined });
+    expect(inactiveReason(plain, plain.grants[0])).toBe('none left');
+    const worn = potion({}, { needEq: true });
+    expect(inactiveReason(worn, worn.grants[0])).toBe('not equipped');
+    const bagged = potion({ in: 'b' });
+    expect(inactiveReason(bagged, bagged.grants[0])).toMatch(/^in /);
+  });
+  it('ends a drunk potion’s effect on a Long Rest', () => {
+    expect(modeSpeed(longRest(potion()), 'climb').base).toBe(0);
+  });
 });

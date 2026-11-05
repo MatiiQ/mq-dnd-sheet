@@ -64,8 +64,19 @@ describe('source checks', () => {
     const cls = (extra: object) => ({ id: 'class/x', kind: 'class', name: 'X', src: 'srd', desc: '', hd: 8, saves: 'str', armor: 'light', weapons: 'simple', skills: { kind: 'choice', id: 's', name: 'S', pick: 2, pool: 'skill:arc|his' }, ...extra }) as unknown as Entry;
     expect(referenceChecks([cls({ skills: { kind: 'choice', id: 's', name: 'S', pick: 2, pool: 'skill:his|arc' } })], [cls({})])).toEqual([]);
     expect(keys(referenceChecks([cls({ armor: 'heavy', tools: 'Lute', skills: { kind: 'choice', id: 's', name: 'S', pick: 3, pool: 'skill:arc|his' } })], [cls({})]))).toEqual(['srd-phb-field|class/x:armor', 'srd-phb-field|class/x:tools', 'srd-phb-field|class/x:skills']);
-    const bg = (extra: object) => ({ id: 'background/x', kind: 'background', name: 'X', src: 'srd', desc: '', abils: 'str', feat: 'feat/a', skills: 'arc,his', tool: 'lute', ...extra }) as unknown as Entry;
-    expect(keys(referenceChecks([bg({ skills: 'arc,rel', tool: 'drum' })], [bg({})]))).toEqual(['srd-phb-field|background/x:skills', 'srd-phb-field|background/x:tool']);
+    const bg = (extra: object) => ({ id: 'background/x', kind: 'background', name: 'X', src: 'srd', desc: '', feat: 'feat/a', ...extra }) as unknown as Entry;
+    expect(keys(referenceChecks([bg({ feat: 'feat/b' })], [bg({})]))).toEqual(['srd-phb-field|background/x:feat']);
+  });
+  it('compares class tools without their "see" pointer', () => {
+    const cls = (tools: string) => ({ id: 'class/x', kind: 'class', name: 'X', src: 'srd', desc: '', hd: 8, saves: 'str', armor: '', weapons: '', tools, skills: { kind: 'choice', id: 's', name: 'S', pick: 1, pool: 'skill:arc' } }) as unknown as Entry;
+    expect(referenceChecks([cls('Choose 3 Musical Instruments (see chapter 6)')], [cls('Choose 3 Musical Instruments (see “Equipment”)')])).toEqual([]);
+    expect(keys(referenceChecks([cls('Choose 2 Lutes (chapter 6)')], [cls('Choose 3 Lutes (see “Equipment”)')]))).toEqual(['srd-phb-field|class/x:tools']);
+  });
+  it('finds a referred table in the entry whose text holds it', () => {
+    const f = (name: string, desc: string) => ({ id: `feature/x/${name}`, kind: 'feature', name, src: 'phb', cls: 'x', lvl: 1, desc, grants: [] }) as unknown as Entry;
+    const user = f('a', 'Roll on the Surge Roll table.');
+    expect(keys(textChecks([user, f('b', 'Surge Roll Table\n1 Boom')]))).toEqual([]);
+    expect(keys(textChecks([user]))).toEqual(['table-missing|feature/x/a:Surge Roll']);
   });
   it('finds a spell whose dice, damage type, attack or concentration its own text does not back', () => {
     const ok = spell('Ok', { desc: 'A ranged spell attack deals 8d6 Fire damage.', dice: '8d6', dtype: 'Fire', atk: 'ranged', dur: 'Concentration, up to 1 minute', conc: true });
@@ -149,6 +160,9 @@ describe('catalog against the sheet', () => {
     const [f] = effectChecks([spell('Two', { desc: 'Then you have Resistance to Fire. The target has Resistance to Cold.' })]);
     expect(f.note).toContain('you have Resistance to');
     expect(f.note).toContain('target has Resistance to');
+  });
+  it('finds a stated effect at the start of a sentence', () => {
+    expect(keys(effectChecks([spell('Capital', { desc: 'You have Resistance to Fire damage.' })]))).toEqual(['effect-no-grant|spell/capital:resistance']);
   });
   it('finds a stated effect with no grant of its kind', () => {
     const fly = 'The target gains a Fly Speed of 60 feet.';

@@ -42,9 +42,9 @@ it('reads the subclass and its features', () => {
 it('reads option features from a section, with prerequisites, repeat and wrapped prerequisite lines', () => {
   const lines = ['Agonizing Blast', '', 'Prerequisite: Level 2+ Warlock, a Warlock Cantrip', 'That Deals Damage', '', 'Add your Charisma modifier.', 'Repeatable. You can gain this more than once.', '',
     'Devouring Blade', '', 'Prerequisite: Level 12+ Warlock, Thirsting Blade', 'Invocation', '', 'Two attacks.', '', 'Armor of Shadows', '', 'Cast Mage Armor.', ''];
-  const opts = parseOptions(lines, ['Agonizing Blast', 'Armor of Shadows', 'Devouring Blade', 'Not In This Text'], { cls: 'Warlock', of: 'invocation', lvl: 1, page: 73 });
+  const opts = parseOptions(lines, ['Agonizing Blast', 'Armor of Shadows', 'Devouring Blade', 'Not In This Text'], { cls: 'Warlock', of: 'invocation', lvl: 1 });
   expect(opts.map((o) => o.id)).toEqual(['feature/warlock/agonizing-blast', 'feature/warlock/devouring-blade', 'feature/warlock/armor-of-shadows']);
-  expect(opts[0]).toMatchObject({ kind: 'feature', src: 'srd', cls: 'warlock', of: 'invocation', lvl: 2, prereq: 'lvl>=2', repeat: true, page: 73, grants: [] });
+  expect(opts[0]).toMatchObject({ kind: 'feature', src: 'srd', cls: 'warlock', of: 'invocation', lvl: 2, prereq: 'lvl>=2', repeat: true, grants: [] });
   expect(opts[1]).toMatchObject({ lvl: 12, prereq: 'lvl>=12;feature=thirsting-blade' });
   expect(opts[1].desc).toBe('Prerequisite: Level 12+ Warlock, Thirsting Blade Invocation\nTwo attacks.');
   expect(opts[2].prereq).toBeUndefined();

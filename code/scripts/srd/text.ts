@@ -12,7 +12,7 @@ export function srdLines(text: string): Line[] {
   const raw = text.split('\n').map((l) => {
     page += (l.match(/\f/g) ?? []).length;
     // pdftotext drops the fraction's superscript in "1½ pints" (Glass Bottle); this one pattern only, so a real 11/2 stays.
-    return { text: l.replace(/\f/g, '').trimEnd().replace(/\b11\/2 pints\b/g, '1½ pints'), page };
+    return { text: l.replace(/\f/g, '').trimEnd().replace(/\b11\/2 pints\b/g, '1½ pints').replace(/\u00ad/g, ''), page };
   });
   const near = (i: number) => [i - 2, i - 1, i + 1, i + 2].some((j) => raw[j]?.text.trim() === FOOTER);
   // A lone number that is the page's own number is its footer too, cut from its title by the column crop.

@@ -18,11 +18,10 @@ describe('feats', () => {
 });
 
 describe('backgrounds', () => {
-  it('reads abilities, feat with its option, skills, tool and equipment', () => {
+  it('reads the feat with its option and the equipment', () => {
     const [acolyte] = parseBackgrounds(fx('backgrounds.txt'));
     expect(acolyte).toMatchObject({
-      id: 'background/acolyte', kind: 'background', name: 'Acolyte', src: 'srd', abils: 'int,wis,cha', feat: 'feat/magic-initiate:cleric',
-      skills: 'insight,religion', tool: 'calligraphers-supplies', grants: []
+      id: 'background/acolyte', kind: 'background', name: 'Acolyte', src: 'srd', feat: 'feat/magic-initiate:cleric', grants: []
     });
     expect(acolyte.equip).toBe('Choose A or B: (A) Calligrapher’s Supplies, Book (prayers), Holy Symbol, Parchment (10 sheets), Robe, 8 GP; or (B) 50 GP');
   });

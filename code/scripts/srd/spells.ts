@@ -94,7 +94,7 @@ export function parseSpells(text: string): SpellEntry[] {
     const scale = lvl === 0 ? (/^Cantrip Upgrade\..*\b5\b/m.test(body) ? 'cantrip' : undefined) : slotDice ? `${slotDice}/slot` : undefined;
     const name = block[0].trim();
     const e: SpellEntry = {
-      id: catalogId('spell', name), kind: 'spell', name, src: 'srd', page: lines[s].page, desc: body,
+      id: catalogId('spell', name), kind: 'spell', name, src: 'srd', desc: body,
       lvl, school: m[2] ?? m[3], classes,
       time: f['Casting Time'].replace(/ or Ritual$/, ''), range: f.Range, comp: f.Components, dur: f.Duration,
       conc: /^Concentration/.test(f.Duration), ritual, fx

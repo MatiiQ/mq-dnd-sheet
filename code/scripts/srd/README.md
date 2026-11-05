@@ -45,8 +45,10 @@ Weapons: all 38 rows match `reference/06-equipment.md` (PHB p.215) in category, 
 cost.
 
 Magic item grants cover lasting effects of worn or held items (AC, saving throws, resistances, senses, speeds,
-proficiencies, score settings, spell attack and spell save DC). Effects that are conditional (only against ranged
-attacks, only in Dim Light), Advantage on ability checks or Initiative and spells cast from an item stay as text. Text
+proficiencies, score settings, spell attack and spell save DC), weapon riders as `xdmg` with the condition in `on`
+(the staffs and the Rod of Lordly Might's flame blade included; the cost is named there and nothing is spent
+automatically; the Rod's 4d6 Necrotic stays text), and potions' effects while switched on. Advantage on ability checks
+or Initiative and spells cast from an item stay as text. Text
 by design: Defender (moving part of its bonus to AC until your next turn), Rod of Alertness (+1 AC and saves inside its
 light), Arrow-Catching Shield (+2 only against ranged attacks), Ioun Stone (a choice option must be a grant and only
 Protection has one: add its +1 AC as a custom AC bonus), and Rod of Lordly Might's other forms and buttons (it is a Mace
@@ -234,6 +236,25 @@ rerolls and minimum rolls (Supreme Healing), damage that adds half a level (Divi
 Source text cut short and other notes stay under "Items checked" above. The audit's plan was a local working note
 (`docs/superpowers/plans/2026-10-31-07-catalog-data-fixes.md`, gitignored), so it isn't in the repo or on every machine.
 
+## Data changes from the catalog audit (2026-11-05)
+
+- Removed fields nothing read: `page` on every entry; `abils`, `skills` and `tool` on backgrounds; `short` on `prof`
+  (kept in `names.ts` for migrate()'s Training match). A pack built earlier still loads: `validateEntry` ignores
+  unknown fields. Each background's grants are checked against the PHB table through `parseBackgroundFields`.
+- Rule categories `property` and `mastery` (`parseWeaponRules`, 17 entries), shown under an open weapon row by
+  `RuleNotes`; senses show theirs the same way.
+- `Spell.acOther` also marks a Touch Concentration spell with a speed or defense grant (Fly, Gaseous Form, Spider
+  Climb) as cast on someone else: its `when: 'active'` grants, an `xdmg` included, don't count on you. No catalog spell
+  mixes them.
+- A grant with `when: 'active'` and no `needEq` keeps counting at quantity 0 while switched on, so a drunk potion lasts
+  until it is switched off or a Long Rest. The rule can't tell a potion from another item; in the catalog only potions
+  have such a grant.
+- The smites have no `xdmg`: the damage is a one-time rider on the hit that triggers the casting. Their row says so.
+- Simplifications: Alter Self's swim counts while you concentrate, whichever option you chose. Gaseous Form's other
+  speeds aren't turned off. A rider counts while the weapon is equipped, not only while it is in hand. Casting
+  Longstrider, Freedom of Movement, Protection from Poison or Wind Walk switches the effect on, even on an ally, until
+  the player taps Off. Summon Dragon's resistance is one row with the type unnamed.
+
 ## What check-phb does not catch
 
 `npm run check-phb` and the pre-push hook look for phrases taken from the condensed `reference/` descriptions, which
@@ -241,20 +262,20 @@ are what the pack holds. Wording pasted straight from the PDF or `reference/sour
 detected. Never paste from those files into tracked files. Pushes from a clone without `reference/` (another machine,
 a cloud session) are not checked at all; the hook says so.
 
-## Entry counts (rechecked 2026-11-03; SRD counts match `src/data/srd/*.json`)
+## Entry counts (rechecked 2026-11-05; SRD counts match `src/data/srd/*.json`)
 
 | Kind | SRD 5.2.1 (committed) | PHB pack (local) |
 |---|---|---|
-| spell | 339 | 52 |
-| item | 420 | 0 |
+| spell | 339 | 56 |
+| item | 455 | 0 |
 | feat | 17 | 58 |
 | background | 4 | 12 |
 | species | 9 | 1 |
 | trait | 47 | 5 |
 | class | 12 | 0 |
 | subclass | 12 | 36 |
-| feature | 231 | 183 |
+| feature | 269 | 203 |
 | prof | 102 | 0 |
-| rule | 17 | 0 |
+| rule | 34 | 0 |
 
 The pack holds only entries the SRD lacks (`npm run pack` prints parsed, dropped and written counts per kind).

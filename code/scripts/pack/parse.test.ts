@@ -2,15 +2,25 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { catalogId, PHB_TO_SRD, validateEntry } from '../../src/catalog/schema.ts';
 import { parseSpells } from '../srd/spells.ts';
-import { parseClassMd, parseEquipmentMd, parseFeatsMd, parseOriginsMd, parseSpellsMd } from './parse.ts';
+import { parseBackgroundFields, parseClassMd, parseEquipmentMd, parseFeatsMd, parseOriginsMd, parseSpellsMd } from './parse.ts';
 
 const fx = (f: string) => readFileSync(new URL(`./fixtures/${f}`, import.meta.url), 'utf8');
 
 describe('spells', () => {
+  const spellMd = (title: string, effect: string, higher = '') => `### ${title}\n- **Level/School:** 5 Evocation\n- **Classes:** Wizard\n- **Casting Time:** Action\n- **Range:** 60 feet\n- **Components:** V\n- **Duration:** Instantaneous\n- **Effect:** ${effect}\n${higher && `- **Higher Levels:** ${higher}\n`}`;
+  it('reads a named spell’s damage die when a per-slot line lists several', () => {
+    expect(parseSpellsMd(spellMd("Bigby's Hand", 'Melee spell attack; 5d8 Force damage.', 'Fist +2d8 and Grip +2d6 per slot level above 5.'))[0].scale).toBe('2d8/slot');
+  });
+  it('reads the damage of a spell the table lists as damage first', () => {
+    expect(parseSpellsMd(spellMd('Conjure Celestial', 'One regains 4d12 HP or takes 6d12 Radiant damage.'))[0]).toMatchObject({ fx: 'damage', dice: '6d12', dtype: 'Radiant' });
+  });
+  it('reads a named spell’s damage save over the first save in its text', () => {
+    expect(parseSpellsMd(spellMd('Prismatic Wall', 'Con save or Blinded. 12d6 Fire damage.'))[0].save).toBe('dex');
+  });
   const list = parseSpellsMd(fx('spells.md'));
   it('reads the fixed field layout', () => {
     expect(list.map((e) => e.id)).toEqual(['spell/hunters-mark', catalogId('spell', 'Acid Arrow'), 'spell/glimmer-pulse']);
-    expect(list[0]).toMatchObject({ kind: 'spell', src: 'phb', page: 901, lvl: 1, school: 'Divination', classes: 'ranger', time: 'Bonus Action',
+    expect(list[0]).toMatchObject({ kind: 'spell', src: 'phb', lvl: 1, school: 'Divination', classes: 'ranger', time: 'Bonus Action',
       range: '90 feet', comp: 'V', dur: 'Concentration, up to 1 hour', conc: true, ritual: false, fx: 'damage', dice: '1d6', dtype: 'Force' });
     expect(list[1]).toMatchObject({ atk: 'ranged', dice: '4d4', dtype: 'Acid', scale: '1d4/slot' });
     expect(list[2]).toMatchObject({ lvl: 0, school: 'Evocation', classes: 'sorcerer,wizard', time: 'Action', ritual: true, save: 'con', scale: 'cantrip' });
@@ -60,7 +70,7 @@ describe('a class with a subclass', () => {
     expect(feats.map((f) => [f.id, f.lvl, f.again])).toEqual([
       ['feature/lamplighter/spellcasting', 1, undefined], ['feature/lamplighter/kindle', 1, '5'], ['feature/lamplighter/ability-score-improvement', 4, '8,12,16'],
       ['feature/lamplighter/order-of-the-wick/steady-flame', 3, undefined], ['feature/lamplighter/order-of-the-wick/shared-glow', 3, undefined]]);
-    expect(subs).toEqual([expect.objectContaining({ id: 'subclass/lamplighter/order-of-the-wick', cls: 'lamplighter', page: 904 })]);
+    expect(subs).toEqual([expect.objectContaining({ id: 'subclass/lamplighter/order-of-the-wick', cls: 'lamplighter' })]);
     expect(feats[4].desc).toBe('Allies within 10 ft see in dim light.');
     for (const e of [...subs, ...feats]) expect(validateEntry(e)).toEqual([]);
   });
@@ -83,10 +93,16 @@ describe('feats, backgrounds, species, equipment', () => {
     expect(bearer).toMatchObject({ prereq: 'lvl>=4;feature=spellcasting|pact-magic', repeat: true });
     for (const e of [ward, bearer]) expect(validateEntry(e)).toEqual([]);
   });
+  it('leaves a rule line out of a background’s text', () => {
+    const bgs = parseOriginsMd(fx('origins.md')).filter((e) => e.kind === 'background');
+    expect(bgs.length).toBeGreaterThan(0);
+    expect(bgs.every((e) => !/^---$/m.test(e.desc))).toBe(true);
+  });
   it('reads a background and a species with a lineage table', () => {
     const list = parseOriginsMd(fx('origins.md'));
-    expect(list.find((e) => e.id === 'background/wanderer')).toMatchObject({ abils: 'dex,con,wis', feat: 'feat/magic-initiate:druid', skills: 'stealth,animal',
-      tool: 'cartographers-tools' });
+    expect(list.find((e) => e.id === 'background/wanderer')).toMatchObject({ feat: 'feat/magic-initiate:druid' });
+    expect(list[0]).not.toHaveProperty('page');
+    expect(parseBackgroundFields(fx('origins.md'))).toEqual([{ id: 'background/wanderer', abils: 'dex,con,wis', skills: 'stealth,animal', tool: 'cartographers-tools' }]);
     expect(list.find((e) => e.id === 'species/mothfolk')).toMatchObject({ sizes: 'small,medium', speed: 30 });
     expect(list.filter((e) => e.kind === 'trait').map((e) => [e.id, 'lvl' in e && e.lvl, 'of' in e ? e.of : undefined])).toEqual([
       ['trait/mothfolk/darkvision', 1, undefined], ['trait/mothfolk/moth-lineage', 1, undefined], ['trait/mothfolk/dusty-wings', 3, undefined],
@@ -101,6 +117,16 @@ describe('feats, backgrounds, species, equipment', () => {
     expect(list.find((e) => e.name === 'Taper Knife')).toMatchObject({ thrown: '20/60' });
     expect(list.find((e) => e.id === 'item/lamplighters-clothes')).toMatchObject({ name: 'Lamplighter’s Clothes', cat: 'gear', wt: 4, cost: '2 GP', desc: 'Smells of wax.' });
     expect(list.find((e) => e.name === 'Ammunition')).toBeUndefined(); // a row that only points to its own table
+    for (const e of list) expect(validateEntry(e)).toEqual([]);
+  });
+  it('reads ammunition and focus rows, naming a focus after its table', () => {
+    const list = parseEquipmentMd(fx('equipment.md'));
+    expect(list.find((e) => e.id === 'item/wax-pellets')).toMatchObject({ name: 'Wax Pellets', cat: 'ammo', wt: 1.5, cost: '4 CP' });
+    expect(list.find((e) => e.id === 'item/arcane-focus-wick')).toMatchObject({ name: 'Arcane Focus (Wick)', cat: 'focus', wt: 1, cost: '10 GP' });
+    const sprig = list.find((e) => e.id === 'item/druidic-focus-sprig-of-tallow');
+    expect(sprig).toMatchObject({ name: 'Druidic Focus (Sprig of Tallow)', cat: 'focus', cost: '1 GP' });
+    expect(sprig?.wt).toBeUndefined();
+    expect(list.find((e) => e.id === 'item/holy-symbol-sconce')).toMatchObject({ name: 'Holy Symbol (Sconce)', cat: 'focus', wt: 2, cost: '5 GP' });
     for (const e of list) expect(validateEntry(e)).toEqual([]);
   });
 });

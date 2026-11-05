@@ -63,7 +63,7 @@ export function srdHeadingChecks(text: string, entries: Entry[]): Finding[] {
 const COMPARED: Partial<Record<Entry['kind'], string[]>> = {
   spell: ['lvl', 'school', 'classes', 'time', 'range', 'comp', 'dur', 'conc', 'ritual'],
   item: ['cost', 'wt', 'wcat', 'wrange', 'dmg', 'dtype', 'props', 'thrown', 'vers', 'ammo', 'mastery', 'armor', 'acBase', 'strReq', 'stealthDis'],
-  feature: ['lvl', 'again'], feat: ['cat', 'prereq', 'repeat'], background: ['abils', 'feat', 'skills', 'tool'], species: ['sizes', 'speed'], trait: ['lvl'], class: ['hd', 'saves', 'armor', 'weapons', 'tools', 'skills']
+  feature: ['lvl', 'again'], feat: ['cat', 'prereq', 'repeat'], background: ['feat'], species: ['sizes', 'speed'], trait: ['lvl'], class: ['hd', 'saves', 'armor', 'weapons', 'tools', 'skills']
 };
 // Spell numbers the parser reads from condensed text, so it can leave one out: compared only when both sides have it.
 const COMPARED_IF_BOTH = ['dice', 'dtype', 'save', 'atk', 'scale'];
@@ -71,6 +71,7 @@ const same = (a: unknown, b: unknown) => (typeof a === 'string' && typeof b === 
 // A value as it compares: a spell's class list in any order, a class's skill choice as its pick and sorted pool.
 function comparable(f: string, v: unknown): unknown {
   if (f === 'classes') return [...String(v).split(',')].sort().join();
+  if (f === 'tools' && typeof v === 'string') return v.replace(/\s*\([^)]*\)$/, ''); // the "see …" pointer differs by book
   if (f !== 'skills' || typeof v !== 'object' || !v) return v;
   const c = v as { pick?: number; pool?: string };
   return `${c.pick} ${(c.pool ?? '').split(/[:|]/).sort().join()}`;
@@ -236,6 +237,8 @@ const REFERENCED_TABLE = /[Tt]he ((?:[A-Z][\w’'-]* )+)table\b/g;
 // on into the next heading); a heading that is also an entry name is a normal last word of a list.
 export function textChecks(entries: Entry[], headings: Set<string> = new Set()): Finding[] {
   const out: Finding[] = [], names = new Set(entries.map((e) => e.name));
+  // A table may sit in the entry that owns it (Wild Magic Surge), not in those that refer to it.
+  const tableLines = new Set(entries.flatMap((e) => descOf(e).split('\n').filter((l) => / Table$/.test(l.trim())).map((l) => l.trim())));
   for (const e of entries) {
     const d = descOf(e).trim(), add = (check: string, note: string) => out.push({ check, id: e.id, note });
     if (!d) { if (NEEDS_TEXT(e)) add('text-empty', 'no description'); continue; }
@@ -253,7 +256,7 @@ export function textChecks(entries: Entry[], headings: Set<string> = new Set()):
       const title = m[1].trim();
       if (/Features$/.test(title)) continue;
       const lastAt = d.lastIndexOf(title);
-      if (lastAt === m.index + m[0].indexOf(title)) out.push({ check: 'table-missing', id: `${e.id}:${title}`, note: `refers to the ${title} table, which isn't in the text` });
+      if (lastAt === m.index + m[0].indexOf(title)) { if (!tableLines.has(`${title} Table`)) out.push({ check: 'table-missing', id: `${e.id}:${title}`, note: `refers to the ${title} table, which isn't in the text` }); }
       else if (!/\d|\n/.test(d.slice(lastAt + title.length))) out.push({ check: 'table-cut', id: `${e.id}:${title}`, note: `the ${title} table has no rows` });
     }
   }
@@ -276,7 +279,7 @@ export function ruleTextChecks(entries: Entry[]): Finding[] {
 
 const EFFECTS: { cue: RegExp; kinds: GrantSpec['kind'][]; label: string }[] = [
   { cue: /\b(?:gain|gains|have|has) a (?:Fly|Swim|Climb|Burrow) Speed|Speed increases by \d+/g, kinds: ['speed'], label: 'speed' },
-  { cue: /\b(?:you|target|it) (?:have|has|gain|gains) Resistance to/g, kinds: ['defense'], label: 'resistance' },
+  { cue: /\b(?:you|target|it) (?:have|has|gain|gains) Resistance to/gi, kinds: ['defense'], label: 'resistance' },
   { cue: /\bextra \d+d\d+/g, kinds: ['xdmg', 'dmgBonus'], label: 'extra damage' }
 ];
 // Text that states an effect the sheet has a grant kind for, on an entry with no such grant. A heuristic: the known list

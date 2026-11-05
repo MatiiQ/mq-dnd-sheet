@@ -1,6 +1,5 @@
 // SRD feats, backgrounds and species → catalog entries. Grants come from overlay/origins.json.
 import { catalogId, slug, type BackgroundEntry, type FeatEntry, type SpeciesEntry, type TraitEntry } from '../../src/catalog/schema.ts';
-import { skillKey } from '../lib/skills.ts';
 import { ABILITY_NAMES } from './spells.ts';
 import { norm, paragraphs, RUN_IN, srdLines, unbalanced } from './text.ts';
 
@@ -33,7 +32,7 @@ export function parseFeats(text: string): FeatEntry[] {
     // A category heading ("General Feats") sits between the last feat of one category and the first of the next.
     const body = lines.slice(i + 1, end);
     const name = lines[s].trim();
-    const e: FeatEntry = { id: catalogId('feat', name), kind: 'feat', name, src: 'srd', page: L[s].page, cat: FEAT_CAT[m[1]],
+    const e: FeatEntry = { id: catalogId('feat', name), kind: 'feat', name, src: 'srd', cat: FEAT_CAT[m[1]],
       desc: paragraphs(body.filter((l) => !/^(Origin|General|Fighting Style|Epic Boon) Feats$/.test(l.trim()))).join('\n'), grants: [] };
     if (m[2]) e.prereq = prereq(m[2]);
     if (/^Repeatable\./m.test(e.desc)) e.repeat = true;
@@ -55,14 +54,11 @@ export function parseBackgrounds(text: string): BackgroundEntry[] {
     }
     const feat = /^(.+?)(?: \((\w+)\))? \(see “Feats”\)$/.exec(f.Feat)!;
     const name = lines[s].trim();
-    const tool = f['Tool Proficiency'].replace(/ \(see “Equipment”\)$/, '').replace(/^Choose one kind of /, '');
     return {
-      id: catalogId('background', name), kind: 'background', name, src: 'srd', page: L[s].page,
+      id: catalogId('background', name), kind: 'background', name, src: 'srd',
       desc: Object.entries(f).map(([k, v]) => `${k}: ${v}`).join('\n'),
-      abils: f['Ability Scores'].split(',').map(abilityKey).join(','),
       feat: catalogId('feat', feat[1]) + (feat[2] ? `:${slug(feat[2])}` : ''),
-      skills: f['Skill Proficiencies'].split(/ and |, /).map(skillKey).join(','),
-      tool: slug(tool), equip: f.Equipment, grants: []
+      equip: f.Equipment, grants: []
     };
   });
 }
@@ -119,7 +115,7 @@ export function parseSpecies(text: string, layout: string): [SpeciesEntry[], Tra
     const sizes = SIZES.filter((z) => new RegExp(`\\b${z}\\b`).test(size.replace(/\([^)]*\)/g, ''))).map((z) => z.toLowerCase()).join(',');
     const speed = Number(/^Speed: (\d+) feet/.exec(block[at(/^Speed:/)])![1]);
     const intro = at(/special traits\.$/);
-    species.push({ id: catalogId('species', name), kind: 'species', name, src: 'srd', page: L[s].page, sizes, speed,
+    species.push({ id: catalogId('species', name), kind: 'species', name, src: 'srd', sizes, speed,
       desc: paragraphs(block.slice(0, intro + 1)).join('\n') });
     // Traits: a run-in heading that starts a paragraph (the line before it ends a sentence).
     const body = block.slice(intro + 1);
@@ -131,7 +127,7 @@ export function parseSpecies(text: string, layout: string): [SpeciesEntry[], Tra
       const m = RUN_IN.exec(body[h].trim())!;
       const desc = paragraphs([m[2], ...body.slice(h + 1, heads[k + 1] ?? body.length)]).join('\n');
       const lvl = Number(/^(?:When you reach|Starting at) character level (\d+)/.exec(desc)?.[1] ?? 1);
-      traits.push({ id: catalogId('trait', m[1], [name]), kind: 'trait', name: m[1], src: 'srd', page: L[s + 1 + intro + 1 + h]?.page ?? L[s].page,
+      traits.push({ id: catalogId('trait', m[1], [name]), kind: 'trait', name: m[1], src: 'srd',
         species: slug(name), lvl, desc, grants: [] });
     });
     // Lineage tables: each row is an option of the trait that names the table.
@@ -139,7 +135,7 @@ export function parseSpecies(text: string, layout: string): [SpeciesEntry[], Tra
       const parent = traits.find((t) => t.species === slug(name) && t.desc.includes(`the ${tb.title} table`));
       if (!parent) continue;
       for (const r of tb.rows) {
-        traits.push({ id: catalogId('trait', r.name, [name]), kind: 'trait', name: r.name, src: 'srd', page: parent.page, species: slug(name), lvl: 1,
+        traits.push({ id: catalogId('trait', r.name, [name]), kind: 'trait', name: r.name, src: 'srd', species: slug(name), lvl: 1,
           of: parent.id, desc: `${r.cells[0]}\nLevel 3: ${r.cells[1]}\nLevel 5: ${r.cells[2]}`, grants: [] });
       }
     }

@@ -139,3 +139,8 @@ it('reads focus forms, mounts, tack and large vehicles from their tables', () =>
   expect(by('Airship')).toMatchObject({ cat: 'mount', cost: '40,000 GP', desc: 'Speed 8 mph; Crew 10; Passengers 20; Cargo 1 tons; AC 13; HP 300; Damage Threshold —.' });
   for (const e of list) expect(validateEntry(e)).toEqual([]);
 });
+
+it('keeps a section heading out of the last tool', () => {
+  const [t] = parseTools('Woodcarver’s Tools (1 GP)\nAbility: Dexterity\nWeight: 5 lb.\nUtilize: Carve a pattern in wood (DC 10)\nCraft: Club\n\nOther Tools\n');
+  expect(t.desc.endsWith('Craft: Club')).toBe(true);
+});

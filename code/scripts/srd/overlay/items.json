@@ -579,7 +579,17 @@
     ]
   },
   "item/dragon-slayer": {
-    "base": "weapon"
+    "base": "weapon",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "xdmg",
+        "name": "Dragon Slayer",
+        "dice": "3d6",
+        "on": "hits on a Dragon with this weapon; the weapon's damage type",
+        "needEq": true
+      }
+    ]
   },
   "item/dwarven-plate": {
     "armor": "heavy",
@@ -587,7 +597,19 @@
     "acBonus": 2
   },
   "item/dwarven-thrower": {
-    "base": "item/warhammer"
+    "base": "item/warhammer",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "xdmg",
+        "name": "Dwarven Thrower",
+        "dice": "1d8",
+        "dtype": "Force",
+        "on": "ranged hits with this weapon; 2d8 against a Giant",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   "item/elven-chain": {
     "armor": "medium",
@@ -600,7 +622,20 @@
   },
   "item/flame-tongue": {
     "base": "weapon",
-    "baseOf": "item/battleaxe,item/club,item/dagger,item/flail,item/glaive,item/greataxe,item/greatclub,item/greatsword,item/halberd,item/handaxe,item/javelin,item/lance,item/light-hammer,item/longsword,item/mace,item/maul,item/morningstar,item/pike,item/quarterstaff,item/rapier,item/scimitar,item/shortsword,item/sickle,item/spear,item/trident,item/war-pick,item/warhammer,item/whip"
+    "baseOf": "item/battleaxe,item/club,item/dagger,item/flail,item/glaive,item/greataxe,item/greatclub,item/greatsword,item/halberd,item/handaxe,item/javelin,item/lance,item/light-hammer,item/longsword,item/mace,item/maul,item/morningstar,item/pike,item/quarterstaff,item/rapier,item/scimitar,item/shortsword,item/sickle,item/spear,item/trident,item/war-pick,item/warhammer,item/whip",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "xdmg",
+        "name": "Flame Tongue",
+        "dice": "2d6",
+        "dtype": "Fire",
+        "on": "hits with this weapon while ablaze",
+        "when": "active",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   "item/frost-brand": {
     "grants": [
@@ -610,6 +645,16 @@
         "name": "Fire Resistance",
         "def": "res",
         "target": "Fire",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "xdmg",
+        "name": "Frost Brand",
+        "dice": "1d6",
+        "dtype": "Cold",
+        "on": "hits with this weapon",
         "needEq": true,
         "needAtt": true
       }
@@ -631,7 +676,17 @@
     ]
   },
   "item/giant-slayer": {
-    "base": "weapon"
+    "base": "weapon",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "xdmg",
+        "name": "Giant Slayer",
+        "dice": "2d6",
+        "on": "hits on a Giant with this weapon; the weapon's damage type",
+        "needEq": true
+      }
+    ]
   },
   "item/glamoured-studded-leather": {
     "armor": "light",
@@ -703,6 +758,16 @@
         "target": "vs spells and magical effects",
         "needEq": true,
         "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "xdmg",
+        "name": "Holy Avenger",
+        "dice": "2d10",
+        "dtype": "Radiant",
+        "on": "hits on a Fiend or Undead with this weapon",
+        "needEq": true,
+        "needAtt": true
       }
     ],
     "base": "weapon"
@@ -725,7 +790,19 @@
     "baseOf": "item/glaive,item/greatsword,item/longsword,item/rapier,item/scimitar,item/sickle,item/shortsword"
   },
   "item/mace-of-disruption": {
-    "base": "item/mace"
+    "base": "item/mace",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "xdmg",
+        "name": "Mace of Disruption",
+        "dice": "2d6",
+        "dtype": "Radiant",
+        "on": "hits on a Fiend or Undead with this weapon",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   "item/mace-of-smiting": {
     "base": "item/mace"
@@ -770,7 +847,19 @@
   },
   "item/oathbow": {
     "base": "weapon",
-    "baseOf": "item/longbow,item/shortbow"
+    "baseOf": "item/longbow,item/shortbow",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "xdmg",
+        "name": "Oathbow",
+        "dice": "3d6",
+        "dtype": "Piercing",
+        "on": "hits on your sworn enemy with this weapon",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   "item/periapt-of-health": {
     "grants": [
@@ -1047,7 +1136,20 @@
     ]
   },
   "item/rod-of-lordly-might": {
-    "base": "item/mace"
+    "base": "item/mace",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "xdmg",
+        "name": "Rod of Lordly Might",
+        "dice": "2d6",
+        "dtype": "Fire",
+        "on": "hits while the flame blade is out",
+        "when": "active",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   "item/scarab-of-protection": {
     "grants": [
@@ -1075,7 +1177,18 @@
   },
   "item/shield-of-missile-attraction": {
     "armor": "shield",
-    "acBase": 2
+    "acBase": 2,
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "defense",
+        "name": "Resistance to Ranged weapon attacks",
+        "def": "res",
+        "target": "Ranged weapon attacks",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   "item/shield-of-the-cavalier": {
     "armor": "shield",
@@ -1211,7 +1324,19 @@
     ]
   },
   "item/sun-blade": {
-    "base": "item/longsword"
+    "base": "item/longsword",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "xdmg",
+        "name": "Sun Blade",
+        "dice": "1d8",
+        "dtype": "Radiant",
+        "on": "hits on an Undead with this weapon",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   "item/sword-of-life-stealing": {
     "base": "weapon",
@@ -1223,7 +1348,19 @@
   },
   "item/sword-of-wounding": {
     "base": "weapon",
-    "baseOf": "item/glaive,item/greatsword,item/longsword,item/rapier,item/scimitar,item/shortsword"
+    "baseOf": "item/glaive,item/greatsword,item/longsword,item/rapier,item/scimitar,item/shortsword",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "xdmg",
+        "name": "Sword of Wounding",
+        "dice": "2d6",
+        "dtype": "Necrotic",
+        "on": "hits with this weapon",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   "item/talisman-of-pure-good": {
     "grants": [
@@ -1250,13 +1387,35 @@
     ]
   },
   "item/thunderous-greatclub": {
-    "base": "item/greatclub"
+    "base": "item/greatclub",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "xdmg",
+        "name": "Thunderous Greatclub",
+        "dice": "1d8",
+        "dtype": "Thunder",
+        "on": "hits with this weapon; 3d8 against objects not worn or carried",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   "item/trident-of-fish-command": {
     "base": "item/trident"
   },
   "item/vicious-weapon": {
-    "base": "weapon"
+    "base": "weapon",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "xdmg",
+        "name": "Vicious Weapon",
+        "dice": "2d6",
+        "on": "hits with this weapon; the weapon's damage type",
+        "needEq": true
+      }
+    ]
   },
   "item/vorpal-sword": {
     "base": "weapon",
@@ -1284,5 +1443,267 @@
   },
   "item/lance": {
     "desc": "Two-Handed unless mounted."
+  },
+  "item/cloak-of-the-bat": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "speed",
+        "name": "Fly Speed 40 ft",
+        "mode": "fly",
+        "val": "40",
+        "when": "active",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/helm-of-brilliance": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "defense",
+        "name": "Fire Resistance",
+        "def": "res",
+        "target": "Fire",
+        "when": "active",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/potion-of-climbing": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "speed",
+        "name": "Climb Speed equal to Speed",
+        "mode": "climb",
+        "val": "walk",
+        "when": "active"
+      }
+    ]
+  },
+  "item/potion-of-flying": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "speed",
+        "name": "Fly Speed equal to Speed",
+        "mode": "fly",
+        "val": "walk",
+        "hover": true,
+        "when": "active"
+      }
+    ]
+  },
+  "item/potion-of-invulnerability": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "defense",
+        "name": "Resistance to all damage",
+        "def": "res",
+        "target": "All damage",
+        "when": "active"
+      }
+    ]
+  },
+  "item/potion-of-resistance": {
+    "grants": [
+      {
+        "id": "c1",
+        "kind": "choice",
+        "name": "Damage type",
+        "pick": 1,
+        "options": [
+          {
+            "id": "o1",
+            "kind": "defense",
+            "name": "Acid Resistance",
+            "def": "res",
+            "target": "Acid",
+            "when": "active"
+          },
+          {
+            "id": "o2",
+            "kind": "defense",
+            "name": "Cold Resistance",
+            "def": "res",
+            "target": "Cold",
+            "when": "active"
+          },
+          {
+            "id": "o3",
+            "kind": "defense",
+            "name": "Fire Resistance",
+            "def": "res",
+            "target": "Fire",
+            "when": "active"
+          },
+          {
+            "id": "o4",
+            "kind": "defense",
+            "name": "Force Resistance",
+            "def": "res",
+            "target": "Force",
+            "when": "active"
+          },
+          {
+            "id": "o5",
+            "kind": "defense",
+            "name": "Lightning Resistance",
+            "def": "res",
+            "target": "Lightning",
+            "when": "active"
+          },
+          {
+            "id": "o6",
+            "kind": "defense",
+            "name": "Necrotic Resistance",
+            "def": "res",
+            "target": "Necrotic",
+            "when": "active"
+          },
+          {
+            "id": "o7",
+            "kind": "defense",
+            "name": "Poison Resistance",
+            "def": "res",
+            "target": "Poison",
+            "when": "active"
+          },
+          {
+            "id": "o8",
+            "kind": "defense",
+            "name": "Psychic Resistance",
+            "def": "res",
+            "target": "Psychic",
+            "when": "active"
+          },
+          {
+            "id": "o9",
+            "kind": "defense",
+            "name": "Radiant Resistance",
+            "def": "res",
+            "target": "Radiant",
+            "when": "active"
+          },
+          {
+            "id": "o10",
+            "kind": "defense",
+            "name": "Thunder Resistance",
+            "def": "res",
+            "target": "Thunder",
+            "when": "active"
+          }
+        ]
+      }
+    ]
+  },
+  "item/ring-of-elemental-command": {
+    "grants": [
+      {
+        "id": "c1",
+        "kind": "choice",
+        "name": "Linked plane",
+        "pick": 1,
+        "options": [
+          {
+            "id": "o1",
+            "kind": "defense",
+            "name": "Lightning Resistance",
+            "def": "res",
+            "target": "Lightning",
+            "needEq": true,
+            "needAtt": true,
+            "opt": "Air"
+          },
+          {
+            "id": "o2",
+            "kind": "speed",
+            "name": "Fly Speed equal to Speed",
+            "mode": "fly",
+            "val": "walk",
+            "hover": true,
+            "needEq": true,
+            "needAtt": true,
+            "opt": "Air"
+          },
+          {
+            "id": "o3",
+            "kind": "defense",
+            "name": "Acid Resistance",
+            "def": "res",
+            "target": "Acid",
+            "needEq": true,
+            "needAtt": true,
+            "opt": "Earth"
+          },
+          {
+            "id": "o4",
+            "kind": "defense",
+            "name": "Fire Immunity",
+            "def": "imm",
+            "target": "Fire",
+            "needEq": true,
+            "needAtt": true,
+            "opt": "Fire"
+          },
+          {
+            "id": "o5",
+            "kind": "speed",
+            "name": "Swim Speed 60 ft",
+            "mode": "swim",
+            "val": "60",
+            "needEq": true,
+            "needAtt": true,
+            "opt": "Water"
+          }
+        ]
+      }
+    ]
+  },
+  "item/staff-of-striking": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "xdmg",
+        "name": "Staff of Striking",
+        "dice": "1d6",
+        "dtype": "Force",
+        "on": "melee hits with this staff; per charge spent, up to 3",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/staff-of-thunder-and-lightning": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "xdmg",
+        "name": "Staff of Thunder and Lightning",
+        "dice": "2d6",
+        "dtype": "Lightning",
+        "on": "melee hits with this staff; once per dawn",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/staff-of-withering": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "xdmg",
+        "name": "Staff of Withering",
+        "dice": "2d10",
+        "dtype": "Necrotic",
+        "on": "hits with this staff; spend 1 charge",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   }
 }
