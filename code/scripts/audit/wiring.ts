@@ -26,7 +26,7 @@ function autoAnswers(cat: Catalog, c: Character, entry: Entry, preset: Record<st
     else if (q.key === 'bonus') item.bonus = 1;
     else item.charges = q.min;
   }
-  return { picks, counted: {}, links: {}, nested, item };
+  return { picks, counted: {}, links: {}, nested, item, ...(e.kind === 'background' && e.equipA !== undefined ? { equip: 'A' as const } : {}) };
 }
 
 // Kinds the add flow refuses, by design.

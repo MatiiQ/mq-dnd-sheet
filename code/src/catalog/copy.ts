@@ -4,7 +4,7 @@ import { linkOf, srcKindOfLink } from '../links';
 import { ABILITIES, addGrants, capital, detectArmor, effScore, hasProf, maxFields, maxKindOf, maxOf, newId, normName, num, parseWeight, regainEvent, SKILLS, skillLevel, type GrantInput, type MaxKind } from '../logic';
 import type { AcEffect, Ability, ArmorKind, Character, Feature, FeatureGroup, Item, Linked, Recharge, Size, Spell, SrcKind } from '../types';
 import { entriesOf, type Catalog } from './merge';
-import { slug, type ChoiceSpec, type Entry, type FeatEntry, type FeatureEntry, type GrantSpec, type ItemEntry, type ProfEntry, type RuleEntry, type SpellEntry, type SpellPart, type TraitEntry } from './schema';
+import { slug, type BackgroundEntry, type ChoiceSpec, type Entry, type FeatEntry, type FeatureEntry, type GrantSpec, type ItemEntry, type ProfEntry, type RuleEntry, type SpellEntry, type SpellPart, type TraitEntry } from './schema';
 import { withBase } from './base';
 import { diceRange } from './value';
 
@@ -562,7 +562,8 @@ export function prereqMet(c: Character, prereq: string | undefined, adding: Entr
 // a species' traits, a lineage option, a feat picked by a choice), keyed by that entry's id; choice ids are unique only
 // within one entry. counted/links: by resolved spec id. group: the feature group to use instead of groupOf's. from:
 // the source the new entry hangs from.
-export interface AddChoices { picks: Record<string, string[]>; counted: Record<string, boolean>; links: Record<string, string>; nested?: Record<string, AddChoices>; group?: FeatureGroup; from?: string; item?: ItemAnswers }
+// equip: a background's starting equipment, package A, package B or nothing.
+export interface AddChoices { picks: Record<string, string[]>; counted: Record<string, boolean>; links: Record<string, string>; nested?: Record<string, AddChoices>; group?: FeatureGroup; from?: string; item?: ItemAnswers; equip?: 'A' | 'B' | 'none' }
 const NO_ANSWERS: AddChoices = { picks: {}, counted: {}, links: {} };
 
 // The feature group an entry is added under; null for kinds that are never features.
@@ -578,6 +579,17 @@ export function groupOf(e: Entry): FeatureGroup | null {
 }
 
 const titleOfId = (id: string) => titled(id.split('/').pop() ?? id);
+// A background's package A, item by item: a catalog item, or a name the catalog lacks as typed; '*N' is the count.
+export function equipItems(cat: Catalog, e: BackgroundEntry): { name: string; qty: number; entry?: ItemEntry }[] {
+  return (e.equipA ?? '').split(';').map((t) => t.trim()).filter(Boolean).map((t) => {
+    const m = /^(.*?)\*(\d+)$/.exec(t), term = m ? m[1].trim() : t, qty = m ? Number(m[2]) : 1;
+    const en = term.startsWith('item/') ? cat.byId.get(term) : undefined;
+    return en?.kind === 'item' ? { name: en.name, qty, entry: en } : { name: term.startsWith('item/') ? titleOfId(term) : term, qty };
+  });
+}
+// 'Dagger, 2 × Pouch, 15 GP': package A as the add flow shows it.
+export const equipText = (cat: Catalog, e: BackgroundEntry) =>
+  [...equipItems(cat, e).map((x) => (x.qty > 1 ? `${x.qty} × ${x.name}` : x.name)), `${e.gpA ?? 0} GP`].join(', ');
 // What addFromCatalog adds as features below e: picked feats, traits and subclasses; a background's origin feat
 // ('feat/magic-initiate:cleric' presets the list); a species' traits (not its lineage options, which come by choice).
 export function nestedEntries(cat: Catalog, e: Entry, picks: Record<string, string[]>): Nested[] {
@@ -613,6 +625,7 @@ function checkAnswers(cat: Catalog, c: Character, entry: Entry, ans: AddChoices)
     throw new Error(`${e.name}: choose ${names.join(', ')}`);
   }
   checkItemAnswers(cat, e, ans.item);
+  if (e.kind === 'background' && e.equipA !== undefined && !ans.equip) throw new Error(`${e.name}: choose starting equipment`);
   for (const n of nestedEntries(cat, e, ans.picks)) checkAnswers(cat, c, n.entry, answersFor(ans, n));
 }
 
@@ -743,6 +756,11 @@ function addEntry(c: Character, cat: Catalog, entry: Entry, ans: AddChoices): Ch
     if (e.equip) lines.push('Equipment: ' + e.equip);
     const featId = e.feat.split(':')[0];
     if (!cat.byId.has(featId)) lines.push(`Origin feat: ${titleOfId(featId)} (not in the loaded catalog)`);
+    // Starting equipment (PHB p.36): package A's items, unequipped, and its coins; package B is coins only.
+    if (e.equipA !== undefined && ans.equip === 'A') {
+      out.inv = [...out.inv, ...equipItems(cat, e).map((x): Item => (x.entry ? { id: newId(), ...itemFromEntry(x.entry), qty: x.qty } : { id: newId(), name: x.name, qty: x.qty, eq: false }))];
+      out.coins = { ...out.coins, gp: out.coins.gp + (e.gpA ?? 0) };
+    } else if (e.equipA !== undefined && ans.equip === 'B') out.coins = { ...out.coins, gp: out.coins.gp + (e.gpB ?? 0) };
   }
   if (e.kind === 'subclass' && !c.ch.sub.trim()) {
     out.ch.sub = e.name;

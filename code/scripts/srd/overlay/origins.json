@@ -55,7 +55,10 @@
         "cat": "tool",
         "target": "Calligrapher’s Supplies"
       }
-    ]
+    ],
+    "equipA": "item/calligraphers-supplies;item/book;item/holy-symbol;item/parchment*10;item/robe",
+    "gpA": 8,
+    "gpB": 50
   },
   "background/criminal": {
     "grants": [
@@ -113,7 +116,10 @@
         "cat": "tool",
         "target": "Thieves’ Tools"
       }
-    ]
+    ],
+    "equipA": "item/dagger*2;item/thieves-tools;item/crowbar;item/pouch*2;item/travelers-clothes",
+    "gpA": 16,
+    "gpB": 50
   },
   "background/sage": {
     "grants": [
@@ -171,7 +177,10 @@
         "cat": "tool",
         "target": "Calligrapher’s Supplies"
       }
-    ]
+    ],
+    "equipA": "item/quarterstaff;item/calligraphers-supplies;item/book;item/parchment*8;item/robe",
+    "gpA": 8,
+    "gpB": 50
   },
   "background/soldier": {
     "grants": [
@@ -229,7 +238,10 @@
         "pick": 1,
         "pool": "tool:gaming-set"
       }
-    ]
+    ],
+    "equipA": "item/spear;item/shortbow;item/arrows*20;item/gaming-set;item/healers-kit;item/quiver;item/travelers-clothes",
+    "gpA": 14,
+    "gpB": 50
   },
   "feat/ability-score-improvement": {
     "grants": [

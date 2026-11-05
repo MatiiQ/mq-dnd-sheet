@@ -107,3 +107,15 @@ describe('a step that depends on another choice', () => {
     expect(render(blankCharacter(), <ChoiceFlow entry={e} cat={cat} initial={{ answers, at: 0 }} onDone={() => {}} onCancel={() => {}} />)).toContain('Step 1 of 2');
   });
 });
+
+describe('a background\'s equipment step', () => {
+  it('comes last and lists both packages', () => {
+    const bg = { ...cat.byId.get('background/acolyte')!, equipA: 'item/dagger*2;Lucky charm', gpA: 15, gpB: 50 } as Entry;
+    const html = render(blankCharacter(), <ChoiceFlow entry={bg} cat={cat} initial={{ answers: {}, at: 99 }} onDone={() => {}} onCancel={() => {}} />);
+    expect(html).toContain('Starting equipment');
+    expect(html).toContain('2 × Dagger, Lucky charm, 15 GP');
+    expect(html).toContain('50 GP');
+    expect(html).toContain('Skip');
+    expect(html).toMatch(/Step (\d+) of \1/);
+  });
+});

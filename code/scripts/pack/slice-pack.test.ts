@@ -50,7 +50,7 @@ it.skipIf(!existsSync(PACK))('adds a PHB background with its ability picks, skil
   const cat = mergeCatalog(srdEntries, (JSON.parse(readFileSync(PACK, 'utf8')) as { entries: Entry[] }).entries);
   const guard = cat.byId.get('background/guard')!, blank = blankCharacter();
   expect(missingPicks(cat, blank, guard, {})).toEqual(['abil', 'tool']);
-  const c = addFromCatalog(blank, cat, guard, { picks: { abil: ['o1', 'o1', 'o3'], tool: ['Dice'] }, counted: {}, links: {}, nested: { 'feat/alert': { picks: {}, counted: {}, links: {} } } });
+  const c = addFromCatalog(blank, cat, guard, { picks: { abil: ['o1', 'o1', 'o3'], tool: ['Dice'] }, counted: {}, links: {}, equip: 'none', nested: { 'feat/alert': { picks: {}, counted: {}, links: {} } } });
   expect(effScore(c, 'str') - effScore(blank, 'str')).toBe(2);
   expect(effScore(c, 'wis') - effScore(blank, 'wis')).toBe(1);
   expect([skillLevel(c, 'athletics').level, skillLevel(c, 'perception').level]).toEqual([1, 1]);

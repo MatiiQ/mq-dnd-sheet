@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  atLevel, choiceActive, choicesOf, countedDefault, featureName, freeText, grantSpellName, isCountable, livePicks, needed, nestedEntries, optionGroups, poolOptions, resolveChoices,
+  atLevel, choiceActive, choicesOf, countedDefault, equipText, featureName, freeText, grantSpellName, isCountable, livePicks, needed, nestedEntries, optionGroups, poolOptions, resolveChoices,
   validPicks, type AddChoices
 } from '../../catalog/copy';
 import type { Catalog } from '../../catalog/merge';
@@ -12,7 +12,8 @@ import { LINKABLE, LinkOrAdd } from '../GrantEditor';
 
 // The answers of one entry in the flow, keyed by its path: '' for the entry being added, then '>' + the id of each
 // entry nested below it (Elf → '>trait/elf/elven-lineage>trait/elf/wood-elf').
-interface NodeAnswers { picks: Record<string, string[]>; counted: Record<string, boolean>; links: Record<string, 'link' | 'new'> }
+// equip: the entry's starting equipment package (a background's), asked on the flow's last step.
+interface NodeAnswers { picks: Record<string, string[]>; counted: Record<string, boolean>; links: Record<string, 'link' | 'new'>; equip?: 'A' | 'B' | 'none' }
 // Where the flow stood when it handed its answers on: given back as `initial`, it starts there again (Back from the item
 // questions). total: its step count, 0 when it had nothing to ask.
 export interface FlowState { answers: Record<string, NodeAnswers>; at: number; total?: number }
@@ -62,7 +63,8 @@ export function ChoiceFlow({ entry, cat, preset, initial, onDone, onCancel }: {
     }
   }
   const review = counts.length > 0 || links.length > 0;
-  const total = steps.length + (review ? 1 : 0);
+  const bg = nodes[0].entry.kind === 'background' && nodes[0].entry.equipA !== undefined ? nodes[0].entry : null;
+  const total = steps.length + (review ? 1 : 0) + (bg ? 1 : 0);
   const idx = Math.min(at, Math.max(0, total - 1));
 
   const build = (): AddChoices => {
@@ -73,7 +75,7 @@ export function ChoiceFlow({ entry, cat, preset, initial, onDone, onCancel }: {
       for (const x of counts) if (x.node.key === node.key && x.on) counted[x.spec.id] = true;
       const linked: Record<string, string> = {};
       for (const x of links) if (x.node.key === node.key && x.choice === 'link') linked[x.spec.id] = x.found;
-      out.set(node.key, { picks: { ...node.preset, ...own.picks }, counted, links: linked });
+      out.set(node.key, { picks: { ...node.preset, ...own.picks }, counted, links: linked, ...(node.key === '' && own.equip ? { equip: own.equip } : {}) });
     }
     for (const node of nodes) {
       if (node.parent === null) continue;
@@ -97,7 +99,22 @@ export function ChoiceFlow({ entry, cat, preset, initial, onDone, onCancel }: {
 
   const step = idx < steps.length ? steps[idx] : null;
   let ready = true, body = null;
-  if (step) {
+  if (bg && idx === total - 1) {
+    const cur = answers['']?.equip;
+    ready = !!cur;
+    const opt = (v: 'A' | 'B' | 'none', label: string, extra: string) => (
+      <button key={v} type="button" className="pick-opt" aria-pressed={cur === v} onClick={() => setNode('', (n) => ({ ...n, equip: v }))}>
+        <span className="col"><span>{label}</span><span className="small">{extra}</span></span>
+      </button>
+    );
+    body = (
+      <>
+        <span className="label">{nodes[0].title}</span>
+        <h4 className="pick-title">Starting equipment</h4>
+        <div className="col gap-6">{opt('A', 'Package A', equipText(cat, bg))}{opt('B', 'Package B', `${bg.gpB ?? 0} GP`)}{opt('none', 'Skip', 'Add no items or coins')}</div>
+      </>
+    );
+  } else if (step) {
     const { node, choice } = step;
     const cur = livePicks(cat, c, choice, node.picks, node.adding);
     const valid = validPicks(choice, cur);

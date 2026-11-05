@@ -173,3 +173,10 @@ describe('an action grant with uses', () => {
 it('lets a resource grant carry a note (addGrants copies it)', () => {
   expect(validateEntry({ id: 'feat/x', kind: 'feat', name: 'X', src: 'srd', desc: '', cat: 'general', grants: [{ id: 'r', kind: 'resource', name: 'R', recharge: 'long', note: 'Type the rolls here.' }] })).toEqual([]);
 });
+
+describe('a background\'s equipment packages', () => {
+  const b = (p: object) => ({ id: 'background/x', kind: 'background', name: 'X', src: 'srd', desc: '', feat: 'feat/a', equip: '', grants: [], ...p });
+  it('are valid with both coin amounts', () => expect(validateEntry(b({ equipA: 'item/dagger;Rope*2', gpA: 15, gpB: 50 }))).toEqual([]));
+  it('need gpA and gpB with equipA', () => expect(validateEntry(b({ equipA: 'item/dagger', gpB: 50 }))).toEqual(['background/x: equipA needs gpA and gpB']));
+  it('take whole coins', () => expect(validateEntry(b({ equipA: 'item/dagger', gpA: 1.5, gpB: 50 }))).not.toEqual([]));
+});

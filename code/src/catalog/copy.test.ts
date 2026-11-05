@@ -451,7 +451,7 @@ describe('addFromCatalog', () => {
     const blank = blankCharacter();
     expect(nestedEntries(cat, E('background/acolyte'), {})).toEqual([{ entry: E('feat/magic-initiate'), preset: { list: ['cleric'] } }]);
     const mi = A({ cantrips: ['spell/guidance', 'spell/sacred-flame'], spell1: ['spell/bless'], ab: ['wis'] });
-    const c = addFromCatalog(blank, cat, E('background/acolyte'), A({ abil: ['o2', 'o2', 'o3'] }, { 'feat/magic-initiate': mi }));
+    const c = addFromCatalog(blank, cat, E('background/acolyte'), A({ abil: ['o2', 'o2', 'o3'] }, { 'feat/magic-initiate': mi }, { equip: 'none' }));
     const bg = c.feats.find((f) => f.g === 'background')!;
     expect(bg).toMatchObject({ name: 'Acolyte', cid: 'background/acolyte' });
     expect(bg.desc).toContain('Equipment: ');
@@ -463,8 +463,8 @@ describe('addFromCatalog', () => {
     expect(feat).toMatchObject({ name: 'Magic Initiate (Cleric)', from: 'feature:' + bg.id, srcKind: 'background' });
     expect(fromOf(c, 'feature:' + feat.id).spells.map((x) => x.name)).toEqual(['Guidance', 'Sacred Flame', 'Bless']);
     expect(fromOf(c, 'feature:' + feat.id).res).toHaveLength(1);
-    expect(() => addFromCatalog(blank, cat, E('background/acolyte'), A({ abil: ['o2', 'o2', 'o3'] }))).toThrow();
-    expect(() => addFromCatalog(blank, cat, E('background/acolyte'), A({}, { 'feat/magic-initiate': mi }))).toThrow();
+    expect(() => addFromCatalog(blank, cat, E('background/acolyte'), A({ abil: ['o2', 'o2', 'o3'] }, undefined, { equip: 'none' }))).toThrow();
+    expect(() => addFromCatalog(blank, cat, E('background/acolyte'), A({}, { 'feat/magic-initiate': mi }, { equip: 'none' }))).toThrow();
     const gone = removeRef(c, { kind: 'feature', id: bg.id });
     expect(gone.feats).toEqual([]);
     expect(gone.spells).toEqual([]);
@@ -613,7 +613,7 @@ describe('addFromCatalog', () => {
   it('stores counted and links answers on the grants', () => {
     const c = addFromCatalog(blankCharacter(), cat, E('background/acolyte'),
       A({ abil: ['o1', 'o2', 'o3'] }, { 'feat/magic-initiate': A({ cantrips: ['spell/guidance', 'spell/sacred-flame'], spell1: ['spell/bless'], ab: ['wis'] }) },
-        { counted: { o1: true } }));
+        { counted: { o1: true }, equip: 'none' }));
     expect(c.grants.find((g) => g.ab === 'int')!.counted).toBe(true);
     expect(c.grants.find((g) => g.ab === 'wis')!.counted).toBeUndefined();
     const own: Character = { ...blankCharacter(), res: [{ id: 'r1', name: 'Favored Enemy', count: 2, max: 2, recharge: 'long' }] };
@@ -1022,4 +1022,25 @@ describe('choices that depend on another choice', () => {
     expect(choiceActive(e, choice(e, 'c'), { a: ['x'], b: ['p'] })).toBe(true);
     expect(choiceActive(e, choice(e, 'c'), { a: ['y'], b: ['p'] })).toBe(false);
   });
+});
+
+describe('background starting equipment', () => {
+  const bg = { id: 'background/test', kind: 'background', name: 'Test', src: 'srd', desc: '', feat: 'feat/alert', equip: 'A: Dagger, Lucky charm, Parchment; B: 50 GP', grants: [],
+    equipA: 'item/dagger;Lucky charm;item/parchment*10', gpA: 15, gpB: 50 } as Entry;
+  const bcat = mergeCatalog([...srdEntries, bg], null);
+  const add = (equip?: 'A' | 'B' | 'none') => addFromCatalog(blankCharacter(), bcat, bg, { picks: {}, counted: {}, links: {}, ...(equip ? { equip } : {}) });
+  const gp = blankCharacter().coins.gp;
+  it('package A adds its items and coins', () => {
+    const c = add('A');
+    expect(c.inv.map((i) => [i.name, i.qty, i.cid])).toEqual([['Dagger', 1, 'item/dagger'], ['Lucky charm', 1, undefined], ['Parchment', 10, 'item/parchment']]);
+    expect(c.inv.every((i) => !i.eq)).toBe(true);
+    expect(c.coins.gp).toBe(gp + 15);
+  });
+  it('package B adds its coins only', () => {
+    const c = add('B');
+    expect(c.inv).toEqual([]);
+    expect(c.coins.gp).toBe(gp + 50);
+  });
+  it('none adds neither', () => expect([add('none').inv, add('none').coins.gp]).toEqual([[], gp]));
+  it('asks for it', () => expect(() => add()).toThrow('Test: choose starting equipment'));
 });

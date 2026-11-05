@@ -44,7 +44,9 @@ export interface ItemEntry extends EntryBase {
   grants?: Spec[];
 }
 export interface FeatEntry extends EntryBase { kind: 'feat'; cat: 'origin' | 'general' | 'style' | 'boon'; prereq?: string; repeat?: boolean; grants: Spec[] }
-export interface BackgroundEntry extends EntryBase { kind: 'background'; feat: string; equip: string; grants: Spec[] }
+// equipA: starting equipment package A as data, a ';' list of 'item/<slug>' ids or plain names, each with an optional
+// '*<count>'; gpA/gpB: the coins of package A and of package B (which is coins only). The add flow asks which one.
+export interface BackgroundEntry extends EntryBase { kind: 'background'; feat: string; equip: string; equipA?: string; gpA?: number; gpB?: number; grants: Spec[] }
 export interface SpeciesEntry extends EntryBase { kind: 'species'; sizes: string; speed: number }
 // A species trait or a lineage option. of: the trait an option belongs to (Wood Elf → trait/elf/elven-lineage), which
 // offers its options as a choice with the pool 'trait:of=<trait id>'.
@@ -233,7 +235,7 @@ const FIELDS: Record<Kind, Record<string, [Check, boolean]>> = {
   spell: SPELL,
   item: ITEM,
   feat: { cat: [oneOf('origin', 'general', 'style', 'boon'), true], prereq: [(v) => typeof v === 'string' && v.split(';').every((t) => PREREQ_TERM.test(t)), false], repeat: [bool, false] },
-  background: { feat: [str, true], equip: [str, true] },
+  background: { feat: [str, true], equip: [str, true], equipA: [str, false], gpA: [whole(0, 99999), false], gpB: [whole(0, 99999), false] },
   species: { sizes: [(v) => typeof v === 'string' && v.split(',').every((s) => SIZE_KEYS.includes(s as Size)), true], speed: [num, true] },
   trait: { species: [str, true], lvl: [whole(1, 20), true], of: [(v) => typeof v === 'string' && v.startsWith('trait/'), false] },
   class: {
@@ -333,6 +335,7 @@ export function validateEntry(x: unknown): string[] {
     const lv = e.again.split(',').map(Number);
     if (!lv.every((l, i) => Number.isInteger(l) && l > (i ? lv[i - 1] : e.lvl) && l <= 20)) errs.push(`${at}: bad again ${JSON.stringify(e.again)}`);
   }
+  if (e.kind === 'background' && e.equipA !== undefined && (e.gpA === undefined || e.gpB === undefined)) errs.push(`${at}: equipA needs gpA and gpB`);
   if (e.kind === 'class') {
     if (e.pact && !e.slots?.length) errs.push(`${at}: pact needs slots`);
     if (!isObj(e.skills) || e.skills.kind !== 'choice') errs.push(`${at}: skills is not a choice`);
