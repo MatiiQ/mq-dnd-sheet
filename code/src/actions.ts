@@ -199,19 +199,30 @@ export const attacksPerAction = (c: Character) => Math.max(1, ...activeGrants(c,
 // Attack action". A mastery property applies to attacks with the weapon that has it, so the app reads it as: the extra
 // attack's weapon has Nick and the character has its mastery. Either held weapon may make the extra attack, so it is the
 // one whose Nick counts when exactly one does (at the table: attack with the Nick weapon second), else the newer one.
+// Dual Wielder (a lightExtra grant with anyMelee, PHB p.203): one Light weapon is enough, and the extra attack is with the
+// other, a Melee weapon without Two-Handed; it has no limit on the Light weapon, so a hand crossbow counts. Crossbow
+// Expert (a grant with weapon, PHB p.203): adds the modifier only when the extra attack's weapon matches.
 export function lightExtra(c: Character): (WeaponAttack & { nick: boolean }) | null {
   const held = weaponsHeld(c);
   if (held.length !== 2 || held.some((w) => w.two)) return null;
   const items = held.map((w) => c.inv.find((i) => i.id === w.id)!);
-  if (!items.every((it) => it && hasProp(it, 'light'))) return null;
+  const light = items.filter((it) => it && hasProp(it, 'light'));
+  const grants = activeGrants(c, 'lightExtra');
   const nickOf = (it: Item) => it.mastery === 'nick' && hasMastery(c, weaponKind(it));
-  const nicks = items.filter(nickOf);
-  const it = nicks.length === 1 ? nicks[0] : items[1];
+  let it: Item;
+  if (light.length === 2) {
+    const nicks = items.filter(nickOf);
+    it = nicks.length === 1 ? nicks[0] : items[1];
+  } else {
+    if (light.length !== 1 || !grants.some((g) => g.anyMelee)) return null;
+    it = items.find((x) => x !== light[0])!;
+    if (it.wrange !== 'melee' || twoHanded(it)) return null;
+  }
   const use: Use = it.wrange === 'ranged' ? 'ranged' : 'melee';
   const { attack, die, mod } = attackFor(c, it, use);
-  const addMod = activeGrants(c, 'lightExtra').some((g) => g.addMod);
+  const addMod = grants.some((g) => g.addMod && (!g.weapon || weaponMatches(it, g.weapon)));
   const dmgParts = mod > 0 && !addMod ? attack.dmgParts.slice(1) : attack.dmgParts;
-  const nick = nickOf(it);
+  const nick = light.length === 2 && nickOf(it);
   return {
     ...attack, dmgParts, dmg: diceText(die, partsTotal(dmgParts)), econ: nick ? 'action' : 'bonus', nick,
     ...(nick ? { note: 'part of the Attack action, once per turn' } : { note: 'Bonus Action, after the Attack action' })

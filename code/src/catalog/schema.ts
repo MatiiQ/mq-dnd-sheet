@@ -93,7 +93,7 @@ export interface GrantSpec {
   die?: string; abs?: string;                                                       // unarmed (also dtype), atkAbil
   wrange?: 'melee' | 'ranged'; amode?: 'melee' | 'ranged'; prop?: string; weapon?: string; oneHand?: boolean;   // atkBonus, dmgBonus
   cantrip?: boolean;                                                                // dmgBonus: damage of the entry's class cantrips
-  addMod?: boolean;                                                                 // lightExtra
+  addMod?: boolean; anyMelee?: boolean;                                             // lightExtra (also weapon: addMod only with these)
   weapons?: string;                                                                 // atkAbil
   list?: string; cantrips?: string; prepared?: string;                              // casting: spell list, counts by level
   s1?: string; s2?: string; s3?: string; s4?: string; s5?: string;                 // casting: slots of each level by class level
@@ -173,7 +173,7 @@ const GRANTS: Record<GrantKind, Record<string, [Check, boolean]>> = {
   unarmed: { die: [value, true], abs: [str, true], dtype: [str, false] },
   atkBonus: { val: [value, true], wrange: [RANGE_KIND, false], amode: [RANGE_KIND, false], prop: [str, false], weapon: [str, false], oneHand: [bool, false] },
   dmgBonus: { val: [value, true], wrange: [RANGE_KIND, false], amode: [RANGE_KIND, false], prop: [str, false], weapon: [str, false], oneHand: [bool, false], cantrip: [bool, false] },
-  lightExtra: { addMod: [bool, true] },
+  lightExtra: { addMod: [bool, true], anyMelee: [bool, false], weapon: [str, false] },
   atkAbil: { ab: [or(ability, oneOf('cast'), ref), true], weapons: [str, false], amode: [RANGE_KIND, false], die: [value, false] },
   // A subclass that casts from a class list with its own slots (Eldritch Knight, Arcane Trickster).
   casting: { ab: [ability, true], list: [str, true], cantrips: [value, false], prepared: [value, false],

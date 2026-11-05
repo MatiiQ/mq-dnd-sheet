@@ -235,6 +235,25 @@ describe('the Light extra attack (PHB p.213)', () => {
     expect(lightExtra(duo([shortsword({ id: 'ss' }), longsword({ id: 'ls' })], ['ss', 'ls']))).toBeNull();
     expect(lightExtra(duo([shortsword({ id: 'ss' }), dagger({ id: 'd' })], ['ss', 'd']))!.itemId).toBe('d');
   });
+  const dw = grant({ id: 'gdw', kind: 'lightExtra', name: 'Enhanced Dual Wielding', addMod: false, anyMelee: true });
+  it('Dual Wielder: a Light weapon with a non-Light Melee weapon gives a Bonus Action attack (PHB p.203)', () => {
+    const pair = [dagger({ id: 'd' }), longsword({ id: 'ls' })], hands = ['d', 'ls'];
+    expect(lightExtra(duo(pair, hands, [], dw))).toMatchObject({ itemId: 'ls', econ: 'bonus', nick: false, dmg: '1d8' });
+    expect(lightExtra(duo(pair, hands))).toBeNull();
+  });
+  it('Dual Wielder: no extra attack with a Two-Handed or a non-Light ranged weapon in the other hand', () => {
+    expect(lightExtra(duo([dagger({ id: 'd' }), longsword({ id: 'gs', props: 'two-handed,heavy' })], ['d', 'gs'], [], dw))).toBeNull();
+    expect(lightExtra(duo([dagger({ id: 'd' }), longbow({ id: 'lb', props: 'ammunition' })], ['d', 'lb'], [], dw))).toBeNull();
+    expect(lightExtra(duo([longsword({ id: 'a' }), longsword({ id: 'b' })], ['a', 'b'], [], dw))).toBeNull();
+  });
+  it('Dual Wielder: a Light hand crossbow with a non-Light Melee weapon attacks with the Melee one', () => {
+    expect(lightExtra(duo([handCrossbow({ id: 'hc' }), longsword({ id: 'ls' })], ['hc', 'ls'], [], dw))!.itemId).toBe('ls');
+  });
+  it('Crossbow Expert adds the modifier to a hand crossbow Light extra attack (PHB p.203)', () => {
+    const ce = grant({ id: 'gce', kind: 'lightExtra', name: 'Dual Wielding', addMod: true, weapon: 'hand-crossbow' });
+    expect(lightExtra(duo([handCrossbow({ id: 'hc', qty: 2 })], ['hc', 'hc'], [], ce))!.dmg).toBe('1d6+4');
+    expect(lightExtra(duo([dagger({ id: 'd', qty: 2 })], ['d', 'd'], [], ce))!.dmg).toBe('1d4');
+  });
   it('is part of the Attack action with Nick (PHB p.214)', () => {
     const nick = lightExtra(duo([dagger({ id: 'd', qty: 2 })], ['d', 'd'], ['dagger']))!;
     expect(nick).toMatchObject({ nick: true, econ: 'action', note: 'part of the Attack action, once per turn' });
