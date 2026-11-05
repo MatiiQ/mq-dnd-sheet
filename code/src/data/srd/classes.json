@@ -7064,7 +7064,23 @@
     "prereq": "lvl>=2",
     "repeat": true,
     "desc": "Prerequisite: Level 2+ Warlock, a Warlock Cantrip That Deals Damage\nChoose one of your known Warlock cantrips that deals damage. You can add your Charisma modifier to that spell’s damage rolls.\nRepeatable. You can gain this invocation more than once. Each time you do so, choose a different eligible cantrip.",
-    "grants": []
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "cantrip",
+        "name": "Warlock cantrip",
+        "pick": 1,
+        "pool": "spell:list=warlock;lvl=0"
+      },
+      {
+        "id": "g1",
+        "kind": "dmgBonus",
+        "name": "Agonizing Blast",
+        "cantrip": true,
+        "spell": "$cantrip",
+        "val": "cha"
+      }
+    ]
   },
   {
     "id": "feature/warlock/armor-of-shadows",
@@ -7075,7 +7091,15 @@
     "lvl": 1,
     "of": "invocation",
     "desc": "You can cast Mage Armor on yourself without expending a spell slot.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Mage Armor",
+        "spell": "spell/mage-armor",
+        "always": true
+      }
+    ]
   },
   {
     "id": "feature/warlock/ascendant-step",
@@ -7087,7 +7111,15 @@
     "of": "invocation",
     "prereq": "lvl>=5",
     "desc": "Prerequisite: Level 5+ Warlock\nYou can cast Levitate on yourself without expending a spell slot.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Levitate",
+        "spell": "spell/levitate",
+        "always": true
+      }
+    ]
   },
   {
     "id": "feature/warlock/contact-patron",
@@ -7125,7 +7157,14 @@
     "of": "invocation",
     "prereq": "lvl>=2",
     "desc": "Prerequisite: Level 2+ Warlock\nYou can see normally in Dim Light and Darkness— both magical and nonmagical—within 120 feet of yourself.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "sense",
+        "name": "Devil’s Sight",
+        "range": "120"
+      }
+    ]
   },
   {
     "id": "feature/warlock/devouring-blade",
@@ -7137,7 +7176,15 @@
     "of": "invocation",
     "prereq": "lvl>=12;feature=thirsting-blade",
     "desc": "Prerequisite: Level 12+ Warlock, Thirsting Blade Invocation\nThe Extra Attack of your Thirsting Blade invocation confers two extra attacks rather than one.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "attacks",
+        "name": "Devouring Blade",
+        "val": "3",
+        "when": "active"
+      }
+    ]
   },
   {
     "id": "feature/warlock/eldritch-invocations",
@@ -7193,7 +7240,15 @@
     "lvl": 1,
     "of": "invocation",
     "desc": "You have Advantage on Constitution saving throws that you make to maintain Concentration.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "defense",
+        "name": "Eldritch Mind",
+        "def": "adv",
+        "target": "Constitution saves to keep Concentration"
+      }
+    ]
   },
   {
     "id": "feature/warlock/eldritch-smite",
@@ -7205,7 +7260,17 @@
     "of": "invocation",
     "prereq": "lvl>=5;feature=pact-of-the-blade",
     "desc": "Prerequisite: Level 5+ Warlock, Pact of the Blade Invocation\nOnce per turn when you hit a creature with your pact weapon, you can expend a Pact Magic spell slot to deal an extra 1d8 Force damage to the target, plus another 1d8 per level of the spell slot, and you can give the target the Prone condition if it is Huge or smaller.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "xdmg",
+        "name": "Eldritch Smite (+1d8 per slot level)",
+        "dice": "1d8",
+        "dtype": "Force",
+        "on": "a pact weapon hit, spending a Pact Magic slot",
+        "perTurn": true
+      }
+    ]
   },
   {
     "id": "feature/warlock/eldritch-spear",
@@ -7515,7 +7580,15 @@
     "of": "invocation",
     "prereq": "lvl>=2",
     "desc": "Prerequisite: Level 2+ Warlock\nYou can cast False Life on yourself without expending a spell slot. When you cast the spell with this feature, you don’t roll the die for the Temporary Hit Points; you automatically get the highest number on the die.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "False Life",
+        "spell": "spell/false-life",
+        "always": true
+      }
+    ]
   },
   {
     "id": "feature/warlock/gaze-of-two-minds",
@@ -7527,7 +7600,15 @@
     "of": "invocation",
     "prereq": "lvl>=5",
     "desc": "Prerequisite: Level 5+ Warlock\nYou can use a Bonus Action to touch a willing creature and perceive through its senses until the end of your next turn. As long as the creature is on the same plane of existence as you, you can take a Bonus Action on subsequent turns to maintain this connection, extending the duration until the end of your next turn. The connection ends if you don’t maintain it in this way. While perceiving through the other creature’s senses, you benefit from any special senses possessed by that creature, and you can cast spells as if you were in your space or the other creature’s space if the two of you are within 60 feet of each other.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Gaze of Two Minds",
+        "econ": "bonus",
+        "note": "Touch a willing creature and perceive through its senses until the end of your next turn; a Bonus Action keeps it."
+      }
+    ]
   },
   {
     "id": "feature/warlock/gift-of-the-depths",
@@ -7546,6 +7627,21 @@
         "name": "Swim Speed equal to Speed",
         "mode": "swim",
         "val": "walk"
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Water Breathing",
+        "spell": "spell/water-breathing",
+        "always": true
+      },
+      {
+        "id": "g3",
+        "kind": "resource",
+        "name": "Water Breathing (free cast)",
+        "max": "1",
+        "recharge": "long",
+        "casts": "spell/water-breathing"
       }
     ]
   },
@@ -7559,7 +7655,23 @@
     "of": "invocation",
     "prereq": "lvl>=9;feature=pact-of-the-tome",
     "desc": "Prerequisite: Level 9+ Warlock, Pact of the Tome Invocation\nA new page appears in your Book of Shadows when you conjure it. With your permission, a creature can take an action to write its name on that page, which can contain a number of names equal to your Charisma modifier (minimum of one name). When any creature whose name is on the page is reduced to 0 Hit Points but not killed outright, the creature magically drops to 1 Hit Point instead. Once this magic is triggered, no creature can benefit from it until you finish a Long Rest. As a Magic action, you can erase a name on the page by touching it.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Gift of the Protectors",
+        "max": "1",
+        "recharge": "long"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Gift of the Protectors",
+        "econ": "other",
+        "res": "g1",
+        "note": "A creature named on the page drops to 1 HP instead of 0."
+      }
+    ]
   },
   {
     "id": "feature/warlock/investment-of-the-chain-master",
@@ -7571,7 +7683,22 @@
     "of": "invocation",
     "prereq": "lvl>=5;feature=pact-of-the-chain",
     "desc": "Prerequisite: Level 5+ Warlock, Pact of the Chain Invocation\nWhen you cast Find Familiar, you infuse the summoned familiar with a measure of your eldritch power, granting the creature the following benefits.\nAerial or Aquatic. The familiar gains either a Fly Speed or a Swim Speed (your choice) of 40 feet.\nQuick Attack. As a Bonus Action, you can command the familiar to take the Attack action.\nNecrotic or Radiant Damage. Whenever the familiar deals Bludgeoning, Piercing, or Slashing damage, you can make it deal Necrotic or Radiant damage instead.\nYour Save DC. If the familiar forces a creature to make a saving throw, it uses your spell save DC.\nResistance. When the familiar takes damage, you can take a Reaction to grant it Resistance against that damage.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Familiar: Quick Attack",
+        "econ": "bonus",
+        "note": "Command your familiar to take the Attack action."
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Familiar: Resistance",
+        "econ": "reaction",
+        "note": "When your familiar takes damage, give it Resistance to it."
+      }
+    ]
   },
   {
     "id": "feature/warlock/lessons-of-the-first-ones",
@@ -7584,7 +7711,15 @@
     "prereq": "lvl>=2",
     "repeat": true,
     "desc": "Prerequisite: Level 2+ Warlock\nYou have received knowledge from an elder entity of the multiverse, allowing you to gain one Origin feat of your choice (see “Feats”).\nRepeatable. You can gain this invocation more than once. Each time you do so, choose a different Origin feat.",
-    "grants": []
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "feat",
+        "name": "Origin feat",
+        "pick": 1,
+        "pool": "feat:cat=origin"
+      }
+    ]
   },
   {
     "id": "feature/warlock/lifedrinker",
@@ -7596,7 +7731,17 @@
     "of": "invocation",
     "prereq": "lvl>=9;feature=pact-of-the-blade",
     "desc": "Prerequisite: Level 9+ Warlock, Pact of the Blade Invocation\nOnce per turn when you hit a creature with your pact weapon, you can deal an extra 1d6 Necrotic, Psychic, or Radiant damage (your choice) to the creature, and you can expend one of your Hit Point Dice to roll it and regain a number of Hit Points equal to the roll plus your Constitution modifier (minimum of 1 Hit Point).",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "xdmg",
+        "name": "Lifedrinker",
+        "dice": "1d6",
+        "dtype": "Necrotic, Psychic, or Radiant",
+        "on": "a pact weapon hit",
+        "perTurn": true
+      }
+    ]
   },
   {
     "id": "feature/warlock/magical-cunning",
@@ -7634,7 +7779,15 @@
     "of": "invocation",
     "prereq": "lvl>=2",
     "desc": "Prerequisite: Level 2+ Warlock\nYou can cast Disguise Self without expending a spell slot.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Disguise Self",
+        "spell": "spell/disguise-self",
+        "always": true
+      }
+    ]
   },
   {
     "id": "feature/warlock/master-of-myriad-forms",
@@ -7646,7 +7799,15 @@
     "of": "invocation",
     "prereq": "lvl>=5",
     "desc": "Prerequisite: Level 5+ Warlock\nYou can cast Alter Self without expending a spell slot.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Alter Self",
+        "spell": "spell/alter-self",
+        "always": true
+      }
+    ]
   },
   {
     "id": "feature/warlock/misty-visions",
@@ -7658,7 +7819,15 @@
     "of": "invocation",
     "prereq": "lvl>=2",
     "desc": "Prerequisite: Level 2+ Warlock You can cast Silent Image without expending a spell slot.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Silent Image",
+        "spell": "spell/silent-image",
+        "always": true
+      }
+    ]
   },
   {
     "id": "feature/warlock/mystic-arcanum",
@@ -7704,7 +7873,15 @@
     "of": "invocation",
     "prereq": "lvl>=5",
     "desc": "Prerequisite: Level 5+ Warlock\nWhile you’re in an area of Dim Light or Darkness, you can cast Invisibility on yourself without expending a spell slot.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Invisibility",
+        "spell": "spell/invisibility",
+        "always": true
+      }
+    ]
   },
   {
     "id": "feature/warlock/otherworldly-leap",
@@ -7716,7 +7893,15 @@
     "of": "invocation",
     "prereq": "lvl>=2",
     "desc": "Prerequisite: Level 2+ Warlock\nYou can cast Jump on yourself without expending a spell slot.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Jump",
+        "spell": "spell/jump",
+        "always": true
+      }
+    ]
   },
   {
     "id": "feature/warlock/pact-magic",
@@ -7737,7 +7922,38 @@
     "lvl": 1,
     "of": "invocation",
     "desc": "As a Bonus Action, you can conjure a pact weapon in your hand—a Simple or Martial Melee weapon of your choice with which you bond—or create a bond with a magic weapon you touch; you can’t bond with a magic weapon if someone else is attuned to it or another Warlock is bonded with it. Until the bond ends, you have proficiency with the weapon, and you can use it as a Spellcasting Focus. Whenever you attack with the bonded weapon, you can use your Charisma modifier for the attack and damage rolls instead of using Strength or Dexterity; and you can cause the weapon to deal Necrotic, Psychic, or Radiant damage or its normal damage type. Your bond with the weapon ends if you use this feature’s Bonus Action again, if the weapon is more than 5 feet away from you for 1 minute or more, or if you die. A conjured weapon disappears when the bond ends.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Pact Weapon",
+        "econ": "bonus",
+        "note": "Switch the effect on while your pact weapon is in hand: Charisma attacks and proficiency then apply to any weapon you hold. Necrotic, Psychic or Radiant damage, or its own type."
+      },
+      {
+        "id": "g2",
+        "kind": "atkAbil",
+        "name": "Pact Weapon (Charisma)",
+        "ab": "cha",
+        "when": "active"
+      },
+      {
+        "id": "g3",
+        "kind": "prof",
+        "name": "Pact Weapon (Simple weapons)",
+        "cat": "weapon",
+        "target": "Simple weapons",
+        "when": "active"
+      },
+      {
+        "id": "g4",
+        "kind": "prof",
+        "name": "Pact Weapon (Martial weapons)",
+        "cat": "weapon",
+        "target": "Martial weapons",
+        "when": "active"
+      }
+    ]
   },
   {
     "id": "feature/warlock/pact-of-the-chain",
@@ -7748,7 +7964,22 @@
     "lvl": 1,
     "of": "invocation",
     "desc": "You learn the Find Familiar spell and can cast it as a Magic action without expending a spell slot. When you cast the spell, you choose one of the normal forms for your familiar or one of the following special forms: Imp, Pseudodragon, Quasit, Skeleton, Sphinx of Wonder, Sprite, or Venomous Snake (see “Monsters” for the familiar’s stat block). Additionally, when you take the Attack action, you can forgo one of your own attacks to allow your familiar to make one attack of its own with its Reaction.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Find Familiar",
+        "spell": "spell/find-familiar",
+        "always": true
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Familiar attack",
+        "econ": "other",
+        "note": "On your Attack action, forgo one attack so your familiar attacks with its Reaction."
+      }
+    ]
   },
   {
     "id": "feature/warlock/pact-of-the-tome",
@@ -7759,7 +7990,38 @@
     "lvl": 1,
     "of": "invocation",
     "desc": "Stitching together strands of shadow, you conjure forth a book in your hand at the end of a Short or Long Rest. This Book of Shadows (you determine its appearance) contains eldritch magic that only you can access, granting you the benefits below. The book disappears if you conjure another book with this feature or if you die.\nCantrips and Rituals. When the book appears, choose three cantrips, and choose two level 1 spells that have the Ritual tag. The spells can be from any class’s spell list, and they must be spells you don’t already have prepared. While the book is on your person, you have the chosen spells prepared, and they function as Warlock spells for you.\nSpellcasting Focus. You can use the book as a Spellcasting Focus.",
-    "grants": []
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "cantrips",
+        "name": "Book of Shadows cantrips",
+        "pick": 3,
+        "pool": "spell:lvl=0"
+      },
+      {
+        "kind": "choice",
+        "id": "rituals",
+        "name": "Book of Shadows rituals",
+        "pick": 2,
+        "pool": "spell:lvl=1;ritual=true"
+      },
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Book of Shadows cantrip",
+        "spell": "$cantrips",
+        "always": true,
+        "castAb": "cha"
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Book of Shadows ritual",
+        "spell": "$rituals",
+        "always": true,
+        "castAb": "cha"
+      }
+    ]
   },
   {
     "id": "feature/warlock/repelling-blast",
@@ -7784,7 +8046,15 @@
     "of": "invocation",
     "prereq": "lvl>=5;feature=pact-of-the-blade",
     "desc": "Prerequisite: Level 5+ Warlock, Pact of the Blade Invocation\nYou gain the Extra Attack feature for your pact weapon only. With that feature, you can attack twice with the weapon instead of once when you take the Attack action on your turn.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "attacks",
+        "name": "Thirsting Blade",
+        "val": "2",
+        "when": "active"
+      }
+    ]
   },
   {
     "id": "feature/warlock/visions-of-distant-realms",
@@ -7796,7 +8066,15 @@
     "of": "invocation",
     "prereq": "lvl>=9",
     "desc": "Prerequisite: Level 9+ Warlock\nYou can cast Arcane Eye without expending a spell slot.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Arcane Eye",
+        "spell": "spell/arcane-eye",
+        "always": true
+      }
+    ]
   },
   {
     "id": "feature/warlock/warlock-subclass",
@@ -7826,7 +8104,15 @@
     "of": "invocation",
     "prereq": "lvl>=7",
     "desc": "Prerequisite: Level 7+ Warlock\nYou can cast Speak with Dead without expending a spell slot.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Speak With Dead",
+        "spell": "spell/speak-with-dead",
+        "always": true
+      }
+    ]
   },
   {
     "id": "feature/warlock/witch-sight",
@@ -7838,7 +8124,14 @@
     "of": "invocation",
     "prereq": "lvl>=15",
     "desc": "Prerequisite: Level 15+ Warlock\nYou have Truesight with a range of 30 feet.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "sense",
+        "name": "Truesight",
+        "range": "30"
+      }
+    ]
   },
   {
     "id": "feature/wizard/ability-score-improvement",

@@ -3930,6 +3930,21 @@
         "name": "Swim Speed equal to Speed",
         "mode": "swim",
         "val": "walk"
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Water Breathing",
+        "spell": "spell/water-breathing",
+        "always": true
+      },
+      {
+        "id": "g3",
+        "kind": "resource",
+        "name": "Water Breathing (free cast)",
+        "max": "1",
+        "recharge": "long",
+        "casts": "spell/water-breathing"
       }
     ]
   },
@@ -3943,6 +3958,359 @@
         "uses": "feature/monk/monks-focus",
         "regainTo": "4",
         "note": "On rolling Initiative with 3 or fewer Focus Points, if you don’t use Uncanny Metabolism."
+      }
+    ]
+  },
+  "feature/warlock/armor-of-shadows": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Mage Armor",
+        "spell": "spell/mage-armor",
+        "always": true
+      }
+    ]
+  },
+  "feature/warlock/ascendant-step": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Levitate",
+        "spell": "spell/levitate",
+        "always": true
+      }
+    ]
+  },
+  "feature/warlock/fiendish-vigor": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "False Life",
+        "spell": "spell/false-life",
+        "always": true
+      }
+    ]
+  },
+  "feature/warlock/mask-of-many-faces": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Disguise Self",
+        "spell": "spell/disguise-self",
+        "always": true
+      }
+    ]
+  },
+  "feature/warlock/master-of-myriad-forms": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Alter Self",
+        "spell": "spell/alter-self",
+        "always": true
+      }
+    ]
+  },
+  "feature/warlock/misty-visions": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Silent Image",
+        "spell": "spell/silent-image",
+        "always": true
+      }
+    ]
+  },
+  "feature/warlock/one-with-shadows": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Invisibility",
+        "spell": "spell/invisibility",
+        "always": true
+      }
+    ]
+  },
+  "feature/warlock/otherworldly-leap": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Jump",
+        "spell": "spell/jump",
+        "always": true
+      }
+    ]
+  },
+  "feature/warlock/visions-of-distant-realms": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Arcane Eye",
+        "spell": "spell/arcane-eye",
+        "always": true
+      }
+    ]
+  },
+  "feature/warlock/whispers-of-the-grave": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Speak With Dead",
+        "spell": "spell/speak-with-dead",
+        "always": true
+      }
+    ]
+  },
+  "feature/warlock/pact-of-the-chain": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Find Familiar",
+        "spell": "spell/find-familiar",
+        "always": true
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Familiar attack",
+        "econ": "other",
+        "note": "On your Attack action, forgo one attack so your familiar attacks with its Reaction."
+      }
+    ]
+  },
+  "feature/warlock/witch-sight": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "sense",
+        "name": "Truesight",
+        "range": "30"
+      }
+    ]
+  },
+  "feature/warlock/devils-sight": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "sense",
+        "name": "Devil’s Sight",
+        "range": "120"
+      }
+    ]
+  },
+  "feature/warlock/eldritch-mind": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "defense",
+        "name": "Eldritch Mind",
+        "def": "adv",
+        "target": "Constitution saves to keep Concentration"
+      }
+    ]
+  },
+  "feature/warlock/agonizing-blast": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "cantrip",
+        "name": "Warlock cantrip",
+        "pick": 1,
+        "pool": "spell:list=warlock;lvl=0"
+      },
+      {
+        "id": "g1",
+        "kind": "dmgBonus",
+        "name": "Agonizing Blast",
+        "cantrip": true,
+        "spell": "$cantrip",
+        "val": "cha"
+      }
+    ]
+  },
+  "feature/warlock/pact-of-the-blade": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Pact Weapon",
+        "econ": "bonus",
+        "note": "Switch the effect on while your pact weapon is in hand: Charisma attacks and proficiency then apply to any weapon you hold. Necrotic, Psychic or Radiant damage, or its own type."
+      },
+      {
+        "id": "g2",
+        "kind": "atkAbil",
+        "name": "Pact Weapon (Charisma)",
+        "ab": "cha",
+        "when": "active"
+      },
+      {
+        "id": "g3",
+        "kind": "prof",
+        "name": "Pact Weapon (Simple weapons)",
+        "cat": "weapon",
+        "target": "Simple weapons",
+        "when": "active"
+      },
+      {
+        "id": "g4",
+        "kind": "prof",
+        "name": "Pact Weapon (Martial weapons)",
+        "cat": "weapon",
+        "target": "Martial weapons",
+        "when": "active"
+      }
+    ]
+  },
+  "feature/warlock/thirsting-blade": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "attacks",
+        "name": "Thirsting Blade",
+        "val": "2",
+        "when": "active"
+      }
+    ]
+  },
+  "feature/warlock/devouring-blade": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "attacks",
+        "name": "Devouring Blade",
+        "val": "3",
+        "when": "active"
+      }
+    ]
+  },
+  "feature/warlock/lessons-of-the-first-ones": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "feat",
+        "name": "Origin feat",
+        "pick": 1,
+        "pool": "feat:cat=origin"
+      }
+    ]
+  },
+  "feature/warlock/pact-of-the-tome": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "cantrips",
+        "name": "Book of Shadows cantrips",
+        "pick": 3,
+        "pool": "spell:lvl=0"
+      },
+      {
+        "kind": "choice",
+        "id": "rituals",
+        "name": "Book of Shadows rituals",
+        "pick": 2,
+        "pool": "spell:lvl=1;ritual=true"
+      },
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Book of Shadows cantrip",
+        "spell": "$cantrips",
+        "always": true,
+        "castAb": "cha"
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Book of Shadows ritual",
+        "spell": "$rituals",
+        "always": true,
+        "castAb": "cha"
+      }
+    ]
+  },
+  "feature/warlock/eldritch-smite": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "xdmg",
+        "name": "Eldritch Smite (+1d8 per slot level)",
+        "dice": "1d8",
+        "dtype": "Force",
+        "on": "a pact weapon hit, spending a Pact Magic slot",
+        "perTurn": true
+      }
+    ]
+  },
+  "feature/warlock/lifedrinker": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "xdmg",
+        "name": "Lifedrinker",
+        "dice": "1d6",
+        "dtype": "Necrotic, Psychic, or Radiant",
+        "on": "a pact weapon hit",
+        "perTurn": true
+      }
+    ]
+  },
+  "feature/warlock/gift-of-the-protectors": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Gift of the Protectors",
+        "max": "1",
+        "recharge": "long"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Gift of the Protectors",
+        "econ": "other",
+        "res": "g1",
+        "note": "A creature named on the page drops to 1 HP instead of 0."
+      }
+    ]
+  },
+  "feature/warlock/gaze-of-two-minds": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Gaze of Two Minds",
+        "econ": "bonus",
+        "note": "Touch a willing creature and perceive through its senses until the end of your next turn; a Bonus Action keeps it."
+      }
+    ]
+  },
+  "feature/warlock/investment-of-the-chain-master": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Familiar: Quick Attack",
+        "econ": "bonus",
+        "note": "Command your familiar to take the Attack action."
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Familiar: Resistance",
+        "econ": "reaction",
+        "note": "When your familiar takes damage, give it Resistance to it."
       }
     ]
   }
