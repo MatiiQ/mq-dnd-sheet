@@ -46,7 +46,11 @@ export function unreadFieldChecks(cat: Catalog): Finding[] {
     if (NOT_ADDED.includes(e.kind)) continue;
     // An item whose base the player chooses is spread into a copy, which reads every field, so its add counts no reads.
     tracing = !(e.kind === 'item' && itemQuestions(traced, e).some((q) => q.key === 'base'));
-    try { addFromCatalog(base, traced, e, autoAnswers(traced, base, e)); } catch (err) {
+    try {
+      addFromCatalog(base, traced, e, autoAnswers(traced, base, e));
+      // A background's package B is the other answer of its equipment step.
+      if (e.kind === 'background' && e.equipA !== undefined) addFromCatalog(base, traced, e, { ...autoAnswers(traced, base, e), equip: 'B' });
+    } catch (err) {
       out.set(`add:${e.id}`, { check: 'add-throws', id: e.id, note: err instanceof Error ? err.message : String(err) });
     }
     tracing = true;
