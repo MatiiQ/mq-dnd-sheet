@@ -118,6 +118,15 @@ export function putInHand(c: Character, id: string, two = false): { c: Character
   return { c: setHands(base, next) };
 }
 
+// Equips a weapon from Inventory: equipping a weapon includes drawing it (PHB p.361), so the sheet treats "equipped" as
+// drawn for the last weapon equipped. A Two-Handed weapon while a Shield is on is only equipped, not held (blocked).
+export function equipWeapon(c: Character, id: string): { c: Character; blocked?: 'shield' } {
+  const r = putInHand(c, id);
+  return r.blocked ? { c: withEquipped(c, id), blocked: r.blocked } : r;
+}
+
+export const NO_SHIELD = 'Take off the Shield first';
+
 export const putAway = (c: Character, id: string): Character => setHands(c, c.hands.filter((x) => x !== id));
 
 // Equips a Shield: it takes a hand, so a Versatile weapon held in two moves to one and hands trim to one entry (a

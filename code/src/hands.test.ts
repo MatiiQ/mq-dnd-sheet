@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
-import { ammoType, canLoad, equipShield, putAway, putInHand, setHands, trimHands, weaponKind, weaponMatches, weaponsHeld } from './hands';
+import { ammoType, canLoad, equipShield, equipWeapon, putAway, putInHand, setHands, trimHands, weaponKind, weaponMatches, weaponsHeld } from './hands';
 import { removeRef, normalize } from './logic';
 import { migrate } from './migrate';
 import { applyPatch } from './storage';
@@ -227,5 +227,33 @@ describe('pinned rules', () => {
     const c = (qty: number): Character => ({ ...blankCharacter(), inv: [dagger({ id: 'd', qty })] });
     expect(trimHands(c(0), ['d'])).toEqual([]);
     expect(trimHands(c(1), ['d'])).toEqual(['d']);
+  });
+});
+
+// Equipping a weapon includes drawing it (PHB p.361).
+describe('equipWeapon', () => {
+  it('puts a plain weapon in one hand', () => {
+    const r = equipWeapon(make([dagger({ id: 'dagger', eq: false })]), 'dagger');
+    expect(r.c.inv[0].eq).toBe(true);
+    expect(r.c.hands).toEqual(['dagger']);
+  });
+  it('holds a Versatile weapon in one hand', () => {
+    const r = equipWeapon(make([longsword({ id: 'ls', eq: false })]), 'ls');
+    expect(r.c.inv[0].eq).toBe(true);
+    expect(r.c.hands).toEqual(['ls']);
+  });
+  it('holds a Two-Handed weapon in both hands', () => {
+    expect(equipWeapon(make([longbow({ id: 'bow', eq: false })]), 'bow').c.hands).toEqual(['bow', 'bow']);
+  });
+  it('only equips a Two-Handed weapon while a Shield is on', () => {
+    const r = equipWeapon(make([longbow({ id: 'bow', eq: false }), shield({ id: 'sh' })]), 'bow');
+    expect(r.blocked).toBe('shield');
+    expect(r.c.inv[0].eq).toBe(true);
+    expect(r.c.hands).toEqual([]);
+    expect(r.c.inv[1].eq).toBe(true);
+  });
+  it('lets the oldest weapon go when hands are full', () => {
+    const r = equipWeapon(make([dagger({ id: 'a' }), dagger({ id: 'b' }), shortsword({ id: 'ss', eq: false })], ['a', 'b']), 'ss');
+    expect(r.c.hands).toEqual(['b', 'ss']);
   });
 });

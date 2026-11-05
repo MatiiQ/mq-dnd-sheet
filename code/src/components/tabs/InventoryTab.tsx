@@ -6,7 +6,7 @@ import {
   addSection, containerLoad, DEFAULT_SECTION, inventoryGroups, moveInto, moveSection, removeContainer, removeContainerSummary, removeSection, renameSection,
   setItemSection, takeOut
 } from '../../inventory';
-import { equipShield, setHands } from '../../hands';
+import { equipShield, equipWeapon, isWeapon, NO_SHIELD, setHands, shieldOn, twoHanded } from '../../hands';
 import { hasActiveEffect, isEquipped, linkOf } from '../../links';
 import { GrantList, removalNote, SourceChips } from '../Chips';
 import { ItemPicker } from '../pickers/ItemPicker';
@@ -85,6 +85,10 @@ export function InventoryTab() {
   const toggleEq = (it: Item) => {
     if (!it.eq && it.armor === 'shield') {
       update((p) => equipShield(p, it.id));
+      return;
+    }
+    if (!it.eq && isWeapon(it)) {
+      update((p) => equipWeapon(p, it.id).c);
       return;
     }
     update((s) => { const next = { ...s, inv: patchEntry(s.inv, it.id, { eq: !it.eq }) }; return it.eq ? setHands(next, next.hands) : next; });
@@ -195,6 +199,8 @@ export function InventoryTab() {
   };
   const row = (it: Item) => {
     const info = it.desc || itemStats(it), moves = moveControls(it), gives = grantChips(c, linkOf('item', it.id)).length > 0;
+    // Equipped but not held: a Two-Handed weapon while a Shield is on (equipWeapon).
+    const noHand = it.eq && isWeapon(it) && twoHanded(it) && shieldOn(c) && !c.hands.includes(it.id);
     return (
     <li key={it.id}>
       {f.editingId === it.id ? form : (
@@ -234,6 +240,7 @@ export function InventoryTab() {
           onRemove={() => update((p) => (isContainer(it) ? removeContainer(p, it.id, removeMode(it)) : removeRef(p, { kind: 'item', id: it.id })))}
           removeConfirm={isContainer(it) && holds(it) ? bagConfirm(it) : removalNote(c, { kind: 'item', id: it.id })}>
           {gives && <SourceChips link={linkOf('item', it.id)} />}
+          {noHand && <span className="small">{NO_SHIELD} to hold it</span>}
         </EntryRow>
       )}
     </li>

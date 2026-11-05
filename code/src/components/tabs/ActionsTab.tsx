@@ -7,7 +7,7 @@ import { capWords, dtypeText, titled, weaponRules } from '../../catalog/copy';
 import { entriesOf } from '../../catalog/merge';
 import { useCatalog } from '../../catalog/useCatalog';
 import { RuleNotes } from '../RuleNotes';
-import { canLoad, hasProp, isWeapon, putAway, putInHand, shieldOn as shieldOf, twoHanded, versatile, weaponKind, weaponsHeld } from '../../hands';
+import { canLoad, hasProp, isWeapon, NO_SHIELD, putAway, putInHand, shieldOn as shieldOf, twoHanded, versatile, weaponKind, weaponsHeld } from '../../hands';
 import { linkOf, sourceLabel } from '../../links';
 import { castSpell, COMBAT_ACTIONS, fmt, freeCastsOf, ORDINAL, regainTo, removeRef, slotsLeft, spellUsable, toggled, type AcPart } from '../../logic';
 import { patchEntry, removeEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
@@ -19,7 +19,6 @@ type Filter = 'all' | 'action' | 'bonus' | 'reaction';
 const FILTERS: [Filter, string][] = [['all', 'All'], ['action', 'Action'], ['bonus', 'Bonus'], ['reaction', 'Reaction']];
 const USE_LABEL: Record<WeaponAttack['use'], string> = { melee: '', thrown: 'thrown', ranged: '', 'two-handed': 'two hands' };
 const propsText = (p: string) => p.split(',').filter(Boolean).map(capWords).join(', ');
-const NO_SHIELD = 'Take off the Shield first';
 
 const ATTACK_BLANK = { name: '', hit: '', dmg: '', info: '', mastery: '', econ: 'action' as Econ, group: 'other' as 'weapon' | 'other' };
 const RIDER_BLANK = { name: '', dice: '' };
