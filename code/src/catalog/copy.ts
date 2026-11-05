@@ -341,6 +341,15 @@ export const hasSpell = (c: Character, e: Entry) => onSheet(c.spells, e);
 export const hasFeature = (c: Character, e: Entry) => onSheet(c.feats, e);
 export const hasItem = (c: Character, e: Entry) => onSheet(c.inv, e);
 
+// The skills an entry about to be added gives: the flat skill grants of `adding`, and the picks of the last entry's own
+// skill choices ("gain proficiency in one skill … Expertise in one of your skills", PHB p.207 Skill Expert).
+function ownSkills(adding: Entry[], picks: Record<string, string[]>): string[] {
+  const flat = adding.flatMap((e) => grantsOf(e).flatMap((g) => (g.kind === 'prof' && g.cat === 'skill' && g.target && SKILL_NAME[g.target] ? [g.target] : [])));
+  const last = adding[adding.length - 1];
+  const picked = (last ? choicesOf(last) : []).filter((ch) => ch.pool?.startsWith('skill:') && ch.pool !== 'skill:proficient').flatMap((ch) => validPicks(ch, picks[ch.id] ?? []));
+  return [...flat, ...picked];
+}
+
 // The options a pool offers this character. `adding`: the entry whose choice this is and those above it in the flow,
 // which count as on the sheet for feat prerequisites (a Fighting Style feature offering style feats).
 export function poolOptions(cat: Catalog, c: Character, pool: string, picks: Record<string, string[]>, adding: Entry[] = []): PoolOption[] {
@@ -369,7 +378,10 @@ export function poolOptions(cat: Catalog, c: Character, pool: string, picks: Rec
     case 'trait':
       return filtered(entriesOf(cat, 'trait'), filter, ['of']).map((e) => ent(e, hasFeature(c, e))).sort(byName);
     case 'skill': {
-      if (filter === 'proficient') return SKILLS.filter(([k]) => skillLevel(c, k).level === 1).map(([k]) => ({ value: k, label: SKILL_NAME[k] }));
+      if (filter === 'proficient') {
+        const own = ownSkills(adding, picks);
+        return SKILLS.filter(([k]) => { const lv = skillLevel(c, k).level; return lv === 1 || (lv === 0 && own.includes(k)); }).map(([k]) => ({ value: k, label: SKILL_NAME[k] }));
+      }
       const keys = filter === 'any' ? SKILLS.map(([k]) => k) : words.filter((k) => SKILL_NAME[k]);
       return keys.map(skill);
     }
@@ -407,14 +419,23 @@ export function freeText(cat: Catalog, c: Character, pool: string, picks: Record
 }
 
 // Picks this choice needs: `pick`, or for a pool with options, no more than it offers (none when it offers none).
-export function needed(cat: Catalog, c: Character, choice: ChoiceSpec, picks: Record<string, string[]>): number {
+export function needed(cat: Catalog, c: Character, choice: ChoiceSpec, picks: Record<string, string[]>, adding: Entry[] = []): number {
   if (!choice.pool || freeText(cat, c, choice.pool, picks)) return choice.pick;
-  return Math.min(choice.pick, poolOptions(cat, c, choice.pool, picks).length);
+  return Math.min(choice.pick, poolOptions(cat, c, choice.pool, picks, adding).length);
+}
+
+// A choice's picks as they stand: a skill:proficient pick that has left the pool (the skill it named was changed) goes.
+// Other pools keep every pick.
+export function livePicks(cat: Catalog, c: Character, choice: ChoiceSpec, picks: Record<string, string[]>, adding: Entry[]): string[] {
+  const got = picks[choice.id] ?? [];
+  if (choice.pool !== 'skill:proficient') return got;
+  const offered = new Set(poolOptions(cat, c, choice.pool, picks, adding).map((o) => o.value));
+  return got.filter((v) => offered.has(v));
 }
 
 // The ids of the choices with fewer valid picks than they need.
 export function missingPicks(cat: Catalog, c: Character, e: Entry, picks: Record<string, string[]>): string[] {
-  return choicesOf(e).filter((ch) => validPicks(ch, picks[ch.id] ?? []).length < needed(cat, c, ch, picks)).map((ch) => ch.id);
+  return choicesOf(e).filter((ch) => validPicks(ch, livePicks(cat, c, ch, picks, [e])).length < needed(cat, c, ch, picks, [e])).map((ch) => ch.id);
 }
 
 type Resolved = Omit<GrantSpec, 'opt'>;
@@ -423,11 +444,12 @@ type Nested = { entry: Entry; preset?: Record<string, string[]> };
 // The entry's grants with the player's picks applied: picked options (an option picked twice gets ids -0 and -1),
 // '$ref' fields filled (a grant over a multi-pick choice copied once per pick, ids -<index>; one over a choice with no
 // valid picks dropped), a `casts` ref pointed at the spell spec of the same pick, and picks no grant uses turned into
-// proficiencies (skills, tools, languages, weapon masteries), entries (feats, traits, subclasses) or notes.
-export function resolveChoices(cat: Catalog, e: Entry, picks: Record<string, string[]>):
+// proficiencies (skills, tools, languages, weapon masteries), entries (feats, traits, subclasses) or notes. c: the
+// character, so a pick that has left its pool goes (livePicks).
+export function resolveChoices(cat: Catalog, e: Entry, picks: Record<string, string[]>, c?: Character):
   { specs: Resolved[]; entries: Nested[]; notes: string[] } {
   const choices = new Map(choicesOf(e).map((ch) => [ch.id, ch]));
-  const vp = (id: string) => { const ch = choices.get(id); return ch ? validPicks(ch, picks[id] ?? []) : []; };
+  const vp = (id: string) => { const ch = choices.get(id); return ch ? validPicks(ch, c ? livePicks(cat, c, ch, picks, [e]) : picks[id] ?? []) : []; };
   const strip = ({ opt: _o, ...g }: GrantSpec): Resolved => g;
   const raw: Resolved[] = [];
   for (const s of grantsOf(e)) {
@@ -682,7 +704,7 @@ export function addFromCatalog(c: Character, cat: Catalog, e: Entry, ans: AddCho
 
 function addEntry(c: Character, cat: Catalog, entry: Entry, ans: AddChoices): Character {
   const e = atLevel(c, entry);
-  const r = resolveChoices(cat, e, ans.picks);
+  const r = resolveChoices(cat, e, ans.picks, c);
   const id = newId();
   const srcKind = ans.from ? srcKindOfLink(c, ans.from) : null;
   const link: Linked = ans.from ? { from: ans.from, ...(srcKind ? { srcKind } : {}) } : {};

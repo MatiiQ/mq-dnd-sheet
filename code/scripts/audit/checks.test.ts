@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { mergeCatalog } from '../../src/catalog/merge.ts';
 import type { Entry } from '../../src/catalog/schema.ts';
-import { actionCostChecks, compareKnown, coverageChecks, effectChecks, featPoolChecks, featureHeadingChecks, grantChecks, grantHashes, itemNumberChecks, keyOf, lookupTableChecks, mechanicChecks, ownPoolChecks, referenceChecks, repeatedSpellChecks, rowChecks, ruleSourceChecks, ruleTextChecks, spellListChecks, spellNumberChecks, srdHeadingChecks, standaloneHeadings, textChecks, updateKnown, type Finding } from './checks.ts';
+import { actionCostChecks, compareKnown, coverageChecks, effectChecks, featPoolChecks, featureHeadingChecks, grantChecks, grantHashes, itemNumberChecks, keyOf, lookupTableChecks, mechanicChecks, referenceChecks, repeatedSpellChecks, rowChecks, ruleSourceChecks, ruleTextChecks, spellListChecks, spellNumberChecks, srdHeadingChecks, standaloneHeadings, textChecks, updateKnown, type Finding } from './checks.ts';
 import { backgroundEquipChecks, freeCastLinkChecks, grantedSpellChecks, grantSourceChecks, poolChecks, ruleCatChecks, unreadFieldChecks } from './wiring.ts';
 
 const spell = (name: string, extra: object = {}) => ({ id: `spell/${name.toLowerCase().replace(/ /g, '-')}`, kind: 'spell', name, src: 'srd', desc: 'Some text.', lvl: 1, school: 'Evocation', classes: 'wizard', time: 'Action', range: '60 feet', comp: 'V', dur: 'Instantaneous', conc: false, ritual: false, fx: 'other', ...extra }) as unknown as Entry;
@@ -240,7 +240,6 @@ describe('what a feature or feat says against what the sheet gets', () => {
   const action = (extra: object = {}) => ({ id: 'a', kind: 'action', name: 'Row', econ: 'other', ...extra });
   const spellGrant = (extra: object = {}) => ({ id: 's', kind: 'spell', name: 'Spell', spell: 'spell/burning-tune', ...extra });
   const feat = (name: string, extra: object = {}) => ({ id: `feat/${name.toLowerCase()}`, kind: 'feat', name, src: 'srd', desc: 'Some text.', cat: 'general', grants: [], ...extra }) as unknown as Entry;
-  const skillPool = { kind: 'choice', id: 'exp', name: 'Expertise', pick: 1, pool: 'skill:proficient' };
 
   it.each([
     ['mechanic-no-grant|feature/wizard/a:free cast', 'You can cast Test Spell without expending a spell slot.', { kind: 'resource', id: 'r', name: 'R', recharge: 'long', casts: 'spell/x' }],
@@ -282,10 +281,6 @@ describe('what a feature or feat says against what the sheet gets', () => {
   it('finds an action row that says it spends something and has no res', () => {
     expect(keys(actionCostChecks([feature('A', { grants: [action({ note: 'Spend 1 point to run.' })] })]))).toEqual(['action-cost-unlinked|feature/wizard/a:a']);
     expect(actionCostChecks([feature('A', { grants: [action({ note: 'Spend 1 point.', res: 'r' }), action({ id: 'b', note: 'Run fast.' })] })])).toEqual([]);
-  });
-  it('finds a proficient-skill pool on an entry that grants skills itself', () => {
-    expect(keys(ownPoolChecks([feat('A', { grants: [{ kind: 'prof', id: 'p', name: 'P', cat: 'skill', target: 'arcana' }, skillPool] }), feat('B', { grants: [{ kind: 'choice', id: 'c', name: 'C', pick: 1, pool: 'skill:any' }, skillPool] })]))).toEqual(['pool-before-own-grants|feat/a', 'pool-before-own-grants|feat/b']);
-    expect(ownPoolChecks([feat('A', { grants: [skillPool] })])).toEqual([]);
   });
   it('finds a spell two entries of a class grant, not two subclasses or classes that happen to share it', () => {
     const f = (id: string, extra: object) => feature(id, { grants: [spellGrant()], ...extra });

@@ -358,16 +358,6 @@ export function actionCostChecks(entries: Entry[]): Finding[] {
     .map((g) => ({ check: 'action-cost-unlinked', id: `${e.id}:${g.id}`, note: `"${g.note!.match(SPENDS)![0].trim().slice(0, 60)}" with no res` })));
 }
 
-// A pool of skills the character is proficient in, on an entry that grants skills itself: the pool reads the sheet before
-// those are added, so it can offer too little, or nothing, and then asks for no pick.
-export function ownPoolChecks(entries: Entry[]): Finding[] {
-  return entries.filter(isGranter).flatMap((e) => {
-    const grantsSkill = flatGrants(e).some((g) => g.kind === 'prof' && g.cat === 'skill') || grantsOf(e).some((s) => s.kind === 'choice' && !!s.pool && s.pool !== 'skill:proficient' && s.pool.startsWith('skill:'));
-    return grantsSkill && grantsOf(e).some((s) => s.kind === 'choice' && s.pool === 'skill:proficient')
-      ? [{ check: 'pool-before-own-grants', id: e.id, note: 'skill:proficient is read before the skills this entry grants' }] : [];
-  });
-}
-
 // One spell granted by two entries of a class: the sheet lists it twice. A subclass counts with its class, two subclasses
 // never meet.
 export function repeatedSpellChecks(entries: Entry[]): Finding[] {

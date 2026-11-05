@@ -16,7 +16,7 @@ function autoAnswers(cat: Catalog, c: Character, entry: Entry, preset: Record<st
   for (const ch of choicesOf(e)) {
     if (picks[ch.id]) continue;
     if (ch.options) picks[ch.id] = optionGroups(ch).slice(0, ch.pick).map((g) => g.value);
-    else if (ch.pool) picks[ch.id] = freeText(cat, c, ch.pool, picks) ? Array.from({ length: ch.pick }, (_, i) => `Typed ${i}`) : poolOptions(cat, c, ch.pool, picks).slice(0, ch.pick).map((o) => o.value);
+    else if (ch.pool) picks[ch.id] = freeText(cat, c, ch.pool, picks) ? Array.from({ length: ch.pick }, (_, i) => `Typed ${i}`) : poolOptions(cat, c, ch.pool, picks, [e]).slice(0, ch.pick).map((o) => o.value);
   }
   const nested: Record<string, AddChoices> = {};
   if (depth < 4) for (const n of nestedEntries(cat, e, picks)) nested[n.entry.id] = autoAnswers(cat, c, n.entry, n.preset, depth + 1);

@@ -13,7 +13,7 @@ import srd from '../../src/data/srd/index.ts';
 import { parseClassMd, parseEquipmentMd, parseFeatsMd, parseOriginsMd, parseSpellsMd } from '../pack/parse.ts';
 import { parseRules, parseWeaponRules } from '../srd/rules.ts';
 import { section } from '../srd/text.ts';
-import { actionCostChecks, compareKnown, coverageChecks, effectChecks, featPoolChecks, featureHeadingChecks, grantChecks, grantHashes, itemNumberChecks, keyOf, lookupTableChecks, mechanicChecks, ownPoolChecks, referenceChecks, repeatedSpellChecks, rowChecks, ruleSourceChecks, ruleTextChecks, spellListChecks, spellNumberChecks, srdHeadingChecks, standaloneHeadings, textChecks, updateKnown, type Finding, type Known } from './checks.ts';
+import { actionCostChecks, compareKnown, coverageChecks, effectChecks, featPoolChecks, featureHeadingChecks, grantChecks, grantHashes, itemNumberChecks, keyOf, lookupTableChecks, mechanicChecks, referenceChecks, repeatedSpellChecks, rowChecks, ruleSourceChecks, ruleTextChecks, spellListChecks, spellNumberChecks, srdHeadingChecks, standaloneHeadings, textChecks, updateKnown, type Finding, type Known } from './checks.ts';
 import { backgroundEquipChecks, freeCastLinkChecks, grantedSpellChecks, grantSourceChecks, poolChecks, ruleCatChecks, unreadFieldChecks } from './wiring.ts';
 
 const root = new URL('../../../', import.meta.url);
@@ -55,7 +55,7 @@ describe.skipIf(!ready)('catalog audit', () => {
       // Only proficiency entries feed the language picker: a language named in some description doesn't count.
       ...lookupTableChecks('02-character-creation.md', creation.slice(creation.indexOf('#### Standard Languages'), creation.indexOf('## Step 3')), entries.filter((e) => e.kind === 'prof')),
       ...textChecks(entries, standaloneHeadings(srdText)), ...ruleTextChecks(entries), ...effectChecks(entries),
-      ...mechanicChecks(entries), ...rowChecks(entries), ...actionCostChecks(entries), ...ownPoolChecks(entries), ...repeatedSpellChecks(entries), ...featPoolChecks(entries),
+      ...mechanicChecks(entries), ...rowChecks(entries), ...actionCostChecks(entries), ...repeatedSpellChecks(entries), ...featPoolChecks(entries),
       ...freeCastLinkChecks(cat), ...grantedSpellChecks(cat), ...backgroundEquipChecks(cat),
       ...unreadFieldChecks(cat), ...poolChecks(cat), ...grantSourceChecks(entries, code), ...ruleCatChecks(entries, code)
     ].sort((a, b) => keyOf(a).localeCompare(keyOf(b)));

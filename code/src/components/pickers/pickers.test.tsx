@@ -86,3 +86,15 @@ describe('a catalog feature’s long description', () => {
     expect(html).toMatch(/<span class="muted entry-clamp">First paragraph/);
   });
 });
+
+describe('a skill:proficient step', () => {
+  const feat = { id: 'feat/own-b', kind: 'feat', name: 'Own B', cat: 'general', src: 'srd', desc: '', grants: [
+    { kind: 'choice', id: 'c2', name: 'Skill', pick: 1, pool: 'skill:any' }, { kind: 'choice', id: 'exp', name: 'Expertise', pick: 1, pool: 'skill:proficient' }] } as Entry;
+  it('shows nothing selected when the pick it held has left the pool', () => {
+    const answers = { '': { picks: { c2: ['arcana'], exp: ['stealth'] }, counted: {}, links: {} } };
+    const html = render(blankCharacter(), <ChoiceFlow entry={feat} cat={cat} initial={{ answers, at: 1 }} onDone={() => {}} onCancel={() => {}} />);
+    expect(html).toContain('Arcana');
+    expect(html).not.toContain('aria-pressed="true"');
+    expect(html).toContain('aria-disabled="true"');
+  });
+});

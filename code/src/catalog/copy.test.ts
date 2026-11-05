@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import srdEntries from '../data/srd/index';
 import { blankCharacter, sampleCharacter } from '../defaults';
-import { removeRef, armorClass, spellUsable } from '../logic';
+import { removeRef, armorClass, skillLevel, spellUsable } from '../logic';
 import { migrate } from '../migrate';
 import { inactiveReason, isActive } from '../links';
 import { saveEntry } from '../sheet';
@@ -928,5 +928,34 @@ describe('granted spells with prepared tracking on', () => {
     const sp = sheet.spells.find((x) => x.cid === id)!;
     expect(spellUsable(sheet, sp)).toBe(true);
     expect(sheet.res.find((r) => r.name.includes('free cast'))!.casts).toBe(sp.id);
+  });
+});
+
+describe('a skill:proficient pool reads the entry\'s own skills', () => {
+  const base = { kind: 'feat', cat: 'general', src: 'srd', desc: '' };
+  const exp = { kind: 'choice', id: 'exp', name: 'Expertise', pick: 1, pool: 'skill:proficient' };
+  const expGrant = { id: 'gx', kind: 'prof', name: 'Expertise', cat: 'expertise', target: '$exp' };
+  const featA = { ...base, id: 'feat/own-a', name: 'Own A', grants: [{ id: 'g1', kind: 'prof', name: 'Athletics', cat: 'skill', target: 'athletics' }, exp, expGrant] } as Entry;
+  const featB = { ...base, id: 'feat/own-b', name: 'Own B', grants: [{ kind: 'choice', id: 'c2', name: 'Skill', pick: 1, pool: 'skill:any' }, exp, expGrant] } as Entry;
+  const ans = (picks: Record<string, string[]>): AddChoices => ({ picks, counted: {}, links: {} });
+
+  it('own skills: a flat skill grant is offered, needed and takes Expertise', () => {
+    const c = blankCharacter();
+    expect(poolOptions(cat, c, 'skill:proficient', {}, [featA]).map((o) => o.value)).toEqual(['athletics']);
+    expect(missingPicks(cat, c, featA, {})).toEqual(['exp']);
+    const sheet = addFromCatalog(c, cat, featA, ans({ exp: ['athletics'] }));
+    expect(skillLevel(sheet, 'athletics').level).toBe(2);
+  });
+  it('own skills: a picked skill is offered only once picked, never at Expertise already', () => {
+    const c = blankCharacter(), offered = (ch: Character, picks: Record<string, string[]>) => poolOptions(cat, ch, 'skill:proficient', picks, [featB]).map((o) => o.value);
+    expect(offered(c, { c2: ['stealth'] })).toContain('stealth');
+    expect(offered(c, {})).not.toContain('stealth');
+    expect(offered(withSkills([], { skillProf: { stealth: 2 } }), { c2: ['stealth'] })).not.toContain('stealth');
+  });
+  it('own skills: an Expertise pick goes when the skill it depended on changes', () => {
+    const c = blankCharacter(), picks = { c2: ['arcana'], exp: ['stealth'] };
+    expect(missingPicks(cat, c, featB, picks)).toEqual(['exp']);
+    expect(resolveChoices(cat, featB, picks, c).specs.filter((s) => s.cat === 'expertise')).toEqual([]);
+    expect(resolveChoices(cat, featB, { c2: ['stealth'], exp: ['stealth'] }, c).specs.filter((s) => s.cat === 'expertise')).toHaveLength(1);
   });
 });

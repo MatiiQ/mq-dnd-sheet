@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  atLevel, choicesOf, countedDefault, featureName, freeText, grantSpellName, isCountable, needed, nestedEntries, optionGroups, poolOptions, resolveChoices,
+  atLevel, choicesOf, countedDefault, featureName, freeText, grantSpellName, isCountable, livePicks, needed, nestedEntries, optionGroups, poolOptions, resolveChoices,
   validPicks, type AddChoices
 } from '../../catalog/copy';
 import type { Catalog } from '../../catalog/merge';
@@ -52,7 +52,7 @@ export function ChoiceFlow({ entry, cat, preset, initial, onDone, onCancel }: {
   const counts: CountItem[] = [], links: LinkItem[] = [];
   for (const node of nodes) {
     const own = answers[node.key] ?? EMPTY;
-    for (const spec of resolveChoices(cat, node.entry, node.picks).specs) {
+    for (const spec of resolveChoices(cat, node.entry, node.picks, c).specs) {
       if (isCountable(spec)) counts.push({ node, spec, on: own.counted[spec.id] ?? countedDefault(c, node.entry, spec) });
       const kind = LINKABLE[spec.kind];
       const name = spec.kind === 'spell' ? grantSpellName(cat, spec) : spec.name;
@@ -99,9 +99,9 @@ export function ChoiceFlow({ entry, cat, preset, initial, onDone, onCancel }: {
   let ready = true, body = null;
   if (step) {
     const { node, choice } = step;
-    const cur = node.picks[choice.id] ?? [];
+    const cur = livePicks(cat, c, choice, node.picks, node.adding);
     const valid = validPicks(choice, cur);
-    const need = needed(cat, c, choice, node.picks);
+    const need = needed(cat, c, choice, node.picks, node.adding);
     ready = valid.length >= need;
     const count = (v: string) => cur.filter((x) => x === v).length;
     // A tap adds the option while there is room (a second time only with repeat), else takes it out again.
