@@ -5,7 +5,7 @@ import { valueAt } from './catalog/value';
 import { hasProp, isWeapon, twoHanded, versatile, weaponKind, weaponMatches, weaponsHeld } from './hands';
 import { activeGrants, isActive, linkOf, sourceLabel, sourceOf } from './links';
 import { ABILITIES, abilityMod, abilityName, castAbOf, fmt, num, partsTotal, profBonus, profList, hasProf, spellAttackFor, spellSaveDcFor, spellUsable, valueCtx, type AcPart } from './logic';
-import type { Ability, Character, Econ, Feature, Grant, Item, Spell } from './types';
+import type { Ability, Character, Econ, Feature, Grant, Item, Resource, Spell } from './types';
 
 // The "Other weapons" list: weapons not in hand, equipped first. A weapon inside a container is left out: the player
 // takes it out first to wield it (plan 6).
@@ -328,13 +328,19 @@ function spellRow(c: Character, sp: Spell, r: RowFields): Omit<SpellAction, 'nam
 // Dice or numbers from a grant, at the level (valueAt: num reads dice as 0), with a real minus.
 const valueText = (c: Character, v: string, g?: Grant) => String(valueAt(v, valueCtx(c, g))).replace(/-/g, '−');
 
-export interface FeatureAction { grantId: string; name: string; econ: Econ; dice?: string; resId?: string; source?: string; note?: string }
+export interface FeatureAction { grantId: string; name: string; econ: Econ; dice?: string; resId?: string; regainTo?: number | 'all'; source?: string; note?: string }
+// The counter of the feature with this catalog id (a Domain's option spends the class's Channel Divinity).
+export function resOfFeature(c: Character, cid: string): Resource | undefined {
+  const f = c.feats.find((x) => x.cid === cid);
+  return f && c.res.find((r) => r.from === linkOf('feature', f.id));
+}
 // Active action grants (Second Wind, Wild Shape, Channel Divinity). `dice` is not always dice: Rage's damage bonus or a
 // count evaluates to a number, shown as it comes.
 export const featureActions = (c: Character): FeatureAction[] => activeGrants(c, 'action').map((g) => {
-  const source = sourceLabel(c, g);
+  const source = sourceLabel(c, g), resId = g.res ?? (g.uses ? resOfFeature(c, g.uses)?.id : undefined);
   return {
-    grantId: g.id, name: g.name, econ: g.econ ?? 'other', ...(g.dice ? { dice: valueText(c, g.dice, g) } : {}), ...(g.res ? { resId: g.res } : {}),
+    grantId: g.id, name: g.name, econ: g.econ ?? 'other', ...(g.dice ? { dice: valueText(c, g.dice, g) } : {}), ...(resId ? { resId } : {}),
+    ...(g.regainTo ? { regainTo: g.regainTo === 'all' ? 'all' as const : num(c, g.regainTo, g) } : {}),
     ...(source ? { source } : {}), ...(g.note ? { note: g.note } : {})
   };
 });

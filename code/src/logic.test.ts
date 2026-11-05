@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { newId } from './logic';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import {
-  ABILITIES, SKILLS, acCanTargetOther, acOnOther, toggleAcTarget, regainLabel, damageHitDie, setTempHitDie, castAbOf, removeChip, speedOf, armorSlowBy, stealthDisBy, acSpellIdle, untrainedArmor, grantChips, addGrants, findUnlinked, removalChain, removalSummary, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, dawn, refillFor, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft, num, setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, undoHp
+  ABILITIES, SKILLS, regainTo, acCanTargetOther, acOnOther, toggleAcTarget, regainLabel, damageHitDie, setTempHitDie, castAbOf, removeChip, speedOf, armorSlowBy, stealthDisBy, acSpellIdle, untrainedArmor, grantChips, addGrants, findUnlinked, removalChain, removalSummary, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, dawn, refillFor, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, parseWeight, passiveScore, pillView, resPill, setPill, preparedCount, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft, num, setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, undoHp
 } from './logic';
 import { migrate } from './migrate';
 import { spellActions } from './actions';
@@ -1854,5 +1854,17 @@ describe('a free cast finds its spell (addGrants)', () => {
     const out = addGrants({ ...blankCharacter(), spells: [misty] }, 'feature:f1', [{ spec: { id: 'g0', kind: 'spell', name: 'Misty Step', spell: 'spell/misty-step' } }, { spec: cast }]);
     expect(out.res[0].casts).toBe(out.spells[out.spells.length - 1].id);
     expect(out.res[0].casts).not.toBe('s1');
+  });
+});
+
+describe('regainTo', () => {
+  const c = (count: number, max?: number) => ({ ...blankCharacter(), res: [{ id: 'r', name: 'R', count, ...(max ? { max } : {}), recharge: 'long' as const }] });
+  it('raises the count up to the amount', () => expect(regainTo(c(0, 4), 'r', 2).res[0].count).toBe(2));
+  it('never lowers it', () => expect(regainTo(c(3, 4), 'r', 2).res[0].count).toBe(3));
+  it('stops at the maximum', () => expect(regainTo(c(0, 1), 'r', 4).res[0].count).toBe(1));
+  it('all means the maximum', () => expect(regainTo(c(0, 4), 'r', 'all').res[0].count).toBe(4));
+  it('changes nothing on a counter with no maximum, or one the sheet lacks', () => {
+    expect(regainTo(c(1), 'r', 'all').res[0].count).toBe(1);
+    expect(regainTo(c(1, 4), 'gone', 'all').res[0].count).toBe(1);
   });
 });

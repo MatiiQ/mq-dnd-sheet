@@ -87,6 +87,8 @@ export interface GrantSpec {
   acMode?: 'bonus' | 'unarmored' | 'dexCap'; shieldOk?: boolean;                    // ac; dexCap: Medium armor's Dexterity cap
   size?: Size;                                                                      // size
   econ?: 'action' | 'bonus' | 'reaction' | 'free' | 'other'; res?: string; note?: string;   // action (also dice)
+  uses?: string;                                                                    // action: the feature whose counter it shows (a catalog id); res names one of the entry's own
+  regainTo?: string;                                                                // action: tap to regain the counter up to this Value, or 'all'
   dice?: string; dtype?: string; on?: string; perTurn?: boolean;                    // xdmg
   die?: string; abs?: string;                                                       // unarmed (also dtype), atkAbil
   wrange?: 'melee' | 'ranged'; amode?: 'melee' | 'ranged'; prop?: string; weapon?: string; oneHand?: boolean;   // atkBonus, dmgBonus
@@ -163,7 +165,8 @@ const GRANTS: Record<GrantKind, Record<string, [Check, boolean]>> = {
   hpFlat: { val: [value, true] },
   size: { size: [oneOf(...SIZE_KEYS), true] },
   carryUp: {},
-  action: { econ: [oneOf('action', 'bonus', 'reaction', 'free', 'other'), true], res: [str, false], note: [str, false], dice: [value, false] },
+  action: { econ: [oneOf('action', 'bonus', 'reaction', 'free', 'other'), true], res: [str, false], note: [str, false], dice: [value, false],
+    uses: [(v) => typeof v === 'string' && /^feature\/[a-z0-9-]+(\/[a-z0-9-]+){1,2}$/.test(v), false], regainTo: [or(value, oneOf('all')), false] },
   xdmg: { dice: [value, true], dtype: [str, false], on: [str, true], perTurn: [bool, false] },
   attacks: { val: [value, true] },
   // dtype: the damage type when not Bludgeoning (Demon Armor: "your unarmed strikes deal 1d8 Slashing").
@@ -272,6 +275,7 @@ function checkGrant(g: unknown, e: Record<string, unknown>, where: string, errs:
   if (e.kind !== 'spell' && typeof g.lvl === 'number' && typeof e.lvl === 'number' && g.lvl < e.lvl) errs.push(`${where}: lvl ${g.lvl} is below the entry's ${e.lvl}`);
   if ((g.needEq !== undefined || g.needAtt !== undefined) && e.kind !== 'item') errs.push(`${where}: needEq/needAtt are for item grants`);
   if (g.kind === 'resource') checkRegain(g, where, errs);
+  if (g.res !== undefined && g.uses !== undefined) errs.push(`${where}: res and uses together`);
   if (g.kind === 'speed' && g.mode === 'walk' && g.val === 'walk') errs.push(`${where}: a walk speed can't equal the walking Speed`);
 }
 

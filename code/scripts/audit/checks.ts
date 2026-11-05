@@ -323,7 +323,7 @@ const MECHANICS: { check: string; label: string; cue: RegExp; done: (e: Entry, m
   { check: 'mechanic-no-grant', label: 'save Advantage', cue: /\bAdvantage on [^.\n]*\bsaving throws?/i, done: has('defense') },
   { check: 'mechanic-no-field', label: 'save DC', cue: /\bDC (?:equal to |equals |= ?)?8 ?(?:plus|\+)|\bFocus Save DC\b/i, done: nothingHoldsIt },
   { check: 'mechanic-no-field', label: 'half a number', cue: /\bhalf (?:your )?(?:[A-Z]\w+ level|Proficiency Bonus)/, done: (e) => flatGrants(e).some((g) => g.cat === 'half') },
-  { check: 'mechanic-no-field', label: 'regain on Initiative', cue: /\broll Initiative[^.\n]*\bregain|\bregain[^.\n]*\broll Initiative|\brecharges? when you roll Initiative/i, done: nothingHoldsIt },
+  { check: 'mechanic-no-field', label: 'regain on Initiative', cue: /\broll Initiative[^.\n]*\bregain|\bregain[^.\n]*\broll Initiative|\brecharges? when you roll Initiative/i, done: (e) => flatGrants(e).some((g) => g.regainTo !== undefined) },
   { check: 'mechanic-no-field', label: 'stat block', cue: /\bstat block\b|\bFind (?:Familiar|Steed)\b/, done: nothingHoldsIt },
   { check: 'mechanic-no-field', label: 'state to track', cue: /\bward\b[^.\n]*\b(?:Hit Points|HP)\b|\bforetelling|\broll two d20s/i, done: nothingHoldsIt }
 ];
@@ -351,10 +351,9 @@ export function rowChecks(entries: Entry[]): Finding[] {
 }
 
 const SPENDS = /\b(?:spend|expend)\b[^.;:]*/i;
-// An action row whose note says it spends something, with no `res`: tapping it spends nothing. `res` can only name a
-// resource of the same entry, so a row that spends another feature's counter always comes up here.
+// An action row whose note says it spends something, with no `res` or `uses`: tapping it spends nothing.
 export function actionCostChecks(entries: Entry[]): Finding[] {
-  return entries.filter(isGranter).flatMap((e) => flatGrants(e).filter((g) => g.kind === 'action' && !g.res && SPENDS.test(g.note ?? ''))
+  return entries.filter(isGranter).flatMap((e) => flatGrants(e).filter((g) => g.kind === 'action' && !g.res && !g.uses && SPENDS.test(g.note ?? ''))
     .map((g) => ({ check: 'action-cost-unlinked', id: `${e.id}:${g.id}`, note: `"${g.note!.match(SPENDS)![0].trim().slice(0, 60)}" with no res` })));
 }
 

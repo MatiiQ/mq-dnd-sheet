@@ -620,6 +620,15 @@ export function maxOf(c: Character, x: Partial<Counter>): number | null {
   if (x.maxV !== undefined) return Math.max(0, num(c, x.maxV));
   return x.max && x.max >= 1 ? x.max : null;
 }
+// "Regain up to this many" (Superior Inspiration, PHB p.61; Perfect Focus, p.103): raises a resource's count to `to` or its
+// maximum, never lowers it; 'all' is the maximum. A counter with no maximum stays. Only "when you roll Initiative" and its
+// conditions stay the player's call: a manual tap, as the whole sheet is.
+export function regainTo(c: Character, resId: string, to: number | 'all'): Character {
+  return { ...c, res: c.res.map((r) => {
+    const max = r.id === resId ? maxOf(c, r) : null;
+    return max === null ? r : { ...r, count: Math.max(r.count, to === 'all' ? max : Math.min(max, to)) };
+  }) };
+}
 // A counter's partial regain as words: '' when it is 0 now (Font of Inspiration before level 5, PHB p.61), 'all' at its
 // maximum or above, else the number or the dice.
 export function regainLabel(c: Character, x: Partial<Counter>): string {

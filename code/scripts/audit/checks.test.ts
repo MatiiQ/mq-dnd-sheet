@@ -280,6 +280,7 @@ describe('what a feature or feat says against what the sheet gets', () => {
   });
   it('finds an action row that says it spends something and has no res', () => {
     expect(keys(actionCostChecks([feature('A', { grants: [action({ note: 'Spend 1 point to run.' })] })]))).toEqual(['action-cost-unlinked|feature/wizard/a:a']);
+    expect(actionCostChecks([feature('A', { grants: [action({ note: 'Spend 1 point to run.', uses: 'feature/wizard/b' })] })])).toEqual([]);
     expect(actionCostChecks([feature('A', { grants: [action({ note: 'Spend 1 point.', res: 'r' }), action({ id: 'b', note: 'Run fast.' })] })])).toEqual([]);
   });
   it('finds a spell two entries of a class grant, not two subclasses or classes that happen to share it', () => {
@@ -309,4 +310,10 @@ describe('what a feature or feat says against what the sheet gets', () => {
     expect(keys(backgroundEquipChecks(mergeCatalog([bg], null)))).toEqual(['background-equipment-text|background']);
     expect(backgroundEquipChecks(mergeCatalog([{ ...bg, equip: '' } as Entry], null))).toEqual([]);
   });
+});
+
+it('accepts a regain on Initiative held by an action with regainTo', () => {
+  const f = { id: 'feature/wizard/a', kind: 'feature', name: 'A', cls: 'wizard', lvl: 1, src: 'srd', desc: 'When you roll Initiative, you regain all uses.',
+    grants: [{ id: 'g', kind: 'action', name: 'G', econ: 'free', uses: 'feature/wizard/b', regainTo: 'all' }] } as unknown as Entry;
+  expect(mechanicChecks([f])).toEqual([]);
 });

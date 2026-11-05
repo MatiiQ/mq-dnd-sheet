@@ -9,7 +9,7 @@ import { useCatalog } from '../../catalog/useCatalog';
 import { RuleNotes } from '../RuleNotes';
 import { canLoad, hasProp, isWeapon, putAway, putInHand, shieldOn as shieldOf, twoHanded, versatile, weaponKind, weaponsHeld } from '../../hands';
 import { linkOf, sourceLabel } from '../../links';
-import { castSpell, COMBAT_ACTIONS, fmt, freeCastsOf, ORDINAL, removeRef, slotsLeft, spellUsable, toggled, type AcPart } from '../../logic';
+import { castSpell, COMBAT_ACTIONS, fmt, freeCastsOf, ORDINAL, regainTo, removeRef, slotsLeft, spellUsable, toggled, type AcPart } from '../../logic';
 import { patchEntry, removeEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { Attack, Character, Econ, Item, Rider, Spell } from '../../types';
 import { AcTargetSwitch, AddButton, Caret, DieBadge, EffectSwitch, EntryForm, EntryRow, FreeCastButton, Step, TextField, useNoteUntilChange } from '../ui';
@@ -277,6 +277,7 @@ export function ActionsTab() {
     return shows(f.econ) && (
       <ActRow key={f.grantId} econ={f.econ} name={f.name} sub={[f.dice, f.note].filter(Boolean).join(' · ') || undefined}
         side={r && <div className="row gap-4">
+          {f.regainTo !== undefined && <button type="button" className="btn btn-sm" aria-label={'Regain ' + r.name} onClick={() => update((p) => regainTo(p, r.id, f.regainTo!))}>Regain</button>}
           <Step label={'Use ' + r.name} onClick={() => update((p) => ({ res: patchEntry(p.res, r.id, (x) => ({ count: Math.max(0, x.count - 1) })) }))}>−</Step>
           <span style={{ fontWeight: 700, minWidth: 36, textAlign: 'center' }} aria-label={r.name + ' uses left'}>{r.count}</span>
           <Step label={'Restore ' + r.name} onClick={() => update((p) => ({ res: patchEntry(p.res, r.id, (x) => ({ count: x.count + 1 })) }))}>+</Step>

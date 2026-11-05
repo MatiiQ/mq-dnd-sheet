@@ -4,7 +4,7 @@ import { mergeCatalog } from './catalog/merge';
 import type { Entry, ItemEntry, SpellEntry } from './catalog/schema';
 import { addFromCatalog, itemFromEntry, spellFromEntry, type AddChoices } from './catalog/copy';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
-import { attacksPerAction, cantripDice, econOf, extraDamage, extraText, featureActions, hasMastery, lightExtra, masterySlots, otherWeapons, spellActions, unarmedStrike, weaponAbility, weaponAttacks, weaponProficient, type Use } from './actions';
+import { attacksPerAction, cantripDice, econOf, extraDamage, extraText, featureActions, hasMastery, lightExtra, masterySlots, otherWeapons, resOfFeature, spellActions, unarmedStrike, weaponAbility, weaponAttacks, weaponProficient, type Use } from './actions';
 import { weaponKind } from './hands';
 import { takeOut } from './inventory';
 import { addGrants, normalize } from './logic';
@@ -498,5 +498,27 @@ describe('spell row notes (catalog audit)', () => {
     expect(row('spell/divine-favor')).toBe('Extra damage on your hits while it lasts');
     for (const s of ['banishing', 'blinding', 'divine', 'searing', 'shining', 'staggering', 'thunderous', 'wrathful'])
       expect(row(`spell/${s}-smite`)).toBe('Cast after a hit: the damage comes with that hit');
+  });
+});
+
+describe('a feature row that spends another feature\'s counter', () => {
+  const cd = 'feature/cleric/channel-divinity';
+  const c = (feats: Character['feats']): Character => ({
+    ...blankCharacter(), feats,
+    res: [{ id: 'r1', name: 'Channel Divinity', count: 2, max: 2, recharge: 'short', from: 'feature:a' }],
+    grants: [{ id: 'x', kind: 'action', name: 'Preserve Life', econ: 'action', uses: cd, from: 'feature:b' }]
+  });
+  const a = { id: 'a', g: 'class' as const, name: 'Channel Divinity', desc: '', cid: cd }, b = { id: 'b', g: 'sub' as const, name: 'Life', desc: '' };
+  it('shows the counter of the feature it names', () => expect(featureActions(c([a, b]))[0].resId).toBe('r1'));
+  it('shows no counter, and throws nothing, when the sheet lacks that feature', () => expect(featureActions(c([b]))[0].resId).toBeUndefined());
+  it('resOfFeature finds the first resource of that feature', () => {
+    expect(resOfFeature(c([a, b]), cd)?.id).toBe('r1');
+    expect(resOfFeature(c([b]), cd)).toBeUndefined();
+  });
+  it('carries a regain amount, a Value or all', () => {
+    const sheet = { ...c([a, b]), level: 5, grants: [
+      { id: 'x', kind: 'action' as const, name: 'R', econ: 'free' as const, uses: cd, regainTo: '2', from: 'feature:b' },
+      { id: 'y', kind: 'action' as const, name: 'S', econ: 'free' as const, uses: cd, regainTo: 'all', from: 'feature:b' }] };
+    expect(featureActions(sheet).map((f) => f.regainTo)).toEqual([2, 'all']);
   });
 });

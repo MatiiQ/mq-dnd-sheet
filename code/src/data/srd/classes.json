@@ -2317,6 +2317,15 @@
         "econ": "free",
         "res": "g1",
         "note": "On rolling Initiative, regain all Rage uses. Rage lasts 10 minutes without extending."
+      },
+      {
+        "id": "g3",
+        "kind": "action",
+        "name": "Regain Rage",
+        "econ": "free",
+        "uses": "feature/barbarian/rage",
+        "regainTo": "all",
+        "note": "On rolling Initiative, once per Long Rest: tap the Persistent Rage row too."
       }
     ]
   },
@@ -2613,7 +2622,8 @@
         "kind": "action",
         "name": "Cutting Words",
         "econ": "reaction",
-        "note": "Expend a Bardic Inspiration die and subtract it from a creature’s damage roll, ability check or attack roll within 60 ft."
+        "note": "Expend a Bardic Inspiration die and subtract it from a creature’s damage roll, ability check or attack roll within 60 ft.",
+        "uses": "feature/bard/bardic-inspiration"
       }
     ],
     "sub": "college-of-lore"
@@ -2794,7 +2804,9 @@
         "kind": "action",
         "name": "Superior Inspiration",
         "econ": "free",
-        "note": "On rolling Initiative, regain Bardic Inspiration uses up to 2."
+        "note": "On rolling Initiative, regain Bardic Inspiration uses up to 2.",
+        "uses": "feature/bard/bardic-inspiration",
+        "regainTo": "2"
       }
     ]
   },
@@ -3194,7 +3206,8 @@
         "kind": "action",
         "name": "Preserve Life",
         "econ": "action",
-        "note": "Spend Channel Divinity: restore 5 × Cleric level HP among Bloodied creatures within 30 ft, up to half their maximum."
+        "note": "Spend Channel Divinity: restore 5 × Cleric level HP among Bloodied creatures within 30 ft, up to half their maximum.",
+        "uses": "feature/cleric/channel-divinity"
       }
     ],
     "sub": "life-domain"
@@ -3271,7 +3284,9 @@
         "kind": "action",
         "name": "Evergreen Wild Shape",
         "econ": "free",
-        "note": "On rolling Initiative with no Wild Shape uses, regain one."
+        "note": "On rolling Initiative with no Wild Shape uses, regain one.",
+        "uses": "feature/druid/wild-shape",
+        "regainTo": "1"
       },
       {
         "id": "g2",
@@ -3547,7 +3562,8 @@
         "name": "Land’s Aid",
         "econ": "action",
         "dice": "3:2d6,10:3d6,14:4d6",
-        "note": "Spend a Wild Shape use: 10-ft Sphere within 60 ft, CON save or Necrotic damage (half on a success); one creature there regains the same roll in HP."
+        "note": "Spend a Wild Shape use: 10-ft Sphere within 60 ft, CON save or Necrotic damage (half on a success); one creature there regains the same roll in HP.",
+        "uses": "feature/druid/wild-shape"
       }
     ],
     "sub": "circle-of-the-land"
@@ -3608,7 +3624,8 @@
         "kind": "action",
         "name": "Nature’s Sanctuary",
         "econ": "action",
-        "note": "Spend a Wild Shape use: a 15-ft Cube within 120 ft for 1 minute gives you and allies Half Cover and your Nature’s Ward Resistance."
+        "note": "Spend a Wild Shape use: a 15-ft Cube within 120 ft for 1 minute gives you and allies Half Cover and your Nature’s Ward Resistance.",
+        "uses": "feature/druid/wild-shape"
       }
     ],
     "sub": "circle-of-the-land"
@@ -4270,7 +4287,8 @@
         "name": "Tactical Mind",
         "econ": "free",
         "dice": "1d10",
-        "note": "On a failed ability check, spend a Second Wind use to add 1d10 (kept if you still fail)."
+        "note": "On a failed ability check, spend a Second Wind use to add 1d10 (kept if you still fail).",
+        "uses": "feature/fighter/second-wind"
       }
     ]
   },
@@ -4415,7 +4433,8 @@
         "name": "Deflect Attacks",
         "econ": "reaction",
         "dice": "1d10",
-        "note": "Reduce Bludgeoning, Piercing or Slashing attack damage by 1d10 + DEX + Monk level; at 0, spend 1 Focus Point to redirect it."
+        "note": "Reduce Bludgeoning, Piercing or Slashing attack damage by 1d10 + DEX + Monk level; at 0, spend 1 Focus Point to redirect it.",
+        "uses": "feature/monk/monks-focus"
       }
     ]
   },
@@ -4485,7 +4504,8 @@
         "kind": "action",
         "name": "Disciplined Survivor",
         "econ": "free",
-        "note": "Spend 1 Focus Point to reroll a failed save."
+        "note": "Spend 1 Focus Point to reroll a failed save.",
+        "uses": "feature/monk/monks-focus"
       }
     ]
   },
@@ -4657,7 +4677,17 @@
     "cls": "monk",
     "lvl": 15,
     "desc": "When you roll Initiative and don’t use Uncanny Metabolism, you regain expended Focus Points until you have 4 if you have 3 or fewer.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Perfect Focus",
+        "econ": "free",
+        "uses": "feature/monk/monks-focus",
+        "regainTo": "4",
+        "note": "On rolling Initiative with 3 or fewer Focus Points, if you don’t use Uncanny Metabolism."
+      }
+    ]
   },
   {
     "id": "feature/monk/self-restoration",
@@ -4701,7 +4731,8 @@
         "kind": "action",
         "name": "Stunning Strike",
         "econ": "other",
-        "note": "Once per turn on a hit, spend 1 Focus Point: CON save or Stunned until your next turn."
+        "note": "Once per turn on a hit, spend 1 Focus Point: CON save or Stunned until your next turn.",
+        "uses": "feature/monk/monks-focus"
       }
     ]
   },
@@ -4719,7 +4750,8 @@
         "kind": "action",
         "name": "Superior Defense",
         "econ": "other",
-        "note": "Spend 3 Focus Points at the start of your turn: Resistance to all damage but Force for 1 minute."
+        "note": "Spend 3 Focus Points at the start of your turn: Resistance to all damage but Force for 1 minute.",
+        "uses": "feature/monk/monks-focus"
       },
       {
         "id": "g2",
@@ -4794,6 +4826,15 @@
         "res": "g1",
         "dice": "1:1d6,5:1d8,11:1d10,17:1d12",
         "note": "On rolling Initiative, regain all Focus Points and HP equal to Monk level + a Martial Arts die."
+      },
+      {
+        "id": "g3",
+        "kind": "action",
+        "name": "Regain Focus Points",
+        "econ": "free",
+        "uses": "feature/monk/monks-focus",
+        "regainTo": "all",
+        "note": "On rolling Initiative, once per Long Rest: tap the Uncanny Metabolism row too."
       }
     ]
   },
@@ -4850,7 +4891,8 @@
         "name": "Quivering Palm",
         "econ": "other",
         "dice": "10d12",
-        "note": "Spend 4 Focus Points on an Unarmed Strike hit; end it later for a CON save or 10d12 Force (half on a success)."
+        "note": "Spend 4 Focus Points on an Unarmed Strike hit; end it later for a CON save or 10d12 Force (half on a success).",
+        "uses": "feature/monk/monks-focus"
       }
     ],
     "sub": "warrior-of-the-open-hand"
@@ -4916,7 +4958,8 @@
         "kind": "action",
         "name": "Abjure Foes",
         "econ": "action",
-        "note": "Spend Channel Divinity: up to CHA creatures within 60 ft, WIS save or Frightened for 1 minute."
+        "note": "Spend Channel Divinity: up to CHA creatures within 60 ft, WIS save or Frightened for 1 minute.",
+        "uses": "feature/paladin/channel-divinity"
       }
     ]
   },
@@ -5280,7 +5323,8 @@
         "kind": "action",
         "name": "Sacred Weapon",
         "econ": "other",
-        "note": "With the Attack action, spend Channel Divinity: for 10 minutes a melee weapon adds CHA to attack rolls and can deal Radiant damage."
+        "note": "With the Attack action, spend Channel Divinity: for 10 minutes a melee weapon adds CHA to attack rolls and can deal Radiant damage.",
+        "uses": "feature/paladin/channel-divinity"
       }
     ],
     "sub": "oath-of-devotion"
@@ -6893,7 +6937,8 @@
         "kind": "action",
         "name": "Sorcery Incarnate",
         "econ": "other",
-        "note": "With no Innate Sorcery uses, spend 2 Sorcery Points to use it; while it is active, two Metamagic options per spell."
+        "note": "With no Innate Sorcery uses, spend 2 Sorcery Points to use it; while it is active, two Metamagic options per spell.",
+        "uses": "feature/sorcerer/font-of-magic"
       }
     ]
   },

@@ -153,3 +153,19 @@ describe('a choice with ifPick', () => {
     expect(validateEntry(feat(v))).toEqual(['feat/x: ifPick names no earlier choice']);
   });
 });
+
+describe('an action grant with uses', () => {
+  const feat = (g: object) => ({ id: 'feat/x', kind: 'feat', name: 'X', src: 'srd', desc: '', cat: 'general', grants: [
+    { id: 'r', kind: 'resource', name: 'R', recharge: 'long' }, { id: 'a', kind: 'action', name: 'A', econ: 'action', ...g }] });
+  it('names a feature by catalog id', () => {
+    expect(validateEntry(feat({ uses: 'feature/cleric/channel-divinity' }))).toEqual([]);
+    expect(validateEntry(feat({ uses: 'feature/fighter/psi-warrior/psionic-power' }))).toEqual([]);
+    expect(validateEntry(feat({ uses: 'spell/fireball' }))).not.toEqual([]);
+  });
+  it('fails with res as well', () => expect(validateEntry(feat({ uses: 'feature/cleric/channel-divinity', res: 'r' })).join()).toContain('res and uses together'));
+  it('regainTo is a Value or all', () => {
+    expect(validateEntry(feat({ regainTo: 'all' }))).toEqual([]);
+    expect(validateEntry(feat({ regainTo: '2' }))).toEqual([]);
+    expect(validateEntry(feat({ regainTo: 'most' }))).not.toEqual([]);
+  });
+});

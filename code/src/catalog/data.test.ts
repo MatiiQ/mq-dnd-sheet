@@ -115,6 +115,14 @@ describe('SRD classes', () => {
     expect(list.map((c) => c.name)).toEqual(['Barbarian', 'Bard', 'Cleric', 'Druid', 'Fighter', 'Monk', 'Paladin', 'Ranger', 'Rogue', 'Sorcerer', 'Warlock', 'Wizard']);
     expect((classes as Entry[]).filter((e) => e.kind === 'subclass')).toHaveLength(12);
   });
+  it('name, in every action\'s uses, a feature that has a resource', () => {
+    const byId = new Map((classes as Entry[]).map((e) => [e.id, e]));
+    for (const e of classes as Entry[]) for (const s of specs(e)) {
+      if (s.kind === 'choice' || !s.uses) continue;
+      const owner = byId.get(s.uses);
+      expect([e.id, s.uses, owner ? specs(owner).some((g) => g.kind === 'resource') : false]).toEqual([e.id, s.uses, true]);
+    }
+  });
   it('name every Fighting Style feat choice after its pool', () => {
     const styles = (classes as Entry[]).filter((e) => /^feature\/[a-z]+\/fighting-style$/.test(e.id));
     expect(styles.length).toBeGreaterThanOrEqual(3);
