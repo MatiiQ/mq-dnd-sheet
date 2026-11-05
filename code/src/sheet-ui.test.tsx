@@ -152,6 +152,18 @@ describe('custom Advantage on saves', () => {
   });
 });
 
+describe('Actions hand buttons', () => {
+  it('draws a carried weapon from Weapons not held', () => {
+    renderSheet({ inv: [{ id: 'h', name: 'Handaxe', qty: 1, eq: false, cat: 'weapon', wcat: 'simple', wrange: 'melee', dmg: '1d6', dtype: 'Slashing', props: 'light,thrown', thrown: '20/60' }] });
+    tap([...document.querySelectorAll('button')].find((b) => b.textContent?.startsWith('Weapons not held (1)')));
+    expect(document.body.textContent).toContain('Carried: drawing it equips it');
+    const draw = label('Draw Handaxe');
+    expect(draw?.textContent).toBe('Draw');
+    tap(draw);
+    expect(saved().hands).toEqual(['h']);
+  });
+});
+
 describe('reveal', () => {
   it.todo('reveal opens a spell hidden by the Prepared filter');
   it.todo('a used reveal does not reopen');

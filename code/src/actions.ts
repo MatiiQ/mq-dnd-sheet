@@ -7,7 +7,7 @@ import { activeGrants, isActive, linkOf, sourceLabel, sourceOf } from './links';
 import { ABILITIES, abilityMod, abilityName, castAbOf, fmt, normName, num, partsTotal, profBonus, profList, hasProf, saveDc, spellAttackFor, spellSaveDcFor, spellUsable, valueCtx, type AcPart } from './logic';
 import type { Ability, Character, Econ, Feature, Grant, Item, Resource, Spell } from './types';
 
-// The "Other weapons" list: weapons not in hand, equipped first. A weapon inside a container is left out: the player
+// The "Weapons not held" list: weapons not in hand, equipped first. A weapon inside a container is left out: the player
 // takes it out first to wield it (plan 6).
 export const otherWeapons = (c: Character): Item[] =>
   c.inv.filter((i) => isWeapon(i) && !i.in && i.qty >= 1 && !c.hands.includes(i.id)).sort((a, b) => Number(b.eq) - Number(a.eq));

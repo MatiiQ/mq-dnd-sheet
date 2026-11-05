@@ -100,39 +100,29 @@ export function setHands(c: Character, next: string[]): Character {
   return { ...c, hands, effectsOn: c.effectsOn.filter((l) => !links.includes(l)), restMsg };
 }
 
-// Names of the weapons that left hands between two characters (one per whole weapon).
-function putAwayNames(before: Character, after: Character, except?: string): string[] {
-  const count = (c: Character) => { const m = new Map<string, number>(); for (const w of weaponsHeld(c)) m.set(w.id, (m.get(w.id) ?? 0) + 1); return m; };
-  const a = count(before), b = count(after), out: string[] = [];
-  for (const [id, n] of a) if (id !== except) for (let i = b.get(id) ?? 0; i < n; i++) out.push(itemOf(before, id)?.name ?? '');
-  return out;
-}
-
 // Takes a weapon in hand (two: a Versatile weapon's two-handed use; a Two-Handed weapon always takes both hands).
 // A carried weapon is equipped first, otherwise trimHands would drop it at once. Two hands while a Shield is equipped
 // is refused (blocked), so nothing already held is put away for nothing. A weapon held once whose row has 2 or more
 // (not Versatile or Two-Handed) gets a second entry: the other hand takes the second Dagger. Otherwise a weapon already
-// held is taken again whole, and the oldest weapons go to make room. away: the names put away.
-export function putInHand(c: Character, id: string, two = false): { c: Character; away: string[]; blocked?: 'shield' } {
+// held is taken again whole, and the oldest weapons go to make room.
+export function putInHand(c: Character, id: string, two = false): { c: Character; blocked?: 'shield' } {
   const it = itemOf(c, id);
-  if (!it || !isWeapon(it)) return { c, away: [] };
+  if (!it || !isWeapon(it)) return { c };
   const both = twoHanded(it) || (two && versatile(it));
-  if (both && shieldOn(c)) return { c, away: [], blocked: 'shield' };
+  if (both && shieldOn(c)) return { c, blocked: 'shield' };
   const base = it.eq ? c : withEquipped(c, id);
   const once = base.hands.filter((x) => x === id).length === 1;
   const next = once && !twoHanded(it) && !versatile(it) && it.qty >= 2
     ? [...base.hands, id]
     : [...base.hands.filter((x) => x !== id), ...(both ? [id, id] : [id])];
-  const out = setHands(base, next);
-  return { c: out, away: putAwayNames(base, out, id) };
+  return { c: setHands(base, next) };
 }
 
 export const putAway = (c: Character, id: string): Character => setHands(c, c.hands.filter((x) => x !== id));
 
 // Equips a Shield: it takes a hand, so a Versatile weapon held in two moves to one and hands trim to one entry (a
-// Two-Handed weapon always goes). away: names put away.
-export function equipShield(c: Character, id: string): { c: Character; away: string[] } {
+// Two-Handed weapon always goes).
+export function equipShield(c: Character, id: string): Character {
   const base = withEquipped(c, id);
-  const out = setHands(base, base.hands.filter((x, i, all) => all.indexOf(x) === i || !versatile(itemOf(c, x)!)));
-  return { c: out, away: putAwayNames(base, out) };
+  return setHands(base, base.hands.filter((x, i, all) => all.indexOf(x) === i || !versatile(itemOf(c, x)!)));
 }

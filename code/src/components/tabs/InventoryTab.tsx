@@ -14,7 +14,7 @@ import { RuleNotes } from '../RuleNotes';
 import { scrollToEntry } from '../pickers/usePicker';
 import { patchEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { ArmorKind, Character, Coin, Item, Recharge, Section } from '../../types';
-import { AddButton, DamageTypeField, EffectSwitch, EntryForm, EntryRow, MenuIcon, NumInput, TextField, useArmed, useNoteUntilChange } from '../ui';
+import { AddButton, DamageTypeField, EffectSwitch, EntryForm, EntryRow, MenuIcon, NumInput, TextField, useArmed } from '../ui';
 
 const COINS: [Coin, string, string][] = [['cp', 'CP', 'var(--coin-cp)'], ['sp', 'SP', 'var(--coin-sp)'], ['ep', 'EP', 'var(--coin-ep)'], ['gp', 'GP', 'var(--accent)'], ['pp', 'PP', 'var(--coin-pp)']];
 // The item form's draft (catalog/copy.ts) plus the grants of a new item (pending), added once it exists.
@@ -67,9 +67,6 @@ export function InventoryTab() {
   const f = useEntryForm('item', BLANK, 'item', 'Add a custom item');
   const picking = openForm?.kind === 'pick-item';
   const [carryOpen, setCarryOpen] = useState(false);
-  // What equipping a Shield put away ("Put away: Longbow"), shown under its row until the next action (spec): the next
-  // change to the character hides it.
-  const [awayMsg, setAwayMsg] = useNoteUntilChange<{ id: string; names: string[] }>();
   // Sections and containers (plan 6), UI state only: the section a new item goes in (null: the default list), what
   // removing each bag does with its contents, the open section menu, a section being renamed, a new section's name.
   const [addSec, setAddSec] = useState<string | null>(null);
@@ -83,14 +80,11 @@ export function InventoryTab() {
   const holds = (bag: Item) => c.inv.some((i) => i.in === bag.id) || COINS.some(([k]) => (bag[k] ?? 0) > 0);
   const removeMode = (bag: Item) => (holds(bag) ? bagRemove[bag.id] ?? 'out' : 'out');
   const cap = carryCapacity(c), carried = carriedWeight(c), over = carried > cap.carry;
-  const patch = (id: string, p: Partial<Item>) => { setAwayMsg(null); update((s) => ({ inv: patchEntry(s.inv, id, p) })); };
-  // The equip toggle: a Shield takes a hand (equipShield trims hands and names what went); unequipping lets go of it.
+  const patch = (id: string, p: Partial<Item>) => { update((s) => ({ inv: patchEntry(s.inv, id, p) })); };
+  // The equip toggle: a Shield takes a hand (equipShield trims hands); unequipping lets go of it.
   const toggleEq = (it: Item) => {
-    setAwayMsg(null);
     if (!it.eq && it.armor === 'shield') {
-      const r = equipShield(c, it.id);
-      if (r.away.length) setAwayMsg({ id: it.id, names: r.away });
-      update((p) => equipShield(p, it.id).c);
+      update((p) => equipShield(p, it.id));
       return;
     }
     update((s) => { const next = { ...s, inv: patchEntry(s.inv, it.id, { eq: !it.eq }) }; return it.eq ? setHands(next, next.hands) : next; });
@@ -200,7 +194,7 @@ export function InventoryTab() {
     </>;
   };
   const row = (it: Item) => {
-    const info = it.desc || itemStats(it), moves = moveControls(it), gives = grantChips(c, linkOf('item', it.id)).length > 0, away = awayMsg?.id === it.id;
+    const info = it.desc || itemStats(it), moves = moveControls(it), gives = grantChips(c, linkOf('item', it.id)).length > 0;
     return (
     <li key={it.id}>
       {f.editingId === it.id ? form : (
@@ -239,10 +233,7 @@ export function InventoryTab() {
           onEdit={() => f.openEdit(it.id, { ...draftFromItem(it), pending: [] })}
           onRemove={() => update((p) => (isContainer(it) ? removeContainer(p, it.id, removeMode(it)) : removeRef(p, { kind: 'item', id: it.id })))}
           removeConfirm={isContainer(it) && holds(it) ? bagConfirm(it) : removalNote(c, { kind: 'item', id: it.id })}>
-          {(gives || away) && <>
-            {gives && <SourceChips link={linkOf('item', it.id)} />}
-            {away && <span role="status" className="small muted">Put away: {awayMsg.names.join(', ')}</span>}
-          </>}
+          {gives && <SourceChips link={linkOf('item', it.id)} />}
         </EntryRow>
       )}
     </li>

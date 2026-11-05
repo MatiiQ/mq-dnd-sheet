@@ -1,9 +1,9 @@
 // Server-render smoke tests for the Actions tab: its sections render from both samples, without a browser.
 import { renderToString } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { druidSample, sampleCharacter } from '../../defaults';
+import { blankCharacter, druidSample, sampleCharacter } from '../../defaults';
 import { Sheet } from '../../sheet';
-import { dagger } from '../../test-fixtures';
+import { dagger, longsword } from '../../test-fixtures';
 import type { Character } from '../../types';
 import { ActionsTab, Section } from './ActionsTab';
 
@@ -53,5 +53,15 @@ describe('ActionsTab', () => {
   it('shows the Light extra attack with two Daggers in hand', () => {
     const c: Character = { ...sampleCharacter(), inv: [...sampleCharacter().inv, dagger({ id: 'dg', qty: 2 })], hands: ['dg', 'dg'] };
     expect(render(c)).toContain('Light extra attack · Dagger');
+  });
+  it('names hand buttons Draw and Stow, and lists Weapons not held', () => {
+    const fire = { id: 'fb', name: 'Fire Bolt', lvl: 0, time: 'Action', range: '120 feet', atk: 'ranged' as const, fx: 'damage' as const, dmg: '1d10', dtype: 'Fire' };
+    const c: Character = { ...blankCharacter(), inv: [dagger({ id: 'd' }), longsword({ id: 'ls', eq: false })], hands: ['d'], spells: [fire] };
+    const html = render(c);
+    expect(html).toContain('Weapons not held (1)');
+    expect(html).not.toContain('Other weapons');
+    expect(html).toMatch(/aria-label="Stow Dagger"[^>]*>Stow</);
+    expect(html).not.toContain('Put away');
+    expect(html).not.toContain('In hand');
   });
 });

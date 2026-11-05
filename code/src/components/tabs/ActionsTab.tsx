@@ -11,8 +11,8 @@ import { canLoad, hasProp, isWeapon, putAway, putInHand, shieldOn as shieldOf, t
 import { linkOf, sourceLabel } from '../../links';
 import { castSpell, COMBAT_ACTIONS, fmt, freeCastsOf, ORDINAL, regainTo, removeRef, slotsLeft, spellUsable, toggled, type AcPart } from '../../logic';
 import { patchEntry, removeEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
-import type { Attack, Character, Econ, Item, Rider, Spell } from '../../types';
-import { AcTargetSwitch, AddButton, Caret, DieBadge, EffectSwitch, EntryForm, EntryRow, FreeCastButton, Step, TextField, useNoteUntilChange } from '../ui';
+import type { Attack, Econ, Item, Rider, Spell } from '../../types';
+import { AcTargetSwitch, AddButton, Caret, DieBadge, EffectSwitch, EntryForm, EntryRow, FreeCastButton, Step, TextField } from '../ui';
 
 const ECON: Record<Econ, string> = { action: 'Action', bonus: 'Bonus Action', reaction: 'Reaction', free: 'Free', other: 'Other' };
 type Filter = 'all' | 'action' | 'bonus' | 'reaction';
@@ -72,10 +72,8 @@ export function Section({ title, children, aside }: { title: string; children: R
 }
 
 export function ActionsTab() {
-  const { c, update } = useSheet();
+  const { c, update, reveal } = useSheet();
   const [filter, setFilter] = useState<Filter>('all');
-  // What taking a weapon put away, shown under its row until the next change to the character.
-  const [away, setAway] = useNoteUntilChange<{ id: string; text: string }>();
   const [othersOpen, setOthersOpen] = useState(false);
   const [masteryOpen, setMasteryOpen] = useState(false);
   const [rulesWanted, setRulesWanted] = useState(false);
@@ -84,19 +82,17 @@ export function ActionsTab() {
   const fa = useEntryForm('attack', ATTACK_BLANK, 'attack', 'Add an attack');
   const fr = useEntryForm('rider', RIDER_BLANK, 'extra damage', 'Add extra damage');
   const shows = (econ: Econ) => filter === 'all' || econ === filter;
-  const act = (next: (p: Character) => Character) => { setAway(null); update(next); };
+  const act = update;
 
   // ---- hands ----
   const shieldOn = shieldOf(c);
   const take = (it: Item, two = false) => {
-    const r = putInHand(c, it.id, two);
-    if (r.blocked) return;
-    setAway(r.away.length ? { id: it.id, text: 'Put away: ' + r.away.join(', ') } : null);
+    if (putInHand(c, it.id, two).blocked) return;
     update((p) => putInHand(p, it.id, two).c);
   };
   const handButtons = (it: Item) => {
     const n = c.hands.filter((x) => x === it.id).length;
-    const btn = (label: string, pressed: boolean, onClick: () => void, blocked = false, aria?: string) => (
+    const btn = (label: string, pressed: boolean | undefined, onClick: () => void, blocked = false, aria?: string) => (
       <button key={label} type="button" className="btn btn-sm hand-btn" aria-pressed={pressed} aria-disabled={blocked || undefined}
         aria-label={aria ?? label + ': ' + it.name} title={blocked ? NO_SHIELD : undefined} onClick={() => { if (!blocked) onClick(); }}>{label}</button>
     );
@@ -104,7 +100,9 @@ export function ActionsTab() {
       btn('1 hand', n === 1, () => (n === 1 ? act((p) => putAway(p, it.id)) : take(it))),
       btn('2 hands', n === 2, () => (n === 2 ? act((p) => putAway(p, it.id)) : take(it, true)), shieldOn && n !== 2)
     ] : [
-      btn('In hand', n > 0, () => (n > 0 ? act((p) => putAway(p, it.id)) : take(it)), twoHanded(it) && shieldOn && n === 0),
+      // Equipping a weapon includes drawing it, unequipping includes stowing it (PHB p.361).
+      btn(n > 0 ? 'Stow' : 'Draw', undefined, () => (n > 0 ? act((p) => putAway(p, it.id)) : take(it)), twoHanded(it) && shieldOn && n === 0,
+        (n > 0 ? 'Stow ' : 'Draw ') + it.name),
       ...(n === 1 && it.qty >= 2 && !twoHanded(it) ? [btn('Other hand too', false, () => take(it), false, 'Take a second ' + it.name + ' in the other hand')] : [])
     ];
     const blockedHint = shieldOn && (twoHanded(it) || versatile(it)) && n < 2;
@@ -112,8 +110,7 @@ export function ActionsTab() {
       <div className="row wrap gap-6" role="group" aria-label={'Hands for ' + it.name}>
         {buttons}
         {blockedHint && <span className="small">{NO_SHIELD} to use it in two hands</span>}
-        {!it.eq && <span className="small">Carried: taking it equips it</span>}
-        {away?.id === it.id && <span role="status" className="small">{away.text}</span>}
+        {!it.eq && <span className="small">Carried: drawing it equips it</span>}
       </div>
     );
   };
@@ -143,6 +140,7 @@ export function ActionsTab() {
         <Parts label="Damage" parts={a.dmgParts} />
         {it.desc && <span className="entry-desc">{it.desc}</span>}
         <RuleNotes pick={(cat) => weaponRules(cat, a.props, a.mastery)} />
+        <button type="button" className="btn btn-sm" style={{ alignSelf: 'flex-start' }} onClick={() => reveal({ kind: 'item', id: it.id })}>Open in Inventory</button>
       </>} />
   );
 
@@ -261,11 +259,14 @@ export function ActionsTab() {
           {x.part === undefined && <CastButtons sp={sp} effect={!!x.effect} />}
         </div>}
         // A part's row shows numbers only: one casting, from the spell's own row, spends one slot (plan 7).
-        body={x.part !== undefined ? undefined : <>
-          {sp.desc && <span className="entry-desc">{sp.desc}</span>}
-          {x.upcast && <span className="muted">At higher levels: {x.upcast}</span>}
-          {(sp.comp || sp.dur) && <span className="muted">{[sp.comp, sp.dur].filter(Boolean).join(' · ')}</span>}
-          {x.source && <span className="muted">Source: {x.source}</span>}
+        body={<>
+          {x.part === undefined && <>
+            {sp.desc && <span className="entry-desc">{sp.desc}</span>}
+            {x.upcast && <span className="muted">At higher levels: {x.upcast}</span>}
+            {(sp.comp || sp.dur) && <span className="muted">{[sp.comp, sp.dur].filter(Boolean).join(' · ')}</span>}
+            {x.source && <span className="muted">Source: {x.source}</span>}
+          </>}
+          <button type="button" className="btn btn-sm" style={{ alignSelf: 'flex-start' }} onClick={() => reveal({ kind: 'spell', id: x.spellId })}>Open in Spells</button>
         </>} />
     );
   };
@@ -324,7 +325,7 @@ export function ActionsTab() {
           others.length > 0 && filter !== 'bonus' && filter !== 'reaction' && (
             <div key="others" className="col gap-6">
               <button type="button" className="btn btn-sm row gap-4" style={{ alignSelf: 'flex-start' }} aria-expanded={othersOpen} onClick={() => setOthersOpen(!othersOpen)}>
-                Other weapons ({others.length})<Caret open={othersOpen} />
+                Weapons not held ({others.length})<Caret open={othersOpen} />
               </button>
               {othersOpen && others.map((it) => weaponRow(it, weaponAttacks(c, it)[0], true))}
             </div>

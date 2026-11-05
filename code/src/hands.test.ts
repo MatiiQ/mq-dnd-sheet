@@ -42,7 +42,6 @@ describe('weapons in hand', () => {
     expect(c.hands).toEqual(['d']);
     const r = putInHand(c, 'd');
     expect(r.c.hands).toEqual(['d', 'd']);
-    expect(r.away).toEqual([]);
     const one = putInHand(putInHand(make([dagger({ id: 'd' })]), 'd').c, 'd');
     expect(one.c.hands).toEqual(['d']);
     // Versatile: taking it again re-takes it, never a second one-handed copy.
@@ -53,7 +52,6 @@ describe('weapons in hand', () => {
   it('puts a Two-Handed weapon away whole to make room', () => {
     const r = putInHand(make([longbow({ id: 'bow' }), shortsword({ id: 'ss' })], ['bow', 'bow']), 'ss');
     expect(r.c.hands).toEqual(['ss']);
-    expect(r.away).toEqual(['Longbow']);
   });
 
   it('equips a carried weapon taken in hand', () => {
@@ -75,7 +73,6 @@ describe('weapons in hand', () => {
     const r = putInHand(c, 'bow');
     expect(r.blocked).toBe('shield');
     expect(r.c).toBe(c);
-    expect(r.away).toEqual([]);
     const s = seren({}, true);
     const q = putInHand(s, 'i3', true);
     expect(q.blocked).toBe('shield');
@@ -86,12 +83,10 @@ describe('weapons in hand', () => {
 
   it('trims hands when a Shield is equipped, oldest weapon first', () => {
     const daggers = equipShield(make([dagger({ id: 'd', qty: 2 }), shield({ id: 'sh', eq: false })], ['d', 'd']), 'sh');
-    expect(daggers.c.hands).toEqual(['d']);
-    expect(daggers.away).toEqual(['Dagger']);
-    expect(daggers.c.inv[1].eq).toBe(true);
+    expect(daggers.hands).toEqual(['d']);
+    expect(daggers.inv[1].eq).toBe(true);
     const bow = equipShield(make([longbow({ id: 'bow' }), shield({ id: 'sh', eq: false })], ['bow', 'bow']), 'sh');
-    expect(bow.c.hands).toEqual([]);
-    expect(bow.away).toEqual(['Longbow']);
+    expect(bow.hands).toEqual([]);
   });
 
   it('validates hands on load', () => {
@@ -120,7 +115,7 @@ describe('letting go ends Shillelagh (PHB p.316)', () => {
   });
 
   it('stays on when a Shield moves the Quarterstaff to one hand', () => {
-    const out = equipShield(putInHand(seren(), 'i3', true).c, 'i2').c;
+    const out = equipShield(putInHand(seren(), 'i3', true).c, 'i2');
     expect(out.effectsOn).toEqual(['spell:ds3']);
     expect(out.hands).toEqual(['i3']);
   });
@@ -218,11 +213,9 @@ describe('firearms', () => {
 
 it('moves a Versatile weapon to one hand for a Shield', () => {
   const c: Character = { ...blankCharacter(), inv: [quarterstaff({ id: 'q' }), shield({ id: 's', eq: false })], hands: ['q', 'q'] };
-  const r = equipShield(c, 's');
-  expect(r.c.hands).toEqual(['q']);
-  expect(r.away).toEqual([]);
+  expect(equipShield(c, 's').hands).toEqual(['q']);
   const bow: Character = { ...blankCharacter(), inv: [longbow({ id: 'b' }), shield({ id: 's', eq: false })], hands: ['b', 'b'] };
-  expect(equipShield(bow, 's').c.hands).toEqual([]);
+  expect(equipShield(bow, 's').hands).toEqual([]);
 });
 
 describe('pinned rules', () => {
