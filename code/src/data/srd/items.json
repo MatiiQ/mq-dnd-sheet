@@ -6158,7 +6158,7 @@
     "kind": "item",
     "name": "Woodcarver’s Tools",
     "src": "srd",
-    "desc": "Ability: Dexterity\nUtilize: Carve a pattern in wood (DC 10)\nCraft: Club, Greatclub, Quarterstaff, Ranged weapons (except Pistol, Musket, and Sling), Arcane Focus, Arrows, Bolts, Druidic Focus, Ink Pen, Needles Other Tools",
+    "desc": "Ability: Dexterity\nUtilize: Carve a pattern in wood (DC 10)\nCraft: Club, Greatclub, Quarterstaff, Ranged weapons (except Pistol, Musket, and Sling), Arcane Focus, Arrows, Bolts, Druidic Focus, Ink Pen, Needles",
     "cat": "tool",
     "cost": "1 GP",
     "wt": 5

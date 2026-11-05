@@ -754,7 +754,7 @@
     "kind": "class",
     "name": "Fighter",
     "src": "srd",
-    "desc": "Primary Ability: Strength or Dexterity\nStarting Equipment: Choose A, B, or C: (A) Chain Mail, Greatsword, Flail, 8 Javelins, Dungeoneer’s Pack, and 4 GP; (B) Studded Leather Armor, Scimitar, Short­sword, Longbow, 20 Arrows, Quiver, Dungeoneer’s Pack, and 11 GP; or (C) 155 GP",
+    "desc": "Primary Ability: Strength or Dexterity\nStarting Equipment: Choose A, B, or C: (A) Chain Mail, Greatsword, Flail, 8 Javelins, Dungeoneer’s Pack, and 4 GP; (B) Studded Leather Armor, Scimitar, Shortsword, Longbow, 20 Arrows, Quiver, Dungeoneer’s Pack, and 11 GP; or (C) 155 GP",
     "hd": 10,
     "saves": "str,con",
     "skills": {
@@ -1277,7 +1277,7 @@
     "kind": "class",
     "name": "Rogue",
     "src": "srd",
-    "desc": "Primary Ability: Dexterity\nStarting Equipment: Choose A or B: (A) Leather Armor, 2 Daggers, Short­sword, Shortbow, 20 Arrows, Quiver, Thieves’ Tools, Burglar’s Pack, and 8 GP; or (B) 100 GP",
+    "desc": "Primary Ability: Dexterity\nStarting Equipment: Choose A or B: (A) Leather Armor, 2 Daggers, Shortsword, Shortbow, 20 Arrows, Quiver, Thieves’ Tools, Burglar’s Pack, and 8 GP; or (B) 100 GP",
     "hd": 8,
     "saves": "dex,int",
     "skills": {
@@ -6716,7 +6716,7 @@
     "src": "srd",
     "cls": "sorcerer",
     "lvl": 2,
-    "desc": "Because your magic flows from within, you can alter your spells to suit your needs; you gain two Metamagic options of your choice from “Meta­magic Options” later in this class’s description. You use the chosen options to temporarily modify spells you cast. To use an option, you must spend the number of Sorcery Points that it costs. You can use only one Metamagic option on a spell when you cast it unless otherwise noted in one of those options.\nWhenever you gain a Sorcerer level, you can replace one of your Metamagic options with one you don’t know. You gain two more options at Sorcerer level 10 and two more at Sorcerer level 17.",
+    "desc": "Because your magic flows from within, you can alter your spells to suit your needs; you gain two Metamagic options of your choice from “Metamagic Options” later in this class’s description. You use the chosen options to temporarily modify spells you cast. To use an option, you must spend the number of Sorcery Points that it costs. You can use only one Metamagic option on a spell when you cast it unless otherwise noted in one of those options.\nWhenever you gain a Sorcerer level, you can replace one of your Metamagic options with one you don’t know. You gain two more options at Sorcerer level 10 and two more at Sorcerer level 17.",
     "grants": [
       {
         "kind": "choice",

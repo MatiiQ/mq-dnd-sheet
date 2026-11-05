@@ -163,7 +163,8 @@ export function parseMounts(layout: string): ItemEntry[] {
 export function parseTools(text: string): ItemEntry[] {
   return pricedBlocks(text).filter((b) => /^Ability:/.test(b.lines.find((l) => l.trim())?.trim() ?? '')).map((b) => {
     const fields: string[] = [];
-    for (const l of b.lines.map((x) => x.trim()).filter(Boolean)) {
+    // The tools section's next heading ends the last tool's block.
+    for (const l of b.lines.map((x) => x.trim()).filter((x) => x && x !== 'Other Tools')) {
       if (/^(Ability|Weight|Utilize|Craft|Variants):/.test(l) || !fields.length) fields.push(l.replace(/\s+/g, ' '));
       else fields[fields.length - 1] = /[a-z]-$/.test(fields[fields.length - 1]) ? fields[fields.length - 1].slice(0, -1) + l : `${fields[fields.length - 1]} ${l}`;
     }

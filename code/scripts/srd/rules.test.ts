@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { expect, it } from 'vitest';
 import { parseLanguages, parseRules } from './rules.ts';
+import { srdLines } from './text.ts';
 
 const text = readFileSync(new URL('./fixtures/rules.txt', import.meta.url), 'utf8');
 
@@ -19,4 +20,8 @@ it('reads actions, Opportunity Attack and senses from the glossary', () => {
 it('reads the standard and rare languages', () => {
   expect(parseLanguages(text)).toEqual(['Common', 'Common Sign Language', 'Draconic', 'Dwarvish', 'Elvish', 'Giant', 'Gnomish', 'Goblin', 'Halfling', 'Orc',
     'Abyssal', 'Primordial', 'Celestial', 'Sylvan', 'Deep Speech', 'Thieves’ Cant', 'Druidic', 'Undercommon', 'Infernal']);
+});
+
+it('drops soft hyphens from extracted lines', () => {
+  expect(srdLines('Short\u00adsword').map((l) => l.text)).toEqual(['Shortsword']);
 });

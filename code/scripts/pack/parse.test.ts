@@ -93,6 +93,11 @@ describe('feats, backgrounds, species, equipment', () => {
     expect(bearer).toMatchObject({ prereq: 'lvl>=4;feature=spellcasting|pact-magic', repeat: true });
     for (const e of [ward, bearer]) expect(validateEntry(e)).toEqual([]);
   });
+  it('leaves a rule line out of a background’s text', () => {
+    const bgs = parseOriginsMd(fx('origins.md')).filter((e) => e.kind === 'background');
+    expect(bgs.length).toBeGreaterThan(0);
+    expect(bgs.every((e) => !/^---$/m.test(e.desc))).toBe(true);
+  });
   it('reads a background and a species with a lineage table', () => {
     const list = parseOriginsMd(fx('origins.md'));
     expect(list.find((e) => e.id === 'background/wanderer')).toMatchObject({ feat: 'feat/magic-initiate:druid' });

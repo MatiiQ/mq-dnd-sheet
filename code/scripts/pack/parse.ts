@@ -159,7 +159,7 @@ export function parseOriginsMd(md: string): Entry[] {
     if (!f['Ability Scores']) continue;
     const feat = /^(.+?)(?: \((\w+)\))?$/.exec(f.Feat)!;
     out.push({ id: catalogId('background', b.title), kind: 'background', name: b.title, src: 'phb',
-      desc: b.lines.filter((l) => l.trim()).map(clean).join('\n'),
+      desc: b.lines.filter((l) => l.trim() && l.trim() !== '---').map(clean).join('\n'),
       feat: catalogId('feat', feat[1]) + (feat[2] ? `:${slug(feat[2])}` : ''),
       equip: [f['Equipment A'] && `A: ${f['Equipment A']}`, f['Equipment B'] && `B: ${f['Equipment B']}`].filter(Boolean).join('; '), grants: [] } satisfies BackgroundEntry);
   }
