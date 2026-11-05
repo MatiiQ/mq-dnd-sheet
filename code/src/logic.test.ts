@@ -1933,7 +1933,9 @@ describe('passive scores', () => {
   });
   it('gives a checkAdv chip pointing at Senses', () => {
     const chip = grantChips(base({ grants: [adv({ note: 'relies on sight' })] }), 'feature:f')[0];
-    expect(chip.label).toMatch(/^Advantage on perception checks/);
+    expect(chip.label).toMatch(/^Advantage on Perception checks/);
+    const ab = grantChips(base({ grants: [adv({ target: 'wis', adv: 'dis' })] }), 'feature:f')[0];
+    expect(ab.label).toBe('Disadvantage on Wisdom checks');
     expect(chip.target).toEqual({ sec: 'sec-senses' });
   });
 });
@@ -1993,6 +1995,9 @@ describe('auras', () => {
     const m = migrate({ ...a, defenses: [{ ...a.defenses[0], needAura: 5, needHand: 'yes' }] });
     expect(m.defenses[0]).not.toHaveProperty('needAura');
     expect(m.defenses[0]).not.toHaveProperty('needHand');
+    // Unlinked (source set to none), the entry no longer rides on the aura: nothing on the sheet shows that field.
+    const { from: _f, ...hand } = a.defenses[0];
+    expect(migrate({ ...a, defenses: [hand] }).defenses[0]).not.toHaveProperty('needAura');
     const feature = (g: object) => validateEntry({ id: 'feat/x', kind: 'feat', name: 'X', src: 'srd', desc: '', cat: 'general', grants: [{ id: 'a', kind: 'saveBonus', name: 'A', ab: 'all', val: '1', ...g }] });
     expect(feature({ needHand: true })).not.toEqual([]);
     expect(feature({ needAura: AOP })).toEqual([]);

@@ -64,9 +64,10 @@ export function wouldLoop(c: Character, self: string, candidate: string): boolea
 export const LINKED_LISTS = ['senses', 'spells', 'feats', 'attacks', 'grants', 'defenses', 'res'] as const;
 type LinkedList = (typeof LINKED_LISTS)[number];
 
-// The fields that mean something only with a link: the item checks, "while its effect is on" and `linked`.
+// The fields that mean something only with a link: the item checks, "while its effect is on", the aura it rides on
+// (no UI shows or clears needAura on a hand entry) and `linked`.
 export function dropLinkOnly<T extends Linked>(x: T): T {
-  const { needEq: _e, needAtt: _a, needHand: _h, linked: _l, ...rest } = x;
+  const { needEq: _e, needAtt: _a, needHand: _h, needAura: _n, linked: _l, ...rest } = x;
   return (rest.when === 'active' ? (({ when: _w, ...r }) => r)(rest) : rest) as T;
 }
 const unlink = <T extends Linked>(x: T): T => { const { from: _, ...rest } = x; return dropLinkOnly(rest as T); };

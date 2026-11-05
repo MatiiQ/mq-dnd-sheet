@@ -165,6 +165,23 @@ describe('Actions hand buttons', () => {
   });
 });
 
+describe('Inventory Move to', () => {
+  it('leaves a bag section but stays in the bag', () => {
+    renderSheet({
+      sections: [{ id: 'p', name: 'Potions', in: 'bag' }],
+      inv: [{ id: 'bag', name: 'Bag of Holding', qty: 1, eq: false, xdim: true, cap: 500 }, { id: 'pot', name: 'Potion', qty: 1, eq: false, in: 'bag', sec: 'p' }]
+    });
+    tab('Inventory');
+    tap(document.querySelector('#item-pot .entry-head'));
+    const sel = [...document.querySelectorAll('#item-pot select')].find((x) => x.closest('.move-to')) as HTMLSelectElement;
+    expect([...sel.options].find((o) => o.value === 'loose')?.textContent).toBe('In Bag of Holding, no section');
+    act(() => { sel.value = 'loose'; sel.dispatchEvent(new Event('change', { bubbles: true })); });
+    const pot = saved().inv.find((i) => i.id === 'pot')!;
+    expect(pot.in).toBe('bag');
+    expect(pot).not.toHaveProperty('sec');
+  });
+});
+
 describe('reveal', () => {
   const spell = { id: 's', name: 'Hunter’s Mark', lvl: 1, time: 'Bonus Action', range: '90 feet', c: true };
   const res = { id: 'r', name: 'Favored Enemy', count: 2, max: 2, recharge: 'long' as const, casts: 's' };

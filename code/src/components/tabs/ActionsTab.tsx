@@ -81,7 +81,6 @@ export function ActionsTab() {
   const fa = useEntryForm('attack', ATTACK_BLANK, 'attack', 'Add an attack');
   const fr = useEntryForm('rider', RIDER_BLANK, 'extra damage', 'Add extra damage');
   const shows = (econ: Econ) => filter === 'all' || econ === filter;
-  const act = update;
 
   // ---- hands ----
   const shieldOn = shieldOf(c);
@@ -96,11 +95,11 @@ export function ActionsTab() {
         aria-label={aria ?? label + ': ' + it.name} title={blocked ? NO_SHIELD : undefined} onClick={() => { if (!blocked) onClick(); }}>{label}</button>
     );
     const buttons = versatile(it) ? [
-      btn('1 hand', n === 1, () => (n === 1 ? act((p) => putAway(p, it.id)) : take(it))),
-      btn('2 hands', n === 2, () => (n === 2 ? act((p) => putAway(p, it.id)) : take(it, true)), shieldOn && n !== 2)
+      btn('1 hand', n === 1, () => (n === 1 ? update((p) => putAway(p, it.id)) : take(it))),
+      btn('2 hands', n === 2, () => (n === 2 ? update((p) => putAway(p, it.id)) : take(it, true)), shieldOn && n !== 2)
     ] : [
       // Equipping a weapon includes drawing it, unequipping includes stowing it (PHB p.361).
-      btn(n > 0 ? 'Stow' : 'Draw', undefined, () => (n > 0 ? act((p) => putAway(p, it.id)) : take(it)), twoHanded(it) && shieldOn && n === 0,
+      btn(n > 0 ? 'Stow' : 'Draw', undefined, () => (n > 0 ? update((p) => putAway(p, it.id)) : take(it)), twoHanded(it) && shieldOn && n === 0,
         (n > 0 ? 'Stow ' : 'Draw ') + it.name),
       ...(n === 1 && it.qty >= 2 && !twoHanded(it) ? [btn('Other hand too', false, () => take(it), false, 'Take a second ' + it.name + ' in the other hand')] : [])
     ];
@@ -121,7 +120,7 @@ export function ActionsTab() {
     return (
       <label className="field">Ammunition
         <select className="input" aria-label={'Ammunition for ' + it.name} value={it.load ?? ''}
-          onChange={(e) => act((p) => ({ ...p, inv: patchEntry(p.inv, it.id, { load: e.target.value || undefined }) }))}>
+          onChange={(e) => update((p) => ({ ...p, inv: patchEntry(p.inv, it.id, { load: e.target.value || undefined }) }))}>
           <option value="">None</option>
           {fits.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
         </select>
@@ -202,7 +201,7 @@ export function ActionsTab() {
     if (!name) return;
     let hit = d.hit.trim();
     if (/^\d+$/.test(hit)) hit = '+' + hit;
-    act((p) => ({ ...p, attacks: saveEntry<Attack>(p.attacks, { name, hit, dmg: d.dmg.trim(), info: d.info.trim(), mastery: d.mastery.trim(), econ: d.econ, group: d.group }, fa.editingId) }));
+    update((p) => ({ ...p, attacks: saveEntry<Attack>(p.attacks, { name, hit, dmg: d.dmg.trim(), info: d.info.trim(), mastery: d.mastery.trim(), econ: d.econ, group: d.group }, fa.editingId) }));
     fa.close();
   };
   const saveRider = () => {
@@ -242,7 +241,7 @@ export function ActionsTab() {
       side={<AttackNums hit={a.hit} dmg={a.dmg || '—'} />}
       body={sourceLabel(c, a) ? <span className="muted">Source: {sourceLabel(c, a)}</span> : undefined}
       onEdit={() => fa.openEdit(a.id, { name: a.name, hit: a.hit || '', dmg: a.dmg || '', info: a.info || '', mastery: a.mastery || '', econ: econOfAttack(a), group: a.group ?? 'other' })}
-      onRemove={() => act((p) => removeRef(p, { kind: 'attack', id: a.id }))} />
+      onRemove={() => update((p) => removeRef(p, { kind: 'attack', id: a.id }))} />
   ));
 
   // ---- spells ----

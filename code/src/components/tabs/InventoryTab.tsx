@@ -1,7 +1,7 @@
 import { useState, type CSSProperties } from 'react';
 import { armorBaseMissing, BLANK_ITEM, catForKind, draftFromItem, itemFromForm, itemStats, weaponRules, withDetectedArmor, WEAPON_PROPS, type ItemDraft, type ItemKind, type WeaponProp } from '../../catalog/copy';
 import { isValue } from '../../catalog/value';
-import { removeRef, CARRY_MULT, SIZES, regainLabel, capital, coinWeight, maxFields, maxOf, rechargeOf, regainEvent, carriedWeight, carryCapacity, carryUpOf, sizeOf, effScore, fmt, addGrants, grantChips, isContainer, newId, type GrantInput } from '../../logic';
+import { removeRef, CARRY_MULT, SIZES, regainLabel, capital, coinWeight, maxFields, maxOf, rechargeOf, regainEvent, carriedWeight, carryCapacity, carryUpOf, sizeOf, effScore, fmt, addGrants, grantChips, isContainer, newId, withoutKeys, type GrantInput } from '../../logic';
 import {
   addSection, bagGroups, containerLoad, DEFAULT_SECTION, inventoryGroups, moveInto, moveSection, removeContainer, removeContainerSummary, removeSection, renameSection,
   setItemSection, takeOut
@@ -173,7 +173,9 @@ export function InventoryTab() {
   // ---- items ----
   // "Move to": a section, the default list, into a container or one of its sections (not for a container itself, never
   // "Into" its own one). An item in a container but in none of its sections shows where it is as a first, disabled option.
-  const moveTo = (it: Item, v: string) => update((p) => (v.startsWith('in:') ? moveInto(p, it.id, v.slice(3)) : setItemSection(p, it.id, v.slice(4) || null)));
+  // loose: stays in its bag, out of the bag's section.
+  const moveTo = (it: Item, v: string) => update((p) => (v === 'loose' ? { inv: p.inv.map((i) => (i.id === it.id ? withoutKeys(i, ['sec']) : i)) }
+    : v.startsWith('in:') ? moveInto(p, it.id, v.slice(3)) : setItemSection(p, it.id, v.slice(4) || null)));
   const moveControls = (it: Item) => {
     const bags = isContainer(it) ? [] : containers, into = bags.filter((b) => b.id !== it.in);
     const bagSecs = bags.flatMap((b) => c.sections.filter((x) => x.in === b.id).map((x) => ({ x, label: b.name + ' › ' + x.name })));
@@ -183,7 +185,7 @@ export function InventoryTab() {
       <div className="row wrap gap-8 move-to">
         <label className="field" style={{ flex: '1 1 200px' }}>Move to
           <select className="input" value={it.in && !own ? 'here' : 'sec:' + own} onChange={(e) => moveTo(it, e.target.value)}>
-            {it.in && !own && <option value="here" disabled>In {c.inv.find((b) => b.id === it.in)?.name ?? 'a container'}</option>}
+            {it.in && <option value={own ? 'loose' : 'here'} disabled={!own}>In {c.inv.find((b) => b.id === it.in)?.name ?? 'a container'}{own ? ', no section' : ''}</option>}
             {c.sections.filter((x) => !x.in).map((x) => <option key={x.id} value={'sec:' + x.id}>{x.name}</option>)}
             <option value="sec:">{DEFAULT_SECTION}</option>
             {into.map((b) => <option key={b.id} value={'in:' + b.id}>Into {b.name}</option>)}

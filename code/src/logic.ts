@@ -467,8 +467,6 @@ export function parseWeight(s: string): number | undefined {
   return /^(\d+([.,]\d*)?|[.,]\d+)$/.test(t) ? Number(t.replace(',', '.')) : undefined;
 }
 
-export { INCAPACITATING };
-
 // An aura's size now: its range Value (Aura of Protection '6:10,18:30', Holy Avenger '1:10,17:30'), read against
 // character level; the sheet tracks one class level, so "17 Paladin levels" and Aura Expansion's 18 are simplified.
 export const auraRange = (c: Character, g: Grant) => num(c, g.range, g);
@@ -1124,7 +1122,10 @@ function grantLabel(c: Character, g: Grant): string {
     case 'spellAtk': return fmt(v) + ' spell attack';
     case 'spellDc': return fmt(v) + ' spell save DC';
     case 'aura': return auraRange(c, g) + '-ft aura';
-    case 'checkAdv': return (g.adv === 'dis' ? 'Disadvantage' : 'Advantage') + ' on ' + g.target + ' checks' + (g.note ? ' (' + g.note + ')' : '');
+    case 'checkAdv': {
+      const t = SKILLS.find(([k]) => k === g.target)?.[1] ?? ABILITIES.find(([k]) => k === g.target)?.[1] ?? g.target;
+      return (g.adv === 'dis' ? 'Disadvantage' : 'Advantage') + ' on ' + t + ' checks' + (g.note ? ' (' + g.note + ')' : '');
+    }
     case 'casting': return g.name + ' (set slots by hand)';
     default: return g.name;
   }
