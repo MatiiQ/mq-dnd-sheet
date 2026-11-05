@@ -3101,7 +3101,15 @@
     "cls": "cleric",
     "lvl": 6,
     "desc": "The healing spells you cast on others heal you as well. Immediately after you cast a spell with a spell slot that restores Hit Points to one or more creatures other than yourself, you regain Hit Points equal to 2 plus the spell slot’s level.",
-    "grants": [],
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Blessed Healer",
+        "econ": "other",
+        "note": "After a slot spell heals someone else: regain 2 + the slot level HP."
+      }
+    ],
     "sub": "life-domain"
   },
   {
@@ -4124,6 +4132,13 @@
         "name": "Survivor",
         "econ": "other",
         "note": "Advantage on Death Saving Throws (18–20 counts as 20); while Bloodied, regain 5 + CON HP at the start of your turn."
+      },
+      {
+        "id": "g2",
+        "kind": "defense",
+        "name": "Defy Death",
+        "def": "adv",
+        "target": "Death Saving Throws"
       }
     ],
     "sub": "champion"
@@ -4564,7 +4579,15 @@
     "cls": "monk",
     "lvl": 7,
     "desc": "When you’re subjected to an effect that allows you to make a Dexterity saving throw to take only half damage, you instead take no damage if you succeed on the saving throw and only half damage if you fail. You don’t benefit from this feature if you have the Incapacitated condition.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Evasion",
+        "econ": "other",
+        "note": "DEX save for half damage: none on a success, half on a failure."
+      }
+    ]
   },
   {
     "id": "feature/monk/extra-attack",
@@ -5245,6 +5268,14 @@
         "econ": "bonus",
         "res": "g1",
         "note": "For 10 minutes: Advantage on saves against Fiends and Undead, CHA + PB Radiant to enemies starting in the aura, sunlight. A level 5 slot restores it."
+      },
+      {
+        "id": "g3",
+        "kind": "defense",
+        "name": "Holy Ward",
+        "def": "adv",
+        "target": "saves a Fiend or an Undead forces",
+        "when": "active"
       }
     ],
     "sub": "oath-of-devotion"

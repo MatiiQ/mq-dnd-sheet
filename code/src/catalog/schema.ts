@@ -152,7 +152,7 @@ const RANGE_KIND = oneOf('melee', 'ranged');
 // Own fields per grant kind: [check, required].
 const GRANTS: Record<GrantKind, Record<string, [Check, boolean]>> = {
   sense: { range: [value, true], plus: [bool, false] },
-  resource: { max: [value, false], recharge: [RECHARGE, true], regain: [value, false], regainOn: [oneOf('short', 'dawn'), false], casts: [str, false] },
+  resource: { max: [value, false], recharge: [RECHARGE, true], regain: [value, false], regainOn: [oneOf('short', 'dawn'), false], casts: [str, false], note: [str, false] },
   defense: { def: [oneOf('res', 'vul', 'imm', 'adv'), true], target: [str, true] },
   abil: { ab: [or(ability, ref), true], val: [value, true], cap: [oneOf(20, 25, 30), true] },
   abilSet: { ab: [or(ability, ref), true], val: [value, true] },

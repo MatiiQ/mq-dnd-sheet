@@ -169,3 +169,7 @@ describe('an action grant with uses', () => {
     expect(validateEntry(feat({ regainTo: 'most' }))).not.toEqual([]);
   });
 });
+
+it('lets a resource grant carry a note (addGrants copies it)', () => {
+  expect(validateEntry({ id: 'feat/x', kind: 'feat', name: 'X', src: 'srd', desc: '', cat: 'general', grants: [{ id: 'r', kind: 'resource', name: 'R', recharge: 'long', note: 'Type the rolls here.' }] })).toEqual([]);
+});

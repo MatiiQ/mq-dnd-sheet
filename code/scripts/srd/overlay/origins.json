@@ -370,6 +370,13 @@
             "cap": 30
           }
         ]
+      },
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Peerless Aim",
+        "econ": "other",
+        "note": "When you miss with an attack roll, hit instead; again from the start of your next turn."
       }
     ]
   },
@@ -430,6 +437,13 @@
             "cap": 30
           }
         ]
+      },
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Blink Steps",
+        "econ": "free",
+        "note": "After the Attack or Magic action: teleport up to 30 ft."
       }
     ]
   },
@@ -532,6 +546,13 @@
             "cap": 30
           }
         ]
+      },
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Overwhelming Strike",
+        "econ": "other",
+        "note": "On a 20 to hit: extra damage equal to the score this feat raised. Bludgeoning, Piercing and Slashing damage ignores Resistance."
       }
     ]
   },
@@ -636,6 +657,13 @@
         "def": "res",
         "target": "All damage except Psychic and Radiant",
         "when": "active"
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Merge with Shadows",
+        "econ": "bonus",
+        "note": "In Dim Light or Darkness: Invisible until you take an action, Bonus Action or Reaction."
       }
     ]
   },

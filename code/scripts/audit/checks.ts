@@ -325,7 +325,7 @@ const MECHANICS: { check: string; label: string; cue: RegExp; done: (e: Entry, m
   { check: 'mechanic-no-field', label: 'half a number', cue: /\bhalf (?:your )?(?:[A-Z]\w+ level|Proficiency Bonus)/, done: (e) => flatGrants(e).some((g) => g.cat === 'half' || Object.values(g).some((v) => typeof v === 'string' && /\bhlvl\b/.test(v))) },
   { check: 'mechanic-no-field', label: 'regain on Initiative', cue: /\broll Initiative[^.\n]*\bregain|\bregain[^.\n]*\broll Initiative|\brecharges? when you roll Initiative/i, done: (e) => flatGrants(e).some((g) => g.regainTo !== undefined) },
   { check: 'mechanic-no-field', label: 'stat block', cue: /\bstat block\b|\bFind (?:Familiar|Steed)\b/, done: nothingHoldsIt },
-  { check: 'mechanic-no-field', label: 'state to track', cue: /\bward\b[^.\n]*\b(?:Hit Points|HP)\b|\bforetelling|\broll two d20s/i, done: nothingHoldsIt }
+  { check: 'mechanic-no-field', label: 'state to track', cue: /\bward\b[^.\n]*\b(?:Hit Points|HP)\b|\bforetelling|\broll two d20s/i, done: (e) => flatGrants(e).some((g) => g.kind === 'resource' || !!g.uses) }
 ];
 export function mechanicChecks(entries: Entry[]): Finding[] {
   const out: Finding[] = [];

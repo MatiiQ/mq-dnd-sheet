@@ -340,3 +340,9 @@ it('accepts a free cast held by an always-prepared spell', () => {
     grants: [{ id: 'g', kind: 'spell', name: 'Jump', spell: 'spell/jump', always: true }] } as unknown as Entry;
   expect(mechanicChecks([f])).toEqual([]);
 });
+
+it('accepts state to track held by a resource, or by an action using another feature\'s', () => {
+  const f = (g: object) => ({ id: 'feature/wizard/a', kind: 'feature', name: 'A', cls: 'wizard', lvl: 1, src: 'srd', desc: 'Your ward has 10 Hit Points.', grants: [g] }) as unknown as Entry;
+  expect(mechanicChecks([f({ id: 'g', kind: 'resource', name: 'Ward HP', max: '10', recharge: 'long' })])).toEqual([]);
+  expect(mechanicChecks([f({ id: 'g', kind: 'action', name: 'Ward', econ: 'reaction', uses: 'feature/wizard/b' })])).toEqual([]);
+});

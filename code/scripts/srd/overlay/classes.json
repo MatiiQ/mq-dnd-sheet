@@ -1471,6 +1471,13 @@
         "name": "Survivor",
         "econ": "other",
         "note": "Advantage on Death Saving Throws (18–20 counts as 20); while Bloodied, regain 5 + CON HP at the start of your turn."
+      },
+      {
+        "id": "g2",
+        "kind": "defense",
+        "name": "Defy Death",
+        "def": "adv",
+        "target": "Death Saving Throws"
       }
     ]
   },
@@ -2188,6 +2195,14 @@
         "econ": "bonus",
         "res": "g1",
         "note": "For 10 minutes: Advantage on saves against Fiends and Undead, CHA + PB Radiant to enemies starting in the aura, sunlight. A level 5 slot restores it."
+      },
+      {
+        "id": "g3",
+        "kind": "defense",
+        "name": "Holy Ward",
+        "def": "adv",
+        "target": "saves a Fiend or an Undead forces",
+        "when": "active"
       }
     ]
   },
@@ -4311,6 +4326,28 @@
         "name": "Familiar: Resistance",
         "econ": "reaction",
         "note": "When your familiar takes damage, give it Resistance to it."
+      }
+    ]
+  },
+  "feature/cleric/life-domain/blessed-healer": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Blessed Healer",
+        "econ": "other",
+        "note": "After a slot spell heals someone else: regain 2 + the slot level HP."
+      }
+    ]
+  },
+  "feature/monk/evasion": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Evasion",
+        "econ": "other",
+        "note": "DEX save for half damage: none on a success, half on a failure."
       }
     ]
   }
