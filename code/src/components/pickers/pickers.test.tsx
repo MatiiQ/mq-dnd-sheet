@@ -14,7 +14,7 @@ import { PickerResult } from './PickerResult';
 const cat = mergeCatalog(srdEntries, null);
 // Text only joins up without React's <!-- --> separators between adjacent text parts.
 const render = (c: Character, el: React.ReactElement) =>
-  renderToString(<Sheet.Provider value={{ c, update: () => {}, edit: false, form: null, setForm: () => {} }}>{el}</Sheet.Provider>).replace(/<!-- -->/g, '');
+  renderToString(<Sheet.Provider value={{ c, update: () => {}, edit: false, form: null, setForm: () => {}, focus: null, reveal: () => {}, markFocusUsed: () => {} }}>{el}</Sheet.Provider>).replace(/<!-- -->/g, '');
 const flow = (c: Character, id: string, preset?: Record<string, string[]>) =>
   render(c, <ChoiceFlow entry={cat.byId.get(id)!} cat={cat} preset={preset} onDone={() => {}} onCancel={() => {}} />);
 

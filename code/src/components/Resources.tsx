@@ -124,7 +124,7 @@ export function Resources() {
               const rc = rechargeOf(r), m = maxOf(c, r), why = inactiveReason(c, r), src = sourceLabel(c, r);
               return (
                 f.editingId === r.id ? <div key={r.id}>{form}</div> : (
-                <EntryRow key={r.id} name={r.name} className={why ? 'inactive' : undefined}
+                <EntryRow key={r.id} id={'res-' + r.id} name={r.name} className={why ? 'inactive' : undefined}
                   head={<><strong>{r.name}</strong><span className="muted">{why ? 'Inactive: ' + why : r.note || 'Custom resource'}</span></>}
                   side={
                     <div className="row gap-8">

@@ -121,3 +121,8 @@ describe('entry forms and rows', () => {
     expect(document.getElementById('form-feat')?.textContent).toContain('Grants save at once; Cancel doesn’t undo them.');
   });
 });
+
+describe('reveal', () => {
+  it.todo('reveal opens a spell hidden by the Prepared filter');
+  it.todo('a used reveal does not reopen');
+});

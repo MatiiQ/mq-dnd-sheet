@@ -5,7 +5,7 @@ import { Sheet } from '../sheet';
 import type { Character } from '../types';
 import { Senses } from './Senses';
 
-const render = (c: Character) => renderToString(<Sheet.Provider value={{ c, update: () => {}, edit: false, form: null, setForm: () => {} }}><Senses /></Sheet.Provider>);
+const render = (c: Character) => renderToString(<Sheet.Provider value={{ c, update: () => {}, edit: false, form: null, setForm: () => {}, focus: null, reveal: () => {}, markFocusUsed: () => {} }}><Senses /></Sheet.Provider>);
 
 // A closed row doesn't mount RuleNotes, so this only pins the rows; RuleNotes.test.tsx covers the catalog states.
 it('renders known and typed sense rows', () => {

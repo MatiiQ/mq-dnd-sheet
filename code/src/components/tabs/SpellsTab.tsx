@@ -22,7 +22,7 @@ const EFFECTS: [SpellDraft['fx'], string][] = [['', '—'], ['damage', 'Damage']
 const toDraft = (c: Character, sp: Spell): SpellDraft => ({ ...draftFromSpell(sp), freeCast: ownFreeCasts(c, sp.id).length > 0 });
 
 export function SpellsTab() {
-  const { c, update, edit, form: openForm, setForm } = useSheet();
+  const { c, update, edit, form: openForm, setForm, focus } = useSheet();
   const [castPick, setCastPick] = useState<string | null>(null);
   const [statOpen, setStatOpen] = useState<'dc' | 'atk' | null>(null);
   const f = useEntryForm('spell', BLANK_SPELL, 'spell', 'Add a custom spell');
@@ -119,7 +119,7 @@ export function SpellsTab() {
 
   const groups = [];
   for (let l = 0; l <= 9; l++) {
-    const list = sortSpells(c, c.spells.filter((x) => (x.lvl || 0) === l && (c.spellFilter !== 'prepared' || l === 0 || spellUsable(c, x))));
+    const list = sortSpells(c, c.spells.filter((x) => (x.lvl || 0) === l && (c.spellFilter !== 'prepared' || l === 0 || spellUsable(c, x) || focus?.id === 'spell-' + x.id)));
     if (list.length) groups.push({ l, list });
   }
   const slotLevels = [1, 2, 3, 4, 5, 6, 7, 8, 9].filter((l) => edit || c.slotMax[l] > 0);

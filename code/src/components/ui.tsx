@@ -82,8 +82,15 @@ export function EntryRow({ name, before, head, side, body, onEdit, onRemove, rem
   name: string; before?: ReactNode; head: ReactNode; side?: ReactNode; body?: ReactNode;
   onEdit?: () => void; onRemove: () => void; removeConfirm?: ReactNode; className?: string; children?: ReactNode; id?: string;
 }) {
-  const { edit } = useSheet();
+  const { edit, focus, markFocusUsed } = useSheet();
   const [open, setOpen] = useState(false);
+  // A shortcut revealed this row: open it once, then scroll it into view after that render.
+  useEffect(() => {
+    if (!id || !focus || focus.id !== id || focus.used) return;
+    setOpen(true);
+    markFocusUsed(focus.n);
+    setTimeout(() => document.getElementById(id)?.scrollIntoView?.({ block: 'center', behavior: 'smooth' }), 0);
+  }, [focus?.n]);
   return (
     <div id={id} className={'well entry ' + className}>
       <div className="entry-row">

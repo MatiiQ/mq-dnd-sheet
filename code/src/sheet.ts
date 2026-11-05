@@ -1,7 +1,8 @@
 import { createContext, useContext, useState } from 'react';
 import { newId } from './logic';
 import type { Patch } from './storage';
-import type { Character } from './types';
+import type { RevealTarget } from './components/nav';
+import type { Character, Tab } from './types';
 
 // Only one add/edit form is open at a time across the sheet.
 // pick-*: the catalog pickers, which count as a form (opening one closes any other).
@@ -19,7 +20,13 @@ export interface SheetCtx {
   edit: boolean;
   form: FormState;
   setForm: (f: FormState) => void;
+  // The row a shortcut asked to open (transient, never saved). n counts reveals, so the same row can open twice;
+  // used turns true once the row opened, so a row that mounts again later stays closed; tab is the tab the reveal switched to.
+  focus: Focus | null;
+  reveal: (t: RevealTarget) => void;
+  markFocusUsed: (n: number) => void;
 }
+export type Focus = { id: string; n: number; tab?: Tab; used: boolean };
 
 export const Sheet = createContext<SheetCtx | null>(null);
 export function useSheet(): SheetCtx {

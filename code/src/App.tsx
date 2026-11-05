@@ -16,7 +16,8 @@ import { SpellsTab } from './components/tabs/SpellsTab';
 import { useWide } from './layout';
 import { RestPrompt } from './components/RestPrompt';
 import { TABS, dawn, longRest, restRolls, shortRest, type RestEvent, type RollAsk } from './logic';
-import { formAfterTabChange, Sheet, type FormState } from './sheet';
+import { revealPlace, type RevealTarget } from './components/nav';
+import { formAfterTabChange, Sheet, type Focus, type FormState } from './sheet';
 import { useCharacters } from './storage';
 
 export default function App() {
@@ -29,9 +30,25 @@ export default function App() {
   const [hdPrompt, setHdPrompt] = useState(false);
   // A rest or Dawn waiting for die rolls (restRolls). UI state only, never saved.
   const [restAsk, setRestAsk] = useState<{ event: RestEvent; asks: RollAsk[] } | null>(null);
+  // The row a shortcut opens (reveal). UI state only, never saved.
+  const [focus, setFocus] = useState<Focus | null>(null);
   const wide = useWide();
 
-  useEffect(() => setForm(formAfterTabChange), [c.tab]);
+  // A tab change the reveal did not make drops its focus.
+  useEffect(() => {
+    setForm(formAfterTabChange);
+    setFocus((f) => (f && f.tab !== c.tab ? null : f));
+  }, [c.tab]);
+
+  // Switches tab (the row scrolls itself: no #sec-tabs scroll, two smooth scrolls in one tick race) or scrolls to the
+  // section, then names the row to open.
+  const reveal = (t: RevealTarget) => {
+    const p = revealPlace(t);
+    if (p.tab) update({ tab: p.tab });
+    else if (p.sec) document.getElementById(p.sec)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setFocus((f) => ({ id: p.dom, n: (f?.n ?? 0) + 1, tab: p.tab, used: false }));
+  };
+  const markFocusUsed = (n: number) => setFocus((f) => (f && f.n === n ? { ...f, used: true } : f));
 
   // After switching character: drop per-character UI state.
   const onSwitched = (editOn = false, keepMenu = false) => {
@@ -39,6 +56,7 @@ export default function App() {
     setForm(null);
     setHdPrompt(false);
     setRestAsk(null);
+    setFocus(null);
     if (!keepMenu) { setMenuOpen(false); setActiveSec('sec-hp'); }
   };
   const runRest = (event: RestEvent, rolls?: Record<string, number>) => {
@@ -72,7 +90,7 @@ export default function App() {
   const tabTitle = TABS.find(([t]) => t === c.tab)![1];
 
   return (
-    <Sheet.Provider value={{ c, update, edit, form, setForm }}>
+    <Sheet.Provider value={{ c, update, edit, form, setForm, focus, reveal, markFocusUsed }}>
       <div className={'sheet' + (wide ? ' wide' : '')}>
         <TopBar store={store} activeSec={activeSec} setActiveSec={setActiveSec} menuOpen={menuOpen} setMenuOpen={setMenuOpen}
           onToggleEdit={() => { setEdit(!edit); setForm(null); }} onSwitched={onSwitched} onRest={onRest} />

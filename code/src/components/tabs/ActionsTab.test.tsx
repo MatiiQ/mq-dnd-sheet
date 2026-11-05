@@ -8,7 +8,7 @@ import type { Character } from '../../types';
 import { ActionsTab, Section } from './ActionsTab';
 
 const render = (c: Character) =>
-  renderToString(<Sheet.Provider value={{ c, update: () => {}, edit: false, form: null, setForm: () => {} }}><ActionsTab /></Sheet.Provider>).replace(/<!-- -->/g, '');
+  renderToString(<Sheet.Provider value={{ c, update: () => {}, edit: false, form: null, setForm: () => {}, focus: null, reveal: () => {}, markFocusUsed: () => {} }}><ActionsTab /></Sheet.Provider>).replace(/<!-- -->/g, '');
 
 describe('ActionsTab', () => {
   it('hides a section whose rows the filter all hid, even with its header lines', () => {
