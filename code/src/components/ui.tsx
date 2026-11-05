@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type InputHTMLAttributes, type ReactNode } from 'react';
 import { DAMAGE_TYPES } from '../catalog/schema';
-import { acCanTargetOther, acOnOther, castFree, clamp, fmt, toggleAcTarget, toggleEffect, type AcPart } from '../logic';
+import { effectCanTargetOther } from '../links';
+import { acCanTargetOther, castFree, clamp, fmt, toggleAcTarget, toggleEffect, type AcPart } from '../logic';
 import { useSheet } from '../sheet';
 import type { Resource, Spell } from '../types';
 
@@ -175,11 +176,12 @@ export function EffectSwitch({ link, name }: { link: string; name: string }) {
 
 // Who an AC spell is cast on. Only "me" counts in this character's AC; a Self spell has no choice to make.
 export function AcTargetSwitch({ sp }: { sp: Spell }) {
-  const { update } = useSheet();
-  if (!acCanTargetOther(sp)) return null;
-  const other = acOnOther(sp);
+  const { c, update } = useSheet();
+  const forAc = acCanTargetOther(sp);
+  if (!forAc && !effectCanTargetOther(c, sp)) return null;
+  const other = !!sp.acOther;
   return (
-    <button type="button" aria-pressed={other} aria-label={'Cast ' + sp.name + ' on another creature, so it adds no AC'} className={'btn btn-sm toggle-btn' + (other ? ' on' : '')}
+    <button type="button" aria-pressed={other} aria-label={'Cast ' + sp.name + ' on another creature, so ' + (forAc ? 'it adds no AC' : 'it counts only for them')} className={'btn btn-sm toggle-btn' + (other ? ' on' : '')}
       onClick={() => update((p) => toggleAcTarget(p, sp.id))}>{other ? 'On: other' : 'On: me'}</button>
   );
 }
