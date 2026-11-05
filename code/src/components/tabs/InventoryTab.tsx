@@ -1,15 +1,16 @@
 import { useState, type CSSProperties } from 'react';
-import { armorBaseMissing, BLANK_ITEM, catForKind, draftFromItem, itemFromForm, itemStats, withDetectedArmor, WEAPON_PROPS, type ItemDraft, type ItemKind, type WeaponProp } from '../../catalog/copy';
+import { armorBaseMissing, BLANK_ITEM, catForKind, draftFromItem, itemFromForm, itemStats, weaponRules, withDetectedArmor, WEAPON_PROPS, type ItemDraft, type ItemKind, type WeaponProp } from '../../catalog/copy';
 import { isValue } from '../../catalog/value';
 import { removeRef, CARRY_MULT, SIZES, regainLabel, capital, coinWeight, maxFields, maxOf, rechargeOf, regainEvent, carriedWeight, carryCapacity, carryUpOf, sizeOf, effScore, fmt, addGrants, grantChips, isContainer, newId, type GrantInput } from '../../logic';
 import {
   addSection, containerLoad, DEFAULT_SECTION, inventoryGroups, moveInto, moveSection, removeContainer, removeContainerSummary, removeSection, renameSection,
   setItemSection, takeOut
 } from '../../inventory';
-import { equipShield, setHands } from '../../hands';
+import { equipShield, isWeapon, setHands } from '../../hands';
 import { hasActiveEffect, isEquipped, linkOf } from '../../links';
 import { GrantList, removalNote, SourceChips } from '../Chips';
 import { ItemPicker } from '../pickers/ItemPicker';
+import { RuleNotes } from '../RuleNotes';
 import { scrollToEntry } from '../pickers/usePicker';
 import { patchEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { ArmorKind, Character, Coin, Item, Recharge, Section } from '../../types';
@@ -234,7 +235,7 @@ export function InventoryTab() {
               </div>
             )}
           </div>}
-          body={info || moves ? <>{info && <span className="entry-desc">{info}</span>}{moves}</> : undefined}
+          body={info || moves || isWeapon(it) ? <>{info && <span className="entry-desc">{info}</span>}{isWeapon(it) && <RuleNotes pick={(cat) => weaponRules(cat, it.props, it.mastery)} />}{moves}</> : undefined}
           onEdit={() => f.openEdit(it.id, { ...draftFromItem(it), pending: [] })}
           onRemove={() => update((p) => (isContainer(it) ? removeContainer(p, it.id, removeMode(it)) : removeRef(p, { kind: 'item', id: it.id })))}
           removeConfirm={isContainer(it) && holds(it) ? bagConfirm(it) : removalNote(c, { kind: 'item', id: it.id })}>

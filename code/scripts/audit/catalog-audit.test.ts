@@ -11,7 +11,7 @@ import { mergeCatalog } from '../../src/catalog/merge.ts';
 import type { Entry } from '../../src/catalog/schema.ts';
 import srd from '../../src/data/srd/index.ts';
 import { parseClassMd, parseEquipmentMd, parseFeatsMd, parseOriginsMd, parseSpellsMd } from '../pack/parse.ts';
-import { parseRules } from '../srd/rules.ts';
+import { parseRules, parseWeaponRules } from '../srd/rules.ts';
 import { section } from '../srd/text.ts';
 import { compareKnown, coverageChecks, effectChecks, featureHeadingChecks, grantChecks, grantHashes, itemNumberChecks, keyOf, lookupTableChecks, referenceChecks, ruleSourceChecks, ruleTextChecks, spellListChecks, spellNumberChecks, srdHeadingChecks, standaloneHeadings, textChecks, updateKnown, type Finding, type Known } from './checks.ts';
 import { grantSourceChecks, poolChecks, ruleCatChecks, unreadFieldChecks } from './wiring.ts';
@@ -49,7 +49,7 @@ describe.skipIf(!ready)('catalog audit', () => {
     const findings: Finding[] = [
       ...srdHeadingChecks(srdText, entries), ...referenceChecks(parsed, entries), ...coverageChecks(parsed, entries),
       ...spellNumberChecks(entries), ...itemNumberChecks(entries),
-      ...ruleSourceChecks(parseRules(section(srdText, 'Rules Glossary', 'Gameplay Toolbox')), entries), ...(update ? [] : grantChecks(entries, known.grants ?? {})),
+      ...ruleSourceChecks([...parseRules(section(srdText, 'Rules Glossary', 'Gameplay Toolbox')), ...parseWeaponRules(section(srdText, 'Properties', 'Weapons'))], entries), ...(update ? [] : grantChecks(entries, known.grants ?? {})),
       ...classMd.flatMap(([cls, md]) => [...spellListChecks(cls, md, entries), ...featureHeadingChecks(cls, md, entries), ...lookupTableChecks(`classes/${cls}.md`, md, entries)]),
       ...lookupTableChecks('06-equipment.md', ref('06-equipment.md'), entries),
       // Only proficiency entries feed the language picker: a language named in some description doesn't count.

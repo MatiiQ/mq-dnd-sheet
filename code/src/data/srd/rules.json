@@ -1,5 +1,13 @@
 [
   {
+    "id": "rule/ammunition",
+    "kind": "rule",
+    "name": "Ammunition",
+    "src": "srd",
+    "cat": "property",
+    "desc": "You can use a weapon that has the Ammunition property to make a ranged attack only if you have ammunition to fire from it. The type of ammunition required is specified with the weapon’s range. Each attack expends one piece of ammunition. Drawing the ammunition is part of the attack (you need a free hand to load a one-handed weapon). After a fight, you can spend 1 minute to recover half the ammunition (round down) you used in the fight; the rest is lost."
+  },
+  {
     "id": "rule/attack",
     "kind": "rule",
     "name": "Attack",
@@ -14,6 +22,14 @@
     "src": "srd",
     "cat": "sense",
     "desc": "If you have Blindsight, you can see within a specific range without relying on physical sight. Within that range, you can see anything that isn’t behind Total Cover even if you have the Blinded condition or are in Darkness. Moreover, in that range, you can see something that has the Invisible condition."
+  },
+  {
+    "id": "rule/cleave",
+    "kind": "rule",
+    "name": "Cleave",
+    "src": "srd",
+    "cat": "mastery",
+    "desc": "If you hit a creature with a melee attack roll using this weapon, you can make a melee attack roll with the weapon against a second creature within 5 feet of the first that is also within your reach. On a hit, the second creature takes the weapon’s damage, but don’t add your ability modifier to that damage unless that modifier is negative. You can make this extra attack only once per turn."
   },
   {
     "id": "rule/darkvision",
@@ -48,6 +64,30 @@
     "desc": "If you take the Dodge action, you gain the following benefits: until the start of your next turn, any attack roll made against you has Disadvantage if you can see the attacker, and you make Dexterity saving throws with Advantage. You lose these benefits if you have the Incapacitated condition or if your Speed is 0."
   },
   {
+    "id": "rule/finesse",
+    "kind": "rule",
+    "name": "Finesse",
+    "src": "srd",
+    "cat": "property",
+    "desc": "When making an attack with a Finesse weapon, use your choice of your Strength or Dexterity modifier for the attack and damage rolls. You must use the same modifier for both rolls."
+  },
+  {
+    "id": "rule/graze",
+    "kind": "rule",
+    "name": "Graze",
+    "src": "srd",
+    "cat": "mastery",
+    "desc": "If your attack roll with this weapon misses a creature, you can deal damage to that creature equal to the ability modifier you used to make the attack roll. This damage is the same type dealt by the weapon, and the damage can be increased only by increasing the ability modifier."
+  },
+  {
+    "id": "rule/heavy",
+    "kind": "rule",
+    "name": "Heavy",
+    "src": "srd",
+    "cat": "property",
+    "desc": "You have Disadvantage on attack rolls with a Heavy weapon if it’s a Melee weapon and your Strength score isn’t at least 13 or if it’s a Ranged weapon and your Dexterity score isn’t at least 13."
+  },
+  {
     "id": "rule/help",
     "kind": "rule",
     "name": "Help",
@@ -72,12 +112,36 @@
     "desc": "With the Influence action, you urge a monster to do something. Describe or roleplay how you’re communicating with the monster. Are you trying to deceive, intimidate, amuse, or gently persuade? The GM then determines whether the monster feels willing, unwilling, or hesitant due to your interaction; this determination establishes whether an ability check is necessary, as explained below.\nWilling. If your urging aligns with the monster’s desires, no ability check is necessary; the monster fulfills your request in a way it prefers.\nUnwilling. If your urging is repugnant to the monster or counter to its alignment, no ability check is necessary; it doesn’t comply.\nHesitant. If you urge the monster to do something that it is hesitant to do, you must make an ability check, which is affected by the monster’s attitude: Indifferent, Friendly, or Hostile, each of which is defined in this glossary. The Influence Checks table suggests which ability check to make based on how you’re interacting with the monster. The GM chooses the check, which has a default DC equal to 15 or the monster’s Intelligence score, whichever is higher. On a successful check, the monster does as urged. On a failed check, you must wait 24 hours (or a duration set by the GM) before urging it in the same way again.\nInfluence Checks (ability check: interaction)\nCharisma (Deception): Deceiving a monster that understands you\nCharisma (Intimidation): Intimidating a monster\nCharisma (Performance): Amusing a monster\nCharisma (Persuasion): Persuading a monster that understands you\nWisdom (Animal Handling): Gently coaxing a Beast or Monstrosity."
   },
   {
+    "id": "rule/light",
+    "kind": "rule",
+    "name": "Light",
+    "src": "srd",
+    "cat": "property",
+    "desc": "When you take the Attack action on your turn and attack with a Light weapon, you can make one extra attack as a Bonus Action later on the same turn. That extra attack must be made with a different Light weapon, and you don’t add your ability modifier to the extra attack’s damage unless that modifier is negative. For example, you can attack with a Shortsword in one hand and a Dagger in the other using the Attack action and a Bonus Action, but you don’t add your Strength or Dexterity modifier to the damage roll of the Bonus Action unless that modifier is negative."
+  },
+  {
+    "id": "rule/loading",
+    "kind": "rule",
+    "name": "Loading",
+    "src": "srd",
+    "cat": "property",
+    "desc": "You can fire only one piece of ammunition from a Loading weapon when you use an action, a Bonus Action, or a Reaction to fire it, regardless of the number of attacks you can normally make."
+  },
+  {
     "id": "rule/magic",
     "kind": "rule",
     "name": "Magic",
     "src": "srd",
     "cat": "action",
     "desc": "When you take the Magic action, you cast a spell that has a casting time of an action or use a feature or magic item that requires a Magic action to be activated.\nIf you cast a spell that has a casting time of 1 minute or longer, you must take the Magic action on each turn of that casting, and you must maintain Concentration while you do so. If your Concentration is broken, the spell fails, but you don’t expend a spell slot. See also “Concentration.”"
+  },
+  {
+    "id": "rule/nick",
+    "kind": "rule",
+    "name": "Nick",
+    "src": "srd",
+    "cat": "mastery",
+    "desc": "When you make the extra attack of the Light property, you can make it as part of the Attack action instead of as a Bonus Action. You can make this extra attack only once per turn."
   },
   {
     "id": "rule/opportunity-attack",
@@ -88,12 +152,36 @@
     "desc": "You can make an Opportunity Attack when a creature that you can see leaves your reach using its action, its Bonus Action, its Reaction, or one of its speeds. To make the Opportunity Attack, take a Reaction to make one melee attack with a weapon or an Unarmed Strike against the provoking creature. The attack occurs right before the creature leaves your reach. See also “Playing the Game” (“Combat”)."
   },
   {
+    "id": "rule/push",
+    "kind": "rule",
+    "name": "Push",
+    "src": "srd",
+    "cat": "mastery",
+    "desc": "If you hit a creature with this weapon, you can push the creature up to 10 feet straight away from yourself if it is Large or smaller."
+  },
+  {
+    "id": "rule/reach",
+    "kind": "rule",
+    "name": "Reach",
+    "src": "srd",
+    "cat": "property",
+    "desc": "A Reach weapon adds 5 feet to your reach when you attack with it, as well as when determining your reach for Opportunity Attacks with it."
+  },
+  {
     "id": "rule/ready",
     "kind": "rule",
     "name": "Ready",
     "src": "srd",
     "cat": "action",
     "desc": "You take the Ready action to wait for a particular circumstance before you act. To do so, you take this action on your turn, which lets you act by taking a Reaction before the start of your next turn. First, you decide what perceivable circumstance will trigger your Reaction. Then, you choose the action you will take in response to that trigger, or you choose to move up to your Speed in response to it. Examples include “If the cultist steps on the trapdoor, I’ll pull the lever that opens it,” and “If the zombie steps next to me, I move away.” When the trigger occurs, you can either take your Reaction right after the trigger finishes or ignore the trigger. When you Ready a spell, you cast it as normal (expending any resources used to cast it) but hold its energy, which you release with your Reaction when the trigger occurs. To be readied, a spell must have a casting time of an action, and holding on to the spell’s magic requires Concentration, which you can maintain up to the start of your next turn. If your Concentration is broken, the spell dissipates without taking effect."
+  },
+  {
+    "id": "rule/sap",
+    "kind": "rule",
+    "name": "Sap",
+    "src": "srd",
+    "cat": "mastery",
+    "desc": "If you hit a creature with this weapon, that creature has Disadvantage on its next attack roll before the start of your next turn."
   },
   {
     "id": "rule/search",
@@ -104,12 +192,36 @@
     "desc": "When you take the Search action, you make a Wisdom check to discern something that isn’t obvious. The Search table suggests which skills are applicable when you take this action, depending on what you’re trying to detect.\nSearch (skill: thing to detect)\nInsight: Creature’s state of mind\nMedicine: Creature’s ailment or cause of death\nPerception: Concealed creature or object\nSurvival: Tracks or food"
   },
   {
+    "id": "rule/slow",
+    "kind": "rule",
+    "name": "Slow",
+    "src": "srd",
+    "cat": "mastery",
+    "desc": "If you hit a creature with this weapon and deal damage to it, you can reduce its Speed by 10 feet until the start of your next turn. If the creature is hit more than once by weapons that have this property, the Speed reduction doesn’t exceed 10 feet."
+  },
+  {
     "id": "rule/study",
     "kind": "rule",
     "name": "Study",
     "src": "srd",
     "cat": "action",
     "desc": "When you take the Study action, you make an Intelligence check to study your memory, a book, a clue, or another source of knowledge and call to mind an important piece of information about it. The Areas of Knowledge table suggests which skills are applicable to various areas of knowledge."
+  },
+  {
+    "id": "rule/thrown",
+    "kind": "rule",
+    "name": "Thrown",
+    "src": "srd",
+    "cat": "property",
+    "desc": "If a weapon has the Thrown property, you can throw the weapon to make a ranged attack, and you can draw that weapon as part of the attack. If the weapon is a Melee weapon, use the same ability modifier for the attack and damage rolls that you use for a melee attack with that weapon."
+  },
+  {
+    "id": "rule/topple",
+    "kind": "rule",
+    "name": "Topple",
+    "src": "srd",
+    "cat": "mastery",
+    "desc": "If you hit a creature with this weapon, you can force the creature to make a Constitution saving throw (DC 8 plus the ability modifier used to make the attack roll and your Proficiency Bonus). On a failed save, the creature has the Prone condition."
   },
   {
     "id": "rule/tremorsense",
@@ -128,11 +240,35 @@
     "desc": "If you have Truesight, your vision is enhanced within a specified range. Within that range, your vision pierces through the following:\nDarkness. You can see in normal and magical Darkness.\nInvisibility. You see creatures and objects that have the Invisible condition.\nVisual Illusions. Visual illusions appear transparent to you, and you automatically succeed on saving throws against them.\nTransformations. You discern the true form of any creature or object you see that has been transformed by magic.\nEthereal Plane. You see into the Ethereal Plane."
   },
   {
+    "id": "rule/two-handed",
+    "kind": "rule",
+    "name": "Two-Handed",
+    "src": "srd",
+    "cat": "property",
+    "desc": "A Two-Handed weapon requires two hands when you attack with it."
+  },
+  {
     "id": "rule/utilize",
     "kind": "rule",
     "name": "Utilize",
     "src": "srd",
     "cat": "action",
     "desc": "You normally interact with an object while doing something else, such as when you draw a sword as part of the Attack action. When an object requires an action for its use, you take the Utilize action."
+  },
+  {
+    "id": "rule/versatile",
+    "kind": "rule",
+    "name": "Versatile",
+    "src": "srd",
+    "cat": "property",
+    "desc": "A Versatile weapon can be used with one or two hands. A damage value in parentheses appears with the property. The weapon deals that damage when used with two hands to make a melee attack."
+  },
+  {
+    "id": "rule/vex",
+    "kind": "rule",
+    "name": "Vex",
+    "src": "srd",
+    "cat": "mastery",
+    "desc": "If you hit a creature with this weapon and deal damage to the creature, you have Advantage on your next attack roll against that creature before the end of your next turn."
   }
 ]

@@ -6,7 +6,7 @@ import { writeEntries } from '../lib/write.ts';
 import { copyBase, parseArmor, parseGear, parseMagicItems, parseMounts, parseTools, parseWeapons } from './items.ts';
 import { parseClass } from './classes.ts';
 import { parseBackgrounds, parseFeats, parseSpecies } from './origins.ts';
-import { parseLanguages, parseRules } from './rules.ts';
+import { parseLanguages, parseRules, parseWeaponRules } from './rules.ts';
 import { parseSpells } from './spells.ts';
 import { layoutBetween, section } from './text.ts';
 
@@ -45,7 +45,7 @@ out('classes', CLASSES.flatMap((c, i) => {
   const [cls, subs, feats] = parseClass(section(srdText, `Core ${c} Traits`, CLASSES[i + 1] ? `Core ${CLASSES[i + 1]} Traits` : 'Character Origins'), layout);
   return [cls, ...subs, ...feats];
 }));
-out('rules', parseRules(section(srdText, 'Rules Glossary', 'Gameplay Toolbox')));
+out('rules', [...parseRules(section(srdText, 'Rules Glossary', 'Gameplay Toolbox')), ...parseWeaponRules(section(srdText, 'Properties', 'Weapons'))]);
 
 // Proficiency names: armor training, weapons, tools (with their variants) and languages. They go into the catalog and,
 // as plain names, into src/catalog/names.ts, which the main bundle imports for migrate()'s Training match.

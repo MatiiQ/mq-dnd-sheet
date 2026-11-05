@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { expect, it } from 'vitest';
-import { parseLanguages, parseRules } from './rules.ts';
+import { validateEntry } from '../../src/catalog/schema.ts';
+import { parseLanguages, parseRules, parseWeaponRules } from './rules.ts';
 import { srdLines } from './text.ts';
 
 const text = readFileSync(new URL('./fixtures/rules.txt', import.meta.url), 'utf8');
@@ -24,4 +25,15 @@ it('reads the standard and rare languages', () => {
 
 it('drops soft hyphens from extracted lines', () => {
   expect(srdLines('Short\u00adsword').map((l) => l.text)).toEqual(['Shortsword']);
+});
+
+it('reads the weapon properties and masteries', () => {
+  const fixture = ['Properties', '', 'Here are definitions.', '', 'Two-Handed', '', 'Needs two hands.', '', 'Range', '', 'Two numbers.', '', 'Versatile', '', 'One or two', 'hands.', '',
+    'Mastery Properties', '', 'Each weapon has one.', '', 'Improvised Weapons', '', 'Use a table leg.', '', '90', '', 'System Reference Document 5.2.1', '', '\fCleave', 'Hit a second', 'creature.'].join('\n');
+  const list = parseWeaponRules(fixture);
+  expect(list.map((e) => e.id)).toEqual(['rule/two-handed', 'rule/versatile', 'rule/cleave']);
+  expect(list.find((e) => e.id === 'rule/two-handed')).toMatchObject({ cat: 'property', name: 'Two-Handed', desc: 'Needs two hands.' });
+  expect(list.find((e) => e.id === 'rule/cleave')).toMatchObject({ cat: 'mastery', src: 'srd', desc: 'Hit a second creature.' });
+  expect(list.find((e) => e.id === 'rule/versatile')!.desc).toBe('One or two hands.');
+  for (const e of list) expect(validateEntry(e)).toEqual([]);
 });

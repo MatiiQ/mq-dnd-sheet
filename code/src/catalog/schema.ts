@@ -58,7 +58,7 @@ export interface SubclassEntry extends EntryBase { kind: 'subclass'; cls: string
 // of: an option a pool offers (Eldritch Invocations, Maneuvers, Metamagic), added as its own feature; prereq and repeat as on a feat.
 export interface FeatureEntry extends EntryBase { kind: 'feature'; cls: string; sub?: string; lvl: number; again?: string; of?: 'invocation' | 'maneuver' | 'metamagic'; prereq?: string; repeat?: boolean; grants: Spec[] }
 export interface ProfEntry extends EntryBase { kind: 'prof'; cat: 'armor' | 'weapon' | 'tool' | 'language' }
-export interface RuleEntry extends EntryBase { kind: 'rule'; cat: 'action' | 'sense' | 'condition' }
+export interface RuleEntry extends EntryBase { kind: 'rule'; cat: 'action' | 'sense' | 'condition' | 'property' | 'mastery' }
 export type Entry = SpellEntry | ItemEntry | FeatEntry | BackgroundEntry | SpeciesEntry | TraitEntry | ClassEntry | SubclassEntry | FeatureEntry | ProfEntry | RuleEntry;
 
 export type Recharge4 = 'short' | 'long' | 'dawn' | 'none';
@@ -235,7 +235,7 @@ const FIELDS: Record<Kind, Record<string, [Check, boolean]>> = {
   subclass: { cls: [str, true] },
   feature: { cls: [str, true], sub: [str, false], lvl: [whole(1, 20), true], again: [str, false], of: [oneOf('invocation', 'maneuver', 'metamagic'), false], prereq: [str, false], repeat: [bool, false] },
   prof: { cat: [oneOf('armor', 'weapon', 'tool', 'language'), true] },
-  rule: { cat: [oneOf('action', 'sense', 'condition'), true] }
+  rule: { cat: [oneOf('action', 'sense', 'condition', 'property', 'mastery'), true] }
 };
 const HAS_GRANTS: Kind[] = ['feat', 'background', 'trait', 'feature'];
 

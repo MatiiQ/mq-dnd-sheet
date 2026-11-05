@@ -11,7 +11,7 @@ import type { Entry, FeatureEntry, ItemEntry, SpellEntry } from './schema';
 import {
   keepPrep, atLevel,
   addFromCatalog, armorBaseMissing, draftFromItem, featureCandidates, grantSpellName, withDetectedArmor, BLANK_ITEM, BLANK_SPELL, catForKind, countedDefault, draftFromSpell, spellFromForm, type SpellDraft, choicesOf, classIdOf, matchId, nestedEntries, subclassIdOf, type AddChoices, freeText, itemFromEntry, itemFromForm, missingPicks, needed, optionGroups, poolOptions, prereqMet, resolveChoices,
-  spellFromEntry, spellSummary, validPicks, itemQuestions, itemStats, answeredName, type ItemAnswers, type ItemDraft
+  spellFromEntry, spellSummary, validPicks, itemQuestions, itemStats, answeredName, weaponRules, type ItemAnswers, type ItemDraft
 } from './copy';
 
 const cat = mergeCatalog(srdEntries, null);
@@ -887,5 +887,13 @@ describe('scaled picks and option features', () => {
     const rows = featureCandidates(classCat, c, 'class');
     expect(rows.map((r) => r.entry.id)).toEqual([host.id, low.id, high.id]);
     expect(rows[2]).toMatchObject({ ok: false, note: 'Level 5 or higher' });
+  });
+});
+
+describe('weaponRules', () => {
+  it('finds the rule text of a weapon’s properties and mastery', () => {
+    expect(weaponRules(cat, 'finesse,two-handed', 'nick').map((e) => e.name)).toEqual(['Finesse', 'Two-Handed', 'Nick']);
+    expect(weaponRules(cat, 'silvered', 'Whirl').map((e) => e.name)).toEqual([]);
+    expect(weaponRules(cat, undefined, undefined)).toEqual([]);
   });
 });
