@@ -65,7 +65,9 @@ export type Recharge4 = 'short' | 'long' | 'dawn' | 'none';
 export type Spec = GrantSpec | ChoiceSpec;
 // Pick N of the options, or of a generated pool ('<kind>:<filter>', such as 'spell:list=druid;lvl=0' or 'skill:any').
 // pickAt: a Value that replaces `pick` for the character when the entry is added ('pb', a level table).
-export interface ChoiceSpec { kind: 'choice'; id: string; name: string; pick: number; pickAt?: string; orExpert?: boolean; repeat?: boolean; options?: GrantSpec[]; pool?: string }
+// ifPick: '<choiceId>=<value>': asked and used only while that earlier choice of the entry has the value among its picks:
+// the option group's label for a choice with options, the picked value for a pool.
+export interface ChoiceSpec { kind: 'choice'; id: string; name: string; pick: number; pickAt?: string; orExpert?: boolean; repeat?: boolean; options?: GrantSpec[]; pool?: string; ifPick?: string }
 export type GrantKind = 'sense' | 'resource' | 'defense' | 'abil' | 'abilSet' | 'prof' | 'saveBonus' | 'checkBonus' | 'spell' | 'speed' | 'ac'
   | 'init' | 'hpLvl' | 'hpFlat' | 'size' | 'carryUp' | 'action' | 'xdmg' | 'attacks' | 'unarmed' | 'atkBonus' | 'dmgBonus' | 'lightExtra' | 'atkAbil'
   | 'casting' | 'crit' | 'spellAtk' | 'spellDc';
@@ -274,7 +276,7 @@ function checkGrant(g: unknown, e: Record<string, unknown>, where: string, errs:
 }
 
 function checkChoice(c: Record<string, unknown>, e: Record<string, unknown>, where: string, errs: string[]) {
-  checkFields(c, { id: [str, true], name: [str, true], pick: [whole(1, 99), true], pickAt: [value, false], orExpert: [bool, false], repeat: [bool, false], pool: [(v) => typeof v === 'string' && /^[a-z]+:.+$/.test(v), false] }, where, errs);
+  checkFields(c, { id: [str, true], name: [str, true], pick: [whole(1, 99), true], pickAt: [value, false], orExpert: [bool, false], repeat: [bool, false], pool: [(v) => typeof v === 'string' && /^[a-z]+:.+$/.test(v), false], ifPick: [str, false] }, where, errs);
   if (c.options === undefined && c.pool === undefined) errs.push(`${where}: needs options or a pool`);
   if (c.options !== undefined) {
     if (!Array.isArray(c.options)) errs.push(`${where}: options is not a list`);
@@ -343,6 +345,11 @@ export function validateEntry(x: unknown): string[] {
         const where = `${at}.grants[${i}]`;
         if (isObj(s) && s.kind === 'choice') checkChoice(s, x, where, errs);
         else checkGrant(s, x, where, errs);
+      });
+      grants.forEach((s, i) => {
+        if (!isObj(s) || s.kind !== 'choice' || s.ifPick === undefined) return;
+        const m = /^([\w-]+)=.+$/.exec(String(s.ifPick));
+        if (!m || !grants.slice(0, i).some((o) => isObj(o) && o.kind === 'choice' && o.id === m[1])) errs.push(`${at}: ifPick names no earlier choice`);
       });
       const specs = specsOf(x);
       const ids = specs.map((s) => s.id);

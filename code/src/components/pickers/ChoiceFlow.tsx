@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  atLevel, choicesOf, countedDefault, featureName, freeText, grantSpellName, isCountable, livePicks, needed, nestedEntries, optionGroups, poolOptions, resolveChoices,
+  atLevel, choiceActive, choicesOf, countedDefault, featureName, freeText, grantSpellName, isCountable, livePicks, needed, nestedEntries, optionGroups, poolOptions, resolveChoices,
   validPicks, type AddChoices
 } from '../../catalog/copy';
 import type { Catalog } from '../../catalog/merge';
@@ -47,7 +47,7 @@ export function ChoiceFlow({ entry, cat, preset, initial, onDone, onCancel }: {
 
   const nodes: FlowNode[] = [];
   walk(cat, c, answers, entry, '', null, preset ?? {}, [], nodes);
-  const steps: ChoiceStep[] = nodes.flatMap((node) => choicesOf(node.entry).filter((ch) => !node.preset[ch.id]).map((choice) => ({ node, choice })));
+  const steps: ChoiceStep[] = nodes.flatMap((node) => choicesOf(node.entry).filter((ch) => !node.preset[ch.id] && choiceActive(node.entry, ch, node.picks)).map((choice) => ({ node, choice })));
   // What the answers add, for the last step's questions.
   const counts: CountItem[] = [], links: LinkItem[] = [];
   for (const node of nodes) {

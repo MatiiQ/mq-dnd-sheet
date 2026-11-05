@@ -144,3 +144,12 @@ describe('grantErrors (a grant stored on a character)', () => {
     expect(grantErrors({ id: 'g', kind: 'resource', name: 'X', recharge: 'long', max: 'pb' }, 'feature')).toEqual([]);
   });
 });
+
+describe('a choice with ifPick', () => {
+  const feat = (ifPick: string) => ({ id: 'feat/x', kind: 'feat', name: 'X', src: 'srd', desc: '', cat: 'general', grants: [
+    { kind: 'choice', id: 'a', name: 'A', pick: 1, pool: 'list:one|two' }, { kind: 'choice', id: 'b', name: 'B', pick: 1, pool: 'skill:any', ifPick }] });
+  it('is valid when it names an earlier choice', () => expect(validateEntry(feat('a=one'))).toEqual([]));
+  it.each(['nope=x', 'b=x', 'a'])('%s names no earlier choice', (v) => {
+    expect(validateEntry(feat(v))).toEqual(['feat/x: ifPick names no earlier choice']);
+  });
+});

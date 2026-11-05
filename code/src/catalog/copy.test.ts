@@ -9,7 +9,7 @@ import type { Character, Item, Spell } from '../types';
 import { entriesOf, mergeCatalog } from './merge';
 import type { Entry, FeatureEntry, ItemEntry, SpellEntry } from './schema';
 import {
-  keepPrep, atLevel,
+  keepPrep, atLevel, choiceActive, featureName,
   addFromCatalog, armorBaseMissing, draftFromItem, featureCandidates, grantSpellName, withDetectedArmor, BLANK_ITEM, BLANK_SPELL, catForKind, countedDefault, draftFromSpell, spellFromForm, type SpellDraft, choicesOf, classIdOf, matchId, nestedEntries, subclassIdOf, type AddChoices, freeText, itemFromEntry, itemFromForm, missingPicks, needed, optionGroups, poolOptions, prereqMet, resolveChoices,
   spellFromEntry, spellSummary, validPicks, itemQuestions, itemStats, answeredName, hasSenseRule, senseRule, weaponRules, type ItemAnswers, type ItemDraft
 } from './copy';
@@ -980,5 +980,46 @@ describe('a feat:any pool', () => {
     const asi = cat.byId.get('feat/ability-score-improvement')!;
     const c: Character = { ...lvl(5), feats: [{ id: 'f', g: 'feat', name: asi.name, desc: '', cid: asi.id }] };
     expect(opt(c, asi.id).taken).toBeUndefined();
+  });
+});
+
+describe('choices that depend on another choice', () => {
+  const ans = (picks: Record<string, string[]>): AddChoices => ({ picks, counted: {}, links: {} });
+  const groupValue = (e: Entry, label: string) => optionGroups(choice(e, 'order')).find((g) => g.label === label)!.value;
+  it('Thaumaturge asks for a Cleric cantrip, Protector does not', () => {
+    const c = blankCharacter(), e = E('feature/cleric/divine-order');
+    const thaum = groupValue(e, 'Thaumaturge'), prot = groupValue(e, 'Protector');
+    expect(missingPicks(cat, c, e, { order: [thaum] })).toEqual(['cantrip']);
+    expect(missingPicks(cat, c, e, { order: [prot] })).toEqual([]);
+    expect(addFromCatalog(c, cat, e, ans({ order: [thaum], cantrip: ['spell/guidance'] })).spells.map((s) => s.cid)).toEqual(['spell/guidance']);
+    // The controlling pick changed after the cantrip was picked: no spell, no error.
+    expect(addFromCatalog(c, cat, e, ans({ order: [prot], cantrip: ['spell/guidance'] })).spells).toEqual([]);
+  });
+  it('Magician asks for a Druid cantrip, Warden does not', () => {
+    const c = blankCharacter(), e = E('feature/druid/primal-order');
+    expect(missingPicks(cat, c, e, { order: [groupValue(e, 'Magician')] })).toEqual(['cantrip']);
+    expect(missingPicks(cat, c, e, { order: [groupValue(e, 'Warden')] })).toEqual([]);
+  });
+  it.each([['paladin', 'blessed-warrior', ['spell/guidance', 'spell/sacred-flame'], 'cha'], ['ranger', 'druidic-warrior', ['spell/guidance', 'spell/produce-flame'], 'wis']])(
+    '%s Fighting Style: %s gives two cantrips, the feat option asks for a style', (cls, how, cantrips, ab) => {
+      const c = blankCharacter(), e = E(`feature/${cls}/fighting-style`);
+      const sheet = addFromCatalog(c, cat, e, ans({ how: [how as string], cantrips: cantrips as string[] }));
+      expect(sheet.spells.map((s) => [s.cid, s.castAb])).toEqual((cantrips as string[]).map((id) => [id, ab]));
+      expect(missingPicks(cat, c, e, { how: ['feat'] })).toEqual(['style']);
+      expect(missingPicks(cat, c, e, { how: [how as string] })).toEqual(['cantrips']);
+    });
+  it('Fighting Style is not named after its feat option', () => {
+    const e = E('feature/paladin/fighting-style');
+    expect(featureName(cat, blankCharacter(), e, { how: ['blessed-warrior'] })).toBe('Fighting Style');
+    expect(poolOptions(cat, blankCharacter(), choice(e, 'how').pool!, {}).map((o) => o.label)).toEqual(['Feat', 'Blessed Warrior']);
+  });
+  it('choiceActive follows the chain, and is true with no ifPick', () => {
+    const e = { id: 'feat/x', kind: 'feat', name: 'X', cat: 'general', src: 'srd', desc: '', grants: [
+      { kind: 'choice', id: 'a', name: 'A', pick: 1, pool: 'list:x|y' },
+      { kind: 'choice', id: 'b', name: 'B', pick: 1, pool: 'list:p|q', ifPick: 'a=x' },
+      { kind: 'choice', id: 'c', name: 'C', pick: 1, pool: 'skill:any', ifPick: 'b=p' }] } as Entry;
+    expect(choiceActive(e, choice(e, 'a'), {})).toBe(true);
+    expect(choiceActive(e, choice(e, 'c'), { a: ['x'], b: ['p'] })).toBe(true);
+    expect(choiceActive(e, choice(e, 'c'), { a: ['y'], b: ['p'] })).toBe(false);
   });
 });

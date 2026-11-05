@@ -288,6 +288,17 @@ export function validPicks(choice: ChoiceSpec, picks: string[]): string[] {
   return out;
 }
 
+// Whether a choice is asked and used now: with no ifPick always; else while the earlier choice it names is itself
+// active and has the value among its valid picks (an option group by its label, a pool by the value).
+export function choiceActive(e: Entry, ch: ChoiceSpec, picks: Record<string, string[]>): boolean {
+  if (!ch.ifPick) return true;
+  const at = ch.ifPick.indexOf('='), id = ch.ifPick.slice(0, at), value = ch.ifPick.slice(at + 1);
+  const named = choicesOf(e).find((x) => x.id === id);
+  if (!named || !choiceActive(e, named, picks)) return false;
+  const want = named.options ? optionGroups(named).find((g) => g.label === value)?.value : value;
+  return want !== undefined && validPicks(named, picks[id] ?? []).includes(want);
+}
+
 // '<kind>:<filter>' with every '$ref' replaced by that choice's first pick; null when a ref has no pick yet.
 function expandPool(pool: string, picks: Record<string, string[]>): { kind: string; filter: string } | null {
   let missing = false;
@@ -399,7 +410,7 @@ export function poolOptions(cat: Catalog, c: Character, pool: string, picks: Rec
     case 'ability':
       return words.filter((k) => k in ABILITY_NAME).map((k) => ({ value: k, label: ABILITY_NAME[k as Ability] }));
     case 'list':
-      return words.filter(Boolean).map((k) => ({ value: k, label: capital(k) }));
+      return words.filter(Boolean).map((k) => ({ value: k, label: titled(k) }));
     case 'prof': {
       const out: PoolOption[] = [];
       if (words.includes('skill')) out.push(...SKILLS.map(([k]) => skill(k)));
@@ -437,7 +448,7 @@ export function livePicks(cat: Catalog, c: Character, choice: ChoiceSpec, picks:
 
 // The ids of the choices with fewer valid picks than they need.
 export function missingPicks(cat: Catalog, c: Character, e: Entry, picks: Record<string, string[]>): string[] {
-  return choicesOf(e).filter((ch) => validPicks(ch, livePicks(cat, c, ch, picks, [e])).length < needed(cat, c, ch, picks, [e])).map((ch) => ch.id);
+  return choicesOf(e).filter((ch) => choiceActive(e, ch, picks) && validPicks(ch, livePicks(cat, c, ch, picks, [e])).length < needed(cat, c, ch, picks, [e])).map((ch) => ch.id);
 }
 
 type Resolved = Omit<GrantSpec, 'opt'>;
@@ -451,7 +462,7 @@ type Nested = { entry: Entry; preset?: Record<string, string[]> };
 export function resolveChoices(cat: Catalog, e: Entry, picks: Record<string, string[]>, c?: Character):
   { specs: Resolved[]; entries: Nested[]; notes: string[] } {
   const choices = new Map(choicesOf(e).map((ch) => [ch.id, ch]));
-  const vp = (id: string) => { const ch = choices.get(id); return ch ? validPicks(ch, c ? livePicks(cat, c, ch, picks, [e]) : picks[id] ?? []) : []; };
+  const vp = (id: string) => { const ch = choices.get(id); return ch && choiceActive(e, ch, picks) ? validPicks(ch, c ? livePicks(cat, c, ch, picks, [e]) : picks[id] ?? []) : []; };
   const strip = ({ opt: _o, ...g }: GrantSpec): Resolved => g;
   const raw: Resolved[] = [];
   for (const s of grantsOf(e)) {
@@ -605,9 +616,10 @@ function checkAnswers(cat: Catalog, c: Character, entry: Entry, ans: AddChoices)
   for (const n of nestedEntries(cat, e, ans.picks)) checkAnswers(cat, c, n.entry, answersFor(ans, n));
 }
 
-// "Magic Initiate (Cleric)": the entry's name, plus the label of its list choice's pick.
+// "Magic Initiate (Cleric)": the entry's name, plus the label of its list choice's pick. A 'feat or …' list choice names
+// a way to take the feature, not a version of it (Fighting Style).
 export function featureName(cat: Catalog, c: Character, e: Entry, picks: Record<string, string[]>): string {
-  const ch = choicesOf(e).find((x) => x.pool?.startsWith('list:'));
+  const ch = choicesOf(e).find((x) => x.pool?.startsWith('list:') && !x.pool.startsWith('list:feat|'));
   const v = ch && picks[ch.id]?.[0];
   const label = v && poolOptions(cat, c, ch.pool!, picks).find((o) => o.value === v)?.label;
   return label ? `${e.name} (${label})` : e.name;

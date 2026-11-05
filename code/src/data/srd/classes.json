@@ -3006,6 +3006,21 @@
             "opt": "Thaumaturge"
           }
         ]
+      },
+      {
+        "kind": "choice",
+        "id": "cantrip",
+        "name": "Thaumaturge cantrip",
+        "pick": 1,
+        "pool": "spell:list=cleric;lvl=0",
+        "ifPick": "order=Thaumaturge"
+      },
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Thaumaturge cantrip",
+        "spell": "$cantrip",
+        "castAb": "wis"
       }
     ]
   },
@@ -3819,6 +3834,21 @@
             "opt": "Warden"
           }
         ]
+      },
+      {
+        "kind": "choice",
+        "id": "cantrip",
+        "name": "Magician cantrip",
+        "pick": 1,
+        "pool": "spell:list=druid;lvl=0",
+        "ifPick": "order=Magician"
+      },
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Magician cantrip",
+        "spell": "$cantrip",
+        "castAb": "wis"
       }
     ]
   },
@@ -5044,10 +5074,33 @@
     "grants": [
       {
         "kind": "choice",
+        "id": "how",
+        "name": "Feat or Blessed Warrior",
+        "pick": 1,
+        "pool": "list:feat|blessed-warrior"
+      },
+      {
+        "kind": "choice",
         "id": "style",
         "name": "Fighting Style feat",
         "pick": 1,
-        "pool": "feat:cat=style"
+        "pool": "feat:cat=style",
+        "ifPick": "how=feat"
+      },
+      {
+        "kind": "choice",
+        "id": "cantrips",
+        "name": "Blessed Warrior cantrips",
+        "pick": 2,
+        "pool": "spell:list=cleric;lvl=0",
+        "ifPick": "how=blessed-warrior"
+      },
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Blessed Warrior cantrips",
+        "spell": "$cantrips",
+        "castAb": "cha"
       }
     ]
   },
@@ -5532,10 +5585,33 @@
     "grants": [
       {
         "kind": "choice",
+        "id": "how",
+        "name": "Feat or Druidic Warrior",
+        "pick": 1,
+        "pool": "list:feat|druidic-warrior"
+      },
+      {
+        "kind": "choice",
         "id": "style",
         "name": "Fighting Style feat",
         "pick": 1,
-        "pool": "feat:cat=style"
+        "pool": "feat:cat=style",
+        "ifPick": "how=feat"
+      },
+      {
+        "kind": "choice",
+        "id": "cantrips",
+        "name": "Druidic Warrior cantrips",
+        "pick": 2,
+        "pool": "spell:list=druid;lvl=0",
+        "ifPick": "how=druidic-warrior"
+      },
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Druidic Warrior cantrips",
+        "spell": "$cantrips",
+        "castAb": "wis"
       }
     ]
   },

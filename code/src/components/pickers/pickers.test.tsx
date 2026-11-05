@@ -98,3 +98,12 @@ describe('a skill:proficient step', () => {
     expect(html).toContain('aria-disabled="true"');
   });
 });
+
+describe('a step that depends on another choice', () => {
+  it('Divine Order has no cantrip step until Thaumaturge is picked', () => {
+    const e = cat.byId.get('feature/cleric/divine-order')!;
+    expect(flow(blankCharacter(), e.id)).toContain('Step 1 of 1');
+    const answers = { '': { picks: { order: ['o3'] }, counted: {}, links: {} } };
+    expect(render(blankCharacter(), <ChoiceFlow entry={e} cat={cat} initial={{ answers, at: 0 }} onDone={() => {}} onCancel={() => {}} />)).toContain('Step 1 of 2');
+  });
+});

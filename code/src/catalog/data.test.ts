@@ -115,10 +115,10 @@ describe('SRD classes', () => {
     expect(list.map((c) => c.name)).toEqual(['Barbarian', 'Bard', 'Cleric', 'Druid', 'Fighter', 'Monk', 'Paladin', 'Ranger', 'Rogue', 'Sorcerer', 'Warlock', 'Wizard']);
     expect((classes as Entry[]).filter((e) => e.kind === 'subclass')).toHaveLength(12);
   });
-  it('name every Fighting Style choice after its pool', () => {
+  it('name every Fighting Style feat choice after its pool', () => {
     const styles = (classes as Entry[]).filter((e) => /^feature\/[a-z]+\/fighting-style$/.test(e.id));
     expect(styles.length).toBeGreaterThanOrEqual(3);
-    for (const f of styles) expect([f.id, specs(f).filter((s) => s.kind === 'choice').map((s) => s.name)]).toEqual([f.id, ['Fighting Style feat']]);
+    for (const f of styles) expect([f.id, specs(f).filter((s) => s.kind === 'choice' && s.pool === 'feat:cat=style').map((s) => s.name)]).toEqual([f.id, ['Fighting Style feat']]);
   });
   // Blessed Healer (6) and Supreme Healing (17) change healing rolls, which no grant kind describes.
   it('give every subclass a grant at every level it gains features', () => {
