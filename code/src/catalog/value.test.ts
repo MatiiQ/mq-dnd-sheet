@@ -47,3 +47,8 @@ describe('the magic term (plan 7, Task 9a)', () => {
     expect(valueAt('magic+1', { ...ctx, magic: 2 })).toBe(3);
   });
 });
+it('reads hlvl as half the level, rounded down', () => {
+  expect(valueAt('hlvl', ctx(7))).toBe(3);
+  expect(valueAt('1d6+hlvl', ctx(7))).toBe('1d6+3');
+  expect(isValue('hlvl+cha>=1')).toBe(true);
+});

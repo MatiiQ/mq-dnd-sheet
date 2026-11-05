@@ -328,3 +328,9 @@ it('takes the Light extra attack row for the Bonus Action its text names', () =>
     grants: [{ id: 'g', kind: 'lightExtra', name: 'G', addMod: false, anyMelee: true }] } as unknown as Entry;
   expect(rowChecks([f])).toEqual([]);
 });
+
+it('accepts half a level held by an hlvl value', () => {
+  const f = { id: 'feature/wizard/a', kind: 'feature', name: 'A', cls: 'wizard', lvl: 1, src: 'srd', desc: 'Add half your Wizard level.',
+    grants: [{ id: 'g', kind: 'action', name: 'G', econ: 'other', dice: '1d6+hlvl' }] } as unknown as Entry;
+  expect(mechanicChecks([f])).toEqual([]);
+});

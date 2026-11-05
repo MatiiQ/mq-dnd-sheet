@@ -322,7 +322,7 @@ const MECHANICS: { check: string; label: string; cue: RegExp; done: (e: Entry, m
   { check: 'mechanic-no-grant', label: 'feat pick', cue: /\bOrigin feat of your choice/i, done: hasPool('feat:') },
   { check: 'mechanic-no-grant', label: 'save Advantage', cue: /\bAdvantage on [^.\n]*\bsaving throws?/i, done: has('defense') },
   { check: 'mechanic-no-field', label: 'save DC', cue: /\bDC (?:equal to |equals |= ?)?8 ?(?:plus|\+)|\bFocus Save DC\b/i, done: (e) => flatGrants(e).some((g) => g.dc !== undefined) },
-  { check: 'mechanic-no-field', label: 'half a number', cue: /\bhalf (?:your )?(?:[A-Z]\w+ level|Proficiency Bonus)/, done: (e) => flatGrants(e).some((g) => g.cat === 'half') },
+  { check: 'mechanic-no-field', label: 'half a number', cue: /\bhalf (?:your )?(?:[A-Z]\w+ level|Proficiency Bonus)/, done: (e) => flatGrants(e).some((g) => g.cat === 'half' || Object.values(g).some((v) => typeof v === 'string' && /\bhlvl\b/.test(v))) },
   { check: 'mechanic-no-field', label: 'regain on Initiative', cue: /\broll Initiative[^.\n]*\bregain|\bregain[^.\n]*\broll Initiative|\brecharges? when you roll Initiative/i, done: (e) => flatGrants(e).some((g) => g.regainTo !== undefined) },
   { check: 'mechanic-no-field', label: 'stat block', cue: /\bstat block\b|\bFind (?:Familiar|Steed)\b/, done: nothingHoldsIt },
   { check: 'mechanic-no-field', label: 'state to track', cue: /\bward\b[^.\n]*\b(?:Hit Points|HP)\b|\bforetelling|\broll two d20s/i, done: nothingHoldsIt }
