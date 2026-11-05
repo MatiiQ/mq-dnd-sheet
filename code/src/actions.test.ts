@@ -605,3 +605,13 @@ describe('an extra damage grant that swaps another (Foe Slayer, PHB p.121)', () 
   it('shows nothing without the row it swaps', () => expect(extraDamage(c([foe]))).toEqual([]));
   it('leaves the row alone without the swapper', () => expect(extraDamage(c([mark])).map((x) => x.dice)).toEqual(['1d6']));
 });
+
+describe('a cantrip damage bonus for one spell (Agonizing Blast, PHB p.155)', () => {
+  const eb = { ...spellFromEntry(cat.byId.get('spell/eldritch-blast') as SpellEntry), id: 'eb', prep: true };
+  const fb = { ...spellFromEntry(cat.byId.get('spell/fire-bolt') as SpellEntry), id: 'fb', prep: true };
+  const c = (): Character => ({ ...blankCharacter(), level: 5, castAb: 'cha', abil: { ...blankCharacter().abil, cha: 16 }, spells: [eb, fb],
+    feats: [{ id: 'a', g: 'class', name: 'Agonizing Blast', desc: '', cid: 'feature/warlock/agonizing-blast' }],
+    grants: [{ id: 'g', kind: 'dmgBonus', name: 'Agonizing Blast', cantrip: true, spell: 'spell/eldritch-blast', val: 'cha', from: 'feature:a' }] });
+  it('adds Charisma to each Eldritch Blast beam', () => expect(spellActions(c()).find((x) => x.spellId === 'eb')!.dice).toBe('2 beams × 1d10+3'));
+  it('leaves another cantrip alone, even of the same class', () => expect(spellActions(c()).find((x) => x.spellId === 'fb')!.dice).toBe('2d10'));
+});

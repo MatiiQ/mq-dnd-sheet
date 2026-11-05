@@ -310,7 +310,7 @@ const nothingHoldsIt = () => false;
 // field or kind in the schema yet, so nothing can satisfy them (give `done` a real test when one comes).
 const MECHANICS: { check: string; label: string; cue: RegExp; done: (e: Entry, m: RegExpMatchArray) => boolean }[] = [
   { check: 'mechanic-no-grant', label: 'cantrip', cue: /\b(?:learn|know)\b[^.\n]*\bcantrips?\b/i, done: (e) => has('spell')(e) || hasPool('spell:')(e) },
-  { check: 'mechanic-no-grant', label: 'free cast', cue: /\bcast [^.\n]{0,60}?without (?:expending )?a (?:spell )?slot/i, done: (e) => flatGrants(e).some((g) => g.kind === 'resource' && !!g.casts) },
+  { check: 'mechanic-no-grant', label: 'free cast', cue: /\bcast [^.\n]{0,60}?without (?:expending )?a (?:spell )?slot/i, done: (e) => flatGrants(e).some((g) => (g.kind === 'resource' && !!g.casts) || (g.kind === 'spell' && !!g.always)) },
   { check: 'mechanic-no-grant', label: 'sense', cue: /\b(?:have|gain) (?:Truesight|Blindsight|Tremorsense|Darkvision)\b|\bTruesight \d+ ft|\bsee normally in Dim Light/i, done: has('sense') },
   { check: 'mechanic-no-grant', label: 'extra attacks', cue: /\bExtra Attack feature\b|\battack twice\b|\btwo extra attacks\b/i, done: has('attacks') },
   { check: 'mechanic-no-grant', label: 'attack ability', cue: /\buse your \w+ modifier[^.\n]*\battack|\binstead of (?:using )?(?:your )?(?:Strength|Dexterity)[^.\n]*\battack/i, done: has('atkAbil', 'unarmed') },

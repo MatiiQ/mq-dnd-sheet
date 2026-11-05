@@ -269,12 +269,14 @@ export interface SpellAction {
 // An On/Off effect of the spell: an atkAbil grant from it that counts while its effect is on (Shillelagh).
 const effectOf = (c: Character, sp: Spell) => c.grants.some((g) => g.kind === 'atkAbil' && g.from === linkOf('spell', sp.id) && g.when === 'active');
 // Cantrip damage bonus grants (Potent Spellcasting) add to cantrips of the class of the grant's source feature, read from
-// its catalog id ('feature/druid/…' → druid); a source without one adds nothing.
+// its catalog id ('feature/druid/…' → druid); a source without one adds nothing. A grant with `spell` adds to that cantrip
+// only, whatever its class (Agonizing Blast, PHB p.155).
 function cantripBonus(c: Character, sp: Spell): number {
   if (sp.lvl !== 0) return 0;
   const classes = (sp.classes ?? '').split(',');
   return activeGrants(c, 'dmgBonus').filter((g) => {
     if (!g.cantrip) return false;
+    if (g.spell) return g.spell === sp.cid;
     const cls = (sourceOf(c, g.from) as Feature | null)?.cid?.split('/')[1];
     return g.from.startsWith('feature:') && !!cls && classes.includes(cls);
   }).reduce((t, g) => t + num(c, g.val, g), 0);
@@ -318,7 +320,7 @@ function spellRow(c: Character, sp: Spell, r: RowFields): Omit<SpellAction, 'nam
   if (dice && spellKey(sp) === 'eldritch-blast') {
     // Eldritch Blast adds beams instead of dice (PHB p.267).
     const beams = cantripTier(c.level);
-    dice = `${beams} ${beams === 1 ? 'beam' : 'beams'} × ${dice}`;
+    dice = `${beams} ${beams === 1 ? 'beam' : 'beams'} × ${diceText(dice, cantripBonus(c, sp))}`;
   } else if (dice && r.scale === 'cantrip') {
     dice = diceText(cantripDice(dice, c.level), cantripBonus(c, sp));
   } else if (/\d+d\d+/.test(dice) && ((r.fx === 'healing' && r.healMod) || (r.fx === 'damage' && r.dmgMod))) {

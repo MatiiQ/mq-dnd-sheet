@@ -334,3 +334,9 @@ it('accepts half a level held by an hlvl value', () => {
     grants: [{ id: 'g', kind: 'action', name: 'G', econ: 'other', dice: '1d6+hlvl' }] } as unknown as Entry;
   expect(mechanicChecks([f])).toEqual([]);
 });
+
+it('accepts a free cast held by an always-prepared spell', () => {
+  const f = { id: 'feature/wizard/a', kind: 'feature', name: 'A', cls: 'wizard', lvl: 1, src: 'srd', desc: 'You can cast Jump without expending a spell slot.',
+    grants: [{ id: 'g', kind: 'spell', name: 'Jump', spell: 'spell/jump', always: true }] } as unknown as Entry;
+  expect(mechanicChecks([f])).toEqual([]);
+});
