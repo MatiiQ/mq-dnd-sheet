@@ -571,3 +571,17 @@ describe('Rage damage, Strength attacks only (PHB p.51)', () => {
     expect(rageOf(weaponAttacks(rage(false, [longsword({ id: 'ls' })], ['ls']), longsword({ id: 'ls' }))[0].dmgParts)).toBeUndefined();
   });
 });
+
+describe('Sacred Weapon (PHB p.113)', () => {
+  it('adds Charisma, at least 1, to a Melee weapon while on', () => {
+    const add = (cha: number) => {
+      const base = fighter({ str: 10, cha }, [longsword({ id: 'ls' }), longbow({ id: 'lb' })], undefined, { level: 3, hands: ['ls'] });
+      return addFromCatalog(base, cat, cat.byId.get('feature/paladin/oath-of-devotion/sacred-weapon')!, { picks: {}, counted: {}, links: {} });
+    };
+    const on = (c: Character) => ({ ...c, effectsOn: [c.grants.find((g) => g.kind === 'atkBonus')!.from] });
+    const hit = (c: Character, id: string) => weaponAttacks(c, c.inv.find((i) => i.id === id)!)[0].hit;
+    expect(hit(on(add(16)), 'ls')).toBe(hit(add(16), 'ls') + 3);
+    expect(hit(on(add(8)), 'ls')).toBe(hit(add(8), 'ls') + 1);
+    expect(hit(on(add(16)), 'lb')).toBe(hit(add(16), 'lb'));
+  });
+});

@@ -1875,3 +1875,13 @@ describe('saveDc (a feature row\'s save DC)', () => {
   it('takes the best of a list', () => expect(saveDc(c, { dc: '8+pb', dcAb: 'str,dex', from: 'feature:x' })).toBe(15));
   it('has no ability with no dcAb', () => expect(saveDc(c, { dc: '8+pb', from: 'feature:x' })).toBe(11));
 });
+
+describe('Innate Sorcery (PHB p.140)', () => {
+  it('raises the spell save DC by one while on', () => {
+    const cat = mergeCatalog(srdEntries, null);
+    const c0 = { ...blankCharacter(), level: 3, castAb: 'cha' as const };
+    const c = addFromCatalog(c0, cat, cat.byId.get('feature/sorcerer/innate-sorcery')!, { picks: {}, counted: {}, links: {} });
+    expect(spellSaveDC(c)).toBe(spellSaveDC(c0));
+    expect(spellSaveDC({ ...c, effectsOn: [c.grants.find((g) => g.kind === 'spellDc')!.from] })).toBe(spellSaveDC(c0) + 1);
+  });
+});

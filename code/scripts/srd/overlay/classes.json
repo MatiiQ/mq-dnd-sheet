@@ -2282,6 +2282,14 @@
         "econ": "other",
         "note": "With the Attack action, spend Channel Divinity: for 10 minutes a melee weapon adds CHA to attack rolls and can deal Radiant damage.",
         "uses": "feature/paladin/channel-divinity"
+      },
+      {
+        "id": "g2",
+        "kind": "atkBonus",
+        "name": "Sacred Weapon",
+        "val": "cha>=1",
+        "wrange": "melee",
+        "when": "active"
       }
     ]
   },
@@ -3278,6 +3286,13 @@
         "econ": "bonus",
         "res": "g1",
         "note": "For 1 minute: +1 to your Sorcerer spell save DC and Advantage on Sorcerer spell attacks."
+      },
+      {
+        "id": "g3",
+        "kind": "spellDc",
+        "name": "Innate Sorcery",
+        "val": "1",
+        "when": "active"
       }
     ]
   },
