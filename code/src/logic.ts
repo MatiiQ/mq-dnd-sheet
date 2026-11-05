@@ -78,18 +78,20 @@ export function abilityParts(c: Character, k: Ability): AcPart[] {
   let s = c.abil[k];
   const parts: AcPart[] = [{ label: 'Score', value: s }];
   const mine = activeGrants(c, 'abil', true).filter((g) => g.ab === k);
-  parts.push(...mine.filter((g) => g.counted).map((g) => ({ label: g.name, value: numIn(ctx, g.val), note: 'counted' })));
+  // Where a grant part came from, so its tile can name and open the source.
+  const at = (g: Grant) => ({ from: g.from, src: sourceLabel(c, g) });
+  parts.push(...mine.filter((g) => g.counted).map((g) => ({ label: g.name, value: numIn(ctx, g.val), note: 'counted', ...at(g) })));
   for (const cap of [20, 25, 30]) {
     for (const g of mine.filter((x) => !x.counted && x.cap === cap)) {
       const next = Math.max(s, Math.min(cap, s + numIn(ctx, g.val)));
-      parts.push({ label: g.name, value: next - s, ...(next - s < numIn(ctx, g.val) ? { note: 'capped at ' + cap } : {}) });
+      parts.push({ label: g.name, value: next - s, ...(next - s < numIn(ctx, g.val) ? { note: 'capped at ' + cap } : {}), ...at(g) });
       s = next;
     }
   }
   const sets = activeGrants(c, 'abilSet').filter((g) => g.ab === k);
   const top = sets.reduce<Grant | null>((b, g) => (!b || numIn(ctx, g.val) > numIn(ctx, b.val) ? g : b), null);
   const set = top ? numIn(ctx, top.val) : 0;
-  if (top && set > s) { parts.push({ label: top.name, value: set - s, note: 'sets ' + set }); s = set; }
+  if (top && set > s) { parts.push({ label: top.name, value: set - s, note: 'sets ' + set, ...at(top) }); s = set; }
   if (c.abilAdj[k]) parts.push({ label: 'Adjustment', value: c.abilAdj[k]! });
   return parts;
 }
@@ -198,7 +200,8 @@ export function detectAcSpell(name: string): Pick<Spell, 'acFx' | 'acVal'> | nul
   return { acFx: fx[0], acVal: fx[1] };
 }
 
-export interface AcPart { label: string; value: number; note?: string; active?: boolean }
+// from: the source link of the grant behind a part; src: its label (sourceLabel). Both optional.
+export interface AcPart { label: string; value: number; note?: string; active?: boolean; from?: string; src?: string }
 // Haste, Shield of Faith, Mage Armor and Barkskin can go on another creature (PHB pp.284, 316, 293, 245); a Self spell
 // (Shield) can't. Cast on another creature, the spell still runs (slot, Concentration, chip) but the caster's AC stays.
 export const acCanTargetOther = (sp: Spell) => !!sp.acFx && !/^self/i.test((sp.range || '').trim());

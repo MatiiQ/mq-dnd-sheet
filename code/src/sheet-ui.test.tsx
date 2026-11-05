@@ -199,6 +199,17 @@ describe('reveal', () => {
   });
 });
 
+describe('ability bonus source', () => {
+  it('opens the feat a bonus came from', () => {
+    renderSheet({ feats: [{ id: 'f', g: 'feat', name: 'Athlete', desc: '' }],
+      grants: [{ id: 'g1', kind: 'abil', name: 'Athlete', ab: 'str', val: '1', cap: 20, from: 'feature:f' }] });
+    tap(document.querySelector('[aria-label^="Strength modifier"]'));
+    tap([...document.querySelectorAll('#sec-abilities button')].find((b) => b.textContent?.includes('from Feat · Athlete')));
+    expect(saved().tab).toBe('features');
+    expect(document.querySelector('#feat-f .entry-head')?.getAttribute('aria-expanded')).toBe('true');
+  });
+});
+
 describe('Resources', () => {
   const head = (id: string) => document.querySelector(`#${id} .entry-head`);
   it('resource body falls back to its feature description', () => {

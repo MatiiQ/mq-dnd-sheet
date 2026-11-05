@@ -3,6 +3,7 @@ import { DAMAGE_TYPES } from '../catalog/schema';
 import { effectCanTargetOther } from '../links';
 import { acCanTargetOther, castFree, clamp, fmt, toggleAcTarget, toggleEffect, type AcPart } from '../logic';
 import { useSheet } from '../sheet';
+import { revealOf } from './nav';
 import type { Resource, Spell } from '../types';
 
 // ---------- icons (stroke SVG, colored by currentColor) ----------
@@ -146,16 +147,23 @@ export function DieBadge({ value }: { value: string }) {
 export const ProfDot = ({ level }: { level: number }) => <span aria-hidden="true" className={'dot dot-' + level} />;
 
 // A number's parts as tiles. bareFirst: the first part is a plain number (a base); the rest are signed.
+// A tile with a source names it; a source still on the sheet makes the tile a button that opens it.
 export function PartTiles({ parts, bareFirst = true, style }: { parts: AcPart[]; bareFirst?: boolean; style?: CSSProperties }) {
+  const { c, reveal } = useSheet();
   return (
     <div className="grid speed-grid" style={style}>
-      {parts.map((p, i) => (
-        <div key={i} className={'tile' + (p.active ? ' active' : '')}>
+      {parts.map((p, i) => {
+        const cls = 'tile' + (p.active ? ' active' : ''), to = revealOf(c, p.from);
+        const inner = <>
           <span className="muted">{p.label}</span>
           <span className="speed-value">{bareFirst && i === 0 ? p.value : fmt(p.value)}</span>
           {p.note && <span className="muted">{p.note}</span>}
-        </div>
-      ))}
+          {p.src && <span className={to ? 'small go-text' : 'small'}>from {p.src}</span>}
+        </>;
+        return to
+          ? <button key={i} type="button" className={cls + ' tile-btn'} onClick={() => reveal(to)}>{inner}</button>
+          : <div key={i} className={cls}>{inner}</div>;
+      })}
     </div>
   );
 }

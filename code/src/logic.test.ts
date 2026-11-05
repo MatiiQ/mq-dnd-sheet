@@ -1865,3 +1865,22 @@ describe('Inspiration switch (inspOn)', () => {
     expect(normalize(c).pills[0]).toBe('insp');
   });
 });
+
+describe('ability bonus sources', () => {
+  it('names the grant source on each grant part, not on Score', () => {
+    const c: Character = {
+      ...blankCharacter(),
+      feats: [{ id: 'f', g: 'feat' as const, name: 'Athlete', desc: '' }],
+      inv: [{ id: 'i', name: 'Gauntlets', qty: 1, eq: true }],
+      grants: [
+        { id: 'g1', kind: 'abil' as const, name: 'Athlete', ab: 'str' as const, val: '1', cap: 20, from: 'feature:f' },
+        { id: 'g2', kind: 'abilSet' as const, name: 'Gauntlets', ab: 'con' as const, val: '19', from: 'item:i' }
+      ]
+    };
+    const str = abilityParts(c, 'str');
+    expect(str[0]).not.toHaveProperty('from');
+    expect(str[0]).not.toHaveProperty('src');
+    expect(str[1]).toMatchObject({ from: 'feature:f', src: 'Feat · Athlete' });
+    expect(abilityParts(c, 'con')[1]).toMatchObject({ from: 'item:i' });
+  });
+});
