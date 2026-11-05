@@ -6,7 +6,7 @@ import {
   addSection, containerLoad, DEFAULT_SECTION, inventoryGroups, moveInto, moveSection, removeContainer, removeContainerSummary, removeSection, renameSection,
   setItemSection, takeOut
 } from '../../inventory';
-import { equipShield, isWeapon, setHands } from '../../hands';
+import { equipShield, setHands } from '../../hands';
 import { hasActiveEffect, isEquipped, linkOf } from '../../links';
 import { GrantList, removalNote, SourceChips } from '../Chips';
 import { ItemPicker } from '../pickers/ItemPicker';
@@ -235,7 +235,7 @@ export function InventoryTab() {
               </div>
             )}
           </div>}
-          body={info || moves || isWeapon(it) ? <>{info && <span className="entry-desc">{info}</span>}{isWeapon(it) && <RuleNotes pick={(cat) => weaponRules(cat, it.props, it.mastery)} />}{moves}</> : undefined}
+          body={info || moves || it.props || it.mastery ? <>{info && <span className="entry-desc">{info}</span>}{(it.props || it.mastery) && <RuleNotes pick={(cat) => weaponRules(cat, it.props, it.mastery)} />}{moves}</> : undefined}
           onEdit={() => f.openEdit(it.id, { ...draftFromItem(it), pending: [] })}
           onRemove={() => update((p) => (isContainer(it) ? removeContainer(p, it.id, removeMode(it)) : removeRef(p, { kind: 'item', id: it.id })))}
           removeConfirm={isContainer(it) && holds(it) ? bagConfirm(it) : removalNote(c, { kind: 'item', id: it.id })}>

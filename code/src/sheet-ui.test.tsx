@@ -4,7 +4,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import App from './App';
 import { blankCharacter } from './defaults';
-import { speedNow } from './logic';
+import { modeSpeed, speedNow } from './logic';
 import type { Character, Feature, Item } from './types';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -49,6 +49,19 @@ describe('entry forms and rows', () => {
     tap(sw);
     expect(saved().spells[0].acOther).toBe(true);
     expect(label('Cast Haste on another creature, so it adds no AC')?.textContent).toBe('On: other');
+  });
+  it('takes Fly off your speed when it is cast on another creature', () => {
+    const fly = { id: 's', name: 'Fly', lvl: 3, time: 'Action', range: 'Touch', c: true };
+    renderSheet({ spells: [fly], conc: { id: 's', name: 'Fly' }, slotMax: [0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
+      grants: [{ id: 'g', kind: 'speed', name: 'Fly', mode: 'fly', val: '60', when: 'active', from: 'spell:s' }] });
+    tab('Spells');
+    const sw = label('Cast Fly on another creature, so it counts only for them');
+    expect(sw?.textContent).toBe('On: me');
+    expect(modeSpeed(saved(), 'fly').base).toBe(60);
+    tap(sw);
+    expect(saved().spells[0].acOther).toBe(true);
+    expect(modeSpeed(saved(), 'fly').base).toBe(0);
+    expect(label('Cast Fly on another creature, so it counts only for them')?.textContent).toBe('On: other');
   });
 
   it('keeps line breaks in a feature description', () => {
