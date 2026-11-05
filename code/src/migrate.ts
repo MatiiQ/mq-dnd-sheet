@@ -16,7 +16,7 @@ const ENTRY_LISTS = ['senses', 'res', 'attacks', 'riders', 'inv', 'spells', 'fea
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 export const isEntry = (x: unknown): x is Record<string, unknown> =>
   isObj(x) && typeof x.name === 'string' && Object.values(x).every((v) => v === null || typeof v !== 'object');
-const WHENS: When[] = ['armor', 'noHeavy', 'noArmor', 'noShield', 'noArmorNoShield', 'active'];
+const WHENS: When[] = ['armor', 'noHeavy', 'noArmor', 'noShield', 'noArmorNoShield', 'active', 'empty'];
 // The link fields of an entry, checked on load: an unknown source kind reads as Other, any other bad value goes, and
 // the fields that need a link go from an entry without one. Never touches `lvl` (a spell's level).
 function cleanLinked<T extends Linked>(x: T): T {

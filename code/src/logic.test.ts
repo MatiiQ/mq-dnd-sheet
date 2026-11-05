@@ -1882,6 +1882,6 @@ describe('Innate Sorcery (PHB p.140)', () => {
     const c0 = { ...blankCharacter(), level: 3, castAb: 'cha' as const };
     const c = addFromCatalog(c0, cat, cat.byId.get('feature/sorcerer/innate-sorcery')!, { picks: {}, counted: {}, links: {} });
     expect(spellSaveDC(c)).toBe(spellSaveDC(c0));
-    expect(spellSaveDC({ ...c, effectsOn: [c.grants.find((g) => g.kind === 'spellDc')!.from] })).toBe(spellSaveDC(c0) + 1);
+    expect(spellSaveDC({ ...c, effectsOn: [c.grants.find((g) => g.kind === 'spellDc')!.from] })).toBe(spellSaveDC(c0)! + 1);
   });
 });

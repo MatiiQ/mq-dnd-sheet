@@ -2517,10 +2517,12 @@
     "grants": [
       {
         "id": "g1",
-        "kind": "action",
-        "name": "Foe Slayer",
-        "econ": "other",
-        "note": "Hunter’s Mark deals 1d10 instead of 1d6."
+        "kind": "xdmg",
+        "name": "Foe Slayer (Hunter’s Mark)",
+        "dice": "1d10",
+        "dtype": "Force",
+        "on": "the marked target",
+        "swap": "Hunter’s Mark"
       }
     ]
   },

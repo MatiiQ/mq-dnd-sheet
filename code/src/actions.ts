@@ -4,7 +4,7 @@ import { slug, type SpellPart } from './catalog/schema';
 import { valueAt } from './catalog/value';
 import { hasProp, isWeapon, twoHanded, versatile, weaponKind, weaponMatches, weaponsHeld } from './hands';
 import { activeGrants, isActive, linkOf, sourceLabel, sourceOf } from './links';
-import { ABILITIES, abilityMod, abilityName, castAbOf, fmt, num, partsTotal, profBonus, profList, hasProf, saveDc, spellAttackFor, spellSaveDcFor, spellUsable, valueCtx, type AcPart } from './logic';
+import { ABILITIES, abilityMod, abilityName, castAbOf, fmt, normName, num, partsTotal, profBonus, profList, hasProf, saveDc, spellAttackFor, spellSaveDcFor, spellUsable, valueCtx, type AcPart } from './logic';
 import type { Ability, Character, Econ, Feature, Grant, Item, Resource, Spell } from './types';
 
 // The "Other weapons" list: weapons not in hand, equipped first. A weapon inside a container is left out: the player
@@ -359,9 +359,13 @@ export const featureActions = (c: Character): FeatureAction[] => activeGrants(c,
 
 export interface ExtraDamage { key: string; name: string; dice: string; dtype?: string; when: string; source?: string; manual?: boolean }
 // Extra damage on a hit: active xdmg grants (Sneak Attack's dice at the level, Hunter's Mark while concentrating on
-// it), each saying when it applies, then the manual riders as typed.
+// it), each saying when it applies, then the manual riders as typed. A grant with swap replaces the row it names, and
+// shows only with that row on (Foe Slayer's d10 on Hunter's Mark, PHB p.121).
 export function extraDamage(c: Character): ExtraDamage[] {
-  const granted = activeGrants(c, 'xdmg').map((g): ExtraDamage => {
+  const all = activeGrants(c, 'xdmg'), base = all.filter((g) => !g.swap);
+  const swapped = (name: string) => all.some((g) => g.swap && normName(g.swap) === normName(name));
+  const rows = [...base.filter((g) => !swapped(g.name)), ...all.filter((g) => g.swap && base.some((b) => normName(b.name) === normName(g.swap!)))];
+  const granted = rows.map((g): ExtraDamage => {
     const source = sourceLabel(c, g);
     return {
       key: 'grant:' + g.id, name: g.name, dice: valueText(c, g.dice ?? '', g), ...(g.dtype ? { dtype: g.dtype } : {}),

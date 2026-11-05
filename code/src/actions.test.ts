@@ -585,3 +585,23 @@ describe('Sacred Weapon (PHB p.113)', () => {
     expect(hit(on(add(16)), 'lb')).toBe(hit(add(16), 'lb'));
   });
 });
+
+describe('Unarmed Fighting (PHB p.210)', () => {
+  const c = (hands: string[]): Character => ({ ...fighter({ str: 10 }, [dagger({ id: 'd' })], undefined, { hands }), feats: [{ id: 'u', g: 'feat', name: 'Unarmed Fighting', desc: '' }],
+    grants: [{ id: 'a', kind: 'unarmed', name: 'U', die: '1d6', abs: 'str', from: 'feature:u' }, { id: 'b', kind: 'unarmed', name: 'U', die: '1d8', abs: 'str', when: 'empty', from: 'feature:u' }] });
+  it('is 1d8 with empty hands, 1d6 with a weapon in hand', () => {
+    expect(unarmedStrike(c([])).dmg).toBe('1d8');
+    expect(unarmedStrike(c(['d'])).dmg).toBe('1d6');
+  });
+});
+
+describe('an extra damage grant that swaps another (Foe Slayer, PHB p.121)', () => {
+  const mark = { id: 'm', kind: 'xdmg' as const, name: 'Hunter’s Mark', dice: '1d6', dtype: 'Force', on: 'the marked target', from: 'feature:a' };
+  const foe = { id: 'f', kind: 'xdmg' as const, name: 'Foe Slayer', dice: '1d10', dtype: 'Force', on: 'the marked target', swap: "Hunter's Mark", from: 'feature:a' };
+  const c = (grants: Grant[]): Character => ({ ...blankCharacter(), feats: [{ id: 'a', g: 'class', name: 'A', desc: '' }], grants });
+  it('replaces that row while both are on, whichever apostrophe it was named with', () => {
+    expect(extraDamage(c([mark, foe])).map((x) => x.dice)).toEqual(['1d10']);
+  });
+  it('shows nothing without the row it swaps', () => expect(extraDamage(c([foe]))).toEqual([]));
+  it('leaves the row alone without the swapper', () => expect(extraDamage(c([mark])).map((x) => x.dice)).toEqual(['1d6']));
+});

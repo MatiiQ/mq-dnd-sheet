@@ -8,8 +8,8 @@ export type Recharge = 'none' | 'short' | 'long' | 'dawn';
 export type RegainOn = 'short' | 'dawn';
 export type Tab = 'actions' | 'spells' | 'inventory' | 'features' | 'notes';
 export type FeatureGroup = 'class' | 'sub' | 'feat' | 'species' | 'background' | 'training' | 'other';
-// When a grant or a granted entry counts: with armor, without Heavy armor, without armor and/or a Shield, or while its source's effect is on.
-export type When = 'armor' | 'noHeavy' | 'noArmor' | 'noShield' | 'noArmorNoShield' | 'active';
+// When a grant or a granted entry counts: with armor, without Heavy armor, without armor and/or a Shield, while its source's effect is on, or with empty hands.
+export type When = 'armor' | 'noHeavy' | 'noArmor' | 'noShield' | 'noArmorNoShield' | 'active' | 'empty';
 // adv: Advantage on saving throws ("vs Charmed", "Dexterity saves" or free text).
 export type DefenseKind = 'res' | 'vul' | 'imm' | 'adv';
 export type SpeedKind = 'climb' | 'swim' | 'fly' | 'burrow';

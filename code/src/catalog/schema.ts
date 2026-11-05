@@ -74,7 +74,7 @@ export type GrantKind = 'sense' | 'resource' | 'defense' | 'abil' | 'abilSet' | 
 // Every grant is flat, so a character can store it as a plain entry. Fields that take a Value also accept '$<choiceId>'.
 export interface GrantSpec {
   id: string; kind: GrantKind; name: string;
-  when?: 'armor' | 'noHeavy' | 'noArmor' | 'noShield' | 'noArmorNoShield' | 'active';   // active: while the entry's effect is on (Rage, Starry Form)
+  when?: 'armor' | 'noHeavy' | 'noArmor' | 'noShield' | 'noArmorNoShield' | 'active' | 'empty';   // active: while the entry's effect is on (Rage, Starry Form); empty: no weapon in hand and no Shield
   lvl?: number; needEq?: boolean; needAtt?: boolean;
   opt?: string;                                                                     // in choice options: grants with the same opt are one pick
   range?: string; plus?: boolean;                                                   // sense; plus: adds to another range of the name
@@ -90,7 +90,7 @@ export interface GrantSpec {
   uses?: string;                                                                    // action: the feature whose counter it shows (a catalog id); res names one of the entry's own
   regainTo?: string;                                                                // action: tap to regain the counter up to this Value, or 'all'
   dc?: string; dcAb?: string;                                                       // action: a save DC, a Value ('8+pb') plus the best of these abilities (a comma list, or '$<choiceId>')
-  dice?: string; dtype?: string; on?: string; perTurn?: boolean;                    // xdmg
+  dice?: string; dtype?: string; on?: string; perTurn?: boolean; swap?: string;     // xdmg; swap: the name of an xdmg row this one replaces
   die?: string; abs?: string;                                                       // unarmed (also dtype), atkAbil
   wrange?: 'melee' | 'ranged'; amode?: 'melee' | 'ranged'; prop?: string; weapon?: string; oneHand?: boolean;   // atkBonus, dmgBonus
   cantrip?: boolean;                                                                // dmgBonus: damage of the entry's class cantrips
@@ -147,7 +147,7 @@ const or = (...cs: Check[]): Check => (v) => cs.some((c) => c(v));
 const list = (c: Check): Check => (v) => typeof v === 'string' && (v === '' || v.split(',').every((x) => c(x)));
 
 const RECHARGE = oneOf('short', 'long', 'dawn', 'none');
-const WHEN = oneOf('armor', 'noHeavy', 'noArmor', 'noShield', 'noArmorNoShield', 'active');
+const WHEN = oneOf('armor', 'noHeavy', 'noArmor', 'noShield', 'noArmorNoShield', 'active', 'empty');
 const RANGE_KIND = oneOf('melee', 'ranged');
 // Own fields per grant kind: [check, required].
 const GRANTS: Record<GrantKind, Record<string, [Check, boolean]>> = {
@@ -170,7 +170,7 @@ const GRANTS: Record<GrantKind, Record<string, [Check, boolean]>> = {
   action: { econ: [oneOf('action', 'bonus', 'reaction', 'free', 'other'), true], res: [str, false], note: [str, false], dice: [value, false],
     uses: [(v) => typeof v === 'string' && /^feature\/[a-z0-9-]+(\/[a-z0-9-]+){1,2}$/.test(v), false], regainTo: [or(value, oneOf('all')), false],
     dc: [value, false], dcAb: [or(list(ability), ref), false] },
-  xdmg: { dice: [value, true], dtype: [str, false], on: [str, true], perTurn: [bool, false] },
+  xdmg: { dice: [value, true], dtype: [str, false], on: [str, true], perTurn: [bool, false], swap: [str, false] },
   attacks: { val: [value, true] },
   // dtype: the damage type when not Bludgeoning (Demon Armor: "your unarmed strikes deal 1d8 Slashing").
   unarmed: { die: [value, true], abs: [str, true], dtype: [str, false] },

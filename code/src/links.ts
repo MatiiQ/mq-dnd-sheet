@@ -132,7 +132,9 @@ export function inactiveReason(c: Character, x: Linked, seen: Set<string> = new 
       noArmor: armor ? 'not with armor' : null,
       noShield: shield ? 'not with a Shield' : null,
       noArmorNoShield: armor || shield ? 'not with armor or a Shield' : null,
-      active: x.from && !isOn(c, x.from) ? 'not switched on' : null
+      active: x.from && !isOn(c, x.from) ? 'not switched on' : null,
+      // "holding no weapons or Shield" (Unarmed Fighting, PHB p.210). A Shield isn't in c.hands.
+      empty: c.hands.length > 0 ? 'a weapon is in hand' : shield ? 'not with a Shield' : null
     }[x.when];
     if (why) return why;
   }

@@ -184,3 +184,17 @@ describe('items inside a container (plan 6)', () => {
     expect(inactiveReason(c, { when: 'noHeavy' })).toBeNull();
   });
 });
+
+describe('when: empty (hands free)', () => {
+  const x = { when: 'empty' as const };
+  it('counts with empty hands and no Shield', () => expect(inactiveReason(make({ hands: [], inv: [] }), x)).toBeNull());
+  it('stops with a weapon in hand', () => expect(inactiveReason(make({ hands: ['w'], inv: [] }), x)).toBe('a weapon is in hand'));
+  it('stops with a Shield on', () => {
+    const sh: Item = { id: 's', name: 'Shield', qty: 1, eq: true, armor: 'shield' };
+    expect(inactiveReason(make({ hands: [], inv: [sh] }), x)).toBe('not with a Shield');
+  });
+  it('survives a reload', () => {
+    const c = make({ feats: [feat('a')], grants: [{ id: 'g', kind: 'unarmed', name: 'U', die: '1d8', abs: 'str', when: 'empty', from: 'feature:a' }] });
+    expect(migrate(c).grants.find((g) => g.id === 'g')!.when).toBe('empty');
+  });
+});
