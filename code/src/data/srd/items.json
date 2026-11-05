@@ -1312,7 +1312,19 @@
     "desc": "While wearing this cloak, you have Advantage on Dexterity (Stealth) checks. In an area of Dim Light or Darkness, you can grip the edges of the cloak and use it to gain a Fly Speed of 40 feet. If you ever fail to grip the cloak’s edges while flying in this way, or if you are no longer in Dim Light or Darkness, you lose this Fly Speed. While wearing the cloak in an area of Dim Light or Darkness, you can cast Polymorph on yourself, shape-shifting into a Bat. While in that form, you retain your Intelligence, Wisdom, and Charisma scores. The cloak can’t be used this way again until the next dawn.",
     "cat": "magic",
     "rarity": "Rare",
-    "attune": true
+    "attune": true,
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "speed",
+        "name": "Fly Speed 40 ft",
+        "mode": "fly",
+        "val": "40",
+        "when": "active",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   {
     "id": "item/cloak-of-the-manta-ray",
@@ -1756,7 +1768,17 @@
     "cat": "magic",
     "rarity": "Rare",
     "magic": 1,
-    "base": "weapon"
+    "base": "weapon",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "xdmg",
+        "name": "Dragon Slayer",
+        "dice": "3d6",
+        "on": "hits on a Dragon with this weapon; the weapon's damage type",
+        "needEq": true
+      }
+    ]
   },
   {
     "id": "item/druidic-focus",
@@ -1862,7 +1884,19 @@
     "rarity": "Very Rare",
     "attune": true,
     "magic": 3,
-    "base": "item/warhammer"
+    "base": "item/warhammer",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "xdmg",
+        "name": "Dwarven Thrower",
+        "dice": "1d8",
+        "dtype": "Force",
+        "on": "ranged hits with this weapon; 2d8 against a Giant",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   {
     "id": "item/efficient-quiver",
@@ -2068,7 +2102,20 @@
     "rarity": "Rare",
     "attune": true,
     "base": "weapon",
-    "baseOf": "item/battleaxe,item/club,item/dagger,item/flail,item/glaive,item/greataxe,item/greatclub,item/greatsword,item/halberd,item/handaxe,item/javelin,item/lance,item/light-hammer,item/longsword,item/mace,item/maul,item/morningstar,item/pike,item/quarterstaff,item/rapier,item/scimitar,item/shortsword,item/sickle,item/spear,item/trident,item/war-pick,item/warhammer,item/whip"
+    "baseOf": "item/battleaxe,item/club,item/dagger,item/flail,item/glaive,item/greataxe,item/greatclub,item/greatsword,item/halberd,item/handaxe,item/javelin,item/lance,item/light-hammer,item/longsword,item/mace,item/maul,item/morningstar,item/pike,item/quarterstaff,item/rapier,item/scimitar,item/shortsword,item/sickle,item/spear,item/trident,item/war-pick,item/warhammer,item/whip",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "xdmg",
+        "name": "Flame Tongue",
+        "dice": "2d6",
+        "dtype": "Fire",
+        "on": "hits with this weapon while ablaze",
+        "when": "active",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   {
     "id": "item/flask",
@@ -2117,6 +2164,16 @@
         "name": "Fire Resistance",
         "def": "res",
         "target": "Fire",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "xdmg",
+        "name": "Frost Brand",
+        "dice": "1d6",
+        "dtype": "Cold",
+        "on": "hits with this weapon",
         "needEq": true,
         "needAtt": true
       }
@@ -2196,7 +2253,17 @@
     "cat": "magic",
     "rarity": "Rare",
     "magic": 1,
-    "base": "weapon"
+    "base": "weapon",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "xdmg",
+        "name": "Giant Slayer",
+        "dice": "2d6",
+        "on": "hits on a Giant with this weapon; the weapon's damage type",
+        "needEq": true
+      }
+    ]
   },
   {
     "id": "item/glaive",
@@ -2541,7 +2608,19 @@
     "desc": "This helm is set with 1d10 diamonds, 2d10 rubies, 3d10 fire opals, and 4d10 opals. Any gem pried from the helm crumbles to dust. When all the gems are removed or destroyed, the helm loses its magic. You gain the following benefits while wearing the helm.\nDiamond Light. As long as it has at least one diamond, the helm emits a 30-foot Emanation. When at least one Undead is within that area, the Emanation is filled with Dim Light. Any Undead that starts its turn in that area takes 1d6 Radiant damage.\nFire Opal Flames. As long as the helm has at least one fire opal, you can take a Magic action to cause one weapon you are holding to burst into flames. The flames emit Bright Light in a 10-foot radius and Dim Light for an additional 10 feet. The flames are harmless to you and the weapon. When you hit with an attack using the blazing weapon, the target takes an extra 1d6 Fire damage. The flames last until you take a Bonus Action to extinguish them or until you drop or stow the weapon.\nRuby Resistance. As long as the helm has at least one ruby, you have Resistance to Fire damage.\nSpells. You can cast one of the following spells (save DC 18), using one of the helm’s gems of the specified type as a component: Daylight (opal), Fireball (fire opal), Prismatic Spray (diamond), or Wall of Fire (ruby). The gem is destroyed when the spell is cast and disappears from the helm.\nTaking Fire Damage. Roll 1d20 if you are wearing the helm and take Fire damage as a result of failing a saving throw against a spell. On a roll of 1, the helm emits beams of light from its remaining gems and is then destroyed. Each creature within a 60foot Emanation originating from you must succeed on a DC 17 Dexterity saving throw or be struck by a beam, taking Radiant damage equal to the number of gems in the helm.",
     "cat": "magic",
     "rarity": "Very Rare",
-    "attune": true
+    "attune": true,
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "defense",
+        "name": "Fire Resistance",
+        "def": "res",
+        "target": "Fire",
+        "when": "active",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   {
     "id": "item/helm-of-comprehending-languages",
@@ -2615,6 +2694,16 @@
         "name": "Advantage vs spells and magical effects",
         "def": "adv",
         "target": "vs spells and magical effects",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "xdmg",
+        "name": "Holy Avenger",
+        "dice": "2d10",
+        "dtype": "Radiant",
+        "on": "hits on a Fiend or Undead with this weapon",
         "needEq": true,
         "needAtt": true
       }
@@ -3102,7 +3191,19 @@
     "cat": "magic",
     "rarity": "Rare",
     "attune": true,
-    "base": "item/mace"
+    "base": "item/mace",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "xdmg",
+        "name": "Mace of Disruption",
+        "dice": "2d6",
+        "dtype": "Radiant",
+        "on": "hits on a Fiend or Undead with this weapon",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   {
     "wcat": "simple",
@@ -3481,7 +3582,19 @@
     "rarity": "Very Rare",
     "attune": true,
     "base": "weapon",
-    "baseOf": "item/longbow,item/shortbow"
+    "baseOf": "item/longbow,item/shortbow",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "xdmg",
+        "name": "Oathbow",
+        "dice": "3d6",
+        "dtype": "Piercing",
+        "on": "hits on your sworn enemy with this weapon",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   {
     "id": "item/oil",
@@ -3833,7 +3946,17 @@
     "src": "srd",
     "desc": "When you drink this potion, you gain a Climb Speed equal to your Speed for 1 hour. During this time, you have Advantage on Strength (Athletics) checks to climb. This potion is separated into brown, silver, and gray layers resembling bands of stone. Shaking the bottle fails to mix the colors.",
     "cat": "magic",
-    "rarity": "Common"
+    "rarity": "Common",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "speed",
+        "name": "Climb Speed equal to Speed",
+        "mode": "climb",
+        "val": "walk",
+        "when": "active"
+      }
+    ]
   },
   {
     "id": "item/potion-of-diminution",
@@ -3851,7 +3974,18 @@
     "src": "srd",
     "desc": "When you drink this potion, you gain a Fly Speed equal to your Speed for 1 hour and can hover. If you’re in the air when the potion wears off, you fall unless you have some other means of staying aloft. This potion’s clear liquid floats at the top of its container and has cloudy white impurities drifting in it.",
     "cat": "magic",
-    "rarity": "Very Rare"
+    "rarity": "Very Rare",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "speed",
+        "name": "Fly Speed equal to Speed",
+        "mode": "fly",
+        "val": "walk",
+        "hover": true,
+        "when": "active"
+      }
+    ]
   },
   {
     "id": "item/potion-of-gaseous-form",
@@ -3915,7 +4049,17 @@
     "src": "srd",
     "desc": "For 1 minute after you drink this potion, you have Resistance to all damage. This potion’s syrupy liquid looks like liquefied iron.",
     "cat": "magic",
-    "rarity": "Rare"
+    "rarity": "Rare",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "defense",
+        "name": "Resistance to all damage",
+        "def": "res",
+        "target": "All damage",
+        "when": "active"
+      }
+    ]
   },
   {
     "id": "item/potion-of-longevity",
@@ -3951,7 +4095,97 @@
     "src": "srd",
     "desc": "When you drink this potion, you have Resistance to one type of damage for 1 hour. The GM chooses the type or determines it randomly by rolling on the following table. 1d10 Damage Type 1d10 Damage Type 1 Acid 6 Necrotic 2 Cold 7 Poison 3 Fire 8 Psychic 4 Force 9 Radiant 5 Lightning 10 Thunder",
     "cat": "magic",
-    "rarity": "Uncommon"
+    "rarity": "Uncommon",
+    "grants": [
+      {
+        "id": "c1",
+        "kind": "choice",
+        "name": "Damage type",
+        "pick": 1,
+        "options": [
+          {
+            "id": "o1",
+            "kind": "defense",
+            "name": "Acid Resistance",
+            "def": "res",
+            "target": "Acid",
+            "when": "active"
+          },
+          {
+            "id": "o2",
+            "kind": "defense",
+            "name": "Cold Resistance",
+            "def": "res",
+            "target": "Cold",
+            "when": "active"
+          },
+          {
+            "id": "o3",
+            "kind": "defense",
+            "name": "Fire Resistance",
+            "def": "res",
+            "target": "Fire",
+            "when": "active"
+          },
+          {
+            "id": "o4",
+            "kind": "defense",
+            "name": "Force Resistance",
+            "def": "res",
+            "target": "Force",
+            "when": "active"
+          },
+          {
+            "id": "o5",
+            "kind": "defense",
+            "name": "Lightning Resistance",
+            "def": "res",
+            "target": "Lightning",
+            "when": "active"
+          },
+          {
+            "id": "o6",
+            "kind": "defense",
+            "name": "Necrotic Resistance",
+            "def": "res",
+            "target": "Necrotic",
+            "when": "active"
+          },
+          {
+            "id": "o7",
+            "kind": "defense",
+            "name": "Poison Resistance",
+            "def": "res",
+            "target": "Poison",
+            "when": "active"
+          },
+          {
+            "id": "o8",
+            "kind": "defense",
+            "name": "Psychic Resistance",
+            "def": "res",
+            "target": "Psychic",
+            "when": "active"
+          },
+          {
+            "id": "o9",
+            "kind": "defense",
+            "name": "Radiant Resistance",
+            "def": "res",
+            "target": "Radiant",
+            "when": "active"
+          },
+          {
+            "id": "o10",
+            "kind": "defense",
+            "name": "Thunder Resistance",
+            "def": "res",
+            "target": "Thunder",
+            "when": "active"
+          }
+        ]
+      }
+    ]
   },
   {
     "id": "item/potion-of-speed",
@@ -4143,7 +4377,68 @@
     "charges": "5",
     "recharge": "dawn",
     "regain": "1d4+1",
-    "regainOn": "dawn"
+    "regainOn": "dawn",
+    "grants": [
+      {
+        "id": "c1",
+        "kind": "choice",
+        "name": "Linked plane",
+        "pick": 1,
+        "options": [
+          {
+            "id": "o1",
+            "kind": "defense",
+            "name": "Lightning Resistance",
+            "def": "res",
+            "target": "Lightning",
+            "needEq": true,
+            "needAtt": true,
+            "opt": "Air"
+          },
+          {
+            "id": "o2",
+            "kind": "speed",
+            "name": "Fly Speed equal to Speed",
+            "mode": "fly",
+            "val": "walk",
+            "hover": true,
+            "needEq": true,
+            "needAtt": true,
+            "opt": "Air"
+          },
+          {
+            "id": "o3",
+            "kind": "defense",
+            "name": "Acid Resistance",
+            "def": "res",
+            "target": "Acid",
+            "needEq": true,
+            "needAtt": true,
+            "opt": "Earth"
+          },
+          {
+            "id": "o4",
+            "kind": "defense",
+            "name": "Fire Immunity",
+            "def": "imm",
+            "target": "Fire",
+            "needEq": true,
+            "needAtt": true,
+            "opt": "Fire"
+          },
+          {
+            "id": "o5",
+            "kind": "speed",
+            "name": "Swim Speed 60 ft",
+            "mode": "swim",
+            "val": "60",
+            "needEq": true,
+            "needAtt": true,
+            "opt": "Water"
+          }
+        ]
+      }
+    ]
   },
   {
     "id": "item/ring-of-evasion",
@@ -4641,7 +4936,20 @@
     "rarity": "Legendary",
     "attune": true,
     "magic": 3,
-    "base": "item/mace"
+    "base": "item/mace",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "xdmg",
+        "name": "Rod of Lordly Might",
+        "dice": "2d6",
+        "dtype": "Fire",
+        "on": "hits while the flame blade is out",
+        "when": "active",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   {
     "id": "item/rod-of-resurrection",
@@ -4898,7 +5206,18 @@
     "rarity": "Rare",
     "attune": true,
     "armor": "shield",
-    "acBase": 2
+    "acBase": 2,
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "defense",
+        "name": "Resistance to Ranged weapon attacks",
+        "def": "res",
+        "target": "Ranged weapon attacks",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   {
     "id": "item/shield-of-the-cavalier",
@@ -5310,7 +5629,19 @@
     "regain": "1d6+4",
     "regainOn": "dawn",
     "magic": 3,
-    "base": "item/quarterstaff"
+    "base": "item/quarterstaff",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "xdmg",
+        "name": "Staff of Striking",
+        "dice": "1d6",
+        "dtype": "Force",
+        "on": "melee hits with this staff; per charge spent, up to 3",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   {
     "id": "item/staff-of-swarming-insects",
@@ -5422,7 +5753,19 @@
     "rarity": "Very Rare",
     "attune": true,
     "magic": 2,
-    "base": "item/quarterstaff"
+    "base": "item/quarterstaff",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "xdmg",
+        "name": "Staff of Thunder and Lightning",
+        "dice": "2d6",
+        "dtype": "Lightning",
+        "on": "melee hits with this staff; once per dawn",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   {
     "wcat": "simple",
@@ -5445,7 +5788,19 @@
     "recharge": "dawn",
     "regain": "1d3",
     "regainOn": "dawn",
-    "base": "item/quarterstaff"
+    "base": "item/quarterstaff",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "xdmg",
+        "name": "Staff of Withering",
+        "dice": "2d10",
+        "dtype": "Necrotic",
+        "on": "hits with this staff; spend 1 charge",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   {
     "id": "item/stone-of-controlling-earth-elementals",
@@ -5523,7 +5878,19 @@
     "rarity": "Rare",
     "attune": true,
     "magic": 2,
-    "base": "item/longsword"
+    "base": "item/longsword",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "xdmg",
+        "name": "Sun Blade",
+        "dice": "1d8",
+        "dtype": "Radiant",
+        "on": "hits on an Undead with this weapon",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   {
     "id": "item/sword-of-life-stealing",
@@ -5559,7 +5926,19 @@
     "rarity": "Rare",
     "attune": true,
     "base": "weapon",
-    "baseOf": "item/glaive,item/greatsword,item/longsword,item/rapier,item/scimitar,item/shortsword"
+    "baseOf": "item/glaive,item/greatsword,item/longsword,item/rapier,item/scimitar,item/shortsword",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "xdmg",
+        "name": "Sword of Wounding",
+        "dice": "2d6",
+        "dtype": "Necrotic",
+        "on": "hits with this weapon",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   {
     "id": "item/talisman-of-pure-good",
@@ -5651,7 +6030,19 @@
     "cat": "magic",
     "rarity": "Very Rare",
     "attune": true,
-    "base": "item/greatclub"
+    "base": "item/greatclub",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "xdmg",
+        "name": "Thunderous Greatclub",
+        "dice": "1d8",
+        "dtype": "Thunder",
+        "on": "hits with this weapon; 3d8 against objects not worn or carried",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   {
     "id": "item/tinderbox",
@@ -5789,7 +6180,17 @@
     "desc": "This magic weapon deals an extra 2d6 damage to any creature it hits. This extra damage is of the same type as the weapon’s normal damage.",
     "cat": "magic",
     "rarity": "Rare",
-    "base": "weapon"
+    "base": "weapon",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "xdmg",
+        "name": "Vicious Weapon",
+        "dice": "2d6",
+        "on": "hits with this weapon; the weapon's damage type",
+        "needEq": true
+      }
+    ]
   },
   {
     "id": "item/vorpal-sword",

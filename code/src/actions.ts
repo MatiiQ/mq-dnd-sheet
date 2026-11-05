@@ -229,7 +229,15 @@ export const econOf = (time: string): Econ => {
 // Magic action (PHB p.308). Keyed by catalog slug, with the name as a fallback.
 const SPELL_ECON: Record<string, [Econ, string]> = { 'produce-flame': ['action', 'Cast as a Bonus Action; hurl as a Magic action'] };
 // Hunter's Mark deals no damage on casting: its damage comes on later hits (PHB p.287), listed under Extra damage.
-const SPELL_NOTES: Record<string, string> = { 'hunters-mark': 'Extra damage on your hits while it lasts' };
+const EXTRA_NOTE = 'Extra damage on your hits while it lasts', SMITE_NOTE = 'Cast after a hit: the damage comes with that hit';
+// Rows that would read as damage on casting: Hunter's Mark (PHB p.287), Crusader's Mantle (p.259), Divine Favor (p.265),
+// Fount of Moonlight (p.277), Hex (p.285); and the smites, cast after the hit they add to (Banishing p.245, Blinding
+// p.247, Divine p.265, Searing p.314, Shining p.316, Staggering p.320, Thunderous p.334, Wrathful p.343).
+const SPELL_NOTES: Record<string, string> = {
+  'hunters-mark': EXTRA_NOTE, 'crusaders-mantle': EXTRA_NOTE, 'divine-favor': EXTRA_NOTE, 'fount-of-moonlight': EXTRA_NOTE, hex: EXTRA_NOTE,
+  'banishing-smite': SMITE_NOTE, 'blinding-smite': SMITE_NOTE, 'divine-smite': SMITE_NOTE, 'searing-smite': SMITE_NOTE,
+  'shining-smite': SMITE_NOTE, 'staggering-smite': SMITE_NOTE, 'thunderous-smite': SMITE_NOTE, 'wrathful-smite': SMITE_NOTE
+};
 const spellKey = (sp: Spell) => (sp.cid ? sp.cid.split('/').pop()! : slug(sp.name));
 
 // Cantrip dice at the character level: the count × 1, 2, 3 or 4 from levels 1, 5, 11 and 17 ("Cantrip Upgrade", PHB

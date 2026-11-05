@@ -4690,6 +4690,14 @@
         "name": "Superior Defense",
         "econ": "other",
         "note": "Spend 3 Focus Points at the start of your turn: Resistance to all damage but Force for 1 minute."
+      },
+      {
+        "id": "g2",
+        "kind": "defense",
+        "name": "Resistance to all damage except Force",
+        "def": "res",
+        "target": "All damage except Force",
+        "when": "active"
       }
     ]
   },
@@ -7361,7 +7369,15 @@
     "of": "invocation",
     "prereq": "lvl>=5",
     "desc": "Prerequisite: Level 5+ Warlock\nYou can breathe underwater, and you gain a Swim Speed equal to your Speed. You can also cast Water Breathing once without expending a spell slot. You regain the ability to cast it in this way again when you finish a Long Rest.",
-    "grants": []
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "speed",
+        "name": "Swim Speed equal to Speed",
+        "mode": "swim",
+        "val": "walk"
+      }
+    ]
   },
   {
     "id": "feature/warlock/gift-of-the-protectors",

@@ -718,6 +718,14 @@
             "cap": 30
           }
         ]
+      },
+      {
+        "id": "g1",
+        "kind": "defense",
+        "name": "Resistance to all damage except Psychic and Radiant",
+        "def": "res",
+        "target": "All damage except Psychic and Radiant",
+        "when": "active"
       }
     ],
     "prereq": "lvl>=19"
@@ -1211,6 +1219,14 @@
         "econ": "bonus",
         "res": "g1",
         "note": "Fly Speed equal to your Speed for 10 minutes."
+      },
+      {
+        "id": "g3",
+        "kind": "speed",
+        "name": "Fly Speed equal to Speed",
+        "mode": "fly",
+        "val": "walk",
+        "when": "active"
       }
     ]
   },
@@ -1892,6 +1908,14 @@
         "econ": "bonus",
         "res": "g1",
         "note": "Become Large for 10 minutes: Advantage on Strength checks, Speed +10 ft."
+      },
+      {
+        "id": "g3",
+        "kind": "speed",
+        "name": "Speed +10 ft",
+        "mode": "walk",
+        "val": "10",
+        "when": "active"
       }
     ]
   },

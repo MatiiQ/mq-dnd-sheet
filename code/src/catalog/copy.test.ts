@@ -905,3 +905,17 @@ describe('senseRule', () => {
     expect([hasSenseRule('Truesight'), hasSenseRule('Keen Hearing')]).toEqual([true, false]);
   });
 });
+
+describe('effect grants through the add flow (catalog audit)', () => {
+  const blank = blankCharacter();
+  it('adds a chosen weapon’s rider and a potion’s chosen resistance', () => {
+    const tongue = addFromCatalog(blank, cat, cat.byId.get('item/flame-tongue')!, { picks: {}, counted: {}, links: {}, nested: {}, item: { base: 'item/longsword' } });
+    expect(tongue.grants.find((g) => g.kind === 'xdmg')).toMatchObject({ dice: '2d6', dtype: 'Fire', when: 'active', needEq: true, needAtt: true });
+    const potion = addFromCatalog(blank, cat, cat.byId.get('item/potion-of-resistance')!, { picks: { c1: ['o3'] }, counted: {}, links: {}, nested: {} });
+    expect(potion.defenses).toMatchObject([{ kind: 'res', name: 'Fire', when: 'active' }]);
+  });
+  it('adds both of the Air ring’s grants from one pick', () => {
+    const c = addFromCatalog(blank, cat, cat.byId.get('item/ring-of-elemental-command')!, { picks: { c1: ['o1'] }, counted: {}, links: {}, nested: {} });
+    expect([c.defenses.map((d) => d.name), c.grants.filter((g) => g.kind === 'speed').map((g) => g.mode)]).toEqual([['Lightning'], ['fly']]);
+  });
+});

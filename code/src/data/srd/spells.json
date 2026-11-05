@@ -101,7 +101,17 @@
     "dur": "Concentration, up to 1 hour",
     "conc": true,
     "ritual": false,
-    "fx": "other"
+    "fx": "other",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "speed",
+        "name": "Swim Speed equal to Speed",
+        "mode": "swim",
+        "val": "walk",
+        "when": "active"
+      }
+    ]
   },
   {
     "id": "spell/animal-friendship",
@@ -1767,7 +1777,18 @@
     "ritual": false,
     "fx": "damage",
     "dice": "1d4",
-    "dtype": "Radiant"
+    "dtype": "Radiant",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "xdmg",
+        "name": "Divine Favor",
+        "dice": "1d4",
+        "dtype": "Radiant",
+        "on": "hits with weapons",
+        "when": "active"
+      }
+    ]
   },
   {
     "id": "spell/divine-smite",
@@ -2536,7 +2557,18 @@
     "conc": true,
     "ritual": false,
     "fx": "other",
-    "higher": "You can target one additional creature for each spell slot level above 3."
+    "higher": "You can target one additional creature for each spell slot level above 3.",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "speed",
+        "name": "Fly Speed 60 ft",
+        "mode": "fly",
+        "val": "60",
+        "hover": true,
+        "when": "active"
+      }
+    ]
   },
   {
     "id": "spell/fog-cloud",
@@ -2626,7 +2658,17 @@
     "conc": false,
     "ritual": false,
     "fx": "other",
-    "higher": "You can target one additional creature for each spell slot level above 4."
+    "higher": "You can target one additional creature for each spell slot level above 4.",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "speed",
+        "name": "Swim Speed equal to Speed",
+        "mode": "swim",
+        "val": "walk",
+        "when": "active"
+      }
+    ]
   },
   {
     "id": "spell/freezing-sphere",
@@ -2666,7 +2708,42 @@
     "conc": true,
     "ritual": false,
     "fx": "other",
-    "higher": "You can target one additional creature for each spell slot level above 3."
+    "higher": "You can target one additional creature for each spell slot level above 3.",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "speed",
+        "name": "Fly Speed 10 ft",
+        "mode": "fly",
+        "val": "10",
+        "hover": true,
+        "when": "active"
+      },
+      {
+        "id": "g2",
+        "kind": "defense",
+        "name": "Bludgeoning Resistance",
+        "def": "res",
+        "target": "Bludgeoning",
+        "when": "active"
+      },
+      {
+        "id": "g3",
+        "kind": "defense",
+        "name": "Piercing Resistance",
+        "def": "res",
+        "target": "Piercing",
+        "when": "active"
+      },
+      {
+        "id": "g4",
+        "kind": "defense",
+        "name": "Slashing Resistance",
+        "def": "res",
+        "target": "Slashing",
+        "when": "active"
+      }
+    ]
   },
   {
     "id": "spell/gate",
@@ -3169,7 +3246,18 @@
     "fx": "damage",
     "dice": "1d6",
     "dtype": "Necrotic",
-    "higher": "Your Concentration can last longer with a spell slot of level 2 (up to 4 hours), 3–4 (up to 8 hours), or 5+ (24 hours)."
+    "higher": "Your Concentration can last longer with a spell slot of level 2 (up to 4 hours), 3–4 (up to 8 hours), or 5+ (24 hours).",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "xdmg",
+        "name": "Hex",
+        "dice": "1d6",
+        "dtype": "Necrotic",
+        "on": "hits on the hexed target",
+        "when": "active"
+      }
+    ]
   },
   {
     "id": "spell/hideous-laughter",
@@ -3719,7 +3807,17 @@
     "conc": false,
     "ritual": false,
     "fx": "other",
-    "higher": "You can target one additional creature for each spell slot level above 1."
+    "higher": "You can target one additional creature for each spell slot level above 1.",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "speed",
+        "name": "Speed +10 ft",
+        "mode": "walk",
+        "val": "10",
+        "when": "active"
+      }
+    ]
   },
   {
     "id": "spell/mage-armor",
@@ -4715,7 +4813,17 @@
     "dur": "1 hour",
     "conc": false,
     "ritual": false,
-    "fx": "other"
+    "fx": "other",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "defense",
+        "name": "Poison Resistance",
+        "def": "res",
+        "target": "Poison",
+        "when": "active"
+      }
+    ]
   },
   {
     "id": "spell/purify-food-and-drink",
@@ -5514,7 +5622,17 @@
     "conc": true,
     "ritual": false,
     "fx": "other",
-    "higher": "You can target one additional creature for each spell slot level above 2."
+    "higher": "You can target one additional creature for each spell slot level above 2.",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "speed",
+        "name": "Climb Speed equal to Speed",
+        "mode": "climb",
+        "val": "walk",
+        "when": "active"
+      }
+    ]
   },
   {
     "id": "spell/spike-growth",
@@ -5707,7 +5825,17 @@
     "conc": true,
     "ritual": false,
     "fx": "other",
-    "higher": "Use the spell slot’s level for the spell’s level in the stat block."
+    "higher": "Use the spell slot’s level for the spell’s level in the stat block.",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "defense",
+        "name": "Resistance chosen when cast",
+        "def": "res",
+        "target": "Chosen when cast: Acid, Cold, Fire, Lightning or Poison",
+        "when": "active"
+      }
+    ]
   },
   {
     "id": "spell/sunbeam",
@@ -6366,7 +6494,42 @@
     "dur": "8 hours",
     "conc": false,
     "ritual": false,
-    "fx": "other"
+    "fx": "other",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "speed",
+        "name": "Fly Speed 300 ft",
+        "mode": "fly",
+        "val": "300",
+        "hover": true,
+        "when": "active"
+      },
+      {
+        "id": "g2",
+        "kind": "defense",
+        "name": "Bludgeoning Resistance",
+        "def": "res",
+        "target": "Bludgeoning",
+        "when": "active"
+      },
+      {
+        "id": "g3",
+        "kind": "defense",
+        "name": "Piercing Resistance",
+        "def": "res",
+        "target": "Piercing",
+        "when": "active"
+      },
+      {
+        "id": "g4",
+        "kind": "defense",
+        "name": "Slashing Resistance",
+        "def": "res",
+        "target": "Slashing",
+        "when": "active"
+      }
+    ]
   },
   {
     "id": "spell/wind-wall",
