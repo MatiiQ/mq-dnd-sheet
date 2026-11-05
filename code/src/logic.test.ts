@@ -1850,3 +1850,18 @@ describe('Innate Sorcery (PHB p.140)', () => {
     expect(spellSaveDC({ ...c, effectsOn: [c.grants.find((g) => g.kind === 'spellDc')!.from] })).toBe(spellSaveDC(c0)! + 1);
   });
 });
+
+describe('Inspiration switch (inspOn)', () => {
+  it('defaults on and keeps a boolean through migrate', () => {
+    expect(blankCharacter().inspOn).toBe(true);
+    expect(migrate({ ...blankCharacter(), inspOn: 'yes' }).inspOn).toBe(true);
+    expect(migrate({ ...blankCharacter(), inspOn: false }).inspOn).toBe(false);
+    const { inspOn: _, ...rest } = blankCharacter();
+    expect(migrate(rest).inspOn).toBe(true);
+  });
+  it('empties an Inspiration pill while off, keeping the slot', () => {
+    const c = { ...blankCharacter(), inspOn: false, pills: ['insp', '', ''] };
+    expect(pillView(c, 'insp')).toBeNull();
+    expect(normalize(c).pills[0]).toBe('insp');
+  });
+});

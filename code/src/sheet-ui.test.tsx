@@ -165,6 +165,62 @@ describe('Actions hand buttons', () => {
 });
 
 describe('reveal', () => {
-  it.todo('reveal opens a spell hidden by the Prepared filter');
-  it.todo('a used reveal does not reopen');
+  const spell = { id: 's', name: 'Hunter’s Mark', lvl: 1, time: 'Bonus Action', range: '90 feet', c: true };
+  const res = { id: 'r', name: 'Favored Enemy', count: 2, max: 2, recharge: 'long' as const, casts: 's' };
+  const head = (id: string) => document.querySelector(`#${id} .entry-head`);
+  const open = (id: string) => head(id)?.getAttribute('aria-expanded');
+  const spellButton = () => [...document.querySelectorAll('#sec-resources button')].find((b) => b.textContent === 'Spell: Hunter’s Mark');
+  it('reveal opens a spell hidden by the Prepared filter', () => {
+    renderSheet({ spellFilter: 'prepared', usePrep: true, spells: [spell], res: [res], slotMax: [0, 2, 0, 0, 0, 0, 0, 0, 0, 0] });
+    tap(head('res-r'));
+    tap(spellButton());
+    expect(saved().tab).toBe('spells');
+    expect(saved().spellFilter).toBe('prepared');
+    expect(open('spell-s')).toBe('true');
+  });
+  it('a used reveal does not reopen', () => {
+    renderSheet({ spellFilter: 'prepared', usePrep: true, spells: [spell], res: [res], slotMax: [0, 2, 0, 0, 0, 0, 0, 0, 0, 0] });
+    tap(head('res-r'));
+    tap(spellButton());
+    tap(head('spell-s'));
+    tab('Features');
+    tab('Spells');
+    expect(document.getElementById('spell-s')).toBeNull();
+  });
+  it('a used reveal leaves a prepared spell closed', () => {
+    renderSheet({ spellFilter: 'prepared', usePrep: true, spells: [{ ...spell, prep: true }], res: [res], slotMax: [0, 2, 0, 0, 0, 0, 0, 0, 0, 0] });
+    tap(head('res-r'));
+    tap(spellButton());
+    expect(open('spell-s')).toBe('true');
+    tap(head('spell-s'));
+    tab('Features');
+    tab('Spells');
+    expect(open('spell-s')).toBe('false');
+  });
+});
+
+describe('Resources', () => {
+  const head = (id: string) => document.querySelector(`#${id} .entry-head`);
+  it('resource body falls back to its feature description', () => {
+    renderSheet({ feats: [feat], res: [{ id: 'r', name: 'Rage', count: 2, max: 2, recharge: 'long', from: 'feature:f' }] });
+    tap(head('res-r'));
+    const body = document.querySelector('#res-r .entry-body')!;
+    expect(body.textContent).toContain('first');
+    tap([...body.querySelectorAll('button')].find((b) => b.textContent === 'Source: Class · Rage'));
+    expect(saved().tab).toBe('features');
+    expect(head('feat-f')?.getAttribute('aria-expanded')).toBe('true');
+  });
+  it('shows a gone source as text and no gone spell', () => {
+    renderSheet({ res: [{ id: 'r', name: 'Thing', count: 1, max: 1, recharge: 'long', from: 'feature:gone', casts: 'gone' }] });
+    tap(head('res-r'));
+    const body = document.querySelector('#res-r .entry-body')!;
+    expect(body.textContent).not.toContain('Spell:');
+    expect([...body.querySelectorAll('button')].some((b) => b.textContent?.startsWith('Source:'))).toBe(false);
+  });
+  it('hides Inspiration while off, with its switch in Edit mode', () => {
+    renderSheet({ inspOn: false });
+    expect(label('Spend Inspiration')).toBeNull();
+    editMode();
+    expect(label('Show Inspiration')?.getAttribute('aria-pressed')).toBe('false');
+  });
 });

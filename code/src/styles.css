@@ -427,6 +427,16 @@ button.mod-token { border: none; color: inherit; cursor: pointer; padding: 0; }
 
 /* A value that opens its breakdown: looks like the text it replaces, still a 44 px target. */
 button.link-btn { background: none; border: none; padding: 0; cursor: pointer; text-align: left; color: inherit; min-height: 44px; display: inline-flex; align-items: center; }
+/* A shortcut that goes to another entry and opens it (reveal). */
+button.go-link { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; align-self: flex-start; }
+/* A long description clamped to 3 lines, with More / Less. */
+.clamp-3 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow: hidden; }
+/* Resources: the counter sits in a fixed column that fits "99 / 99", centred; name and note wrap beside it. */
+.res-count { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex: none; }
+.res-num { font-size: 22px; font-weight: 700; width: 76px; text-align: center; white-space: nowrap; }
+.res-max { font-size: 15px; font-weight: 500; color: var(--muted); }
+.res-fixed > .entry-row { flex-wrap: nowrap; }
+.res-fixed > .entry-row > .entry-head { flex: 1 1 0; overflow-wrap: anywhere; }
 /* An entry whose source or condition doesn't count right now (inactiveReason). */
 .inactive { opacity: 0.55; }
 

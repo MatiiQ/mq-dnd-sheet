@@ -1134,7 +1134,7 @@ export function pillView(c: Character, key: string): PillView | null {
     case 'init': return { key, label, value: fmt(initiative(c)), target: { sec: 'sec-vitals' } };
     case 'atk': return { key, label, value: atk === null ? '—' : fmt(atk), target: { tab: 'spells' } };
     case 'hd': return { key, label, value: String(c.level - hdSpent(c)), max: String(c.level), target: { sec: 'sec-hp' } };
-    case 'insp': return { key, label, value: String(c.insp), target: { sec: 'sec-resources' } };
+    case 'insp': return c.inspOn ? { key, label, value: String(c.insp), target: { sec: 'sec-resources' } } : null;
   }
 }
 

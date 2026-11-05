@@ -172,6 +172,7 @@ export function migrate(data: unknown): Character {
   // Inspiration is a counter, 0 or more. This deliberately departs from the rules, where a character has at most one
   // Heroic Inspiration (PHB p.13, p.368): the book says it doesn't stack, the sheet counts it with no maximum (house rule).
   c.insp = finite(c.insp) ? Math.max(0, Math.floor(c.insp)) : 0;
+  // inspOn: a non-boolean already fell back to the blank character's true (sameType above).
   if (typeof c.concCheck !== 'string') c.concCheck = null;
   const msg = c.restMsg as unknown;
   c.restMsg = isObj(msg) && typeof msg.title === 'string' && typeof msg.body === 'string' ? c.restMsg : null;

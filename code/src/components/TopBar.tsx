@@ -135,7 +135,7 @@ export function TopBar({ store, activeSec, setActiveSec, menuOpen, setMenuOpen, 
           <span className="label">Slot {pickSlot + 1}</span>
           <span className="small">Stats</span>
           <div className="row wrap gap-6">
-            {PILL_STATS.map(([k, name]) => (
+            {PILL_STATS.filter(([k]) => k !== 'insp' || c.inspOn).map(([k, name]) => (
               <button key={k} type="button" aria-pressed={c.pills[pickSlot] === k} onClick={() => pick(pickSlot, k)}>{name}</button>
             ))}
           </div>

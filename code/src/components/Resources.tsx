@@ -1,9 +1,10 @@
-import type { CSSProperties } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { isValue } from '../catalog/value';
-import { inactiveReason, SRC_KINDS, sourceLabel } from '../links';
+import { inactiveReason, SRC_KINDS, sourceLabel, sourceOf } from '../links';
 import { removeRef, maxFields, maxKindOf, maxOf, rechargeOf, regainEvent, regainLabel, resourceGroups, type MaxKind } from '../logic';
 import { patchEntry, saveEntry, useEntryForm, useSheet } from '../sheet';
 import type { Recharge, Resource, SrcKind } from '../types';
+import { revealOf } from './nav';
 import { SourcePicker } from './SourcePicker';
 import { AddButton, EntryForm, EntryRow, NumInput, StarIcon, Step, TextField } from './ui';
 
@@ -21,11 +22,12 @@ const toDraft = (r: Resource): Draft => ({
 });
 
 export function Resources() {
-  const { c, update } = useSheet();
+  const { c, update, edit, reveal } = useSheet();
   const f = useEntryForm('res', BLANK, 'resource', 'Add a resource');
   const d = f.draft;
   const patch = (id: string, p: Partial<Resource> | ((r: Resource) => Partial<Resource>)) =>
     update((s) => ({ res: patchEntry(s.res, id, p) }));
+  const spellOf = (r: Resource) => (r.casts ? c.spells.find((x) => x.id === r.casts) : undefined);
   const bump = (id: string, by: number) => patch(id, (r) => ({ count: Math.max(0, r.count + by) }));
   const maxNow = maxFields(d.maxKind, d.maxText);
   // Regain is a Value (number or die): on a Short Rest for a Long Rest counter, at dawn for a Dawn counter.
@@ -106,39 +108,52 @@ export function Resources() {
     <section id="sec-resources" aria-label="Resources" className="block section">
       <h2 className="block-title area-title">Resources</h2>
       {/* The table's Inspiration counter (house rule, see migrate()). Heroic Inspiration by the rules is added as a resource. */}
-      <div className="well row gap-10">
-        <span aria-hidden="true" className={'bar-icon' + (c.insp ? ' on' : '')}><StarIcon /></span>
-        <span className="col grow">
-          <strong>Inspiration</strong>
-          <span className="muted">The table’s counter, no limit.</span>
-        </span>
-        <Step label="Spend Inspiration" onClick={() => update((p) => ({ insp: Math.max(0, p.insp - 1) }))}>−</Step>
-        <span style={{ fontSize: 22, fontWeight: 700, minWidth: 28, textAlign: 'center' }}>{c.insp}</span>
-        <Step label="Gain Inspiration" onClick={() => update((p) => ({ insp: p.insp + 1 }))}>+</Step>
-      </div>
+      {/* Off: hidden outside Edit mode; c.insp is kept, so switching it back on restores the count. */}
+      {(c.inspOn || edit) && (
+        <div className={'well row gap-10' + (c.inspOn ? '' : ' inactive')}>
+          <span aria-hidden="true" className={'bar-icon' + (c.insp ? ' on' : '')}><StarIcon /></span>
+          <span className="col grow">
+            <strong>Inspiration</strong>
+            <span className="muted">The table’s counter, no limit.</span>
+          </span>
+          {edit && (
+            <button type="button" className={'btn btn-sm toggle-btn' + (c.inspOn ? ' on' : '')} aria-label="Show Inspiration" aria-pressed={c.inspOn}
+              onClick={() => update((p) => ({ inspOn: !p.inspOn }))}>{c.inspOn ? 'On' : 'Off'}</button>
+          )}
+          {c.inspOn && <div className="res-count">
+            <Step label="Spend Inspiration" onClick={() => update((p) => ({ insp: Math.max(0, p.insp - 1) }))}>−</Step>
+            <span className="res-num">{c.insp}</span>
+            <Step label="Gain Inspiration" onClick={() => update((p) => ({ insp: p.insp + 1 }))}>+</Step>
+          </div>}
+        </div>
+      )}
       {resourceGroups(c).map((g) => (
         <div key={g.title} className="col gap-6">
           <span className="muted">{g.title}</span>
-          <div className="grid" style={{ '--min': '240px', gap: 12 } as CSSProperties}>
+          <div className="grid" style={{ '--min': '320px', gap: 12 } as CSSProperties}>
             {g.list.map((r) => {
               const rc = rechargeOf(r), m = maxOf(c, r), why = inactiveReason(c, r), src = sourceLabel(c, r);
               return (
                 f.editingId === r.id ? <div key={r.id}>{form}</div> : (
-                <EntryRow key={r.id} id={'res-' + r.id} name={r.name} className={why ? 'inactive' : undefined}
+                <EntryRow key={r.id} id={'res-' + r.id} name={r.name} className={'res-entry' + (edit ? '' : ' res-fixed') + (why ? ' inactive' : '')}
                   head={<><strong>{r.name}</strong><span className="muted">{why ? 'Inactive: ' + why : r.note || 'Custom resource'}</span></>}
                   side={
-                    <div className="row gap-8">
+                    <div className="res-count">
                       <Step label={'Decrease ' + r.name} onClick={() => bump(r.id, -1)}>−</Step>
-                      <span style={{ fontSize: 22, fontWeight: 700, minWidth: 36, textAlign: 'center' }}>
-                        {r.count}{m !== null && <span style={{ fontSize: 15, fontWeight: 500, color: 'var(--muted)' }}> / {m}</span>}
+                      <span className="res-num">
+                        {r.count}{m !== null && <span className="res-max"> / {m}</span>}
                       </span>
                       <Step label={'Increase ' + r.name} onClick={() => bump(r.id, 1)}>+</Step>
                     </div>
                   }
                   body={<>
+                    {/* The head shows the note unless the row is inactive; without a note, the source feature's text. */}
+                    {why && r.note ? <span className="small">{r.note}</span> : !r.note && <ClampText text={sourceOf(c, r.from)?.desc} />}
                     <span className="small">{RECHARGE_TEXT[rc]}{regainLabel(c, r) ? ' · regain ' + regainLabel(c, r) + (r.regainOn === 'dawn' ? ' at dawn' : ' on a Short Rest') : ''}</span>
-                    {why && r.note && <span className="small">{r.note}</span>}
-                    {src && <span className="muted">Source: {src}</span>}
+                    {src && (revealOf(c, r.from)
+                      ? <button type="button" className="link-btn go-link" onClick={() => reveal(revealOf(c, r.from)!)}>Source: {src}</button>
+                      : <span className="muted">Source: {src}</span>)}
+                    {spellOf(r) && <button type="button" className="link-btn go-link" onClick={() => reveal({ kind: 'spell', id: r.casts! })}>Spell: {spellOf(r)!.name}</button>}
                   </>}
                   onEdit={() => f.openEdit(r.id, toDraft(r))}
                   onRemove={() => update((p) => removeRef(p, { kind: 'res', id: r.id }))}>
@@ -153,5 +168,18 @@ export function Resources() {
       {!f.isOpen && <AddButton onClick={f.openAdd}>+ Add resource</AddButton>}
       {f.isOpen && !f.editingId && form}
     </section>
+  );
+}
+
+// A long text clamped to 3 lines, with More / Less.
+function ClampText({ text }: { text?: string }) {
+  const [more, setMore] = useState(false);
+  if (!text) return null;
+  const long = text.split('\n').length > 3 || text.length > 180;
+  return (
+    <>
+      <span className={'entry-desc' + (long && !more ? ' clamp-3' : '')}>{text}</span>
+      {long && <button type="button" className="link-btn go-link" aria-expanded={more} onClick={() => setMore(!more)}>{more ? 'Less' : 'More'}</button>}
+    </>
   );
 }
