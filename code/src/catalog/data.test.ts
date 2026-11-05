@@ -19,6 +19,11 @@ describe('committed SRD data', () => {
     expect(all.filter((e) => e.src !== 'srd').map((e) => e.id)).toEqual([]);
     expect(new Set(all.map((e) => e.id)).size).toBe(all.length);
   });
+  it('hold no page, abils, skills on a background, tool or short', () => {
+    expect(all.filter((e) => 'page' in e).map((e) => e.id)).toEqual([]);
+    expect(all.filter((e) => e.kind === 'background' && ('abils' in e || 'skills' in e || 'tool' in e)).map((e) => e.id)).toEqual([]);
+    expect(all.filter((e) => 'short' in e).map((e) => e.id)).toEqual([]);
+  });
 });
 
 describe('SRD spells', () => {
@@ -76,11 +81,17 @@ describe('SRD origins', () => {
     const bgs = list.filter((e): e is BackgroundEntry => e.kind === 'background');
     expect(bgs).toHaveLength(4);
     const keys = SKILLS.map(([k]) => k);
+    const TABLE: Record<string, [string, string]> = {
+      'background/acolyte': ['int,wis,cha', 'insight,religion'], 'background/criminal': ['dex,con,int', 'sleight,stealth'],
+      'background/sage': ['con,int,wis', 'arcana,history'], 'background/soldier': ['str,dex,con', 'athletics,intimidation']
+    };
     for (const b of bgs) {
       const abil = specs(b).find((s): s is ChoiceSpec => s.kind === 'choice' && !!s.options?.every((o) => o.kind === 'abil'));
-      expect([b.id, abil?.pick, abil?.options?.map((o) => o.ab).join(',')]).toEqual([b.id, 3, b.abils]);
+      expect([b.id, abil?.pick, abil?.options?.map((o) => o.ab).join(',')]).toEqual([b.id, 3, TABLE[b.id][0]]);
       expect(ids.has(b.feat.split(':')[0])).toBe(true);
-      for (const k of b.skills.split(',')) expect(keys).toContain(k);
+      const skills = specs(b).filter((s): s is GrantSpec => s.kind === 'prof' && s.cat === 'skill').map((s) => s.target);
+      expect([b.id, skills.join(',')]).toEqual([b.id, TABLE[b.id][1]]);
+      for (const k of skills) expect(keys).toContain(k);
     }
   });
   it('point every grant at entries that exist', () => {

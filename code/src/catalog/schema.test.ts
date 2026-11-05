@@ -2,6 +2,16 @@ import { describe, expect, it } from 'vitest';
 import { ABILITIES, ARMORS, SIZES } from '../logic';
 import { ABILITY_KEYS, ARMOR_KINDS, catalogId, grantErrors, SIZE_KEYS, slug, validateEntry } from './schema';
 
+describe('older packs', () => {
+  // Review Focus: a pack already on a device still holds the fields removed from the schema.
+  it('accepts an entry from an older pack that still holds the removed fields', () => {
+    const b = { id: 'background/x', kind: 'background', name: 'X', src: 'phb', desc: '', feat: 'feat/a', equip: '', grants: [] };
+    expect(validateEntry(b)).toEqual([]);
+    expect(validateEntry({ ...b, page: 12, abils: 'str,dex,con', skills: 'arc,rel', tool: 'drum' })).toEqual([]);
+    expect(validateEntry({ id: 'prof/light-armor', kind: 'prof', name: 'Light armor', src: 'srd', desc: '', cat: 'armor', short: 'Light' })).toEqual([]);
+  });
+});
+
 describe('catalog ids', () => {
   it('slugs names: lower case, apostrophes dropped, other runs become -', () => {
     expect(slug('Hunter’s Mark')).toBe('hunters-mark');

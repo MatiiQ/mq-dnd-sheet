@@ -9,7 +9,7 @@ export type Kind = 'spell' | 'item' | 'feat' | 'background' | 'species' | 'trait
 export const KINDS: Kind[] = ['spell', 'item', 'feat', 'background', 'species', 'trait', 'class', 'subclass', 'feature', 'prof', 'rule'];
 
 // replace: a pack entry that wins over the SRD entry with its id (merge.ts).
-export interface EntryBase { id: string; kind: Kind; name: string; src: 'srd' | 'phb'; page?: number; desc: string; replace?: boolean }
+export interface EntryBase { id: string; kind: Kind; name: string; src: 'srd' | 'phb'; desc: string; replace?: boolean }
 export interface SpellEntry extends EntryBase {
   kind: 'spell'; lvl: number; school: string; classes: string; time: string; range: string;
   comp: string; dur: string; conc: boolean; ritual: boolean; atk?: 'melee' | 'ranged'; save?: Ability; fx: 'damage' | 'healing' | 'other';
@@ -44,7 +44,7 @@ export interface ItemEntry extends EntryBase {
   grants?: Spec[];
 }
 export interface FeatEntry extends EntryBase { kind: 'feat'; cat: 'origin' | 'general' | 'style' | 'boon'; prereq?: string; repeat?: boolean; grants: Spec[] }
-export interface BackgroundEntry extends EntryBase { kind: 'background'; abils: string; feat: string; skills: string; tool: string; equip: string; grants: Spec[] }
+export interface BackgroundEntry extends EntryBase { kind: 'background'; feat: string; equip: string; grants: Spec[] }
 export interface SpeciesEntry extends EntryBase { kind: 'species'; sizes: string; speed: number }
 // A species trait or a lineage option. of: the trait an option belongs to (Wood Elf → trait/elf/elven-lineage), which
 // offers its options as a choice with the pool 'trait:of=<trait id>'.
@@ -57,7 +57,7 @@ export interface SubclassEntry extends EntryBase { kind: 'subclass'; cls: string
 // again: later levels at which the same feature is gained again, as a comma list ('8,12,16').
 // of: an option a pool offers (Eldritch Invocations, Maneuvers, Metamagic), added as its own feature; prereq and repeat as on a feat.
 export interface FeatureEntry extends EntryBase { kind: 'feature'; cls: string; sub?: string; lvl: number; again?: string; of?: 'invocation' | 'maneuver' | 'metamagic'; prereq?: string; repeat?: boolean; grants: Spec[] }
-export interface ProfEntry extends EntryBase { kind: 'prof'; cat: 'armor' | 'weapon' | 'tool' | 'language'; short?: string }
+export interface ProfEntry extends EntryBase { kind: 'prof'; cat: 'armor' | 'weapon' | 'tool' | 'language' }
 export interface RuleEntry extends EntryBase { kind: 'rule'; cat: 'action' | 'sense' | 'condition' }
 export type Entry = SpellEntry | ItemEntry | FeatEntry | BackgroundEntry | SpeciesEntry | TraitEntry | ClassEntry | SubclassEntry | FeatureEntry | ProfEntry | RuleEntry;
 
@@ -225,7 +225,7 @@ const FIELDS: Record<Kind, Record<string, [Check, boolean]>> = {
   spell: SPELL,
   item: ITEM,
   feat: { cat: [oneOf('origin', 'general', 'style', 'boon'), true], prereq: [(v) => typeof v === 'string' && v.split(';').every((t) => PREREQ_TERM.test(t)), false], repeat: [bool, false] },
-  background: { abils: [list(ability), true], feat: [str, true], skills: [str, true], tool: [str, true], equip: [str, true] },
+  background: { feat: [str, true], equip: [str, true] },
   species: { sizes: [(v) => typeof v === 'string' && v.split(',').every((s) => SIZE_KEYS.includes(s as Size)), true], speed: [num, true] },
   trait: { species: [str, true], lvl: [whole(1, 20), true], of: [(v) => typeof v === 'string' && v.startsWith('trait/'), false] },
   class: {
@@ -234,7 +234,7 @@ const FIELDS: Record<Kind, Record<string, [Check, boolean]>> = {
   },
   subclass: { cls: [str, true] },
   feature: { cls: [str, true], sub: [str, false], lvl: [whole(1, 20), true], again: [str, false], of: [oneOf('invocation', 'maneuver', 'metamagic'), false], prereq: [str, false], repeat: [bool, false] },
-  prof: { cat: [oneOf('armor', 'weapon', 'tool', 'language'), true], short: [str, false] },
+  prof: { cat: [oneOf('armor', 'weapon', 'tool', 'language'), true] },
   rule: { cat: [oneOf('action', 'sense', 'condition'), true] }
 };
 const HAS_GRANTS: Kind[] = ['feat', 'background', 'trait', 'feature'];
@@ -295,7 +295,7 @@ export function validateEntry(x: unknown): string[] {
   const at = typeof x.id === 'string' ? x.id : JSON.stringify(x.name);
   if (!KINDS.includes(x.kind as Kind)) return [`${at}: unknown kind ${JSON.stringify(x.kind)}`];
   checkFields(x, { id: [str, true], name: [(v) => typeof v === 'string' && v.trim() !== '', true], src: [oneOf('srd', 'phb'), true],
-    page: [whole(1, 9999), false], desc: [str, true], replace: [bool, false] }, at, errs);
+    desc: [str, true], replace: [bool, false] }, at, errs);
   checkFields(x, FIELDS[x.kind as Kind], at, errs);
   if (errs.length) return errs;
   const e = x as unknown as Entry;

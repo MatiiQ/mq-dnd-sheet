@@ -349,8 +349,7 @@
     "name": "Heavy armor",
     "src": "srd",
     "desc": "",
-    "cat": "armor",
-    "short": "Heavy"
+    "cat": "armor"
   },
   {
     "id": "prof/heavy-crossbow",
@@ -422,8 +421,7 @@
     "name": "Light armor",
     "src": "srd",
     "desc": "",
-    "cat": "armor",
-    "short": "Light"
+    "cat": "armor"
   },
   {
     "id": "prof/light-crossbow",
@@ -487,8 +485,7 @@
     "name": "Martial weapons",
     "src": "srd",
     "desc": "",
-    "cat": "weapon",
-    "short": "Martial"
+    "cat": "weapon"
   },
   {
     "id": "prof/masons-tools",
@@ -512,8 +509,7 @@
     "name": "Medium armor",
     "src": "srd",
     "desc": "",
-    "cat": "armor",
-    "short": "Medium"
+    "cat": "armor"
   },
   {
     "id": "prof/morningstar",
@@ -657,8 +653,7 @@
     "name": "Shields",
     "src": "srd",
     "desc": "",
-    "cat": "armor",
-    "short": "Shield"
+    "cat": "armor"
   },
   {
     "id": "prof/shortbow",
@@ -690,8 +685,7 @@
     "name": "Simple weapons",
     "src": "srd",
     "desc": "",
-    "cat": "weapon",
-    "short": "Simple"
+    "cat": "weapon"
   },
   {
     "id": "prof/sling",

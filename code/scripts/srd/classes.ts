@@ -84,7 +84,7 @@ export function optionPrereq(text: string): { lvl?: number; prereq?: string } {
 
 // The options of a section, each under a line that is exactly its name: "Prerequisite:" up to the first blank line, a
 // "Repeatable." paragraph, and the rest as text. Names not in the text are skipped.
-export function parseOptions(lines: string[], names: string[], o: { cls: string; of: FeatureEntry['of']; lvl: number; page?: number }): FeatureEntry[] {
+export function parseOptions(lines: string[], names: string[], o: { cls: string; of: FeatureEntry['of']; lvl: number }): FeatureEntry[] {
   const heads = lines.flatMap((l, i) => (names.includes(l) ? [i] : []));
   return heads.map((at, k) => {
     const body = lines.slice(at + 1, heads[k + 1] ?? lines.length);
@@ -93,7 +93,7 @@ export function parseOptions(lines: string[], names: string[], o: { cls: string;
     if (body[0]?.startsWith('Prerequisite:')) { const n = body.findIndex((l) => !l); pre = body.splice(0, n < 0 ? body.length : n).join(' '); }
     if (body[0]?.startsWith('Cost:')) pre = body.shift()!;
     const { lvl, prereq } = optionPrereq(pre);
-    return { id: catalogId('feature', lines[at], [o.cls]), kind: 'feature', name: lines[at], src: 'srd', ...(o.page ? { page: o.page } : {}), cls: slug(o.cls), lvl: lvl ?? o.lvl, of: o.of,
+    return { id: catalogId('feature', lines[at], [o.cls]), kind: 'feature', name: lines[at], src: 'srd', cls: slug(o.cls), lvl: lvl ?? o.lvl, of: o.of,
       ...(prereq ? { prereq } : {}), ...(body.some((l) => l.startsWith('Repeatable.')) ? { repeat: true } : {}),
       desc: [...(pre ? [pre] : []), ...paragraphs(body)].join('\n'), grants: [] };
   });
@@ -123,7 +123,7 @@ export function parseClass(text: string, layout: string): [ClassEntry, SubclassE
   const col = (k: number) => table.rows.map((r) => r.cells[k]);
   const n = table.rows[0].cells.length;
   const c: ClassEntry = {
-    id: catalogId('class', name), kind: 'class', name, src: 'srd', page: L[0].page, desc: `Primary Ability: ${f['Primary Ability']}\nStarting Equipment: ${f['Starting Equipment']}`,
+    id: catalogId('class', name), kind: 'class', name, src: 'srd', desc: `Primary Ability: ${f['Primary Ability']}\nStarting Equipment: ${f['Starting Equipment']}`,
     hd: Number(/D(\d+) per/.exec(f['Hit Point Die'])![1]), saves: split(f['Saving Throw Proficiencies']).map((a) => ABILITY_NAMES[a]).join(','),
     skills, armor: profList(f['Armor Training']), weapons: profList(f['Weapon Proficiencies'])
   };
@@ -150,7 +150,7 @@ export function parseClass(text: string, layout: string): [ClassEntry, SubclassE
       // A long name wraps: the next line holds its end when the name is empty or the next line has at most two words.
       if (!sname || / (of|the)$/.test(sname) || lines[j].split(' ').length <= 2) { sname = `${sname} ${lines[j]}`.trim(); j++; }
       let k = j; while (k < lines.length && !STOP(lines[k])) k++;
-      sub = { id: catalogId('subclass', sname, [name]), kind: 'subclass', name: sname, src: 'srd', page: L[i].page, cls: slug(name), desc: paragraphs(lines.slice(j, k)).join('\n') };
+      sub = { id: catalogId('subclass', sname, [name]), kind: 'subclass', name: sname, src: 'srd', cls: slug(name), desc: paragraphs(lines.slice(j, k)).join('\n') };
       subs.push(sub);
       return;
     }
@@ -159,7 +159,7 @@ export function parseClass(text: string, layout: string): [ClassEntry, SubclassE
     let k = i + 1; while (k < lines.length && !STOP(lines[k])) k++;
     const fname = hm[2].trim(), lvl = Number(hm[1]);
     if (feats.some((x) => x.name === fname && x.sub === (sub ? slug(sub.name) : undefined))) return;
-    const e: FeatureEntry = { id: catalogId('feature', fname, [name, sub?.name]), kind: 'feature', name: fname, src: 'srd', page: L[i].page,
+    const e: FeatureEntry = { id: catalogId('feature', fname, [name, sub?.name]), kind: 'feature', name: fname, src: 'srd',
       cls: slug(name), lvl, desc: paragraphs(lines.slice(i + 1, k)).join('\n'), grants: [] };
     if (sub) e.sub = slug(sub.name);
     else {
@@ -172,7 +172,7 @@ export function parseClass(text: string, layout: string): [ClassEntry, SubclassE
     const a = lines.indexOf(title);
     if (a < 0) continue;
     const z = lines.findIndex((l, i) => i > a && (/^\w+ Spell List$/.test(l) || SUB.test(l)));
-    feats.push(...parseOptions(lines.slice(a + 1, z < 0 ? lines.length : z), [...names], { cls: name, of, lvl, page: L[a].page }));
+    feats.push(...parseOptions(lines.slice(a + 1, z < 0 ? lines.length : z), [...names], { cls: name, of, lvl }));
   }
   return [c, subs, feats];
 }

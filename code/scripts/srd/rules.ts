@@ -24,7 +24,7 @@ export function parseRules(text: string): RuleEntry[] {
       if (!lines[k]) stray = false;
       if (!stray) body.push(lines[k]);
     }
-    out.push({ id: catalogId('rule', name), kind: 'rule', name, src: 'srd', page: L[i].page, cat: SENSES.includes(name) ? 'sense' : 'action',
+    out.push({ id: catalogId('rule', name), kind: 'rule', name, src: 'srd', cat: SENSES.includes(name) ? 'sense' : 'action',
       desc: paragraphs(body).join('\n') });
   });
   return out;

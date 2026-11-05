@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { catalogId, PHB_TO_SRD, validateEntry } from '../../src/catalog/schema.ts';
 import { parseSpells } from '../srd/spells.ts';
-import { parseClassMd, parseEquipmentMd, parseFeatsMd, parseOriginsMd, parseSpellsMd } from './parse.ts';
+import { parseBackgroundFields, parseClassMd, parseEquipmentMd, parseFeatsMd, parseOriginsMd, parseSpellsMd } from './parse.ts';
 
 const fx = (f: string) => readFileSync(new URL(`./fixtures/${f}`, import.meta.url), 'utf8');
 
@@ -10,7 +10,7 @@ describe('spells', () => {
   const list = parseSpellsMd(fx('spells.md'));
   it('reads the fixed field layout', () => {
     expect(list.map((e) => e.id)).toEqual(['spell/hunters-mark', catalogId('spell', 'Acid Arrow'), 'spell/glimmer-pulse']);
-    expect(list[0]).toMatchObject({ kind: 'spell', src: 'phb', page: 901, lvl: 1, school: 'Divination', classes: 'ranger', time: 'Bonus Action',
+    expect(list[0]).toMatchObject({ kind: 'spell', src: 'phb', lvl: 1, school: 'Divination', classes: 'ranger', time: 'Bonus Action',
       range: '90 feet', comp: 'V', dur: 'Concentration, up to 1 hour', conc: true, ritual: false, fx: 'damage', dice: '1d6', dtype: 'Force' });
     expect(list[1]).toMatchObject({ atk: 'ranged', dice: '4d4', dtype: 'Acid', scale: '1d4/slot' });
     expect(list[2]).toMatchObject({ lvl: 0, school: 'Evocation', classes: 'sorcerer,wizard', time: 'Action', ritual: true, save: 'con', scale: 'cantrip' });
@@ -60,7 +60,7 @@ describe('a class with a subclass', () => {
     expect(feats.map((f) => [f.id, f.lvl, f.again])).toEqual([
       ['feature/lamplighter/spellcasting', 1, undefined], ['feature/lamplighter/kindle', 1, '5'], ['feature/lamplighter/ability-score-improvement', 4, '8,12,16'],
       ['feature/lamplighter/order-of-the-wick/steady-flame', 3, undefined], ['feature/lamplighter/order-of-the-wick/shared-glow', 3, undefined]]);
-    expect(subs).toEqual([expect.objectContaining({ id: 'subclass/lamplighter/order-of-the-wick', cls: 'lamplighter', page: 904 })]);
+    expect(subs).toEqual([expect.objectContaining({ id: 'subclass/lamplighter/order-of-the-wick', cls: 'lamplighter' })]);
     expect(feats[4].desc).toBe('Allies within 10 ft see in dim light.');
     for (const e of [...subs, ...feats]) expect(validateEntry(e)).toEqual([]);
   });
@@ -85,8 +85,9 @@ describe('feats, backgrounds, species, equipment', () => {
   });
   it('reads a background and a species with a lineage table', () => {
     const list = parseOriginsMd(fx('origins.md'));
-    expect(list.find((e) => e.id === 'background/wanderer')).toMatchObject({ abils: 'dex,con,wis', feat: 'feat/magic-initiate:druid', skills: 'stealth,animal',
-      tool: 'cartographers-tools' });
+    expect(list.find((e) => e.id === 'background/wanderer')).toMatchObject({ feat: 'feat/magic-initiate:druid' });
+    expect(list[0]).not.toHaveProperty('page');
+    expect(parseBackgroundFields(fx('origins.md'))).toEqual([{ id: 'background/wanderer', abils: 'dex,con,wis', skills: 'stealth,animal', tool: 'cartographers-tools' }]);
     expect(list.find((e) => e.id === 'species/mothfolk')).toMatchObject({ sizes: 'small,medium', speed: 30 });
     expect(list.filter((e) => e.kind === 'trait').map((e) => [e.id, 'lvl' in e && e.lvl, 'of' in e ? e.of : undefined])).toEqual([
       ['trait/mothfolk/darkvision', 1, undefined], ['trait/mothfolk/moth-lineage', 1, undefined], ['trait/mothfolk/dusty-wings', 3, undefined],

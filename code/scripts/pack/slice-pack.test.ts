@@ -5,6 +5,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { expect, it } from 'vitest';
 import srdEntries from '../../src/data/srd/index.ts';
 import { mergeCatalog } from '../../src/catalog/merge.ts';
+import { parseBackgroundFields } from './parse.ts';
 import { validateEntry, type Entry } from '../../src/catalog/schema.ts';
 import { addFromCatalog, missingPicks } from '../../src/catalog/copy';
 import { blankCharacter } from '../../src/defaults';
@@ -23,22 +24,24 @@ it.skipIf(!existsSync(PACK))('has every PHB-only slice entry in the merged catal
   for (const id of SLICE) expect([id, cat.byId.get(id)?.src, cat.byId.has(id) && validateEntry(cat.byId.get(id))]).toEqual([id, 'phb', []]);
 });
 
-// Every background grants what its fields name: the three abilities as one +2/+1-or-+1/+1/+1 choice, its two skills,
-// and its tool (a fixed proficiency, or a choice from the tool's group). Reads the pack's own fields, no PHB data here.
-it.skipIf(!existsSync(PACK))('gives every PHB background its ability, skill and tool grants', () => {
+// Every background grants what the PHB's table names: the three abilities as one +2/+1-or-+1/+1/+1 choice, its two skills,
+// and its tool (a fixed proficiency, or a choice from the tool's group). Reads reference/04-origins.md, no PHB data here.
+it.skipIf(!existsSync(PACK))('gives every background the ability, skill and tool grants of the PHB table', () => {
   const cat = mergeCatalog(srdEntries, (JSON.parse(readFileSync(PACK, 'utf8')) as { entries: Entry[] }).entries);
-  const bgs = cat.list.filter((e) => e.kind === 'background' && e.src === 'phb') as (Entry & { abils: string; skills: string; tool: string; grants: Record<string, unknown>[] })[];
-  expect(bgs.length).toBe(12);
+  const bgs = cat.list.filter((e) => e.kind === 'background') as (Entry & { grants: Record<string, unknown>[] })[];
+  expect(bgs.length).toBe(16);
+  const fields = new Map(parseBackgroundFields(readFileSync(new URL('../../../reference/04-origins.md', import.meta.url), 'utf8')).map((f) => [f.id, f]));
   for (const b of bgs) {
+    const f = fields.get(b.id)!;
     const abil = b.grants.find((g) => g.kind === 'choice' && g.id === 'abil') as { pick: number; repeat: boolean; options: { kind: string; ab: string; val: string; cap: number }[] } | undefined;
     expect([b.id, abil?.pick, abil?.repeat, abil?.options.map((o) => `${o.kind}:${o.ab}:${o.val}:${o.cap}`)])
-      .toEqual([b.id, 3, true, b.abils.split(',').map((a) => `abil:${a}:1:20`)]);
+      .toEqual([b.id, 3, true, f.abils.split(',').map((a) => `abil:${a}:1:20`)]);
     const skills = b.grants.filter((g) => g.kind === 'prof' && g.cat === 'skill').map((g) => g.target);
-    expect([b.id, skills]).toEqual([b.id, b.skills.split(',')]);
-    const group = ({ 'one-kind-of-artisans-tools': 'artisan', 'one-kind-of-gaming-set': 'gaming-set', 'one-kind-of-musical-instrument': 'musical-instrument' } as Record<string, string>)[b.tool];
+    expect([b.id, skills]).toEqual([b.id, f.skills.split(',')]);
+    const group = ({ 'one-kind-of-artisans-tools': 'artisan', 'one-kind-of-gaming-set': 'gaming-set', 'one-kind-of-musical-instrument': 'musical-instrument' } as Record<string, string>)[f.tool];
     const tool = b.grants.find((g) => (g.kind === 'prof' && g.cat === 'tool') || (g.kind === 'choice' && String(g.pool ?? '').startsWith('tool:')));
     if (group) expect([b.id, tool?.pool]).toEqual([b.id, `tool:${group}`]);
-    else expect([b.id, tool && cat.byId.get(`prof/${b.tool}`)?.name]).toEqual([b.id, tool?.target]);
+    else expect([b.id, tool && cat.byId.get(`prof/${f.tool}`)?.name]).toEqual([b.id, tool?.target]);
   }
 });
 

@@ -74,7 +74,7 @@ export function parseArmor(layout: string): ItemEntry[] {
 }
 
 // Prose blocks headed "Name (cost)", as in the tool and gear descriptions.
-interface Priced { name: string; cost: string; page: number; lines: string[] }
+interface Priced { name: string; cost: string; lines: string[] }
 const PRICED = new RegExp(`^([A-Z].*?) \\((${COST}|Varies)\\)$`);
 // A heading split over two lines, prices for two sizes: "Spell Scroll (Cantrip, 30 GP;" + "Level 1, 50 GP)".
 const PRICED_TWO = new RegExp(`^([A-Z].*?) \\((.*${COST}.*)\\)$`);
@@ -85,8 +85,8 @@ function pricedBlocks(text: string): Priced[] {
     const l = lines[i], t = l.text.trim();
     const m = PRICED.exec(t);
     const two = !m && /\([^)]*$/.test(t) && lines[i + 1] ? PRICED_TWO.exec(`${t} ${lines[i + 1].text.trim()}`) : null;
-    if (m) out.push({ name: m[1], cost: m[2], page: l.page, lines: [] });
-    else if (two) { out.push({ name: two[1], cost: two[2], page: l.page, lines: [] }); i++; }
+    if (m) out.push({ name: m[1], cost: m[2], lines: [] });
+    else if (two) { out.push({ name: two[1], cost: two[2], lines: [] }); i++; }
     else out[out.length - 1]?.lines.push(l.text);
   }
   return out;
@@ -111,7 +111,7 @@ export function parseGear(text: string, layout: string): ItemEntry[] {
     // "Spell Scroll (Cantrip)" in the table, one "Spell Scroll" block in the prose.
     const p = prose.get(tableName) ?? prose.get(tableName.replace(/ \(.*\)$/, ''));
     const desc = p ? paragraphs(p.lines).join('\n') : '';
-    out.push(item(playName(tableName), { ...fields, desc, ...(p ? { page: p.page } : {}), ...capacityOf(desc) }));
+    out.push(item(playName(tableName), { ...fields, desc, ...capacityOf(desc) }));
   };
   for (const line of layout.split('\n')) {
     const a = AMMO_ROW.exec(line);
@@ -168,7 +168,7 @@ export function parseTools(text: string): ItemEntry[] {
       else fields[fields.length - 1] = /[a-z]-$/.test(fields[fields.length - 1]) ? fields[fields.length - 1].slice(0, -1) + l : `${fields[fields.length - 1]} ${l}`;
     }
     const wt = pounds(/^Weight: (.*)$/m.exec(fields.join('\n'))?.[1] ?? '');
-    return item(b.name, { cat: 'tool', page: b.page, desc: fields.filter((f) => !f.startsWith('Weight:')).join('\n'),
+    return item(b.name, { cat: 'tool', desc: fields.filter((f) => !f.startsWith('Weight:')).join('\n'),
       ...(b.cost === 'Varies' ? {} : { cost: b.cost }), ...(wt === undefined ? {} : { wt }) });
   });
 }
@@ -199,11 +199,11 @@ export function parseMagicItems(text: string): ItemEntry[] {
     if (/^[a-z]/.test(t) && /^[A-Z+]/.test(prev) && nameLike(prev)) starts.push([i - 1, k, h, `${prev} ${t}`]);
     else if (/^[A-Z+]/.test(t)) starts.push([i, k, h, t]);
   });
-  return starts.map(([s, k, h, name], n) => {
+  return starts.map(([, k, h, name], n) => {
     const desc = paragraphs(lines.slice(k + 1, starts[n + 1]?.[0] ?? lines.length).map((l) => l.text)).join('\n');
     const attune = /\(Requires Attunement[^)]*\)/.test(h);
     const rarity = splitTop(h.replace(/\s*\(Requires Attunement[^)]*\)/, '')).slice(1).join(', ');
-    const e = item(name, { cat: 'magic', page: lines[s].page, desc, rarity, ...(attune ? { attune: true } : {}) });
+    const e = item(name, { cat: 'magic', desc, rarity, ...(attune ? { attune: true } : {}) });
     // "has 7 charges", "has 1d8 + 1 charges" (rolled when found), "starts with 10 charges", "1 of its 3 charges".
     const charges = /(?:has|have|starts with) (\d+d\d+(?: ?\+ ?\d+)?|\d+) charges/.exec(desc) ?? /\d+ of its (\d+) charges/.exec(desc);
     if (charges) e.charges = charges[1].replace(/ /g, '');

@@ -63,7 +63,7 @@ export function srdHeadingChecks(text: string, entries: Entry[]): Finding[] {
 const COMPARED: Partial<Record<Entry['kind'], string[]>> = {
   spell: ['lvl', 'school', 'classes', 'time', 'range', 'comp', 'dur', 'conc', 'ritual'],
   item: ['cost', 'wt', 'wcat', 'wrange', 'dmg', 'dtype', 'props', 'thrown', 'vers', 'ammo', 'mastery', 'armor', 'acBase', 'strReq', 'stealthDis'],
-  feature: ['lvl', 'again'], feat: ['cat', 'prereq', 'repeat'], background: ['abils', 'feat', 'skills', 'tool'], species: ['sizes', 'speed'], trait: ['lvl'], class: ['hd', 'saves', 'armor', 'weapons', 'tools', 'skills']
+  feature: ['lvl', 'again'], feat: ['cat', 'prereq', 'repeat'], background: ['feat'], species: ['sizes', 'speed'], trait: ['lvl'], class: ['hd', 'saves', 'armor', 'weapons', 'tools', 'skills']
 };
 // Spell numbers the parser reads from condensed text, so it can leave one out: compared only when both sides have it.
 const COMPARED_IF_BOTH = ['dice', 'dtype', 'save', 'atk', 'scale'];
