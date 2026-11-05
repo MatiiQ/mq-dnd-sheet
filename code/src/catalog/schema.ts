@@ -72,12 +72,14 @@ export type Spec = GrantSpec | ChoiceSpec;
 export interface ChoiceSpec { kind: 'choice'; id: string; name: string; pick: number; pickAt?: string; orExpert?: boolean; repeat?: boolean; options?: GrantSpec[]; pool?: string; ifPick?: string }
 export type GrantKind = 'sense' | 'resource' | 'defense' | 'abil' | 'abilSet' | 'prof' | 'saveBonus' | 'checkBonus' | 'spell' | 'speed' | 'ac'
   | 'init' | 'hpLvl' | 'hpFlat' | 'size' | 'carryUp' | 'action' | 'xdmg' | 'attacks' | 'unarmed' | 'atkBonus' | 'dmgBonus' | 'lightExtra' | 'atkAbil'
-  | 'casting' | 'crit' | 'spellAtk' | 'spellDc' | 'checkAdv';
+  | 'casting' | 'crit' | 'spellAtk' | 'spellDc' | 'checkAdv' | 'aura';
 // Every grant is flat, so a character can store it as a plain entry. Fields that take a Value also accept '$<choiceId>'.
 export interface GrantSpec {
   id: string; kind: GrantKind; name: string;
   when?: 'armor' | 'noHeavy' | 'noArmor' | 'noShield' | 'noArmorNoShield' | 'active' | 'empty';   // active: while the entry's effect is on (Rage, Starry Form); empty: no weapon in hand and no Shield
   lvl?: number; needEq?: boolean; needAtt?: boolean;
+  needAura?: string; needHand?: boolean;                                            // needAura: a feature's catalog id whose aura must be on; needHand: item in hand
+  incap?: boolean;                                                                  // aura: ends while Incapacitated (range, note: its size and who it affects)
   opt?: string;                                                                     // in choice options: grants with the same opt are one pick
   range?: string; plus?: boolean;                                                   // sense; plus: adds to another range of the name
   max?: string; recharge?: Recharge4; regain?: string; regainOn?: 'short' | 'dawn'; casts?: string;   // resource
@@ -149,6 +151,7 @@ const ability: Check = oneOf(...ABILITY_KEYS);
 const or = (...cs: Check[]): Check => (v) => cs.some((c) => c(v));
 const list = (c: Check): Check => (v) => typeof v === 'string' && (v === '' || v.split(',').every((x) => c(x)));
 
+const FEATURE_ID: Check = (v) => typeof v === 'string' && /^feature\/[a-z0-9-]+(\/[a-z0-9-]+){1,2}$/.test(v);
 const RECHARGE = oneOf('short', 'long', 'dawn', 'none');
 const WHEN = oneOf('armor', 'noHeavy', 'noArmor', 'noShield', 'noArmorNoShield', 'active', 'empty');
 const RANGE_KIND = oneOf('melee', 'ranged');
@@ -164,6 +167,8 @@ const GRANTS: Record<GrantKind, Record<string, [Check, boolean]>> = {
   checkBonus: { target: [str, true], val: [value, true] },
   // Advantage or Disadvantage on checks of a skill, an ability or all; always: in passive scores, else a note.
   checkAdv: { target: [str, true], adv: [oneOf('adv', 'dis'), true], always: [bool, false], note: [str, false] },
+  // An Emanation from you while the grant counts (range: a Value, may be a level table); incap: ends while Incapacitated.
+  aura: { range: [value, true], note: [str, false], incap: [bool, false] },
   spell: { spell: [str, true], always: [bool, false], castAb: [or(ability, ref), false] },
   speed: { mode: [oneOf('walk', 'climb', 'swim', 'fly', 'burrow'), true], val: [or(value, oneOf('walk', 'walk2')), true], hover: [bool, false] },
   ac: { acMode: [oneOf('bonus', 'unarmored', 'dexCap'), true], val: [value, false], ab: [or(ability, ref), false], shieldOk: [bool, false] },
@@ -173,7 +178,7 @@ const GRANTS: Record<GrantKind, Record<string, [Check, boolean]>> = {
   size: { size: [oneOf(...SIZE_KEYS), true] },
   carryUp: {},
   action: { econ: [oneOf('action', 'bonus', 'reaction', 'free', 'other'), true], res: [str, false], note: [str, false], dice: [value, false],
-    uses: [(v) => typeof v === 'string' && /^feature\/[a-z0-9-]+(\/[a-z0-9-]+){1,2}$/.test(v), false], regainTo: [or(value, oneOf('all')), false],
+    uses: [FEATURE_ID, false], regainTo: [or(value, oneOf('all')), false],
     dc: [value, false], dcAb: [or(list(ability), ref), false] },
   xdmg: { dice: [value, true], dtype: [str, false], on: [str, true], perTurn: [bool, false], swap: [str, false] },
   attacks: { val: [value, true] },
@@ -192,7 +197,8 @@ const GRANTS: Record<GrantKind, Record<string, [Check, boolean]>> = {
   spellAtk: { val: [value, true] },
   spellDc: { val: [value, true] }
 };
-const COMMON: Record<string, [Check, boolean]> = { id: [str, true], kind: [str, true], name: [str, true], when: [WHEN, false], lvl: [whole(1, 20), false], needEq: [bool, false], needAtt: [bool, false] };
+const COMMON: Record<string, [Check, boolean]> = { id: [str, true], kind: [str, true], name: [str, true], when: [WHEN, false], lvl: [whole(1, 20), false], needEq: [bool, false], needAtt: [bool, false],
+  needAura: [FEATURE_ID, false], needHand: [bool, false] };
 
 // Per-kind entry fields: [check, required]. Base fields and grants are checked separately.
 const SPELL: Record<string, [Check, boolean]> = {
@@ -281,7 +287,7 @@ function checkGrant(g: unknown, e: Record<string, unknown>, where: string, errs:
   }
   // A spell's lvl is its spell level, not a character level: nothing to compare.
   if (e.kind !== 'spell' && typeof g.lvl === 'number' && typeof e.lvl === 'number' && g.lvl < e.lvl) errs.push(`${where}: lvl ${g.lvl} is below the entry's ${e.lvl}`);
-  if ((g.needEq !== undefined || g.needAtt !== undefined) && e.kind !== 'item') errs.push(`${where}: needEq/needAtt are for item grants`);
+  if ((g.needEq !== undefined || g.needAtt !== undefined || g.needHand !== undefined) && e.kind !== 'item') errs.push(`${where}: needEq/needAtt/needHand are for item grants`);
   if (g.kind === 'resource') checkRegain(g, where, errs);
   if (g.res !== undefined && g.uses !== undefined) errs.push(`${where}: res and uses together`);
   if (g.kind === 'speed' && g.mode === 'walk' && g.val === 'walk') errs.push(`${where}: a walk speed can't equal the walking Speed`);

@@ -3,7 +3,7 @@ import type { GrantSpec } from './catalog/schema';
 import { hasDice, isValue, valueAt, type ValueCtx } from './catalog/value';
 import type { ProfCat } from './catalog/names';
 import { canLoad, setHands } from './hands';
-import { activeGrants, dropLinkOnly, hasActiveEffect, inactiveReason, isActive, isEquipped, LINKED_LISTS, srcKindOfLink, type SourceKind, linkOf, parseLink, sourceLabel, sourceOf, SRC_KINDS } from './links';
+import { activeGrants, dropLinkOnly, hasActiveEffect, INCAPACITATING, inactiveReason, isActive, isEquipped, LINKED_LISTS, srcKindOfLink, type SourceKind, linkOf, parseLink, sourceLabel, sourceOf, SRC_KINDS } from './links';
 import type { AcEffect, Ability, ArmorKind, CastAbility, Character, Coin, Concentration, Counter, DefenseKind, Grant, HpSnapshot, Item, Linked, Recharge, Resource, Size, Spell, SpeedKind, SpellSort, Tab, Unarmored } from './types';
 
 export const ABILITIES: [Ability, string][] = [
@@ -45,7 +45,6 @@ export const CONDITION_RULES: Record<string, string> = {
 export const CONDITIONS = Object.keys(CONDITION_RULES);
 // Conditions a defense can name: the list above plus Exhaustion, which the sheet tracks as a level.
 export const CONDITION_OPTIONS = [...CONDITIONS.slice(0, 3), 'Exhaustion', ...CONDITIONS.slice(3)];
-const INCAPACITATING = ['Incapacitated', 'Paralyzed', 'Petrified', 'Stunned', 'Unconscious'];
 const ZERO_SPEED = ['Grappled', 'Restrained', 'Paralyzed', 'Petrified', 'Unconscious'];
 
 export const abilityName = (a: Ability) => ABILITIES.find(([k]) => k === a)![1];
@@ -466,6 +465,17 @@ export function fixContainers(c: Character): Character {
 export function parseWeight(s: string): number | undefined {
   const t = s.trim();
   return /^(\d+([.,]\d*)?|[.,]\d+)$/.test(t) ? Number(t.replace(',', '.')) : undefined;
+}
+
+export { INCAPACITATING };
+
+// An aura's size now: its range Value (Aura of Protection '6:10,18:30', Holy Avenger '1:10,17:30'), read against
+// character level; the sheet tracks one class level, so "17 Paladin levels" and Aura Expansion's 18 are simplified.
+export const auraRange = (c: Character, g: Grant) => num(c, g.range, g);
+// Every aura grant that counts now or is stopped only by Incapacitated (shown greyed with that reason), in c.grants order.
+export function activeAuras(c: Character): { g: Grant; range: number; why: string | null }[] {
+  return c.grants.filter((g) => g.kind === 'aura').map((g) => ({ g, range: auraRange(c, g), why: inactiveReason(c, g) }))
+    .filter((a) => a.why === null || a.why === 'Incapacitated');
 }
 
 export const zeroSpeedBy = (c: Character) => CONDITIONS.filter((n) => c.conds[n] && ZERO_SPEED.includes(n));
@@ -934,7 +944,8 @@ export function findUnlinked(c: Character, kind: 'resource' | 'spell' | 'action'
 export function addGrants(c: Character, from: string, inputs: GrantInput[]): Character {
   const srcKind = srcKindOfLink(c, from) ?? undefined;
   const base = { from, ...(srcKind ? { srcKind } : {}) };
-  const common = (s: GrantInput['spec']) => ({ ...(s.when ? { when: s.when } : {}), ...(s.needEq ? { needEq: true } : {}), ...(s.needAtt ? { needAtt: true } : {}), ...(s.lvl ? { minLvl: s.lvl } : {}) });
+  const common = (s: GrantInput['spec']) => ({ ...(s.when ? { when: s.when } : {}), ...(s.needEq ? { needEq: true } : {}), ...(s.needAtt ? { needAtt: true } : {}),
+    ...(s.needHand ? { needHand: true } : {}), ...(s.needAura ? { needAura: s.needAura } : {}), ...(s.lvl ? { minLvl: s.lvl } : {}) });
   // Ids first, so a resource's casts and an action's res can name entries made later in the batch.
   const ids = new Map<GrantInput, string>(inputs.map((x) => [x, x.link ?? newId()]));
   const spellInputs = inputs.filter((x) => x.spec.kind === 'spell');
@@ -1112,6 +1123,7 @@ function grantLabel(c: Character, g: Grant): string {
     case 'saveBonus': return fmt(v) + ' ' + (g.ab === 'all' ? 'all' : (g.ab ?? '').toUpperCase()) + ' saves';
     case 'spellAtk': return fmt(v) + ' spell attack';
     case 'spellDc': return fmt(v) + ' spell save DC';
+    case 'aura': return auraRange(c, g) + '-ft aura';
     case 'checkAdv': return (g.adv === 'dis' ? 'Disadvantage' : 'Advantage') + ' on ' + g.target + ' checks' + (g.note ? ' (' + g.note + ')' : '');
     case 'casting': return g.name + ' (set slots by hand)';
     default: return g.name;
@@ -1124,6 +1136,7 @@ function grantTarget(g: Grant): PillTarget {
   if (g.kind === 'prof') return { tab: 'features' };
   if (VITAL_GRANTS.includes(g.kind)) return { sec: 'sec-vitals' };
   if (g.kind === 'checkAdv') return { sec: 'sec-senses' };
+  if (g.kind === 'aura') return { sec: 'sec-conditions' };
   if (g.kind === 'hpLvl' || g.kind === 'hpFlat') return { sec: 'sec-hp' };
   if (g.kind === 'casting' || g.kind === 'spell' || g.kind === 'spellAtk' || g.kind === 'spellDc') return { tab: 'spells' };
   return { tab: 'actions' };

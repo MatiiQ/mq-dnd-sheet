@@ -30,7 +30,9 @@ export interface Details { name: string; species: string; cls: string; sub: stri
 // minLvl: counts from this character level (never `lvl`, which is the spell level on Spell). needEq / needAtt: the
 // source item must be equipped / attuned. linked: the entry was on the sheet before and a grant linked it (removing
 // the source unlinks it instead of removing it).
-export interface Linked { from?: string; srcKind?: SrcKind; srcName?: string; when?: When; minLvl?: number; needEq?: boolean; needAtt?: boolean; linked?: boolean }
+// needAura: the catalog id of the feature whose aura must be active (Aura of Courage rides on Aura of Protection);
+// needHand: an item's grant counts only while the item is in hand (Holy Avenger).
+export interface Linked { from?: string; srcKind?: SrcKind; srcName?: string; when?: When; minLvl?: number; needEq?: boolean; needAtt?: boolean; linked?: boolean; needAura?: string; needHand?: boolean }
 // A grant that is not an entry of its own list: ability, proficiency, speed, AC, initiative, HP per level, size, action
 // and the attack kinds. Same flat fields as the catalog's GrantSpec; the spec's `lvl` is stored as `minLvl`, the field
 // entries use. counted: "Already counted in my numbers", shown on its source but adding nothing.

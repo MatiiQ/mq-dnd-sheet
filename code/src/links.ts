@@ -66,7 +66,7 @@ type LinkedList = (typeof LINKED_LISTS)[number];
 
 // The fields that mean something only with a link: the item checks, "while its effect is on" and `linked`.
 export function dropLinkOnly<T extends Linked>(x: T): T {
-  const { needEq: _e, needAtt: _a, linked: _l, ...rest } = x;
+  const { needEq: _e, needAtt: _a, needHand: _h, linked: _l, ...rest } = x;
   return (rest.when === 'active' ? (({ when: _w, ...r }) => r)(rest) : rest) as T;
 }
 const unlink = <T extends Linked>(x: T): T => { const { from: _, ...rest } = x; return dropLinkOnly(rest as T); };
@@ -111,7 +111,27 @@ export const isEquipped = (it: Item): boolean => it.eq && !it.in && it.qty >= 1;
 
 // Why an entry or grant doesn't count right now, or null when it counts. Level and armor conditions apply to every
 // entry; the item checks, "while its effect is on" and the source's own state need a link. The visited set stops loops.
+// Conditions that include Incapacitated (Paralyzed PHB p.371, Petrified p.372, Stunned p.376, Unconscious p.377).
+export const INCAPACITATING = ['Incapacitated', 'Paralyzed', 'Petrified', 'Stunned', 'Unconscious'];
+
+// The item, level, armor, "switched on" and source checks run first; Incapacitated (an aura's `incap`) and `needAura`
+// only once those pass, so a level-5 Paladin's aura reads "from level 6", not "Incapacitated".
 export function inactiveReason(c: Character, x: Linked, seen: Set<string> = new Set()): string | null {
+  return baseReason(c, x, seen)
+    ?? ((x as { incap?: boolean }).incap && INCAPACITATING.some((n) => c.conds[n]) ? 'Incapacitated' : null)
+    ?? auraReason(c, x, seen);
+}
+// needAura: some aura grant from a feature with that catalog id counts. Each candidate is checked with a copy of `seen`
+// plus the aura's key, so a shared set can't skip a check, and an aura that needs itself reads "aura not active".
+function auraReason(c: Character, x: Linked, seen: Set<string>): string | null {
+  if (!x.needAura) return null;
+  const key = 'aura:' + x.needAura;
+  if (seen.has(key)) return 'aura not active';
+  const links = new Set(c.feats.filter((f) => f.cid === x.needAura).map((f) => linkOf('feature', f.id)));
+  const on = c.grants.some((g) => g.kind === 'aura' && links.has(g.from) && inactiveReason(c, g, new Set([...seen, key])) === null);
+  return on ? null : 'aura not active';
+}
+function baseReason(c: Character, x: Linked, seen: Set<string>): string | null {
   if (x.minLvl && x.minLvl > c.level) return 'from level ' + x.minLvl;
   const p = parseLink(x.from);
   if (p?.kind === 'item') {
@@ -122,6 +142,7 @@ export function inactiveReason(c: Character, x: Linked, seen: Set<string> = new 
     if (item && item.qty < 1 && !(x.when === 'active' && isOn(c, x.from!))) return 'none left';
     if (x.needEq && !(item && isEquipped(item))) return 'not equipped';
     if (x.needAtt && !c.attuneIds.includes(p.id)) return 'not attuned';
+    if (x.needHand && !c.hands.includes(p.id)) return 'not in hand';
   }
   if (x.when) {
     const eq = c.inv.filter(isEquipped);

@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { newId } from './logic';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import {
-  ABILITIES, regainTo, saveDc, acCanTargetOther, acOnOther, toggleAcTarget, regainLabel, damageHitDie, setTempHitDie, castAbOf, removeChip, speedOf, armorSlowBy, stealthDisBy, acSpellIdle, untrainedArmor, grantChips, addGrants, findUnlinked, removalChain, removalSummary, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, dawn, refillFor, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, parseWeight, passiveScore, passiveParts, passiveNotes, pillView, resPill, setPill, preparedCount, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft, num, setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, undoHp
+  ABILITIES, regainTo, saveDc, acCanTargetOther, acOnOther, toggleAcTarget, regainLabel, damageHitDie, setTempHitDie, castAbOf, removeChip, speedOf, armorSlowBy, stealthDisBy, acSpellIdle, untrainedArmor, grantChips, addGrants, findUnlinked, removalChain, removalSummary, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, dawn, refillFor, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, parseWeight, passiveScore, passiveParts, passiveNotes, activeAuras, pillView, resPill, setPill, preparedCount, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft, num, setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, undoHp
 } from './logic';
 import { migrate } from './migrate';
+import { AOP, haAura, holyAvenger, paladin } from './test-fixtures';
 import { spellActions } from './actions';
 import { grantErrors, validateEntry, type GrantSpec } from './catalog/schema';
 import { addFromCatalog, type ItemAnswers } from './catalog/copy';
@@ -1934,5 +1935,66 @@ describe('passive scores', () => {
     const chip = grantChips(base({ grants: [adv({ note: 'relies on sight' })] }), 'feature:f')[0];
     expect(chip.label).toMatch(/^Advantage on perception checks/);
     expect(chip.target).toEqual({ sec: 'sec-senses' });
+  });
+});
+
+// Aura of Protection: a 10-ft Emanation from level 6, inactive while Incapacitated; Aura Expansion makes it 30 ft at
+// level 18; Aura of Courage works only while in it (PHB p.111). Holy Avenger: while you hold the drawn weapon, 10 ft,
+// 30 ft with 17+ Paladin levels (SRD 5.2.1). Class levels are read as character level (a stated simplification).
+describe('auras', () => {
+  it('runs Protection from level 6 at 10 ft, 30 ft at 18', () => {
+    expect(activeAuras(paladin(6))).toEqual([expect.objectContaining({ range: 10, why: null })]);
+    expect(activeAuras(paladin(18))[0].range).toBe(30);
+  });
+  it('lists no aura below its level, Unconscious or not', () => {
+    expect(activeAuras(paladin(5))).toEqual([]);
+    const ko = paladin(5, { conds: { Unconscious: true } });
+    expect(activeAuras(ko)).toEqual([]);
+    expect(inactiveReason(ko, ko.grants[0])).toBe('from level 6');
+  });
+  it('stops a looping needAura without overflowing', () => {
+    const c = paladin(6);
+    const loop = { ...c, grants: c.grants.map((g) => (g.id === 'g2' ? { ...g, needAura: AOP } : g)) };
+    expect(inactiveReason(loop, loop.grants[1])).toBe('aura not active');
+  });
+  it('labels the aura chip and points it at Conditions', () => {
+    const chip = grantChips(paladin(6), 'feature:p').find((x) => x.ref.id === 'g2')!;
+    expect(chip.label).toBe('10-ft aura');
+    expect(chip.target).toEqual({ sec: 'sec-conditions' });
+  });
+  for (const cond of ['Incapacitated', 'Unconscious', 'Stunned']) {
+    it('stops the aura and what rides on it while ' + cond, () => {
+      const on = paladin(10), off = paladin(10, { conds: { [cond]: true } });
+      expect(activeAuras(off)).toEqual([expect.objectContaining({ why: 'Incapacitated' })]);
+      expect(saveMod(on, 'wis')).toBe(saveMod(off, 'wis') + 3);
+      expect(mergedDefenses(on, 'imm').map((d) => d.name)).toContain('Frightened');
+      expect(mergedDefenses(off, 'imm').map((d) => d.name)).not.toContain('Frightened');
+    });
+  }
+  it('needs the Holy Avenger-like item in hand', () => {
+    const c = (level: number, hands: string[]) => ({ ...blankCharacter(), level, inv: [holyAvenger()], attuneIds: ['ha', '', ''], hands, grants: [haAura] });
+    expect(inactiveReason(c(16, []), haAura)).toBe('not in hand');
+    expect(activeAuras(c(16, ['ha']))[0].range).toBe(10);
+    expect(activeAuras(c(17, ['ha']))[0].range).toBe(30);
+  });
+  it('runs a spell aura only while concentrating', () => {
+    const sg = { id: 'sg', name: 'Guardians', lvl: 3, time: 'Action', range: 'Self', c: true };
+    const g: Grant = { id: 'gs', kind: 'aura', name: 'Guardians', range: '15', when: 'active', from: 'spell:sg' };
+    const c = { ...blankCharacter(), spells: [sg], grants: [g] };
+    expect(activeAuras(c)).toEqual([]);
+    expect(activeAuras({ ...c, conc: { id: 'sg', name: 'Guardians' } })).toHaveLength(1);
+  });
+  it('keeps needAura and needHand through addGrants, checks them on load and in the catalog', () => {
+    const c = { ...blankCharacter(), feats: [{ id: 'f', g: 'class' as const, name: 'F', desc: '' }], inv: [holyAvenger()] };
+    const a = addGrants(c, 'feature:f', [{ spec: { id: 'x', kind: 'defense', name: 'Frightened', def: 'imm', target: 'Frightened', needAura: AOP } }]);
+    expect(a.defenses[0].needAura).toBe(AOP);
+    const b = addGrants(c, 'item:ha', [{ spec: { id: 'y', kind: 'aura', name: 'A', range: '10', needHand: true } }]);
+    expect(b.grants[0].needHand).toBe(true);
+    const m = migrate({ ...a, defenses: [{ ...a.defenses[0], needAura: 5, needHand: 'yes' }] });
+    expect(m.defenses[0]).not.toHaveProperty('needAura');
+    expect(m.defenses[0]).not.toHaveProperty('needHand');
+    const feature = (g: object) => validateEntry({ id: 'feat/x', kind: 'feat', name: 'X', src: 'srd', desc: '', cat: 'general', grants: [{ id: 'a', kind: 'saveBonus', name: 'A', ab: 'all', val: '1', ...g }] });
+    expect(feature({ needHand: true })).not.toEqual([]);
+    expect(feature({ needAura: AOP })).toEqual([]);
   });
 });

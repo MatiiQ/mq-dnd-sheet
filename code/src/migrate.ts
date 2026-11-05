@@ -20,7 +20,7 @@ const WHENS: When[] = ['armor', 'noHeavy', 'noArmor', 'noShield', 'noArmorNoShie
 // The link fields of an entry, checked on load: an unknown source kind reads as Other, any other bad value goes, and
 // the fields that need a link go from an entry without one. Never touches `lvl` (a spell's level).
 function cleanLinked<T extends Linked>(x: T): T {
-  const { from, srcKind, srcName, when, minLvl, needEq, needAtt, linked, ...rest } = x as Linked & Record<string, unknown>;
+  const { from, srcKind, srcName, when, minLvl, needEq, needAtt, linked, needAura, needHand, ...rest } = x as Linked & Record<string, unknown>;
   const out = {
     ...rest,
     ...(typeof from === 'string' ? { from } : {}),
@@ -30,7 +30,9 @@ function cleanLinked<T extends Linked>(x: T): T {
     ...(Number.isInteger(minLvl) && minLvl! >= 1 && minLvl! <= 20 ? { minLvl } : {}),
     ...(typeof needEq === 'boolean' ? { needEq } : {}),
     ...(typeof needAtt === 'boolean' ? { needAtt } : {}),
-    ...(typeof linked === 'boolean' ? { linked } : {})
+    ...(typeof linked === 'boolean' ? { linked } : {}),
+    ...(typeof needAura === 'string' ? { needAura } : {}),
+    ...(typeof needHand === 'boolean' ? { needHand } : {})
   } as unknown as T;
   return out.from === undefined ? dropLinkOnly(out) : out;
 }
