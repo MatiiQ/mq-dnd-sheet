@@ -67,6 +67,17 @@ describe('source checks', () => {
     const bg = (extra: object) => ({ id: 'background/x', kind: 'background', name: 'X', src: 'srd', desc: '', feat: 'feat/a', ...extra }) as unknown as Entry;
     expect(keys(referenceChecks([bg({ feat: 'feat/b' })], [bg({})]))).toEqual(['srd-phb-field|background/x:feat']);
   });
+  it('compares class tools without their "see" pointer', () => {
+    const cls = (tools: string) => ({ id: 'class/x', kind: 'class', name: 'X', src: 'srd', desc: '', hd: 8, saves: 'str', armor: '', weapons: '', tools, skills: { kind: 'choice', id: 's', name: 'S', pick: 1, pool: 'skill:arc' } }) as unknown as Entry;
+    expect(referenceChecks([cls('Choose 3 Musical Instruments (see chapter 6)')], [cls('Choose 3 Musical Instruments (see “Equipment”)')])).toEqual([]);
+    expect(keys(referenceChecks([cls('Choose 2 Lutes (chapter 6)')], [cls('Choose 3 Lutes (see “Equipment”)')]))).toEqual(['srd-phb-field|class/x:tools']);
+  });
+  it('finds a referred table in the entry whose text holds it', () => {
+    const f = (name: string, desc: string) => ({ id: `feature/x/${name}`, kind: 'feature', name, src: 'phb', cls: 'x', lvl: 1, desc, grants: [] }) as unknown as Entry;
+    const user = f('a', 'Roll on the Surge Roll table.');
+    expect(keys(textChecks([user, f('b', 'Surge Roll Table\n1 Boom')]))).toEqual([]);
+    expect(keys(textChecks([user]))).toEqual(['table-missing|feature/x/a:Surge Roll']);
+  });
   it('finds a spell whose dice, damage type, attack or concentration its own text does not back', () => {
     const ok = spell('Ok', { desc: 'A ranged spell attack deals 8d6 Fire damage.', dice: '8d6', dtype: 'Fire', atk: 'ranged', dur: 'Concentration, up to 1 minute', conc: true });
     const bad = spell('Bad', { desc: 'Deals 8d6 Fire damage.', dice: '1d6', dtype: 'Cold', atk: 'melee', dur: 'Instantaneous', conc: true });

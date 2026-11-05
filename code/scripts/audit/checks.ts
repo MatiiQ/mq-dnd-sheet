@@ -71,6 +71,7 @@ const same = (a: unknown, b: unknown) => (typeof a === 'string' && typeof b === 
 // A value as it compares: a spell's class list in any order, a class's skill choice as its pick and sorted pool.
 function comparable(f: string, v: unknown): unknown {
   if (f === 'classes') return [...String(v).split(',')].sort().join();
+  if (f === 'tools' && typeof v === 'string') return v.replace(/\s*\([^)]*\)$/, ''); // the "see …" pointer differs by book
   if (f !== 'skills' || typeof v !== 'object' || !v) return v;
   const c = v as { pick?: number; pool?: string };
   return `${c.pick} ${(c.pool ?? '').split(/[:|]/).sort().join()}`;
@@ -236,6 +237,8 @@ const REFERENCED_TABLE = /[Tt]he ((?:[A-Z][\w’'-]* )+)table\b/g;
 // on into the next heading); a heading that is also an entry name is a normal last word of a list.
 export function textChecks(entries: Entry[], headings: Set<string> = new Set()): Finding[] {
   const out: Finding[] = [], names = new Set(entries.map((e) => e.name));
+  // A table may sit in the entry that owns it (Wild Magic Surge), not in those that refer to it.
+  const tableLines = new Set(entries.flatMap((e) => descOf(e).split('\n').filter((l) => / Table$/.test(l.trim())).map((l) => l.trim())));
   for (const e of entries) {
     const d = descOf(e).trim(), add = (check: string, note: string) => out.push({ check, id: e.id, note });
     if (!d) { if (NEEDS_TEXT(e)) add('text-empty', 'no description'); continue; }
@@ -253,7 +256,7 @@ export function textChecks(entries: Entry[], headings: Set<string> = new Set()):
       const title = m[1].trim();
       if (/Features$/.test(title)) continue;
       const lastAt = d.lastIndexOf(title);
-      if (lastAt === m.index + m[0].indexOf(title)) out.push({ check: 'table-missing', id: `${e.id}:${title}`, note: `refers to the ${title} table, which isn't in the text` });
+      if (lastAt === m.index + m[0].indexOf(title)) { if (!tableLines.has(`${title} Table`)) out.push({ check: 'table-missing', id: `${e.id}:${title}`, note: `refers to the ${title} table, which isn't in the text` }); }
       else if (!/\d|\n/.test(d.slice(lastAt + title.length))) out.push({ check: 'table-cut', id: `${e.id}:${title}`, note: `the ${title} table has no rows` });
     }
   }

@@ -63,6 +63,14 @@ function saveOf(effect: string): { index: number; ab: string } | null {
   }
   return null;
 }
+// Named exceptions, so no other spell's parse changes.
+// Its per-slot line lists the Clenched Fist's die first, and that row is the spell's damage (PHB p.246). A wider regex
+// would give Animate Objects, whose die depends on size, a wrong 1d4/slot.
+const SLOT_DICE: Record<string, string> = { "Bigby's Hand": '2d8' };
+// Healing comes first in its text, but its damage is what the SRD's fields describe.
+const DAMAGE_FIRST = ['Conjure Celestial'];
+// The first save in its text is the Blinded one; the damage is against the layers' save.
+const SAVE_OF: Record<string, Ability> = { 'Prismatic Wall': 'dex' };
 export function parseSpellsMd(md: string): SpellEntry[] {
   return blocks(md).filter((b) => b.depth === 3 && b.lines.some((l) => l.startsWith('- **Level/School:**'))).map((b) => named(b, () => {
     const f = fields(b.lines);
@@ -76,7 +84,7 @@ export function parseSpellsMd(md: string): SpellEntry[] {
     const after = b.lines.slice(at + 1), end = after.findIndex((l) => /^- \*\*/.test(l) || l.trim() === '---');
     const extra = plain(end < 0 ? after : after.slice(0, end));
     const dmg = DAMAGE.exec(effect), heal = /regains? [^.]*?(\d+d\d+(?: ?\+ ?\d+)?)/.exec(effect);
-    const fx = dmg && (!heal || dmg.index <= heal.index) ? 'damage' : heal ? 'healing' : 'other';
+    const fx = dmg && (!heal || dmg.index <= heal.index || DAMAGE_FIRST.includes(b.title)) ? 'damage' : heal ? 'healing' : 'other';
     const atk = /\b(melee|ranged) spell attack/i.exec(effect), save = saveOf(effect);
     const e: SpellEntry = {
       id: catalogId('spell', b.title), kind: 'spell', name: b.title, src: 'phb',
@@ -85,10 +93,10 @@ export function parseSpellsMd(md: string): SpellEntry[] {
       range: f.Range, comp: f.Components, dur: f.Duration, conc: /^Concentration/.test(f.Duration), ritual: / or Ritual$/.test(f['Casting Time']) || !!ls[4], fx
     };
     if (atk && (!save || atk.index < save.index)) e.atk = atk[1].toLowerCase() as 'melee' | 'ranged';
-    else if (save) e.save = ab(save.ab);
+    else if (save) e.save = SAVE_OF[b.title] ?? ab(save.ab);
     if (fx === 'damage') { e.dice = dmg![1].replace(/ /g, ''); e.dtype = dmg![2]; }
     if (fx === 'healing') e.dice = heal![1].replace(/ /g, '');
-    const slotDice = higher && /(\d+d\d+) per (?:spell )?slot level/.exec(higher)?.[1];
+    const slotDice = higher && (SLOT_DICE[b.title] ?? /(\d+d\d+) per (?:spell )?slot level/.exec(higher)?.[1]);
     if (lvl === 0 && upgrade && /\b5\b/.test(upgrade)) e.scale = 'cantrip';
     else if (slotDice) e.scale = `${slotDice}/slot`;
     if (higher) e.higher = clean(higher);

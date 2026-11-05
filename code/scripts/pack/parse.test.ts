@@ -7,6 +7,16 @@ import { parseBackgroundFields, parseClassMd, parseEquipmentMd, parseFeatsMd, pa
 const fx = (f: string) => readFileSync(new URL(`./fixtures/${f}`, import.meta.url), 'utf8');
 
 describe('spells', () => {
+  const spellMd = (title: string, effect: string, higher = '') => `### ${title}\n- **Level/School:** 5 Evocation\n- **Classes:** Wizard\n- **Casting Time:** Action\n- **Range:** 60 feet\n- **Components:** V\n- **Duration:** Instantaneous\n- **Effect:** ${effect}\n${higher && `- **Higher Levels:** ${higher}\n`}`;
+  it('reads a named spell’s damage die when a per-slot line lists several', () => {
+    expect(parseSpellsMd(spellMd("Bigby's Hand", 'Melee spell attack; 5d8 Force damage.', 'Fist +2d8 and Grip +2d6 per slot level above 5.'))[0].scale).toBe('2d8/slot');
+  });
+  it('reads the damage of a spell the table lists as damage first', () => {
+    expect(parseSpellsMd(spellMd('Conjure Celestial', 'One regains 4d12 HP or takes 6d12 Radiant damage.'))[0]).toMatchObject({ fx: 'damage', dice: '6d12', dtype: 'Radiant' });
+  });
+  it('reads a named spell’s damage save over the first save in its text', () => {
+    expect(parseSpellsMd(spellMd('Prismatic Wall', 'Con save or Blinded. 12d6 Fire damage.'))[0].save).toBe('dex');
+  });
   const list = parseSpellsMd(fx('spells.md'));
   it('reads the fixed field layout', () => {
     expect(list.map((e) => e.id)).toEqual(['spell/hunters-mark', catalogId('spell', 'Acid Arrow'), 'spell/glimmer-pulse']);
