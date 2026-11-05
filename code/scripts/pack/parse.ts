@@ -258,6 +258,8 @@ export function parseClassMd(md: string): [ClassEntry, SubclassEntry[], FeatureE
   return [cls, subs, feats];
 }
 
+// A focus row names only its form ("Orb"); the table's heading gives the rest of the catalog name.
+const FOCUS_TABLE = /^(Arcane Focus|Druidic Focus|Holy Symbol)/;
 const ARMOR_KIND: Record<string, ArmorKind> = { Light: 'light', Medium: 'medium', Heavy: 'heavy', Shield: 'shield' };
 export function parseEquipmentMd(md: string): ItemEntry[] {
   const out: ItemEntry[] = [];
@@ -282,7 +284,11 @@ export function parseEquipmentMd(md: string): ItemEntry[] {
           ...(none(r.Strength) ? {} : { strReq: Number(/\d+/.exec(r.Strength)![0]) }), ...(r.Stealth === 'Disadvantage' ? { stealthDis: true } : {}) }, b.page);
       } else if (r.Tool) add(r.Tool, { cat: 'tool', ...wt(r.Weight), ...cost(r.Cost), desc: [r.Ability && `Ability: ${r.Ability}`, r['Utilize (DC)'] && `Utilize: ${r['Utilize (DC)']}`].filter(Boolean).join('\n') }, b.page);
       else if (r.Pack) add(r.Pack, { cat: 'pack', ...wt(r.Weight), ...cost(r.Cost), desc: r.Contents ?? '' }, b.page);
-      else if (r.Item && 'Mechanical use' in r && r.Item !== 'Ammunition') add(r.Item, { cat: /Pack$/.test(r.Item) ? 'pack' : 'gear', ...wt(r.Weight), ...cost(r.Cost), desc: clean(r['Mechanical use'] ?? '') }, b.page);
+      else if (r.Type && r.Storage) add(r.Type, { cat: 'ammo', ...wt(r.Weight), ...cost(r.Cost) }, b.page);
+      else if ((r.Focus || r.Symbol) && FOCUS_TABLE.test(b.title)) {
+        const form = (r.Focus || r.Symbol).replace(/\s*\(.*\)$/, '').replace(/\b(?!of\b)\w/g, (ch) => ch.toUpperCase());
+        add(`${FOCUS_TABLE.exec(b.title)![1]} (${form})`, { cat: 'focus', ...wt(r.Weight), ...cost(r.Cost) }, b.page);
+      } else if (r.Item && 'Mechanical use' in r && r.Item !== 'Ammunition') add(r.Item, { cat: /Pack$/.test(r.Item) ? 'pack' : 'gear', ...wt(r.Weight), ...cost(r.Cost), desc: clean(r['Mechanical use'] ?? '') }, b.page);
     }
   }
   return out;

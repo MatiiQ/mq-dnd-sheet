@@ -276,7 +276,7 @@ export function ruleTextChecks(entries: Entry[]): Finding[] {
 
 const EFFECTS: { cue: RegExp; kinds: GrantSpec['kind'][]; label: string }[] = [
   { cue: /\b(?:gain|gains|have|has) a (?:Fly|Swim|Climb|Burrow) Speed|Speed increases by \d+/g, kinds: ['speed'], label: 'speed' },
-  { cue: /\b(?:you|target|it) (?:have|has|gain|gains) Resistance to/g, kinds: ['defense'], label: 'resistance' },
+  { cue: /\b(?:you|target|it) (?:have|has|gain|gains) Resistance to/gi, kinds: ['defense'], label: 'resistance' },
   { cue: /\bextra \d+d\d+/g, kinds: ['xdmg', 'dmgBonus'], label: 'extra damage' }
 ];
 // Text that states an effect the sheet has a grant kind for, on an entry with no such grant. A heuristic: the known list

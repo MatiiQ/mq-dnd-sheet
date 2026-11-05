@@ -103,6 +103,16 @@ describe('feats, backgrounds, species, equipment', () => {
     expect(list.find((e) => e.name === 'Ammunition')).toBeUndefined(); // a row that only points to its own table
     for (const e of list) expect(validateEntry(e)).toEqual([]);
   });
+  it('reads ammunition and focus rows, naming a focus after its table', () => {
+    const list = parseEquipmentMd(fx('equipment.md'));
+    expect(list.find((e) => e.id === 'item/wax-pellets')).toMatchObject({ name: 'Wax Pellets', cat: 'ammo', wt: 1.5, cost: '4 CP' });
+    expect(list.find((e) => e.id === 'item/arcane-focus-wick')).toMatchObject({ name: 'Arcane Focus (Wick)', cat: 'focus', wt: 1, cost: '10 GP' });
+    const sprig = list.find((e) => e.id === 'item/druidic-focus-sprig-of-tallow');
+    expect(sprig).toMatchObject({ name: 'Druidic Focus (Sprig of Tallow)', cat: 'focus', cost: '1 GP' });
+    expect(sprig?.wt).toBeUndefined();
+    expect(list.find((e) => e.id === 'item/holy-symbol-sconce')).toMatchObject({ name: 'Holy Symbol (Sconce)', cat: 'focus', wt: 2, cost: '5 GP' });
+    for (const e of list) expect(validateEntry(e)).toEqual([]);
+  });
 });
 
 describe('text the parser used to drop', () => {

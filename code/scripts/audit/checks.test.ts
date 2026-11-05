@@ -150,6 +150,9 @@ describe('catalog against the sheet', () => {
     expect(f.note).toContain('you have Resistance to');
     expect(f.note).toContain('target has Resistance to');
   });
+  it('finds a stated effect at the start of a sentence', () => {
+    expect(keys(effectChecks([spell('Capital', { desc: 'You have Resistance to Fire damage.' })]))).toEqual(['effect-no-grant|spell/capital:resistance']);
+  });
   it('finds a stated effect with no grant of its kind', () => {
     const fly = 'The target gains a Fly Speed of 60 feet.';
     expect(keys(effectChecks([spell('Fly', { desc: fly }), spell('Has Grant', { desc: fly, grants: [{ id: 'g', kind: 'speed', name: 'Fly', mode: 'fly', val: '60' }] }), item('Gear', { desc: fly, cat: 'gear' })]))).toEqual(['effect-no-grant|spell/fly:speed']);
