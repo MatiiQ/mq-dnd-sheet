@@ -38,7 +38,7 @@ describe('derived numbers', () => {
     expect(passiveScore(c, 'investigation')).toBe(10);
     expect(initiative(c)).toBe(4);
     expect(initiative(make({ initMisc: 2, abilAdj: { dex: -4 } }))).toBe(4); // DEX 14 +2
-    expect(hitDieRoll(c)).toBe('1d10 +2');
+    expect(hitDieRoll(c, 10)).toBe('1d10 +2');
   });
   it('derives spellcasting numbers', () => {
     expect(spellSaveDC(make())).toBe(13);
@@ -482,14 +482,14 @@ describe('hit points', () => {
     describe('undoing a Hit Die heal', () => {
       const start = withClass(make({ hp: 10, maxHp: 40, hdUsed: { 10: 1 } }), { lvl: 5 });
       it('gives the die back; other HP actions leave Hit Dice alone', () => {
-        const undone = undoHp(healHitDie({ ...spendHitDie(start), amount: 6 }));
+        const undone = undoHp(healHitDie({ ...spendHitDie(start, 10), amount: 6 }));
         expect(undone).toMatchObject({ hp: 10, hdUsed: { 10: 1 } });
         expect(undoHp(applyHeal({ ...start, amount: 5 })).hdUsed).toEqual({ 10: 1 });
         expect(undoHp(applyDamage({ ...start, amount: 5 })).hdUsed).toEqual({ 10: 1 });
         expect('hdUsed' in applyHeal({ ...start, amount: 5 }).hpUndo!.prev).toBe(false);
       });
       it('spending another die drops the old undo, so only one die is ever refunded', () => {
-        const again = spendHitDie(healHitDie({ ...spendHitDie(start), amount: 6 }));
+        const again = spendHitDie(healHitDie({ ...spendHitDie(start, 10), amount: 6 }), 10);
         expect(again.hpUndo).toBeNull();
         expect(undoHp(again).hdUsed).toEqual({ 10: 3 });
       });
@@ -498,10 +498,10 @@ describe('hit points', () => {
       });
       it('also gives the die back when the spent die is undone by damage or Set Temp', () => {
         const c: Character = withClass({ ...blankCharacter(), maxHp: 30, hp: 20, temp: 6 }, { lvl: 3 });
-        const hit = damageHitDie({ ...spendHitDie({ ...c, temp: 0 }), amount: 5 });
+        const hit = damageHitDie({ ...spendHitDie({ ...c, temp: 0 }, 8), amount: 5 });
         expect(hit.hp).toBe(15);
         expect(undoHp(hit)).toMatchObject({ hdUsed: { 8: 0 }, hp: 20 });
-        const cleared = setTempHitDie(spendHitDie(c));
+        const cleared = setTempHitDie(spendHitDie(c, 8));
         expect(cleared.temp).toBe(0);
         expect(undoHp(cleared)).toMatchObject({ hdUsed: { 8: 0 }, temp: 6 });
       });
@@ -578,8 +578,8 @@ describe('rests', () => {
     expect(s.restMsg?.body).toMatch(/dead/);
   });
   it('spends a hit die, unless none are left, at 0 HP or at Exhaustion 6', () => {
-    expect(spendHitDie(make({ hdUsed: { 10: 1 } }))).toMatchObject({ hdUsed: { 10: 2 }, amount: 0 });
-    for (const c of [withClass(make({ hdUsed: { 10: 2 } }), { lvl: 2 }), make({ hp: 0, hdUsed: { 10: 1 } }), make({ hp: 10, exh: 6, hdUsed: {} })]) expect(spendHitDie(c)).toBe(c);
+    expect(spendHitDie(make({ hdUsed: { 10: 1 } }), 10)).toMatchObject({ hdUsed: { 10: 2 }, amount: 0 });
+    for (const c of [withClass(make({ hdUsed: { 10: 2 } }), { lvl: 2 }), make({ hp: 0, hdUsed: { 10: 1 } }), make({ hp: 10, exh: 6, hdUsed: {} })]) expect(spendHitDie(c, 10)).toBe(c);
   });
   it('heals at least 1 per hit die', () => {
     expect(healHitDie(make({ hp: 20, amount: 0 })).hp).toBe(21);
@@ -1730,5 +1730,35 @@ describe('class levels in formulas and gates', () => {
     const c: Character = { ...base, feats: [{ id: 'dr', g: 'sub', name: 'Draconic Resilience', desc: '', cid: 'feature/sorcerer/draconic/draconic-resilience' }],
       grants: [{ id: 'h', kind: 'hpLvl', name: 'Draconic Resilience', val: '1', from: 'feature:dr' }] };
     expect(maxHpOf(c)).toBe(maxHpOf(base) + 3);
+  });
+});
+
+describe('Hit Dice pools (PHB p.45)', () => {
+  // Ranger 5 (d10) / Rogue 2 (d8).
+  const two = (p: Partial<Character> = {}) => withClasses({ ...blankCharacter(), maxHp: 60, hp: 30, hdUsed: {}, ...p },
+    [{ clsId: 'class/ranger', lvl: 5, hd: 10 }, { clsId: 'class/rogue', lvl: 2, hd: 8 }]);
+  it('spends a die of the size asked for', () => {
+    const c = spendHitDie(two(), 8);
+    expect(c).toMatchObject({ hdUsed: { 8: 1 }, hdLast: 8, amount: 0 });
+    const full = two({ hdUsed: { 8: 2 } });
+    expect(spendHitDie(full, 8)).toBe(full);
+    expect(hitDieRoll(two(), 8)).toBe('1d8 +0');
+  });
+  it('undo after a heal, damage or temp HP refunds only that pool', () => {
+    const spent = { ...spendHitDie(two({ hdUsed: { 10: 1 } }), 8), amount: 5 };
+    for (const f of [healHitDie, damageHitDie, setTempHitDie]) {
+      const after = f(spent);
+      expect(after.hdLast).toBeUndefined();
+      expect(undoHp(after).hdUsed).toEqual({ 10: 1, 8: 0 });
+    }
+  });
+  it('a rest clears the waiting die', () => {
+    const spent = spendHitDie(two(), 8);
+    expect(shortRest(spent).hdLast).toBeUndefined();
+    expect(longRest(spent).hdLast).toBeUndefined();
+    expect(longRest(spent).hdUsed).toEqual({});
+  });
+  it('the pill shows the total left over the total level', () => {
+    expect(pillView(spendHitDie(two(), 8), 'hd')).toMatchObject({ value: '6', max: '7' });
   });
 });

@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import App from './App';
 import { blankCharacter } from './defaults';
 import { modeSpeed, speedNow } from './logic';
-import { haAura, holyAvenger, paladin, withClass } from './test-fixtures';
+import { haAura, holyAvenger, paladin, withClass, withClasses } from './test-fixtures';
 import type { Character, Feature, Item } from './types';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -336,5 +336,25 @@ describe('max HP with the CON part derived', () => {
     editMode();
     tap([...document.querySelectorAll('button')].find((b) => b.textContent === 'Reset to original'));
     expect(saved().maxHp).toBe(50);
+  });
+});
+
+describe('Hit Dice pools', () => {
+  const two = () => withClasses({ ...blankCharacter(), maxHp: 60, hp: 30, hdUsed: {} }, [{ name: 'Ranger', lvl: 5, hd: 10 }, { name: 'Rogue', lvl: 2, hd: 8 }]);
+  const button = (text: string) => [...document.querySelectorAll('button')].find((b) => b.textContent === text);
+  it('a Hit Die heal then Undo refunds one pool only', () => {
+    renderSheet(two());
+    const select = label('Hit Die size') as HTMLSelectElement;
+    act(() => { select.value = '8'; select.dispatchEvent(new Event('change', { bubbles: true })); });
+    tap(button('Spend Hit Die'));
+    expect(saved().hdUsed).toEqual({ 8: 1 });
+    act(() => { (document.getElementById('hp-amount') as HTMLInputElement).blur(); });
+    tap(button('Heal'));
+    tap(button('Undo'));
+    expect(saved().hdUsed).toEqual({ 8: 0 });
+  });
+  it('shows no die select with one pool', () => {
+    renderSheet(withClass(blankCharacter(), { lvl: 3 }));
+    expect(label('Hit Die size')).toBeNull();
   });
 });

@@ -207,7 +207,7 @@ export function TopBar({ store, activeSec, setActiveSec, menuOpen, setMenuOpen, 
 
 const SEC_NAMES: Record<string, string> = { ...Object.fromEntries(SECTION_LINKS), 'sec-vitals': 'Vitals' };
 const pillName = (v: PillView) => PILL_STATS.find(([k]) => k === v.key)?.[1] ?? v.label;
-const pillSpoken = (v: PillView) => pillName(v) + ' ' + v.value + (v.max ? ' of ' + v.max : '') + '.';
+const pillSpoken = (v: PillView) => pillName(v) + ' ' + v.value + (v.max ? ' of ' + v.max : '') + (v.detail ? ' (' + v.detail + ')' : '') + '.';
 
 // A pill's content. HP keeps its own look: coloured current, max, and temporary HP.
 function PillBody({ v }: { v: PillView }) {

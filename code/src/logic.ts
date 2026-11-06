@@ -661,24 +661,25 @@ export const hdPools = (c: Character): { die: Die; size: number; used: number }[
   [...DICE].reverse().map((die) => ({ die, size: poolSize(c, die), used: hdSpent(c, die) })).filter((p) => p.size > 0);
 export const hdLeft = (c: Character) => hdPools(c).reduce((t, p) => t + p.size - p.used, 0);
 
-// Hit Dice are spent during a Short Rest, which needs at least 1 HP (PHB p.373). Spends from the largest pool with a die left.
-export function spendHitDie(c: Character): Character {
-  const pool = hdPools(c).find((p) => p.used < p.size);
-  if (!pool || c.hp === 0 || isDead(c)) return c;
+// Hit Dice are spent during a Short Rest, which needs at least 1 HP (PHB p.373), one die of the size asked for. The heal
+// comes later, so the size waits in hdLast for the HP undo (undoGivesDie).
+export function spendHitDie(c: Character, die: Die): Character {
+  const pool = hdPools(c).find((p) => p.die === die);
+  if (!pool || pool.used >= pool.size || c.hp === 0 || isDead(c)) return c;
   // Spending a die starts a new HP action, so the old undo (which may refund an earlier die) no longer applies.
-  return { ...c, hdUsed: { ...c.hdUsed, [pool.die]: pool.used + 1 }, amount: 0, hpUndo: null };
+  return { ...c, hdUsed: { ...c.hdUsed, [die]: pool.used + 1 }, hdLast: die, amount: 0, hpUndo: null };
 }
 
 // Spending a Hit Die: roll it and add the Con modifier (PHB p.373).
-export const hitDieRoll = (c: Character) => '1d' + (hdPools(c)[0]?.die ?? 8) + ' ' + fmt(abilityMod(c, 'con'));
+export const hitDieRoll = (c: Character, die: Die) => '1d' + die + ' ' + fmt(abilityMod(c, 'con'));
 
 // Each spent Hit Die restores at least 1 HP, even with a negative Con modifier (PHB p.373).
 // Undoing a Hit Die heal also gives the die back, so the roll can be entered again.
-// The die refunded is the largest pool's (the one spendHitDie spends from first).
-const undoGivesDie = (c: Character, next: Character): Character => {
-  const pool = hdPools(c).find((p) => p.used > 0);
-  if (!pool || !next.hpUndo || next.hpUndo === c.hpUndo) return next;
-  return { ...next, hpUndo: { ...next.hpUndo, prev: { ...next.hpUndo.prev, hdUsed: { die: pool.die, used: (c.hdUsed[pool.die] ?? 0) - 1 } } } };
+// The die refunded is the one waiting in hdLast, from its own pool; the action ends the wait.
+const undoGivesDie = (c: Character, next0: Character): Character => {
+  const die = c.hdLast, { hdLast: _, ...next } = next0;
+  if (!die || !next.hpUndo || next.hpUndo === c.hpUndo) return next;
+  return { ...next, hpUndo: { ...next.hpUndo, prev: { ...next.hpUndo.prev, hdUsed: { die, used: Math.max(0, (c.hdUsed[die] ?? 0) - 1) } } } };
 };
 export const healHitDie = (c: Character): Character => undoGivesDie(c, applyHeal({ ...c, amount: Math.max(1, c.amount) }));
 // Damage or temp HP set while a spent die waits for its roll: Undo gives that die back too.
@@ -857,7 +858,7 @@ export function longRest(c: Character): Character {
     Object.values(c.abilAdj).some((v) => (v || 0) < 0) ? ', reduced ability scores restored' : ''
   ].join('');
   return {
-    ...c, maxHp, abilAdj, hp: maxHpOf({ ...c, maxHp, abilAdj }), temp: 0, slotUsed: slots([]), pactUsed: 0, hdUsed: {}, ds: 0, df: 0, acOn: [], effectsOn: [],
+    ...withoutKeys(c, ['hdLast']), maxHp, abilAdj, hp: maxHpOf({ ...c, maxHp, abilAdj }), temp: 0, slotUsed: slots([]), pactUsed: 0, hdUsed: {}, ds: 0, df: 0, acOn: [], effectsOn: [],
     hpUndo: null, ...setConc(null), res, inv, exh: Math.max(0, c.exh - 1),
     restMsg: {
       title: 'Long Rest complete',
@@ -877,12 +878,12 @@ export function shortRest(c: Character, rolls?: Record<string, number>): Charact
   // Pact Magic slots come back on a Short Rest (PHB p.154); they are their own pool, so other slots stay spent.
   const slotsBack = c.pactUsed > 0;
   return {
-    ...c, res, inv, ...(slotsBack ? { pactUsed: 0 } : {}),
+    ...withoutKeys(c, ['hdLast']), res, inv, ...(slotsBack ? { pactUsed: 0 } : {}),
     restMsg: {
       title: 'Short Rest',
       body: (slotsBack ? 'Spell slots restored. ' : '') +
         (refilled.length ? 'Refilled: ' + refilled.join(', ') + '. ' : slotsBack ? '' : 'No resources recharge on a Short Rest. ') +
-        'Spend Hit Dice below: roll ' + hitDieRoll(c) + ' each (minimum 1), then Heal (' + left + ' left).'
+        'Spend Hit Dice below: roll ' + hdPools(c).map((p) => hitDieRoll(c, p.die)).join(' or ') + ' each (minimum 1), then Heal (' + left + ' left).'
     }
   };
 }
@@ -1197,7 +1198,8 @@ export const PILL_STATS: [PillStat, string, string][] = [
 ];
 export const resPill = (id: string) => 'res:' + id;
 export type PillTarget = { sec: 'sec-hp' | 'sec-vitals' | 'sec-abilities' | 'sec-senses' | 'sec-defenses' | 'sec-conditions' | 'sec-resources' } | { tab: Tab };
-export interface PillView { key: string; label: string; value: string; max?: string; target: PillTarget }
+// detail: more on the value (the Hit Dice pools), read out with it.
+export interface PillView { key: string; label: string; value: string; max?: string; detail?: string; target: PillTarget }
 
 // What a slot shows. Null for an empty slot, an unknown key, or a resource that was deleted.
 export function pillView(c: Character, key: string): PillView | null {
@@ -1217,7 +1219,11 @@ export function pillView(c: Character, key: string): PillView | null {
     case 'pp': return { key, label, value: String(passiveScore(c, 'perception')), target: { sec: 'sec-senses' } };
     case 'init': return { key, label, value: fmt(initiative(c)), target: { sec: 'sec-vitals' } };
     case 'atk': return { key, label, value: atk === null ? '—' : fmt(atk), target: { tab: 'spells' } };
-    case 'hd': return { key, label, value: String(hdLeft(c)), max: String(charLevel(c)), target: { sec: 'sec-hp' } };
+    case 'hd': {
+      const pools = hdPools(c);
+      return { key, label, value: String(hdLeft(c)), max: String(charLevel(c)), target: { sec: 'sec-hp' },
+        ...(pools.length > 1 ? { detail: pools.map((p) => 'd' + p.die + ' ' + (p.size - p.used) + '/' + p.size).join(' · ') } : {}) };
+    }
     case 'insp': return c.inspOn ? { key, label, value: String(c.insp), target: { sec: 'sec-resources' } } : null;
   }
 }

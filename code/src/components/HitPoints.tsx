@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { activeGrants, sourceLabel } from '../links';
-import { abilityMod, applyDamage, capital, classLevel, conHpPart, damageHitDie, maxHpOf, num, applyHeal, applySetTemp, clearHpUndo, charLevel, fmt, hdLeft as hdLeftOf, hdPools, healHitDie, hitDieRoll, hpColor, hpRingStops, isDead, setHp, setMaxHp, setTempHitDie, spendHitDie, undoHp } from '../logic';
+import { abilityMod, applyDamage, capital, classLevel, conHpPart, damageHitDie, maxHpOf, num, applyHeal, applySetTemp, clearHpUndo, fmt, hdPools, healHitDie, hitDieRoll, hpColor, hpRingStops, isDead, setHp, setMaxHp, setTempHitDie, spendHitDie, undoHp } from '../logic';
 import { useWide } from '../layout';
 import { useSheet } from '../sheet';
-import type { Character } from '../types';
+import type { Character, Die } from '../types';
 import { DieBadge, MarkPips, Notice, NumInput, Step, TypeInNumber, XIcon } from './ui';
 
 const HP_UNDO_MS = 5000;
@@ -23,13 +23,14 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
   const max = maxHpOf(c), origShown = maxHpOf({ ...c, maxHp: c.origHp });
   const perLevel = [...activeGrants(c, 'hpLvl'), ...activeGrants(c, 'hpFlat')];
   const [maxOpen, setMaxOpen] = useState(false);
-  // Until the pools get their own rows (Task 4), the buttons act on the largest pool.
-  const pool = hdPools(c)[0] ?? { die: 8 as const, size: 0, used: 0 };
-  const hdUsed = pool.used, level = charLevel(c);
-  const hdLeft = hdLeftOf(c);
+  // Hit Dice by die size (PHB p.45). The die to spend is UI state: the chosen pool while it has a die left, else the
+  // first pool that has one.
+  const pools = hdPools(c);
+  const [dieChoice, setDieChoice] = useState<Die | null>(null);
+  const pool = pools.find((p) => p.die === dieChoice && p.used < p.size) ?? pools.find((p) => p.used < p.size) ?? pools[0];
   const dead = isDead(c);
-  const canSpendHD = hdLeft > 0 && c.hp > 0 && !dead;
-  const hdRoll = hitDieRoll(c);
+  const canSpendHD = !!pool && pool.used < pool.size && c.hp > 0 && !dead;
+  const hdRoll = hitDieRoll(c, c.hdLast ?? pool?.die ?? 8);
   const stable = c.hp === 0 && c.ds >= 3 && c.df < 3 && !dead;
   // A closed Stable or Dead notice stays hidden until that state ends; it isn't saved.
   const stateNotice = c.hp === 0 && dead ? 'dead' : stable ? 'stable' : null;
@@ -53,7 +54,7 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
     if (!canSpendHD) return;
     // Render the emptied Amount field now, so it can be focused within the tap: iPad only opens the keypad then.
     flushSync(() => {
-      update(spendHitDie);
+      update((p) => spendHitDie(p, pool!.die));
       setHdPrompt(true);
       setAmtKey((k) => k + 1);
     });
@@ -141,17 +142,26 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
         </div>
       )}
 
-      {/* A count instead of one pip per die, so it stays on one row up to level 20. */}
+      {/* A count per die size instead of one pip per die, so each stays on one row up to level 20. */}
+      {pools.map((p) => (
+        <div key={p.die} className="row gap-10">
+          <DieBadge value={'d' + p.die} />
+          <div className="col" role="group" aria-label={'d' + p.die + ' Hit Dice: ' + (p.size - p.used) + ' of ' + p.size + ' left'} style={{ lineHeight: 1.1 }}>
+            <span><span className="hd-count">{p.size - p.used}</span> <span className="muted">/ {p.size}</span></span>
+            <span className="small hd-sub">left · CON {fmt(abilityMod(c, 'con'))}</span>
+          </div>
+          <div className="row amount">
+            <Step label={'Remove a d' + p.die + ' Hit Die'} onClick={() => update((x) => ({ hdUsed: { ...x.hdUsed, [p.die]: Math.min(p.size, p.used + 1) } }))}>−</Step>
+            <Step label={'Restore a d' + p.die + ' Hit Die'} onClick={() => update((x) => ({ hdUsed: { ...x.hdUsed, [p.die]: Math.max(0, p.used - 1) } }))}>+</Step>
+          </div>
+        </div>
+      ))}
       <div className="row gap-10">
-        <DieBadge value={'d' + pool.die} />
-        <div className="col" role="group" aria-label={'Hit Dice: ' + hdLeft + ' of ' + level + ' left'} style={{ lineHeight: 1.1 }}>
-          <span><span className="hd-count">{hdLeft}</span> <span className="muted">/ {level}</span></span>
-          <span className="small hd-sub">left · CON {fmt(abilityMod(c, 'con'))}</span>
-        </div>
-        <div className="row amount">
-          <Step label="Remove a Hit Die" onClick={() => update((p) => ({ hdUsed: { ...p.hdUsed, [pool.die]: Math.min(pool.size, hdUsed + 1) } }))}>−</Step>
-          <Step label="Restore a Hit Die" onClick={() => update((p) => ({ hdUsed: { ...p.hdUsed, [pool.die]: Math.max(0, hdUsed - 1) } }))}>+</Step>
-        </div>
+        {pools.length > 1 && (
+          <select className="input" aria-label="Hit Die size" value={String(pool?.die ?? '')} onChange={(e) => setDieChoice(Number(e.target.value) as Die)}>
+            {pools.map((p) => <option key={p.die} value={p.die} disabled={p.used >= p.size}>d{p.die}</option>)}
+          </select>
+        )}
         <button type="button" className="btn" style={{ fontSize: 14, padding: '0 12px', marginLeft: 'auto' }} aria-disabled={!canSpendHD} onClick={spendHD}>Spend Hit Die</button>
       </div>
       {hdPrompt && <Notice className="notice-blue" label="Dismiss Hit Die note" onClose={() => setHdPrompt(false)}>Hit Die spent. Roll {hdRoll} (minimum 1), type the total in Amount above, then tap Heal.</Notice>}
