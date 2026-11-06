@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { newId } from './logic';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import {
-  ABILITIES, charLevel, hasHistory, pactLeft, setBaseRows, spellForRow, valueCtx, conHpPart, maxHpRaw, profBonus, regainTo, saveDc, acCanTargetOther, acOnOther, toggleAcTarget, regainLabel, damageHitDie, setTempHitDie, castAbOf, removeChip, speedOf, armorSlowBy, stealthDisBy, acSpellIdle, untrainedArmor, grantChips, addGrants, findUnlinked, removalChain, removalSummary, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, dawn, refillFor, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, parseWeight, passiveScore, passiveParts, passiveNotes, activeAuras, pillView, resPill, setPill, preparedCount, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft, num, setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, undoHp
+  ABILITIES, MULTICLASS_SLOTS, casterLevel, pactFor, slotsFor, charLevel, hasHistory, pactLeft, setBaseRows, spellForRow, valueCtx, conHpPart, maxHpRaw, profBonus, regainTo, saveDc, acCanTargetOther, acOnOther, toggleAcTarget, regainLabel, damageHitDie, setTempHitDie, castAbOf, removeChip, speedOf, armorSlowBy, stealthDisBy, acSpellIdle, untrainedArmor, grantChips, addGrants, findUnlinked, removalChain, removalSummary, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, dawn, refillFor, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, parseWeight, passiveScore, passiveParts, passiveNotes, activeAuras, pillView, resPill, setPill, preparedCount, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft, num, setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, undoHp
 } from './logic';
 import { migrate } from './migrate';
 import { AOP, haAura, holyAvenger, paladin, withClass, withClasses } from './test-fixtures';
@@ -1818,5 +1818,44 @@ describe('class rows edited by hand', () => {
     expect(c.grants).toEqual([]);
     expect(c.spells[0].cls).toBeUndefined();
     expect(c.levels).toEqual([{ base: true, n: 3, cls: 'A', added: [], picks: {}, set: [] }]);
+  });
+});
+
+describe('spell slots from classes (PHB p.45)', () => {
+  const srd = mergeCatalog(srdEntries, null);
+  const row = (cls: string, lvl: number) => ({ clsId: 'class/' + cls, name: cls, lvl });
+  const of = (...rows: { clsId: string; name: string; lvl: number }[]) => withClasses(blankCharacter(), rows);
+  const pad = (...n: number[]) => [0, ...n, ...Array(9 - n.length).fill(0)];
+  it('one Spellcasting class uses its own table', () => {
+    expect(slotsFor(of(row('ranger', 5), row('rogue', 2)), srd)).toEqual(pad(4, 2));
+    expect(casterLevel(of(row('ranger', 5), row('rogue', 2)), srd).casters).toBe(1);
+  });
+  it('two or more use the multiclass table, rounding half casters up per class', () => {
+    expect(casterLevel(of(row('ranger', 1), row('paladin', 1)), srd)).toEqual({ level: 2, casters: 2 });
+    expect(slotsFor(of(row('ranger', 1), row('paladin', 1)), srd)).toEqual([0, ...MULTICLASS_SLOTS[1]]);
+    expect(casterLevel(of(row('wizard', 3), row('cleric', 2)), srd).level).toBe(5);
+    expect(slotsFor(of(row('wizard', 3), row('cleric', 2)), srd)).toEqual(pad(4, 3, 2));
+  });
+  it('a Pact Magic class keeps its own pool and adds nothing to the caster level', () => {
+    const c = of(row('warlock', 3), row('sorcerer', 2));
+    expect(slotsFor(c, srd)).toEqual(pad(3));
+    expect(pactFor(c, srd)).toEqual({ max: 2, lvl: 2 });
+    expect(pactFor(of(row('wizard', 3)), srd)).toEqual({ max: 0, lvl: 0 });
+  });
+  const ek = (fighter: number, extra: { clsId: string; name: string; lvl: number }[] = []): Character => ({
+    ...of(row('fighter', fighter), ...extra),
+    feats: [{ id: 'ek', g: 'sub', name: 'Spellcasting', desc: '', cid: 'feature/fighter/eldritch-knight/spellcasting' }],
+    grants: [{ id: 'gc', kind: 'casting', name: 'Spellcasting', ab: 'int', list: 'wizard', s1: '3:2,4:3,7:4', s2: '7:2', from: 'feature:ek', minLvl: 3 }]
+  });
+  it('a casting grant alone reads its own slot values at its class level', () => {
+    expect(slotsFor(ek(7), srd)).toEqual(pad(4, 2));
+  });
+  it('a casting grant counts a third, rounded down, with another caster', () => {
+    expect(casterLevel(ek(9, [row('wizard', 1)]), srd)).toEqual({ level: 4, casters: 2 });
+  });
+  it('an inactive casting grant does not make two casters', () => {
+    const c = ek(2, [row('wizard', 3)]);
+    expect(casterLevel(c, srd).casters).toBe(1);
+    expect(slotsFor(c, srd)).toEqual(pad(4, 2));
   });
 });

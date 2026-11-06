@@ -1,5 +1,6 @@
 // D&D 2024 rules used by the sheet. Pure functions: each takes a character and returns the next one.
-import type { GrantSpec } from './catalog/schema';
+import type { ClassEntry, GrantSpec } from './catalog/schema';
+import type { Catalog } from './catalog/merge';
 import { hasDice, isValue, valueAt, type ValueCtx } from './catalog/value';
 import type { ProfCat } from './catalog/names';
 import { canLoad, setHands } from './hands';
@@ -1259,6 +1260,56 @@ let idSeq = 0;
 // A later save change that renames one of these fields must also rewrite every levels[].set in its STEPS entry.
 export const LEVEL_KEYS = ['castAb', 'slotMax', 'pactMax', 'pactLvl'] as const;
 export const ROW_FIELDS = ['sub', 'subId', 'prep', 'castAb'] as const;
+
+// Multiclass Spellcaster: Spell Slots per Spell Level (PHB p.45), slots of levels 1–9 by caster level 1–20.
+export const MULTICLASS_SLOTS: number[][] = [
+  [2, 0, 0, 0, 0, 0, 0, 0, 0], [3, 0, 0, 0, 0, 0, 0, 0, 0], [4, 2, 0, 0, 0, 0, 0, 0, 0], [4, 3, 0, 0, 0, 0, 0, 0, 0],
+  [4, 3, 2, 0, 0, 0, 0, 0, 0], [4, 3, 3, 0, 0, 0, 0, 0, 0], [4, 3, 3, 1, 0, 0, 0, 0, 0], [4, 3, 3, 2, 0, 0, 0, 0, 0],
+  [4, 3, 3, 3, 1, 0, 0, 0, 0], [4, 3, 3, 3, 2, 0, 0, 0, 0], [4, 3, 3, 3, 2, 1, 0, 0, 0], [4, 3, 3, 3, 2, 1, 0, 0, 0],
+  [4, 3, 3, 3, 2, 1, 1, 0, 0], [4, 3, 3, 3, 2, 1, 1, 0, 0], [4, 3, 3, 3, 2, 1, 1, 1, 0], [4, 3, 3, 3, 2, 1, 1, 1, 0],
+  [4, 3, 3, 3, 2, 1, 1, 1, 1], [4, 3, 3, 3, 3, 1, 1, 1, 1], [4, 3, 3, 3, 3, 2, 1, 1, 1], [4, 3, 3, 3, 3, 2, 2, 1, 1]
+];
+// A Spellcasting class's share of the caster level (PHB p.45): all levels, or half rounded up. A casting grant (Eldritch
+// Knight, Arcane Trickster) counts a third, rounded down. Rounding is per class: the PHB doesn't say whether Paladin and
+// Ranger levels are halved together, and the sheet halves each (Ranger 1 / Paladin 1 counts 2).
+export const CASTER_SHARE: Record<string, 1 | 0.5> = { bard: 1, cleric: 1, druid: 1, sorcerer: 1, wizard: 1, paladin: 0.5, ranger: 0.5 };
+const classOf = (cat: Catalog, r: ClassRow) => { const e = cat.byId.get(r.clsId); return e?.kind === 'class' ? (e as ClassEntry) : undefined; };
+// A row that has Spellcasting at its level: a non-pact class whose table gives it a slot there.
+const castsAt = (e: ClassEntry | undefined, lvl: number) => !!e && !e.pact && !!e.slots?.[lvl - 1]?.some((n) => n > 0);
+const grantSlots = (c: Character, g: Grant) => [0, ...[g.s1, g.s2, g.s3, g.s4, g.s5].map((v) => (v ? num(c, v, g) : 0)), 0, 0, 0, 0];
+// The caster level and how many Spellcasting sources count. A Pact Magic class adds nothing (it has its own pool), and a
+// casting grant counts only while active (its minLvl met).
+export function casterLevel(c: Character, cat: Catalog): { level: number; casters: number } {
+  let level = 0, casters = 0;
+  for (const r of c.classes) {
+    const e = classOf(cat, r);
+    if (!castsAt(e, r.lvl)) continue;
+    casters++;
+    level += CASTER_SHARE[r.clsId.split('/')[1]] === 0.5 ? Math.ceil(r.lvl / 2) : r.lvl;
+  }
+  for (const g of activeGrants(c, 'casting')) { casters++; level += Math.floor(classLevel(c, g) / 3); }
+  return { level, casters };
+}
+// Spell slots (index 0 is cantrips, always 0): none without a caster; one caster's own table (a casting grant's s1–s5 at
+// its class level); two or more, the multiclass table (PHB p.45).
+export function slotsFor(c: Character, cat: Catalog): number[] {
+  const { level, casters } = casterLevel(c, cat);
+  if (casters === 0) return slots([]);
+  if (casters > 1) return [0, ...MULTICLASS_SLOTS[Math.min(20, level) - 1]];
+  const r = c.classes.find((x) => castsAt(classOf(cat, x), x.lvl));
+  if (r) return [0, ...classOf(cat, r)!.slots![r.lvl - 1]];
+  return grantSlots(c, activeGrants(c, 'casting')[0]);
+}
+// The Pact Magic pool from the pact class's table at its level: the slot count and the slot level.
+export function pactFor(c: Character, cat: Catalog): { max: number; lvl: number } {
+  for (const r of c.classes) {
+    const e = classOf(cat, r);
+    const row = e?.pact ? e.slots?.[r.lvl - 1] : undefined;
+    const i = row ? row.findIndex((n) => n > 0) : -1;
+    if (row && i >= 0) return { max: row[i], lvl: i + 1 };
+  }
+  return { max: 0, lvl: 0 };
+}
 
 // True once a level was gained through the app (a record that isn't the baseline): levels then change only by level-up and undo.
 export const hasHistory = (c: Character) => c.levels.some((r) => !r.base);
