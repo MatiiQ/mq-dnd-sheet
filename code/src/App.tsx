@@ -15,6 +15,7 @@ import { NotesTab } from './components/tabs/NotesTab';
 import { SpellsTab } from './components/tabs/SpellsTab';
 import { useWide } from './layout';
 import { RestPrompt } from './components/RestPrompt';
+import { LevelUpWizard } from './components/LevelUpWizard';
 import { TABS, dawn, longRest, restRolls, shortRest, type RestEvent, type RollAsk } from './logic';
 import { revealPlace, type RevealTarget } from './components/nav';
 import { formAfterTabChange, Sheet, type Focus, type FormState } from './sheet';
@@ -28,6 +29,8 @@ export default function App() {
   const [form, setForm] = useState<FormState>(null);
   const [activeSec, setActiveSec] = useState('sec-hp');
   const [hdPrompt, setHdPrompt] = useState(false);
+  // A full-screen wizard over the sheet (UI only, never saved).
+  const [wizard, setWizard] = useState<'levelup' | null>(null);
   // A rest or Dawn waiting for die rolls (restRolls). UI state only, never saved.
   const [restAsk, setRestAsk] = useState<{ event: RestEvent; asks: RollAsk[] } | null>(null);
   // The row a shortcut opens (reveal). UI state only, never saved.
@@ -91,6 +94,7 @@ export default function App() {
 
   return (
     <Sheet.Provider value={{ c, update, edit, form, setForm, focus, reveal, markFocusUsed }}>
+      {wizard === 'levelup' && <LevelUpWizard c={c} onApply={(next) => { update(() => next); setWizard(null); }} onClose={() => setWizard(null)} />}
       <div className={'sheet' + (wide ? ' wide' : '')}>
         <TopBar store={store} activeSec={activeSec} setActiveSec={setActiveSec} menuOpen={menuOpen} setMenuOpen={setMenuOpen}
           onToggleEdit={() => { setEdit(!edit); setForm(null); }} onSwitched={onSwitched} onRest={onRest} />
