@@ -12,9 +12,6 @@ import { CrashScreen } from './components/CrashScreen';
 
 createRoot(document.getElementById('root')!).render(<StrictMode><CrashScreen><App /></CrashScreen></StrictMode>);
 
-// Characters can't be replaced, so ask the browser not to evict them under storage pressure.
-navigator.storage?.persist?.().catch(() => {});
-
 // Offline support for the installed Home Screen app.
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js'); });

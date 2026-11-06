@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { isObj, slug } from './catalog/schema';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import { newId, normalize } from './logic';
@@ -130,6 +130,15 @@ export function openExampleOnNextLoad(): void {
   writeJSON(INDEX_KEY, { ...(readJSON(INDEX_KEY) as object | null), active: EXAMPLES[0].id });
 }
 
+// Characters can't be replaced, so ask the browser not to evict them under storage pressure. Asked once, at the first
+// change to one of your own characters rather than on load, because Firefox answers with a permission prompt.
+let persistAsked = false;
+function askPersist(): void {
+  if (persistAsked) return;
+  persistAsked = true;
+  navigator.storage?.persist?.().catch(() => {});
+}
+
 // Saves the open character (not an example) and the index. Returns false when the browser refused.
 export function persistStore(s: Store): boolean {
   return (isExample(s.id) || writeJSON(sheetKey(s.id), s.c)) && writeJSON(INDEX_KEY, { active: s.id, list: freshList(s) });
@@ -158,14 +167,15 @@ export function rawBackup() {
   return backup([...new Set([...ids, ...sheetIds()])].map((id) => readJSON(sheetKey(String(id)))).filter(isObj), unreadableSheets());
 }
 
-// Offers a backup file: the share sheet on iPad (Save to Files / iCloud Drive), a download elsewhere.
+// Offers a backup file: the share sheet on a touch device that can share it (iPad: Save to Files / iCloud Drive), a download elsewhere.
 // With a character's name, the file is named after it. Resolves to what happened, or null if the user cancelled the share sheet.
 export async function saveBackupFile(data: unknown, name?: string): Promise<string | null> {
   const json = JSON.stringify(data, null, 2);
   const label = name === undefined ? 'backup' : slug(name) || 'character';
   const fileName = 'character-sheet-' + label + '-' + new Date().toISOString().slice(0, 10) + '.json';
   const file = new File([json], fileName, { type: 'application/json' });
-  if (navigator.canShare?.({ files: [file] })) {
+  // Touch screens only: on a Mac, Safari's share menu offers no way to save the file.
+  if (globalThis.matchMedia?.('(pointer: coarse)').matches && navigator.canShare?.({ files: [file] })) {
     try { await navigator.share({ files: [file] }); return 'Backup shared.'; } catch (e) {
       if ((e as DOMException)?.name === 'AbortError') return null;
       // Any other failure falls through to the download below.
@@ -196,8 +206,10 @@ export function useCharacters() {
   const [saveFailed, setSaveFailed] = useState(false);
   const list = freshList(s);
 
+  const loaded = useRef(s);
   useEffect(() => {
     setSaveFailed(!persistStore(s));
+    if (s !== loaded.current && !isExample(s.id)) askPersist();
   }, [s]);
 
   const add = (c: Character) => setS((p) => addToStore(p, [{ id: newId(), c }]));

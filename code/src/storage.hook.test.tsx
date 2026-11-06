@@ -17,9 +17,22 @@ const mount = () => {
 const sheet = (id: string) => JSON.parse(localStorage.getItem('dnd-sheet-v3:' + id) ?? 'null');
 const index = () => JSON.parse(localStorage.getItem('dnd-index-v3') ?? 'null');
 
+// Set before the first mount: the request is made once per page load.
+const persist = vi.fn(async () => true);
+Object.defineProperty(navigator, 'storage', { value: { persist }, configurable: true });
+
 describe('useCharacters', () => {
   beforeEach(() => { localStorage.clear(); mount(); });
   afterEach(() => { act(() => root.unmount()); vi.unstubAllGlobals(); });
+
+  // Firefox answers persist() with a prompt, so it waits for a change instead of coming on load.
+  it('asks for persistent storage once, at the first change to your own character', () => {
+    expect(persist).not.toHaveBeenCalled();
+    act(() => store.newBlank());
+    act(() => store.update((c) => ({ ch: { ...c.ch, name: 'Bob' } })));
+    act(() => store.update((c) => ({ ch: { ...c.ch, name: 'Rob' } })));
+    expect(persist).toHaveBeenCalledOnce();
+  });
 
   it('saves a change to the sheet and the index', () => {
     act(() => store.newBlank());
@@ -56,12 +69,15 @@ describe('useCharacters', () => {
 describe('saveBackupFile', () => {
   const nav = navigator as unknown as { canShare?: unknown; share?: unknown };
   let click: ReturnType<typeof vi.spyOn>;
+  let coarse = true;
   beforeEach(() => {
+    coarse = true;
+    vi.stubGlobal('matchMedia', (q: string) => ({ matches: q === '(pointer: coarse)' && coarse }));
     click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
     URL.createObjectURL = vi.fn(() => 'blob:x');
     URL.revokeObjectURL = vi.fn();
   });
-  afterEach(() => { delete nav.canShare; delete nav.share; vi.restoreAllMocks(); });
+  afterEach(() => { delete nav.canShare; delete nav.share; vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
   it('shares a backup on iPad', async () => {
     nav.canShare = () => true;
@@ -81,6 +97,14 @@ describe('saveBackupFile', () => {
     nav.share = async () => { throw new Error('nope'); };
     expect(await saveBackupFile({})).toBe('Backup downloaded.');
     expect(click).toHaveBeenCalledOnce();
+  });
+  // Safari on a Mac can share a file, but its share menu has no Save.
+  it('downloads without a touch screen, even when the browser can share', async () => {
+    coarse = false;
+    nav.canShare = () => true;
+    nav.share = vi.fn(async () => {});
+    expect(await saveBackupFile({})).toBe('Backup downloaded.');
+    expect(nav.share).not.toHaveBeenCalled();
   });
   it('downloads when sharing is missing', async () => {
     expect(await saveBackupFile({})).toBe('Backup downloaded.');

@@ -128,7 +128,7 @@ function Proficiencies() {
             <span className="muted">{label}</span>
             <div className="row wrap gap-6">
               {mine.map((p) => (
-                <span key={p.name} className="prof-chip">
+                <span key={p.name} className={'prof-chip' + (p.id ? '' : ' bare')}>
                   {p.name}{p.by && <span className="small">· {p.by}</span>}
                   {p.id ? <RemoveButton name={p.name + ' proficiency'} onRemove={() => update((x) => ({ profs: removeEntry(x.profs, p.id!) }))} /> : null}
                 </span>

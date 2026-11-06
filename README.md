@@ -1,8 +1,8 @@
 # D&D Character Sheet
 
-An interactive character sheet for **D&D 2024** (Player's Handbook 2024), built for the iPad.
-It is a static web app: you open it once in Safari, add it to the Home Screen, and from then on it works
-offline like a native app. Everything is saved on the device. There is no account, no server and no tracking.
+An interactive character sheet for **D&D 2024** (Player's Handbook 2024), built for the iPad and
+other tablets. It is a static web app: you open it once in the browser, add it to the Home Screen, and from
+then on it works offline like a native app. Everything is saved on the device. There is no account, no server and no tracking.
 
 **Live:** https://matiiq.github.io/mq-dnd-sheet/
 
@@ -120,7 +120,7 @@ Appearance, Personality, Backstory and Session notes.
 ### Characters and backup (Rest · More menu)
 - Several characters; **+ New character** gives a blank sheet or a copy of one of the two examples (Ilyra,
   Ranger 5, and Seren, Druid 12). **Duplicate** and **Delete** are in the same menu.
-- **Backup:** *Export this*, *Export all* (a JSON file, shared to Files or iCloud Drive from the iPad) and
+- **Backup:** *Export this*, *Export all* (a JSON file, shared to Files or iCloud Drive from the iPad, downloaded elsewhere) and
   *Import* (adds the characters next to your own; it never overwrites).
 - If the device refuses to store a change, a red banner at the top tells you to export a backup.
 
@@ -136,6 +136,23 @@ and it picks up new versions.
 
 Data lives only in that Home Screen app. Deleting the icon deletes the characters, so use
 Menu › Backup › **Export all** now and then (it saves a JSON file to Files or iCloud Drive).
+
+Use the Home Screen app, not a Safari tab: Safari may delete a website's saved data after 7 days without a
+visit, and a tab and the Home Screen app keep separate data.
+
+## Install on an Android tablet or a computer
+
+1. Open https://matiiq.github.io/mq-dnd-sheet/ in Chrome or Edge.
+2. Android: browser menu › **Add to Home screen** › Install. Computer: the install icon in the address bar,
+   or browser menu › **Install**.
+3. Launch it from the icon. It updates itself on the next online launch.
+
+Here the installed app and the browser tabs of that site share the same data, and removing the icon keeps it;
+clearing the browser's site data deletes it. Export a backup now and then (Menu › Backup › **Export all**
+downloads a JSON file). Firefox on Android installs it the same way; Firefox on a computer can't install it,
+but the sheet works in a tab, offline too.
+
+On a wide screen (from about 1060 × 700 points) the sheet shows two columns; Menu › Layout changes that.
 
 ## Development
 
