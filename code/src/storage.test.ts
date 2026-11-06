@@ -93,6 +93,14 @@ describe('save from a newer app', () => {
     localStorage.setItem = setItem;
     expect(body).toContain('no copy');
   });
+  it('skips a backup character saved by a newer app instead of importing it cut down', () => {
+    const m = stubStorage();
+    const r = writeBackup({ ...backupOf(1), characters: [blankCharacter(), JSON.parse(newer())] });
+    expect(r).toMatchObject({ newer: 1, failed: 0 });
+    expect(r.added).toHaveLength(1);
+    expect(m.size).toBe(1);
+    expect(() => writeBackup({ ...backupOf(1), characters: [JSON.parse(newer())] })).toThrow(/newer version/);
+  });
   it('opens a current save without a copy or a notice', () => {
     const m = stubStorage();
     m.set('dnd-sheet-v3:x', JSON.stringify(blankCharacter()));

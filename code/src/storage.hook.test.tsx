@@ -26,7 +26,7 @@ describe('useCharacters', () => {
   afterEach(() => { act(() => root.unmount()); vi.unstubAllGlobals(); });
 
   // Firefox answers persist() with a prompt, so it waits for a change instead of coming on load.
-  it('asks for persistent storage once, at the first change to your own character', () => {
+  it('asks for persistent storage once, at the first store change after load', () => {
     expect(persist).not.toHaveBeenCalled();
     act(() => store.newBlank());
     act(() => store.update((c) => ({ ch: { ...c.ch, name: 'Bob' } })));
@@ -50,9 +50,9 @@ describe('useCharacters', () => {
   });
   it('imports next to the existing characters', () => {
     act(() => store.newBlank());
-    let r: { added: number; failed: number } | undefined;
+    let r: { added: number; newer: number; failed: number } | undefined;
     act(() => { r = store.importAll({ app: 'dnd-character-sheet', version: 1, characters: [sampleCharacter()] }); });
-    expect(r).toEqual({ added: 1, failed: 0 });
+    expect(r).toEqual({ added: 1, newer: 0, failed: 0 });
     expect(store.list).toHaveLength(2);
     expect(sheet(store.charId).ch.name).toBe(sampleCharacter().ch.name);
   });

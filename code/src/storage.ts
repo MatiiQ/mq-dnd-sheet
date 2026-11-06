@@ -74,7 +74,7 @@ export function load(id: string): Character {
     const { kept } = keepRaw(key);
     return {
       ...migrate(data),
-      restMsg: { title: 'Saved by a newer version', body: 'This character was saved by a newer version of the app, so anything this version doesn’t know was left out. ' + (kept ? 'The full data stays on this device and goes into every backup file. Open the app online to update it.' : 'Storage is full, so no copy of the full data could be kept.') }
+      restMsg: { title: 'Saved by a newer version', body: 'This character was saved by a newer version of the app, so anything this version doesn’t know was left out. ' + (kept ? 'The full data stays on this device and goes into every backup file, but the app doesn’t bring it back by itself, not even after an update.' : 'Storage is full, so no copy of the full data could be kept.') }
     };
   }
   if (isObj(data)) return migrate(data);
@@ -131,7 +131,8 @@ export function openExampleOnNextLoad(): void {
 }
 
 // Characters can't be replaced, so ask the browser not to evict them under storage pressure. Asked once, at the first
-// change to one of your own characters rather than on load, because Firefox answers with a permission prompt.
+// store change after load while one of your own characters is open (an edit, a switch, a new character or an import),
+// rather than on load, because Firefox answers with a permission prompt.
 let persistAsked = false;
 function askPersist(): void {
   if (persistAsked) return;
@@ -188,16 +189,19 @@ export async function saveBackupFile(data: unknown, name?: string): Promise<stri
   return 'Backup downloaded.';
 }
 
-// Saves a backup's characters under new ids. Returns the ones that were saved and how many weren't (not a character,
-// or the browser refused: storage full), so the index never lists a character that has no sheet.
-export function writeBackup(data: unknown): { added: { id: string; c: Character }[]; failed: number } {
+// Saves a backup's characters under new ids. Returns the ones that were saved, how many were skipped as saved by a
+// newer app (migrate() would drop what this version doesn't know), and how many failed (not a character, or the
+// browser refused: storage full), so the index never lists a character that has no sheet.
+export function writeBackup(data: unknown): { added: { id: string; c: Character }[]; newer: number; failed: number } {
   const d = data as { app?: string; characters?: unknown[] } | null;
   if (!d || d.app !== BACKUP_APP || !Array.isArray(d.characters)) throw new Error('Not a character sheet backup file.');
-  const chars = d.characters.filter((x) => x && typeof x === 'object' && (x as Character).ch).map(migrate);
-  if (!chars.length) throw new Error('The backup has no characters.');
+  const found = d.characters.filter((x) => x && typeof x === 'object' && (x as Character).ch);
+  if (!found.length) throw new Error('The backup has no characters.');
+  const chars = found.filter((x) => !isNewerSave(x)).map(migrate), newer = found.length - chars.length;
+  if (!chars.length) throw new Error('This backup was saved by a newer version of the app. Open the app online to update it, then import again.');
   const added = chars.map((c) => ({ id: newId(), c })).filter((a) => writeJSON(sheetKey(a.id), a.c));
   if (!added.length) throw new Error('The backup could not be saved: storage is full.');
-  return { added, failed: d.characters.length - added.length };
+  return { added, newer, failed: d.characters.length - newer - added.length };
 }
 
 // All characters, the active one, and every way to change them. Saves on each change.
@@ -236,11 +240,11 @@ export function useCharacters() {
 
     exportAll: () => exportStore(s),
     exportOne: () => backup([s.c]),
-    // Adds the backup's characters next to the existing ones; returns how many were added and how many failed.
-    importAll: (data: unknown): { added: number; failed: number } => {
-      const { added, failed } = writeBackup(data);
+    // Adds the backup's characters next to the existing ones; returns how many were added, skipped as newer, and failed.
+    importAll: (data: unknown): { added: number; newer: number; failed: number } => {
+      const { added, newer, failed } = writeBackup(data);
       setS((p) => addToStore(p, added));
-      return { added: added.length, failed };
+      return { added: added.length, newer, failed };
     }
   };
 }
