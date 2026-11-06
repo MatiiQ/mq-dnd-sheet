@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { mergeCatalog } from './catalog/merge';
 import type { ChoiceSpec, ClassEntry, Entry, FeatureEntry, SubclassEntry } from './catalog/schema';
-import { applyLevel, emptyCharacter, fixedHp, hpGain, levelPlan, levelSet, withLevel, type ClassPick, type LevelAnswers } from './levelup';
+import { applyLevel, emptyCharacter, fixedHp, hpGain, levelPlan, levelSet, prereqCheck, withLevel, type ClassPick, type LevelAnswers } from './levelup';
 import { abilityMod, longRest, maxHpOf } from './logic';
 import { migrate } from './migrate';
 import type { Character } from './types';
@@ -113,7 +113,7 @@ describe('level engine core [11a]', () => {
     const s = up(fresh(), { cls: 'class/sorcerer' }, A({ flows: { 'profs/skills': flow({ skills: ['insight'] }) } }));
     const plan = levelPlan(s, { cls: 'class/ranger' }, cat, A())!;
     expect(plan.steps.filter((x) => x.kind === 'profs').map((x) => x.choice?.pick)).toEqual([1]);
-    const c = applyLevel(s, plan, fixed({ flows: { 'profs/mskills': flow({ mskills: ['nature'] }) } }), cat).c;
+    const c = applyLevel(s, plan, fixed({ anyway: true, flows: { 'profs/mskills': flow({ mskills: ['nature'] }) } }), cat).c;
     const id = row(c, 'class/ranger').id;
     const got = c.grants.filter((g) => g.from === 'class:' + id).map((g) => g.cat + ':' + (g.target ?? g.name));
     expect(got.sort()).toEqual(['skill:nature', 'weapon:Martial weapons']);
@@ -125,7 +125,7 @@ describe('level engine core [11a]', () => {
     const sorc = levelPlan(r, { cls: 'class/sorcerer' }, cat, A())!.steps.filter((x) => x.kind === 'profs');
     expect(sorc).toHaveLength(1);
     expect(sorc[0].warn).toBeTruthy();
-    const c = applyLevel(r, levelPlan(r, { cls: 'class/sorcerer' }, cat, A())!, fixed(), cat).c;
+    const c = applyLevel(r, levelPlan(r, { cls: 'class/sorcerer' }, cat, A())!, fixed({ anyway: true }), cat).c;
     expect(c.grants.filter((g) => g.from === 'class:' + row(c, 'class/sorcerer').id)).toEqual([]);
   });
   it('a feature already on the sheet is not added twice', () => {
@@ -147,9 +147,9 @@ describe('level engine core [11a]', () => {
     expect(levelPlan(c, { row: r.classes[0].id }, cat)).toBeNull();
   });
   it('a class without catalog data asks for its die', () => {
-    const r = ranger1();
+    const r = ranger1({ dex: 13, wis: 13 });
     const plan = levelPlan(r, { name: 'Artificer', hd: 8 }, cat)!;
-    expect(plan.steps.map((s) => s.kind)).toEqual(['hp', 'nocat']);
+    expect(plan.steps.map((s) => s.kind)).toEqual(['prereq', 'hp', 'nocat']);
     expect(levelPlan(r, { row: r.classes[0].id }, null)!.steps.map((s) => s.kind)).toEqual(['hp', 'nocat']);
     const c = applyLevel(r, plan, fixed(), cat).c;
     expect(c.classes.at(-1)).toMatchObject({ name: 'Artificer', hd: 8, clsId: '', lvl: 1 });
@@ -179,5 +179,40 @@ describe('level engine core [11a]', () => {
     const newRow = { ...after, classes: [...after.classes, { id: 'nr', name: 'X', clsId: '', sub: '', subId: '', lvl: 1, hd: 8 as const, prep: 0, castAb: 'int' as const }] };
     expect(levelSet(after, newRow)).toEqual([]);
     void abilityMod;
+  });
+});
+
+describe('multiclass prerequisite and subclass [11b]', () => {
+  it('multiclass prerequisite (PHB p.44)', () => {
+    const r = ranger1({ dex: 13, wis: 13, cha: 10 });
+    const plan = levelPlan(r, { cls: 'class/sorcerer' }, cat, A())!;
+    const step = plan.steps.find((s) => s.kind === 'prereq')!;
+    expect(step.warn).toContain('Charisma 13');
+    expect(() => applyLevel(r, plan, fixed(), cat)).toThrow();
+    expect(applyLevel(r, plan, fixed({ anyway: true }), cat).c.classes).toHaveLength(2);
+    const low = ranger1({ dex: 12, wis: 13, cha: 13 });
+    expect(prereqCheck(low, cat.byId.get('class/sorcerer') as ClassEntry, cat).missing.join()).toContain('Dexterity 13');
+    expect(prereqCheck(ranger1({ dex: 13, wis: 13, cha: 13 }), cat.byId.get('class/sorcerer') as ClassEntry, cat).ok).toBe(true);
+    const art = levelPlan(r, { name: 'Artificer', hd: 8 }, cat)!.steps.find((s) => s.kind === 'prereq')!;
+    expect(r.abil.dex).toBe(13);
+    expect(art.title).toContain('No prerequisite known for Artificer');
+    expect(art.warn).toBeUndefined();
+    expect(levelPlan(r, { row: r.classes[0].id }, cat)!.steps.some((s) => s.kind === 'prereq')).toBe(false);
+  });
+  it('subclass picked at level 3 adds its level-3 features once', () => {
+    const c2 = levelTo(ranger1(), 'class/ranger', 2);
+    const plan = levelPlan(c2, { row: c2.classes[0].id }, cat, fixed())!;
+    expect(plan.steps.find((s) => s.kind === 'subclass')!.choice?.pool).toBe('subclass:cls=ranger');
+    const ans = fixed({ sub: 'subclass/ranger/hunter' });
+    const again = levelPlan(c2, { row: c2.classes[0].id }, cat, ans)!;
+    expect(again.steps.filter((s) => s.entry?.id === 'feature/ranger/prey')).toHaveLength(1);
+    expect(again.steps.some((s) => s.entry?.id === 'feature/ranger/dread')).toBe(false);
+    const c3 = applyLevel(c2, again, ans, cat).c;
+    expect(c3.classes[0]).toMatchObject({ sub: 'hunter', subId: 'subclass/ranger/hunter' });
+    expect(c3.feats.filter((f) => f.cid === 'feature/ranger/prey')).toHaveLength(1);
+    const keys = c3.levels.at(-1)!.set.map((x) => x.key);
+    expect(keys).toEqual(expect.arrayContaining([`row.${c2.classes[0].id}.sub`, `row.${c2.classes[0].id}.subId`]));
+    const typed = applyLevel(c2, levelPlan(c2, { row: c2.classes[0].id }, cat, fixed({ sub: 'name:Beast Master' }))!, fixed({ sub: 'name:Beast Master' }), cat).c;
+    expect(typed.classes[0]).toMatchObject({ sub: 'Beast Master', subId: '' });
   });
 });

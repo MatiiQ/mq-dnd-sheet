@@ -7,8 +7,8 @@ import { entriesOf, type Catalog } from './catalog/merge';
 import type { ChoiceSpec, ClassEntry, Entry, FeatureEntry } from './catalog/schema';
 import { atLevel } from './catalog/copy';
 import { blankCharacter } from './defaults';
-import { abilityMod, addGrants, LEVEL_KEYS, LIST_KIND, maxHpOf, maxHpRaw, newId, normalize, ROW_FIELDS, totalLevel, type RefKind } from './logic';
-import type { Character, ClassRow, Die, LevelKey, LevelRecord, LevelSet } from './types';
+import { ABILITIES, abilityMod, addGrants, effScore, LEVEL_KEYS, LIST_KIND, maxHpOf, maxHpRaw, newId, normalize, ROW_FIELDS, totalLevel, type RefKind } from './logic';
+import type { Ability, Character, ClassRow, Die, LevelKey, LevelRecord, LevelSet } from './types';
 
 // { row }: that row (the level-up wizard). { cls }: the row whose clsId is cls, or a new row of that catalog class (the
 // creator names classes this way, never by row id). { name, hd }: the row of that name without clsId, or a new row
@@ -65,16 +65,46 @@ function featuresAt(cat: Catalog, r: ClassRow, short: string): FeatureEntry[] {
     && (e.lvl === r.lvl || (e.again ?? '').split(',').map(Number).includes(r.lvl)));
 }
 
+// Multiclassing prerequisite (PHB p.44): 13 or higher in the primary ability of the new class and of every current
+// class (',' all of them, '|' any one), read from the final scores. A class without a known primary is listed in
+// unknown and skipped. Advisory: the wizard warns and offers "Do it anyway".
+export function prereqCheck(c: Character, cls: ClassEntry | undefined, cat: Catalog | null): { ok: boolean; missing: string[]; unknown: string[] } {
+  const missing: string[] = [], unknown: string[] = [];
+  const name = (a: string) => ABILITIES.find(([k]) => k === a)?.[1] ?? a;
+  const check = (label: string, primary: string | undefined) => {
+    if (!primary) { unknown.push(label); return; }
+    const any = primary.includes('|'), abs = primary.split(/[|,]/) as Ability[];
+    const low = abs.filter((a) => effScore(c, a) < 13);
+    if (any ? low.length === abs.length : low.length) missing.push((any ? abs : low).map((a) => name(a) + ' 13').join(any ? ' or ' : ' and ') + ' (' + label + ')');
+  };
+  const rows = c.classes.filter((r) => !cls || r.clsId !== cls.id);
+  for (const r of rows) check(r.name || 'Level ' + r.lvl, classEntry(cat, r.clsId)?.primary);
+  if (cls) check(cls.name, cls.primary);
+  return { ok: !missing.length, missing, unknown };
+}
+
 // The steps of the next level of one class (spec §2). Null at total level 20. With no catalog, or a class missing from
 // it, the plan is the HP and the class level only.
 export function levelPlan(c: Character, pick: ClassPick, cat: Catalog | null, ans?: LevelAnswers): Plan | null {
   if (totalLevel(c) >= 20) return null;
   void ans;
-  const { c: x, row } = withLevel(c, pick, cat);
-  const r = x.classes.find((y) => y.id === row)!;
-  const cls = classEntry(cat, r.clsId);
-  const n = totalLevel(x), steps: Step[] = [];
+  const { c: x0, row } = withLevel(c, pick, cat);
+  const r0 = x0.classes.find((y) => y.id === row)!;
+  const cls = classEntry(cat, r0.clsId);
+  const n = totalLevel(x0), steps: Step[] = [];
   const first = c.classes.length === 0;
+  // A new class (multiclassing): the prerequisite first.
+  if (!first && r0.lvl === 1) {
+    const pre = prereqCheck(c, cls, cat);
+    if (!cls) pre.unknown.push(r0.name);
+    if (!pre.ok) steps.push({ key: 'prereq', kind: 'prereq', title: 'Multiclass prerequisite', warn: 'Needs ' + pre.missing.join('; ') });
+    else steps.push({ key: 'prereq', kind: 'prereq', title: pre.unknown.length ? 'No prerequisite known for ' + pre.unknown.join(', ') : 'Prerequisite met' });
+  }
+  // The subclass pick (step 5): with an answer the plan reads the row as having it, so its features are listed.
+  const subFeat = cat && cls && !r0.sub.trim() ? entriesOf(cat, 'feature').find((e) => e.cls === cls.id.split('/')[1] && e.lvl === r0.lvl && /-subclass$/.test(e.id)) : undefined;
+  const picked = subFeat && ans?.sub && !ans.sub.startsWith('name:') ? cat!.byId.get(ans.sub) : undefined;
+  const x = picked?.kind === 'subclass' ? { ...x0, classes: x0.classes.map((y) => (y.id === row ? { ...y, sub: picked.name, subId: picked.id } : y)) } : x0;
+  const r = x.classes.find((y) => y.id === row)!;
   if (!first) steps.push({ key: 'hp', kind: 'hp', title: 'Hit points' });
   if (!cls || !cat) {
     steps.push({ key: 'nocat', kind: 'nocat', title: r.name + ' ' + r.lvl, warn: 'No class data: only the HP and the class level are added. Add its features by hand.' });
@@ -91,7 +121,14 @@ export function levelPlan(c: Character, pick: ClassPick, cat: Catalog | null, an
       for (const ch of choices) steps.push({ key: 'profs/' + ch.id, kind: 'profs', title: ch.name, choice: ch });
     }
   }
-  for (const e0 of featuresAt(cat, r, short)) {
+  if (subFeat) {
+    const choice = subFeat.grants.find((g): g is ChoiceSpec => g.kind === 'choice');
+    steps.push({ key: 'subclass', kind: 'subclass', title: 'Subclass', entry: subFeat, ...(choice ? { choice } : {}),
+      ...(ans?.sub?.startsWith('name:') ? { warn: 'A subclass typed by name adds no features: add them by hand.' } : {}) });
+  }
+  // A subclass picked now brings every subclass feature up to this level (a creator taking it late gets the earlier ones).
+  const subFeats = picked ? entriesOf(cat, 'feature').filter((e) => e.cls === short && e.sub === subOf(r) && e.lvl < r.lvl && !e.of) : [];
+  for (const e0 of [...subFeats, ...featuresAt(cat, r, short)]) {
     const e = atLevel(x, e0), on = x.feats.find((f) => f.cid === e.id);
     const key = 'feature:' + e.id + '@' + r.lvl;
     if (on) steps.push({ key, kind: 'feature', title: e.name + (e.lvl === r.lvl ? ': Already on your sheet' : ': gained again'), entry: e, onSheet: on.id });
@@ -122,6 +159,7 @@ const refsOf = (c: Character) => new Set(LISTS.flatMap(([k, kind]) => (c[k] as {
 // minLvl to what is gained now), the class proficiencies, the features, then the HP; then the record (added, picks,
 // set) and normalize(). kept: fields left as the player edited them (Task 13).
 export function applyLevel(c: Character, plan: Plan, ans: LevelAnswers, cat: Catalog | null): { c: Character; kept: { key: LevelKey; table: unknown }[] } {
+  if (plan.steps.some((s) => s.kind === 'prereq' && s.warn) && !ans.anyway) throw new Error('Multiclass prerequisite not met');
   const { c: raised, row } = withLevel(c, plan.pick, cat);
   let x = raised;
   const picks: Record<string, string[]> = {};
@@ -138,6 +176,16 @@ export function applyLevel(c: Character, plan: Plan, ans: LevelAnswers, cat: Cat
     if (isFirst || cls.multi) {
       const inputs = classProfInputs(cat, cls, !isFirst, prof);
       if (inputs.length) x = addGrants(x, 'class:' + row, inputs);
+    }
+  }
+  // The subclass: its entry (which names the row's sub and subId) or a typed name.
+  if (plan.steps.some((s) => s.kind === 'subclass') && ans.sub) {
+    if (ans.sub.startsWith('name:')) x = { ...x, classes: x.classes.map((y) => (y.id === row ? { ...y, sub: ans.sub!.slice(5), subId: '' } : y)) };
+    else if (cat?.byId.get(ans.sub)?.kind === 'subclass') {
+      const e = cat.byId.get(ans.sub)!;
+      x = addFromCatalog(x, cat, e, { picks: {}, counted: {}, links: {} });
+      x = { ...x, classes: x.classes.map((y) => (y.id === row ? { ...y, sub: e.name, subId: e.id } : y)) };
+      picks['subclass'] = [e.id];
     }
   }
   if (cat) for (const s of plan.steps) {
