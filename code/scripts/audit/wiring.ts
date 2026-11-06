@@ -9,6 +9,9 @@ import { spellUsable } from '../../src/logic.ts';
 import type { Character } from '../../src/types.ts';
 import { flatGrants, type Finding } from './checks.ts';
 
+// A blank character at level 20, so every level-gated entry counts.
+const level20 = (): Character => { const b = blankCharacter(); return { ...b, classes: [{ ...b.classes[0], lvl: 20 }] }; };
+
 // Answers every choice of an entry and of the entries nested under it with the first options, so it can be added.
 function autoAnswers(cat: Catalog, c: Character, entry: Entry, preset: Record<string, string[]> = {}, depth = 0): AddChoices {
   const e = atLevel(c, entry);
@@ -40,7 +43,7 @@ export function unreadFieldChecks(cat: Catalog): Finding[] {
   let tracing = true;
   const wrap = (e: Entry): Entry => new Proxy(e, { get(t, p, r) { if (tracing && typeof p === 'string') seen.add(`${t.kind}.${p}`); return Reflect.get(t, p, r); } });
   const list = cat.list.map(wrap), traced: Catalog = { list, byId: new Map(list.map((e) => [e.id, e])) };
-  const base = { ...blankCharacter(), level: 20 };
+  const base = level20();
   for (const e of list) {
     if (e.kind === 'item') { itemStats(e); itemQuestions(traced, e); }
     if (NOT_ADDED.includes(e.kind)) continue;
@@ -57,7 +60,7 @@ export function unreadFieldChecks(cat: Catalog): Finding[] {
   }
   for (const e of cat.list) {
     if (e.kind === 'class') {
-      const c = { ...base, ch: { ...base.ch, cls: e.name, clsId: matchId(traced, 'class', e.name) } };
+      const c = { ...base, classes: [{ ...base.classes[0], name: e.name, clsId: matchId(traced, 'class', e.name) }] };
       for (const t of ['class', 'sub', 'feat', 'species', 'background'] as FeatureType[]) featureCandidates(traced, c, t);
     }
   }
@@ -112,7 +115,7 @@ const granters = (cat: Catalog) => cat.list.filter((e) => e.kind === 'feature' |
 // A free cast that names a catalog spell the character already has (from another feature, say) and ends up pointing at
 // nothing: the counter shows, the spell gets no button.
 export function freeCastLinkChecks(cat: Catalog): Finding[] {
-  const out: Finding[] = [], base = { ...blankCharacter(), level: 20 };
+  const out: Finding[] = [], base = level20();
   for (const e of granters(cat)) {
     for (const g of flatGrants(e).filter((x) => x.kind === 'resource' && x.casts?.startsWith('spell/'))) {
       const sp = cat.byId.get(g.casts!);
@@ -126,7 +129,7 @@ export function freeCastLinkChecks(cat: Catalog): Finding[] {
 
 // A levelled spell a feature or feat adds that can't be cast with prepared-spell tracking on until the player prepares it.
 export function grantedSpellChecks(cat: Catalog): Finding[] {
-  const base = { ...blankCharacter(), level: 20, usePrep: true }, out: Finding[] = [];
+  const base = { ...level20(), usePrep: true }, out: Finding[] = [];
   for (const e of granters(cat)) {
     if (!flatGrants(e).some((g) => g.kind === 'spell')) continue;
     const sheet = addFromCatalog(base, cat, e, autoAnswers(cat, base, e));

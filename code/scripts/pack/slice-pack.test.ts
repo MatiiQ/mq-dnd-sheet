@@ -9,6 +9,7 @@ import { parseBackgroundFields } from './parse.ts';
 import { validateEntry, type Entry } from '../../src/catalog/schema.ts';
 import { addFromCatalog, missingPicks } from '../../src/catalog/copy';
 import { blankCharacter } from '../../src/defaults';
+import { withClass } from '../../src/test-fixtures';
 import { effScore, skillLevel } from '../../src/logic';
 
 const PACK = new URL('../../../reference/build/phb-pack.json', import.meta.url);
@@ -105,7 +106,7 @@ it.skipIf(!existsSync(PACK))('pairs Resilient’s ability increase with the same
 // the increased ability, each with its free cast.
 it.skipIf(!existsSync(PACK))('adds Resilient and Fey-Touched with their picks', () => {
   const cat = mergeCatalog(srdEntries, (JSON.parse(readFileSync(PACK, 'utf8')) as { entries: Entry[] }).entries);
-  const blank = { ...blankCharacter(), level: 4 }, none = { counted: {}, links: {} };
+  const blank = withClass({ ...blankCharacter()}, { lvl: 4 }), none = { counted: {}, links: {} };
   const res = cat.byId.get('feat/resilient')!;
   expect(missingPicks(cat, blank, res, {})).toEqual(['c1']);
   const c = addFromCatalog(blank, cat, res, { picks: { c1: ['o9'] }, ...none });

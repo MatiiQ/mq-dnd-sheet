@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  removeRef, ABILITIES, CAST_NAMES, newId, ORDINAL, ownFreeCasts, setOwnFreeCast, SPELL_SORTS, acAfterEdit, castSpell, concAfterEdit, detectAcSpell, effectsAfterEdit, fmt, preparedCount, setConc, setSlotUsed,
+  removeRef, ABILITIES, castingRows, clamp, CAST_NAMES, newId, ORDINAL, ownFreeCasts, setOwnFreeCast, SPELL_SORTS, acAfterEdit, castSpell, concAfterEdit, detectAcSpell, effectsAfterEdit, fmt, preparedCount, setConc, setSlotUsed,
   slotsLeft, sortSpells, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, freeCastsOf, spellAttackFor, spellSaveDcFor
 } from '../../logic';
 import { hasActiveEffect, inactiveReason, linkOf, sourceLabel } from '../../links';
@@ -127,6 +127,10 @@ export function SpellsTab() {
     <UsePips used={c.slotUsed[l]} max={max} color="var(--accent)" size={20} noun={'level ' + l + ' slot'} onChange={(n) => update((p) => setSlotUsed(p, l, n))} />
   );
 
+  // Until each casting class gets its own counter (Task 6), the first casting row's maximum is the one shown.
+  const prepRow = castingRows(c)[0] ?? c.classes[0];
+  const prepMax = prepRow?.prep ?? 0;
+  const setPrep = (d: number) => update((p) => ({ classes: p.classes.map((r) => (r.id === prepRow?.id ? { ...r, prep: clamp(r.prep + d, 0, 40) } : r)) }));
   return (
     <div className="col gap-12">
       <div className="row wrap gap-12" style={{ alignItems: 'stretch' }}>
@@ -136,15 +140,15 @@ export function SpellsTab() {
         {usePrep && (
           <div className="well col" style={{ flex: '1 1 140px' }}>
             <span className="small">Prepared spells</span>
-            <span style={{ fontSize: 20, fontWeight: 700, color: c.prepMax && prepCount > c.prepMax ? 'var(--danger)' : 'var(--text)' }}>
-              {prepCount + (c.prepMax ? ' / ' + c.prepMax : '')}
+            <span style={{ fontSize: 20, fontWeight: 700, color: prepMax && prepCount > prepMax ? 'var(--danger)' : 'var(--text)' }}>
+              {prepCount + (prepMax ? ' / ' + prepMax : '')}
             </span>
             {edit && (
               <div className="row gap-6" style={{ marginTop: 4 }}>
                 <span className="small">Max</span>
-                <Step small label="Lower maximum prepared spells" onClick={() => update((p) => ({ prepMax: Math.max(0, p.prepMax - 1) }))}>−</Step>
-                <span style={{ minWidth: 24, textAlign: 'center', fontWeight: 700 }}>{c.prepMax}</span>
-                <Step small label="Raise maximum prepared spells" onClick={() => update((p) => ({ prepMax: Math.min(40, p.prepMax + 1) }))}>+</Step>
+                <Step small label="Lower maximum prepared spells" onClick={() => setPrep(-1)}>−</Step>
+                <span style={{ minWidth: 24, textAlign: 'center', fontWeight: 700 }}>{prepMax}</span>
+                <Step small label="Raise maximum prepared spells" onClick={() => setPrep(1)}>+</Step>
               </div>
             )}
           </div>
@@ -211,7 +215,6 @@ export function SpellsTab() {
           );
         })}
         {slotLevels.length === 0 && <span className="muted" style={{ padding: '8px 0' }}>No spell slots. Turn on Edit to set them.</span>}
-        {edit && <label className="check" style={{ alignSelf: 'start' }}><input type="checkbox" checked={c.slotsOnShort} onChange={(e) => update({ slotsOnShort: e.target.checked })} />All slots refill on a Short Rest (Pact Magic)</label>}
       </div>
 
       <div className="row wrap between" style={{ gap: '8px 14px' }}>

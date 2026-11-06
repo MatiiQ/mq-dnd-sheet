@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { isObj, slug } from './catalog/schema';
-import { blankCharacter, druidSample, sampleCharacter } from './defaults';
-import { newId, normalize } from './logic';
-import { isNewerSave, migrate } from './migrate';
+import { blankCharacter, druidSample, SAVE_VERSION, sampleCharacter } from './defaults';
+import { classLine, newId, normalize } from './logic';
+import { isNewerSave, migrate, saveVersion } from './migrate';
 import type { Character } from './types';
 
 const INDEX_KEY = 'dnd-index-v3';
@@ -77,7 +77,11 @@ export function load(id: string): Character {
       restMsg: { title: 'Saved by a newer version', body: 'This character was saved by a newer version of the app, so anything this version doesn’t know was left out. ' + (kept ? 'The full data stays on this device and goes into every backup file, but the app doesn’t bring it back by itself, not even after an update.' : 'Storage is full, so no copy of the full data could be kept.') }
     };
   }
-  if (isObj(data)) return migrate(data);
+  if (isObj(data)) {
+    // The step from an older format is one-way and its result is written back, so the raw text is kept once first.
+    if (saveVersion(data) < SAVE_VERSION) keepRaw(key);
+    return migrate(data);
+  }
   const { raw, kept } = keepRaw(key);
   const blank = blankCharacter();
   const list = (readJSON(INDEX_KEY) as { list?: unknown } | null)?.list;
@@ -91,7 +95,7 @@ export function load(id: string): Character {
   };
 }
 export const charName = (c: Character) => c.ch.name || 'Unnamed character';
-export const charInfo = (c: Character) => [c.ch.species, (c.ch.cls || 'Level') + ' ' + c.level].filter((x) => x).join(' · ');
+export const charInfo = (c: Character) => [c.ch.species, classLine(c)].filter((x) => x).join(' · ');
 const entryOf = (id: string, c: Character): IndexEntry => ({ id, name: charName(c), info: charInfo(c) });
 
 export interface Store { id: string; list: IndexEntry[]; c: Character }

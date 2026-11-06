@@ -4,7 +4,7 @@ import { blankCharacter, SAVE_VERSION } from './defaults';
 import { AC_EFFECTS, grantErrors, isDtypes, isObj, ITEM_CATS, partErrors } from './catalog/schema';
 import { isValue } from './catalog/value';
 import { dropLinkOnly, fixLinks, GROUP_SRC, parseLink, sourceOf, SRC_KINDS } from './links';
-import { ABILITIES, CAST_NAMES, clamp, isMaxFormula, LEVEL_KEYS, newId, ROW_FIELDS, normalize, PROF_CATS, regainEvent, sanitizePills, SIZES, slots, SPELL_SORTS, strings, TABS, UNARMORED, uniqueStrings, withoutKeys } from './logic';
+import { abilityMod, ABILITIES, CAST_NAMES, clamp, totalLevel, isMaxFormula, LEVEL_KEYS, newId, ROW_FIELDS, normalize, PROF_CATS, regainEvent, sanitizePills, SIZES, slots, SPELL_SORTS, strings, TABS, UNARMORED, uniqueStrings, withoutKeys } from './logic';
 import type { Ability, AcEffect, Attack, Character, ClassRow, Counter, DefenseKind, Die, Feature, Item, LevelRecord, LevelSet, Linked, Recharge, Resource, Section, Sense, Spell, When } from './types';
 
 const sameType = (def: unknown, v: unknown) => (Array.isArray(def) ? Array.isArray(v) : isObj(def) ? isObj(v) : typeof v === typeof def);
@@ -68,7 +68,7 @@ const SPELL_FIELDS: Record<string, FieldCheck> = {
   desc: isStr, school: isStr, classes: isStr, ritual: isBool, atk: among('melee', 'ranged'), save: among(...ABILITIES.map(([k]) => k)),
   dur: isStr, comp: isStr, dice: isStr, c: isBool, always: isBool, prep: isBool,
   fx: among('damage', 'healing', 'other'), dmg: isStr, dtype: isStr, scale: isStr, higher: isStr, healMod: (v) => v === true,
-  dmgMod: (v) => v === true, dtypes: isDtypes, acOther: (v) => v === true, linkAlways: (v) => v === true, linkCastAb: among('none', ...ABILITIES.map(([k]) => k))
+  dmgMod: (v) => v === true, dtypes: isDtypes, cls: nonEmpty, acOther: (v) => v === true, linkAlways: (v) => v === true, linkCastAb: among('none', ...ABILITIES.map(([k]) => k))
 };
 const ATTACK_FIELDS: Record<string, FieldCheck> = { econ: among('action', 'bonus', 'reaction', 'free', 'other'), group: among('weapon', 'other') };
 const ITEM_FIELDS: Record<string, FieldCheck> = {
@@ -180,10 +180,54 @@ export function cleanLevel(x: unknown, rows: ClassRow[]): LevelRecord | null {
   };
 }
 
+// The records add up: base records first, their n rising, then non-base ones from the last base n + 1 (or 1), rising
+// by 1; the last n is the total level, and each row's level is its base shares plus its non-base records.
+function levelsAddUp(recs: LevelRecord[], rows: ClassRow[]): boolean {
+  const per = new Map<string, number>();
+  let n = 0;
+  for (const r of recs) {
+    const share = r.base ? r.n - n : 1;
+    if (share < 1 || (!r.base && r.n !== n + 1)) return false;
+    per.set(r.cls, (per.get(r.cls) ?? 0) + share);
+    n = r.n;
+  }
+  return n === rows.reduce((t, r) => t + r.lvl, 0) && rows.every((r) => (per.get(r.id) ?? 0) === r.lvl);
+}
+
 type Raw = Record<string, unknown>;
-// Version steps: STEPS[n] turns a version-n save into version n+1, before the repair below. None yet: every save so
-// far is version 1. Add one with each SAVE_VERSION bump, and keep the old format's fixture (src/fixtures/).
-export const STEPS: Record<number, (d: Raw) => Raw> = {};
+// v1 → v2: one class row and a baseline record from ch.cls/sub/clsId/subId, level, hdDie and prepMax; hdUsed per die;
+// slotsOnShort's highest slot row (level 1–5, the pact slot levels, PHB p.154) becomes the pact pool. The values are
+// copied as they are; the repair below checks them. conBase is left out: migrate() sets it once the grants are in.
+function v1to2(d: Raw): Raw {
+  const { level, hdDie, prepMax, slotsOnShort, ...rest } = d;
+  const ch = isObj(d.ch) ? d.ch : {};
+  const { cls, sub, clsId, subId, ...chRest } = ch;
+  const hd: Die = DICE_OK.includes(hdDie as Die) ? (hdDie as Die) : 8;
+  const id = newId();
+  const str = (v: unknown) => (typeof v === 'string' ? v : '');
+  const row = {
+    id, name: str(cls), clsId: str(clsId), sub: str(sub), subId: str(subId), lvl: level, hd, prep: prepMax,
+    ...(isAbility(d.castAb) ? { castAb: d.castAb } : {})
+  };
+  const out: Raw = { ...rest, ch: chRest, classes: [row], levels: [{ base: true, n: level, cls: id, added: [], picks: {}, set: [] }] };
+  if (finite(d.hdUsed)) out.hdUsed = { [hd]: d.hdUsed };
+  const snap = (x: unknown) => (isObj(x) && finite(x.hdUsed) ? { ...x, hdUsed: { die: hd, used: x.hdUsed } } : x);
+  if (isObj(d.hpUndo)) out.hpUndo = { ...d.hpUndo, prev: snap(d.hpUndo.prev), ...(d.hpUndo.post === undefined ? {} : { post: snap(d.hpUndo.post) }) };
+  if (slotsOnShort === true && Array.isArray(d.slotMax)) {
+    const max = [...d.slotMax], used = Array.isArray(d.slotUsed) ? [...d.slotUsed] : [];
+    const lvl = [5, 4, 3, 2, 1].find((i) => finite(max[i]) && max[i] > 0);
+    if (lvl) {
+      Object.assign(out, { pactMax: max[lvl], pactLvl: lvl, pactUsed: finite(used[lvl]) ? used[lvl] : 0 });
+      max[lvl] = 0;
+      used[lvl] = 0;
+      Object.assign(out, { slotMax: max, slotUsed: used });
+    }
+  }
+  return out;
+}
+// Version steps: STEPS[n] turns a version-n save into version n+1, before the repair below. Add one with each
+// SAVE_VERSION bump, and keep the old format's fixture (src/fixtures/). Each returns a new object.
+export const STEPS: Record<number, (d: Raw) => Raw> = { 1: v1to2 };
 // A save without a usable `v` predates the field, which came with version 1.
 export const saveVersion = (d: Raw): number => (Number.isInteger(d.v) && (d.v as number) >= 1 ? (d.v as number) : 1);
 // Written by a newer app (a backup from an updated device, opened by an older offline copy): the repair below would
@@ -242,8 +286,8 @@ export function migrate(data: unknown): Character {
   // Numbers. These values size lists of buttons, so an out-of-range number could freeze the sheet. Limits match the UI;
   // whole numbers in a sane range, so a damaged backup can't give fractional Hit Dice or NaN bars.
   const whole = (v: unknown, min: number, max: number, dflt: number) => (finite(v) ? clamp(Math.floor(v), min, max) : dflt);
-  c.level = whole(c.level, 1, 20, 1);
-  c.maxHp = whole(c.maxHp, 1, 9999, 1);
+  // maxHp is stored without the derived CON part (maxHpOf), so it can go below 1.
+  c.maxHp = whole(c.maxHp, -9999, 9999, 1);
   c.hp = whole(c.hp, 0, 9999, 0);
   c.temp = whole(c.temp, 0, 9999, 0);
   c.abilAdj = { ...c.abilAdj }; // a copy: the save passed in stays as it was
@@ -256,7 +300,6 @@ export function migrate(data: unknown): Character {
   c.exh = clamp(c.exh, 0, 6);
   c.ds = clamp(c.ds, 0, 3);
   c.df = clamp(c.df, 0, 3);
-  c.hdUsed = clamp(c.hdUsed, 0, c.level);
   // Inspiration is a counter, 0 or more. This deliberately departs from the rules, where a character has at most one
   // Heroic Inspiration (PHB p.13, p.368): the book says it doesn't stack, the sheet counts it with no maximum (house rule).
   // inspOn: a non-boolean already fell back to the blank character's true (sameType above).
@@ -295,8 +338,48 @@ export function migrate(data: unknown): Character {
   c.hands = strings(c.hands);
   c.mastery = uniqueStrings(c.mastery);
 
+  // Class rows and level records (save v2). A character always has a row; the rows hold at most 20 levels, the last
+  // rows losing levels first; the records must add up to the rows (else one base record, history lost, levels kept).
+  const notes: string[] = [];
+  c.classes = cleanClasses(c.classes);
+  if (!c.classes.length) c.classes = [{ id: newId(), name: '', clsId: '', sub: '', subId: '', lvl: 1, hd: 8, prep: 0 }];
+  if (totalLevel(c) > 20) {
+    let over = totalLevel(c) - 20;
+    const rows = [...c.classes];
+    for (let i = rows.length - 1; i > 0 && over > 0; i--) {
+      const cut = Math.min(over, rows[i].lvl);
+      over -= cut;
+      rows[i] = { ...rows[i], lvl: rows[i].lvl - cut };
+    }
+    if (over > 0) rows[0] = { ...rows[0], lvl: rows[0].lvl - over };
+    c.classes = rows.filter((r) => r.lvl > 0);
+    notes.push('The class levels added up to more than 20, so the last classes lost levels.');
+  }
+  const recs = (Array.isArray(c.levels) ? (c.levels as unknown[]) : []).map((x) => cleanLevel(x, c.classes)).filter((x): x is LevelRecord => !!x);
+  const firstOpen = recs.findIndex((r) => !r.base);
+  const ordered = firstOpen < 0 ? recs : [...recs.slice(0, firstOpen), ...recs.slice(firstOpen).filter((r) => !r.base)];
+  if (!ordered.length) c.levels = [{ base: true, n: totalLevel(c), cls: c.classes[0].id, added: [], picks: {}, set: [] }];
+  else if (levelsAddUp(ordered, c.classes)) c.levels = ordered;
+  else {
+    c.levels = [{ base: true, n: totalLevel(c), cls: c.classes[0].id, added: [], picks: {}, set: [] }];
+    notes.push('The level history didn’t match the class levels, so it was cleared; the levels are kept, and earlier levels can no longer be undone.');
+  }
+  // Hit Dice spent per die size, each at most its pool (the levels of the rows with that die).
+  const hdRaw: Raw = isObj(c.hdUsed) ? (c.hdUsed as Raw) : {};
+  c.hdUsed = Object.fromEntries(DICE_OK.filter((d) => finite(hdRaw[d])).map((d) => [d, clamp(Math.floor(hdRaw[d] as number), 0, c.classes.filter((r) => r.hd === d).reduce((t, r) => t + r.lvl, 0))]));
+  c.spells = c.spells.map((sp) => (sp.cls !== undefined && !c.classes.some((r) => r.id === sp.cls) ? withoutKeys(sp, ['cls']) : sp));
+  // The pact pool sizes lists of buttons: a slot count 0–9 at a slot level 0–5 (PHB p.154).
+  c.pactMax = whole(c.pactMax, 0, 9, 0);
+  c.pactLvl = whole(c.pactLvl, 0, 5, 0);
+  c.pactUsed = whole(c.pactUsed, 0, c.pactMax, 0);
+  if (notes.length) c.restMsg = { title: 'Levels repaired', body: notes.join(' ') };
+
   const fixed = fixLinks(c);
   // A grant exists only through its source: one whose link fixLinks cleared goes. normalize() then runs the container
   // rules and the hands check.
-  return normalize({ ...fixed, grants: fixed.grants.filter((g) => g.from) });
+  const out = { ...fixed, grants: fixed.grants.filter((g) => g.from) };
+  // conBase: the CON modifier already inside maxHp. A v1 save's maximum includes CON, and so may a v2 save whose conBase
+  // is missing or damaged (the blank's 0 would add level × CON at once), so it becomes the current modifier.
+  if (saveVersion(data) < 2 || !Number.isInteger(raw.conBase)) out.conBase = abilityMod(out, 'con');
+  return normalize(out);
 }

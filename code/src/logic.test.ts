@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { newId } from './logic';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import {
-  ABILITIES, regainTo, saveDc, acCanTargetOther, acOnOther, toggleAcTarget, regainLabel, damageHitDie, setTempHitDie, castAbOf, removeChip, speedOf, armorSlowBy, stealthDisBy, acSpellIdle, untrainedArmor, grantChips, addGrants, findUnlinked, removalChain, removalSummary, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, dawn, refillFor, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, parseWeight, passiveScore, passiveParts, passiveNotes, activeAuras, pillView, resPill, setPill, preparedCount, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft, num, setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, undoHp
+  ABILITIES, charLevel, profBonus, regainTo, saveDc, acCanTargetOther, acOnOther, toggleAcTarget, regainLabel, damageHitDie, setTempHitDie, castAbOf, removeChip, speedOf, armorSlowBy, stealthDisBy, acSpellIdle, untrainedArmor, grantChips, addGrants, findUnlinked, removalChain, removalSummary, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, dawn, refillFor, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, parseWeight, passiveScore, passiveParts, passiveNotes, activeAuras, pillView, resPill, setPill, preparedCount, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft, num, setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, undoHp
 } from './logic';
 import { migrate } from './migrate';
-import { AOP, haAura, holyAvenger, paladin } from './test-fixtures';
+import { AOP, haAura, holyAvenger, paladin, withClass } from './test-fixtures';
 import { validateEntry, type GrantSpec } from './catalog/schema';
 import { addFromCatalog, type ItemAnswers } from './catalog/copy';
 import { mergeCatalog } from './catalog/merge';
@@ -62,8 +62,8 @@ describe('derived numbers', () => {
     expect(setMaxHp(make({ hp: 10, maxHp: 44 }), 30)).toEqual({ maxHp: 30, hp: 10 });
     expect(setMaxHp(make({ hp: 5 }), 0)).toEqual({ maxHp: 1, hp: 1 });
     expect(setMaxHp(make({ hp: 44, maxHp: 44 }), 45)).toEqual({ maxHp: 45, hp: 44 });
-    expect(hdSpent(make({ level: 5, hdUsed: 2 }))).toBe(2);
-    expect(hdSpent(make({ level: 3, hdUsed: 5 }))).toBe(3);
+    expect(hdSpent(withClass(make({ hdUsed: { 10: 2 } }), { lvl: 5 }), 10)).toBe(2);
+    expect(hdSpent(withClass(make({ hdUsed: { 10: 5 } }), { lvl: 3 }), 10)).toBe(3);
   });
   it('lowers speed for exhaustion and sets it to 0 when Grappled', () => {
     expect(speedNow(make({ exh: 2 }))).toBe(25);
@@ -197,10 +197,10 @@ describe('proficiencies', () => {
     expect(skillMod(c, 'stealth', 'dex')).toBe(4 + 6);
   });
   it('adds half Proficiency Bonus, rounded down, to skills without proficiency (PHB p.60), not to Initiative', () => {
-    const bard = make({ level: 5, skillProf: { arcana: 1 }, grants: [pg('j', 'half')] });
+    const bard = withClass(make({ skillProf: { arcana: 1 }, grants: [pg('j', 'half')] }), { lvl: 5 });
     expect(skillMod(bard, 'history', 'int')).toBe(0 + 1);
     expect(skillMod(bard, 'arcana', 'int')).toBe(0 + 3);
-    expect(initiative(bard)).toBe(initiative(make({ level: 5 })));
+    expect(initiative(bard)).toBe(initiative(withClass(make(), { lvl: 5 })));
   });
   it('adds check bonuses to a skill or to every skill of an ability', () => {
     const cb = (target: string): Grant => ({ id: 'c' + target, kind: 'checkBonus', name: 'Magician', target, val: 'wis>=1', from: 'feature:f4' });
@@ -306,8 +306,8 @@ describe('speed, initiative and size', () => {
   });
   it('adds Initiative grants (Alert adds PB, PHB p.200)', () => {
     const alert: Grant = { id: 'a', kind: 'init', name: 'Alert', val: 'pb', from: 'feature:f10' };
-    expect(initiative(make({ level: 5, grants: [alert] }))).toBe(initiative(make({ level: 5 })) + 3);
-    expect(initiative(make({ level: 5, grants: [{ ...alert, counted: true }] }))).toBe(initiative(make({ level: 5 })));
+    expect(initiative(withClass(make({ grants: [alert] }), { lvl: 5 }))).toBe(initiative(withClass(make(), { lvl: 5 })) + 3);
+    expect(initiative(withClass(make({ grants: [{ ...alert, counted: true }] }), { lvl: 5 }))).toBe(initiative(withClass(make(), { lvl: 5 })));
   });
   it('size and carrying size grants (Powerful Build, PHB p.192; a grant never lowers a hand size)', () => {
     const pb: Grant = { id: 'p', kind: 'carryUp', name: 'Powerful Build', from: 'feature:f15' };
@@ -479,36 +479,36 @@ describe('hit points', () => {
       expect(undoHp(hit).conds.Unconscious).toBeFalsy();
     });
     describe('undoing a Hit Die heal', () => {
-      const start = make({ hp: 10, maxHp: 40, hdUsed: 1, level: 5 });
+      const start = withClass(make({ hp: 10, maxHp: 40, hdUsed: { 10: 1 } }), { lvl: 5 });
       it('gives the die back; other HP actions leave Hit Dice alone', () => {
         const undone = undoHp(healHitDie({ ...spendHitDie(start), amount: 6 }));
-        expect(undone).toMatchObject({ hp: 10, hdUsed: 1 });
-        expect(undoHp(applyHeal({ ...start, amount: 5 })).hdUsed).toBe(1);
-        expect(undoHp(applyDamage({ ...start, amount: 5 })).hdUsed).toBe(1);
+        expect(undone).toMatchObject({ hp: 10, hdUsed: { 10: 1 } });
+        expect(undoHp(applyHeal({ ...start, amount: 5 })).hdUsed).toEqual({ 10: 1 });
+        expect(undoHp(applyDamage({ ...start, amount: 5 })).hdUsed).toEqual({ 10: 1 });
         expect('hdUsed' in applyHeal({ ...start, amount: 5 }).hpUndo!.prev).toBe(false);
       });
       it('spending another die drops the old undo, so only one die is ever refunded', () => {
         const again = spendHitDie(healHitDie({ ...spendHitDie(start), amount: 6 }));
         expect(again.hpUndo).toBeNull();
-        expect(undoHp(again).hdUsed).toBe(3);
+        expect(undoHp(again).hdUsed).toEqual({ 10: 3 });
       });
       it('a refused heal (dead) sets no undo', () => {
         expect(healHitDie(make({ hp: 10, exh: 6, amount: 4 })).hpUndo).toBeNull();
       });
       it('also gives the die back when the spent die is undone by damage or Set Temp', () => {
-        const c: Character = { ...blankCharacter(), level: 3, maxHp: 30, hp: 20, temp: 6 };
+        const c: Character = withClass({ ...blankCharacter(), maxHp: 30, hp: 20, temp: 6 }, { lvl: 3 });
         const hit = damageHitDie({ ...spendHitDie({ ...c, temp: 0 }), amount: 5 });
         expect(hit.hp).toBe(15);
-        expect(undoHp(hit)).toMatchObject({ hdUsed: 0, hp: 20 });
+        expect(undoHp(hit)).toMatchObject({ hdUsed: { 8: 0 }, hp: 20 });
         const cleared = setTempHitDie(spendHitDie(c));
         expect(cleared.temp).toBe(0);
-        expect(undoHp(cleared)).toMatchObject({ hdUsed: 0, temp: 6 });
+        expect(undoHp(cleared)).toMatchObject({ hdUsed: { 8: 0 }, temp: 6 });
       });
     });
   });
   describe('maximum HP grants', () => {
     const tough: Grant = { id: 't', kind: 'hpLvl', name: 'Tough', val: '2', from: 'feature:f10' };
-    const t5 = (p: Partial<Character> = {}) => make({ level: 5, maxHp: 44, origHp: 44, hp: 44, grants: [tough], ...p });
+    const t5 = (p: Partial<Character> = {}) => withClass(make({ maxHp: 44, origHp: 44, hp: 44, grants: [tough], ...p }), { lvl: 5 });
     it('adds HP per level on top of the typed maximum (Tough, PHB p.202)', () => {
       expect(maxHpOf(t5())).toBe(54);
       expect(applyHeal(t5({ hp: 50, amount: 10 })).hp).toBe(54);
@@ -532,7 +532,7 @@ describe('hit points', () => {
       expect(applyDamage(t5({ hp: 0, amount: 53 })).df).toBe(1);
     });
     it('adds a flat Hit Point bonus once, not per level (Boon of Fortitude, PHB p.210)', () => {
-      const c = make({ level: 19, maxHp: 100, origHp: 100, hp: 100, grants: [gr({ kind: 'hpFlat', val: '40' })] });
+      const c = withClass(make({ maxHp: 100, origHp: 100, hp: 100, grants: [gr({ kind: 'hpFlat', val: '40' })] }), { lvl: 19 });
       expect(maxHpOf(c)).toBe(140);
       expect(maxHpOf({ ...c, grants: [{ ...c.grants[0], counted: true }] })).toBe(100);
     });
@@ -541,8 +541,8 @@ describe('hit points', () => {
 
 describe('rests', () => {
   it('long rest restores HP, slots, hit dice, resources and one exhaustion level', () => {
-    const c = longRest(make({ hp: 3, temp: 5, hdUsed: 3, exh: 2, slotUsed: [0, 4, 2, 0, 0, 0, 0, 0, 0, 0] }));
-    expect(c).toMatchObject({ hp: 44, temp: 0, hdUsed: 0, exh: 1 });
+    const c = longRest(make({ hp: 3, temp: 5, hdUsed: { 10: 3 }, exh: 2, slotUsed: [0, 4, 2, 0, 0, 0, 0, 0, 0, 0] }));
+    expect(c).toMatchObject({ hp: 44, temp: 0, hdUsed: {}, exh: 1 });
     expect(c.slotUsed.every((n) => n === 0)).toBe(true);
     expect(c.res.find((r) => r.id === 'favored')?.count).toBe(3);
     expect(c.restMsg?.body).toContain('Refilled: Favored Enemy');
@@ -564,8 +564,8 @@ describe('rests', () => {
   });
   it('neither rest starts at 0 HP or at Exhaustion 6', () => {
     for (const rest of [longRest, shortRest]) {
-      const c = rest(make({ hp: 0, hdUsed: 3, conds: { Unconscious: true } }));
-      expect(c).toMatchObject({ hp: 0, hdUsed: 3 });
+      const c = rest(make({ hp: 0, hdUsed: { 10: 3 }, conds: { Unconscious: true } }));
+      expect(c).toMatchObject({ hp: 0, hdUsed: { 10: 3 } });
       expect(c.restMsg?.body).toContain('at least 1 HP');
     }
     const l = longRest(make({ hp: 10, exh: 6 }));
@@ -576,25 +576,26 @@ describe('rests', () => {
     expect(s.restMsg?.body).toMatch(/dead/);
   });
   it('spends a hit die, unless none are left, at 0 HP or at Exhaustion 6', () => {
-    expect(spendHitDie(make({ hdUsed: 1 }))).toMatchObject({ hdUsed: 2, amount: 0 });
-    for (const c of [make({ level: 2, hdUsed: 2 }), make({ hp: 0, hdUsed: 1 }), make({ hp: 10, exh: 6, hdUsed: 0 })]) expect(spendHitDie(c)).toBe(c);
+    expect(spendHitDie(make({ hdUsed: { 10: 1 } }))).toMatchObject({ hdUsed: { 10: 2 }, amount: 0 });
+    for (const c of [withClass(make({ hdUsed: { 10: 2 } }), { lvl: 2 }), make({ hp: 0, hdUsed: { 10: 1 } }), make({ hp: 10, exh: 6, hdUsed: {} })]) expect(spendHitDie(c)).toBe(c);
   });
   it('heals at least 1 per hit die', () => {
     expect(healHitDie(make({ hp: 20, amount: 0 })).hp).toBe(21);
     expect(healHitDie(make({ hp: 20, amount: 7 })).hp).toBe(27);
   });
-  it('restores slots on a Short Rest only when the sheet says so (PHB p.154)', () => {
+  it('a Short Rest refills the pact pool only; a Long Rest both (PHB p.154)', () => {
     const used = [0, 2, 0, 0, 0, 0, 0, 0, 0, 0];
-    const on = shortRest(make({ slotsOnShort: true, slotUsed: used, hp: 5 }));
-    expect(on.slotUsed).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+    const pact = { pactMax: 2, pactLvl: 3, pactUsed: 2 };
+    const on = shortRest(make({ ...pact, slotUsed: used, hp: 5 }));
+    expect(on.pactUsed).toBe(0);
+    expect(on.slotUsed).toEqual(used);
     expect(on.restMsg!.body).toContain('Spell slots restored');
     const bare = { slotUsed: used, hp: 5, res: [], inv: [] };
-    expect(shortRest(make({ ...bare, slotsOnShort: true })).restMsg!.body).not.toContain('No resources recharge');
-    expect(shortRest(make({ ...bare, slotsOnShort: false })).restMsg!.body).toContain('No resources recharge');
-    const off = shortRest(make({ slotsOnShort: false, slotUsed: used, hp: 5 }));
-    expect(off.slotUsed).toEqual(used);
-    expect(off.restMsg!.body).not.toContain('Spell slots restored');
-    expect(shortRest(make({ slotsOnShort: true, slotUsed: used, hp: 0 })).slotUsed).toEqual(used);
+    expect(shortRest(make({ ...bare, ...pact })).restMsg!.body).not.toContain('No resources recharge');
+    expect(shortRest(make(bare)).restMsg!.body).toContain('No resources recharge');
+    expect(shortRest(make({ slotUsed: used, hp: 5 })).restMsg!.body).not.toContain('Spell slots restored');
+    expect(shortRest(make({ ...pact, slotUsed: used, hp: 0 })).pactUsed).toBe(2);
+    expect(longRest(make({ ...pact, slotUsed: used, hp: 5 }))).toMatchObject({ pactUsed: 0, slotUsed: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0] });
   });
   describe('Concentration and refused rests', () => {
     const sp = { id: 's', name: 'Bless', lvl: 1, time: 'Action', range: '30 ft', c: true } as Spell;
@@ -663,7 +664,7 @@ describe('rests', () => {
     });
     it('shows a rolled regain with its modifier and level step', () => {
       const b = blankCharacter();
-      const c = (regain: string, level = 5): Character => ({ ...b, hp: 5, maxHp: 10, level, abil: { ...b.abil, dex: 16 }, res: [{ id: 'r', name: 'R', count: 0, max: 9, recharge: 'long', regain, regainOn: 'short' }] });
+      const c = (regain: string, level = 5): Character => (withClass({ ...b, hp: 5, maxHp: 10, abil: { ...b.abil, dex: 16 }, res: [{ id: 'r', name: 'R', count: 0, max: 9, recharge: 'long', regain, regainOn: 'short' }] }, { lvl: level }));
       expect(restRolls(c('1d4+dex'), 'short')[0].dice).toBe('1d4+3');
       expect(restRolls(c('1:1d4,5:1d6'), 'short')[0].dice).toBe('1d6');
       expect(restRolls(c('5:1d6', 1), 'short')).toEqual([]); // below the table's first level it regains nothing
@@ -674,7 +675,7 @@ describe('rests', () => {
     const bard = (level: number): Character => {
       const entry = cat.byId.get('feature/bard/bardic-inspiration') as FeatureEntry;
       const spec = entry.grants!.find((g) => g.id === 'g1') as GrantSpec;
-      const base: Character = { ...blankCharacter(), level, hp: 8, abil: { ...blankCharacter().abil, cha: 16 }, feats: [{ id: 'f', g: 'class', name: 'Bardic Inspiration', desc: '' }] };
+      const base: Character = withClass({ ...blankCharacter(), hp: 8, abil: { ...blankCharacter().abil, cha: 16 }, feats: [{ id: 'f', g: 'class', name: 'Bardic Inspiration', desc: '' }] }, { lvl: level });
       const c = addGrants(base, 'feature:f', [{ spec }]);
       return { ...c, res: c.res.map((r) => ({ ...r, count: 0 })) };
     };
@@ -686,8 +687,8 @@ describe('rests', () => {
     });
     it('words a level-based regain', () => {
       const r = { regain: '1:0,5:20', regainOn: 'short' as const, recharge: 'long' as const, max: 3 };
-      expect(regainLabel({ ...blankCharacter(), level: 4 }, r)).toBe('');
-      expect(regainLabel({ ...blankCharacter(), level: 5 }, r)).toBe('all');
+      expect(regainLabel(withClass({ ...blankCharacter()}, { lvl: 4 }), r)).toBe('');
+      expect(regainLabel(withClass({ ...blankCharacter()}, { lvl: 5 }), r)).toBe('all');
       expect(regainLabel(blankCharacter(), { ...r, regain: '1' })).toBe('1');
       expect(regainLabel(blankCharacter(), { ...r, regain: '1d6+1' })).toBe('1d6+1');
     });
@@ -889,7 +890,7 @@ describe('spells', () => {
     });
   });
   describe('saveDc (a feature row\'s save DC)', () => {
-    const c = { ...blankCharacter(), level: 5, abil: { ...blankCharacter().abil, wis: 16, str: 12, dex: 18 } };
+    const c = withClass({ ...blankCharacter(), abil: { ...blankCharacter().abil, wis: 16, str: 12, dex: 18 } }, { lvl: 5 });
     it('adds the Value and the ability, the best of a list, or none without dcAb', () => {
       expect(saveDc(c, { dc: '8+pb', dcAb: 'wis', from: 'feature:x' })).toBe(14);
       expect(saveDc(c, { dc: '8+pb', dcAb: 'str,dex', from: 'feature:x' })).toBe(15);
@@ -899,7 +900,7 @@ describe('spells', () => {
   describe('spell save DC effects', () => {
     it('Innate Sorcery raises the spell save DC by one while on (PHB p.140)', () => {
       const cat = mergeCatalog(srdEntries, null);
-      const c0 = { ...blankCharacter(), level: 3, castAb: 'cha' as const };
+      const c0 = withClass({ ...blankCharacter(), castAb: 'cha' as const }, { lvl: 3 });
       const c = addFromCatalog(c0, cat, cat.byId.get('feature/sorcerer/innate-sorcery')!, { picks: {}, counted: {}, links: {} });
       expect(spellSaveDC(c)).toBe(spellSaveDC(c0));
       expect(spellSaveDC({ ...c, effectsOn: [c.grants.find((g) => g.kind === 'spellDc')!.from] })).toBe(spellSaveDC(c0)! + 1);
@@ -1206,7 +1207,7 @@ describe('resources', () => {
     expect(maxOf(seren, { max: 0 })).toBeNull();
     expect(maxOf(make({ abil: { ...make().abil, wis: 8 } }), { maxV: 'wis' })).toBe(0);
     expect(maxOf(seren, { maxV: 'wis>=1' })).toBe(5);
-    expect(maxOf(make({ level: 1 }), { maxV: '2:2,6:3' })).toBe(0);
+    expect(maxOf(withClass(make(), { lvl: 1 }), { maxV: '2:2,6:3' })).toBe(0);
   });
   it('turns the form\'s maximum into fields: Number needs 1 or more, a 0 is the Formula 0', () => {
     expect(maxFields('none', '')).toEqual({});
@@ -1220,7 +1221,7 @@ describe('resources', () => {
     expect(maxOf(seren, maxFields('formula', '0')!)).toBe(0);
   });
   it('shows a computed maximum on a pill, none without one, and 0 when it computes to 0', () => {
-    const c = make({ level: 1, res: [{ id: 'a', name: 'A', count: 0, maxV: 'pb' }, { id: 'b', name: 'B', count: 1 }, { id: 'z', name: 'Z', count: 0, maxV: '2:2' }] });
+    const c = withClass(make({ res: [{ id: 'a', name: 'A', count: 0, maxV: 'pb' }, { id: 'b', name: 'B', count: 1 }, { id: 'z', name: 'Z', count: 0, maxV: '2:2' }] }), { lvl: 1 });
     expect(pillView(c, resPill('a'))!.max).toBe('2');
     expect(pillView(c, resPill('b'))!.max).toBeUndefined();
     expect(pillView(c, resPill('z'))!.max).toBe('0');
@@ -1232,7 +1233,7 @@ describe('resources', () => {
       ['Species', ['e']], ['Class', ['b']], ['Other', ['c']], ['Arcane', ['d']], ['Zeal', ['a']]]);
   });
   it('clamps counts to their maximum, and HP to max HP, in one place', () => {
-    const c = make({ level: 1, hp: 60, res: [{ id: 'w', name: 'W', count: 2, maxV: '2:2,6:3' }, { id: 'x', name: 'X', count: 9 }] });
+    const c = withClass(make({ hp: 60, res: [{ id: 'w', name: 'W', count: 2, maxV: '2:2,6:3' }, { id: 'x', name: 'X', count: 9 }] }), { lvl: 1 });
     const n = normalize(c);
     expect(n.res.map((r) => r.count)).toEqual([0, 9]);
     expect(n.hp).toBe(44);
@@ -1320,7 +1321,7 @@ describe('grants and links', () => {
       expect(r.conc).toEqual({ id: 'sp4', name: 'Hunter’s Mark' });
     });
     it('a spell granted from a level gates the spell and its free cast, not the spell level', () => {
-      const c = custom(make({ level: 2, spells: [], res: [] }), 'el');
+      const c = custom(withClass(make({ spells: [], res: [] }), { lvl: 2 }), 'el');
       const n = addGrants(c, 'feature:el', [
         { spec: spec({ kind: 'spell', id: 'ls', name: 'Longstrider', spell: 'spell/longstrider', lvl: 3, always: true }), spell: { name: 'Longstrider', lvl: 1, time: 'Action', range: 'Touch' } },
         { spec: spec({ kind: 'resource', name: 'Longstrider', max: '1', recharge: 'long', casts: 'ls' }) }]);
@@ -1611,7 +1612,7 @@ describe('auras', () => {
     });
   }
   it('needs the Holy Avenger-like item in hand', () => {
-    const c = (level: number, hands: string[]) => ({ ...blankCharacter(), level, inv: [holyAvenger()], attuneIds: ['ha', '', ''], hands, grants: [haAura] });
+    const c = (level: number, hands: string[]) => (withClass({ ...blankCharacter(), inv: [holyAvenger()], attuneIds: ['ha', '', ''], hands, grants: [haAura] }, { lvl: level }));
     expect(inactiveReason(c(16, []), haAura)).toBe('not in hand');
     expect(activeAuras(c(16, ['ha']))[0].range).toBe(10);
     expect(activeAuras(c(17, ['ha']))[0].range).toBe(30);
@@ -1638,5 +1639,15 @@ describe('auras', () => {
     const feature = (g: object) => validateEntry({ id: 'feat/x', kind: 'feat', name: 'X', src: 'srd', desc: '', cat: 'general', grants: [{ id: 'a', kind: 'saveBonus', name: 'A', ab: 'all', val: '1', ...g }] });
     expect(feature({ needHand: true })).not.toEqual([]);
     expect(feature({ needAura: AOP })).toEqual([]);
+  });
+});
+
+describe('an empty class list (the creator before level 1)', () => {
+  it('reads level 1 and does not throw', () => {
+    const c = { ...blankCharacter(), classes: [], levels: [] };
+    expect(charLevel(c)).toBe(1);
+    expect(profBonus(charLevel(c))).toBe(2);
+    expect(() => maxHpOf(c)).not.toThrow();
+    expect(() => normalize(c)).not.toThrow();
   });
 });

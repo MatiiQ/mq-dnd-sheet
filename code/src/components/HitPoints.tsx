@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { activeGrants, sourceLabel } from '../links';
-import { abilityMod, applyDamage, capital, damageHitDie, maxHpOf, num, applyHeal, applySetTemp, clearHpUndo, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, isDead, setHp, setMaxHp, setTempHitDie, spendHitDie, undoHp } from '../logic';
+import { abilityMod, applyDamage, capital, damageHitDie, maxHpOf, num, applyHeal, applySetTemp, clearHpUndo, charLevel, fmt, hdLeft as hdLeftOf, hdPools, healHitDie, hitDieRoll, hpColor, hpRingStops, isDead, setHp, setMaxHp, setTempHitDie, spendHitDie, undoHp } from '../logic';
 import { useWide } from '../layout';
 import { useSheet } from '../sheet';
 import type { Character } from '../types';
@@ -21,8 +21,10 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
   const max = maxHpOf(c), origShown = maxHpOf({ ...c, maxHp: c.origHp });
   const perLevel = [...activeGrants(c, 'hpLvl'), ...activeGrants(c, 'hpFlat')];
   const [maxOpen, setMaxOpen] = useState(false);
-  const hdUsed = hdSpent(c);
-  const hdLeft = c.level - hdUsed;
+  // Until the pools get their own rows (Task 4), the buttons act on the largest pool.
+  const pool = hdPools(c)[0] ?? { die: 8 as const, size: 0, used: 0 };
+  const hdUsed = pool.used, level = charLevel(c);
+  const hdLeft = hdLeftOf(c);
   const dead = isDead(c);
   const canSpendHD = hdLeft > 0 && c.hp > 0 && !dead;
   const hdRoll = hitDieRoll(c);
@@ -81,7 +83,7 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
             ? <button type="button" className="hp-max link-btn" aria-expanded={maxOpen} aria-label={'Max HP ' + max + '. Show breakdown.'} onClick={() => setMaxOpen(!maxOpen)}>/ {max}</button>
             : <span className="hp-max">/ {max}</span>}
           {maxOpen && perLevel.length > 0 && (
-            <span className="small">Base {c.maxHp}{perLevel.map((g) => ' · ' + g.name + ' ' + fmt(num(c, g.val, g) * c.level) + ' (' + fmt(num(c, g.val, g)) + ' × level ' + c.level + (sourceLabel(c, g) ? ', ' + sourceLabel(c, g) : '') + ')')}</span>
+            <span className="small">Base {c.maxHp}{perLevel.map((g) => ' · ' + g.name + ' ' + fmt(num(c, g.val, g) * level) + ' (' + fmt(num(c, g.val, g)) + ' × level ' + level + (sourceLabel(c, g) ? ', ' + sourceLabel(c, g) : '') + ')')}</span>
           )}
           {!edit && c.origOn && delta !== 0 && <span className="hp-delta" style={{ color: deltaColor }}>max {fmt(delta)} (original {origShown})</span>}
         </div>
@@ -139,14 +141,14 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
 
       {/* A count instead of one pip per die, so it stays on one row up to level 20. */}
       <div className="row gap-10">
-        <DieBadge value={'d' + c.hdDie} />
-        <div className="col" role="group" aria-label={'Hit Dice: ' + hdLeft + ' of ' + c.level + ' left'} style={{ lineHeight: 1.1 }}>
-          <span><span className="hd-count">{hdLeft}</span> <span className="muted">/ {c.level}</span></span>
+        <DieBadge value={'d' + pool.die} />
+        <div className="col" role="group" aria-label={'Hit Dice: ' + hdLeft + ' of ' + level + ' left'} style={{ lineHeight: 1.1 }}>
+          <span><span className="hd-count">{hdLeft}</span> <span className="muted">/ {level}</span></span>
           <span className="small hd-sub">left · CON {fmt(abilityMod(c, 'con'))}</span>
         </div>
         <div className="row amount">
-          <Step label="Remove a Hit Die" onClick={() => update({ hdUsed: Math.min(c.level, hdUsed + 1) })}>−</Step>
-          <Step label="Restore a Hit Die" onClick={() => update({ hdUsed: Math.max(0, hdUsed - 1) })}>+</Step>
+          <Step label="Remove a Hit Die" onClick={() => update((p) => ({ hdUsed: { ...p.hdUsed, [pool.die]: Math.min(pool.size, hdUsed + 1) } }))}>−</Step>
+          <Step label="Restore a Hit Die" onClick={() => update((p) => ({ hdUsed: { ...p.hdUsed, [pool.die]: Math.max(0, hdUsed - 1) } }))}>+</Step>
         </div>
         <button type="button" className="btn" style={{ fontSize: 14, padding: '0 12px', marginLeft: 'auto' }} aria-disabled={!canSpendHD} onClick={spendHD}>Spend Hit Die</button>
       </div>

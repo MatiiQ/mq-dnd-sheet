@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { blankCharacter, druidSample, SAVE_VERSION, sampleCharacter } from './defaults';
 import { cleanClasses, cleanLevel, isNewerSave, migrate, saveVersion, STEPS, upgrade } from './migrate';
-import { armorClass, carriedWeight } from './logic';
+import { abilityMod, armorClass, carriedWeight, classLine, hdSpent, maxHpOf, normalize } from './logic';
+import { isActive } from './links';
 import { spellActions } from './actions';
 import { inventoryGroups } from './inventory';
 import type { Character, Item, Spell } from './types';
@@ -82,11 +83,11 @@ describe('top-level fields', () => {
   });
   it('fills a missing or wrong-type field from the blank character, never the sample', () => {
     const c = migrate({ ch: { name: 'Sparse' } });
-    expect(c).toMatchObject({ level: 1, inv: [], spells: [], attacks: [], amount: 0 });
+    expect(c).toMatchObject({ classes: [{ lvl: 1 }], inv: [], spells: [], attacks: [], amount: 0 });
     expect(migrate({ ...sampleCharacter(), inv: 'x' }).inv).toEqual([]);
     expect(migrate(null)).toEqual(blankCharacter());
     expect(migrate('x')).toEqual(blankCharacter());
-    for (const k of ['spellSort', 'size', 'carryUp', 'attuneIds', 'grants', 'effectsOn', 'profs', 'defenses', 'hands', 'mastery', 'sections', 'slotsOnShort'] as const) {
+    for (const k of ['spellSort', 'size', 'carryUp', 'attuneIds', 'grants', 'effectsOn', 'profs', 'defenses', 'hands', 'mastery', 'sections'] as const) {
       const raw = { ...sampleCharacter() } as Record<string, unknown>;
       delete raw[k];
       expect(migrate(raw)[k]).toEqual(blankCharacter()[k]);
@@ -118,13 +119,14 @@ describe('top-level fields', () => {
     expect(migrate({ ...sampleCharacter(), spellSort: 'zz' }).spellSort).toBe('az');
   });
   it('clamps levels, HP and values that size lists of buttons, and keeps exactly three attunement slots', () => {
-    const c = migrate({ ...sampleCharacter(), level: 1e9, slotMax: [0, 1e9], slotUsed: [0, 50], exh: 99, ds: -1, df: 7, hdUsed: 1e9, attuneIds: [] });
-    expect(c).toMatchObject({ level: 20, exh: 6, ds: 0, df: 3, hdUsed: 20 });
+    const c = migrate({ ...sampleCharacter(), slotMax: [0, 1e9], slotUsed: [0, 50], exh: 99, ds: -1, df: 7, hdUsed: { 10: 1e9 }, attuneIds: [] });
+    expect(c).toMatchObject({ exh: 6, ds: 0, df: 3, hdUsed: { 10: 5 } });
     expect(c.slotMax[1]).toBe(9);
     expect(c.slotUsed[1]).toBe(9);
     expect(c.attuneIds).toEqual(['', '', '']);
     expect(migrate({ attuneIds: ['a', 'b', 'c', 'd'] }).attuneIds).toEqual(['', '', '']); // ids of missing items drop
-    expect(migrate({ ...sampleCharacter(), level: 5.5, hp: -3, maxHp: 20 })).toMatchObject({ level: 5, hp: 0 });
+    expect(migrate({ ...sampleCharacter(), hp: -3, maxHp: 20 })).toMatchObject({ hp: 0 });
+    expect(migrate({ ...sampleCharacter(), classes: [{ ...sampleCharacter().classes[0], lvl: 5.5 }] }).classes[0].lvl).toBe(1);
   });
   it('keeps Heroic Inspiration a whole count of 0 or more, with no maximum (house rule)', () => {
     const vals = [true, false, 3, 2.7, -4, 'x', null, undefined];
@@ -380,5 +382,118 @@ describe('class rows and level records', () => {
       { key: 'row.a.sub', was: '', now: 'Hunter' }
     ];
     expect(cleanLevel(rec({ set }), [A])!.set.map((x) => x.key)).toEqual(['castAb', 'slotMax', 'pactMax', 'row.a.castAb', 'row.a.sub']);
+  });
+});
+
+describe('save v2: class rows from a v1 save', () => {
+  const v1 = (p: Raw = {}): Raw => ({ ...structuredClone(files['./fixtures/save-v1-ilyra.json'].default), ...p });
+  it.each(fixtures.filter(([, fx]) => saveVersion(fx) === 1))('%s gets one row and one base record', (_, fx) => {
+    const c = migrate(fx), ch = fx.ch as Raw;
+    expect(c.classes).toHaveLength(1);
+    const r = c.classes[0];
+    expect(r).toMatchObject({ name: ch.cls, clsId: ch.clsId, sub: ch.sub, subId: ch.subId, lvl: fx.level, hd: fx.hdDie, prep: fx.prepMax });
+    if (fx.castAb !== 'none') expect(r.castAb).toBe(fx.castAb);
+    expect(c.levels).toEqual([{ base: true, n: fx.level, cls: r.id, added: [], picks: {}, set: [] }]);
+    expect(c.hdUsed).toEqual({ [fx.hdDie as number]: fx.hdUsed });
+    expect(c.v).toBe(2);
+    for (const k of ['level', 'hdDie', 'prepMax', 'slotsOnShort']) expect(c).not.toHaveProperty(k);
+    for (const k of ['cls', 'sub', 'clsId', 'subId']) expect(c.ch).not.toHaveProperty(k);
+  });
+  it('v1 with an hdDie of 7 gets a d8 row', () => expect(migrate(v1({ hdDie: 7 })).classes[0].hd).toBe(8));
+  it('v1 with an empty class at level 1 keeps a row named ""', () => {
+    const c = migrate(v1({ level: 1, ch: { ...(v1().ch as Raw), cls: '', sub: '', clsId: '', subId: '' } }));
+    expect(c.classes[0]).toMatchObject({ name: '', lvl: 1 });
+    expect(classLine(c)).toBe('Level 1');
+  });
+  it('v1 Warlock with slotsOnShort moves the highest slot row to the pact pool', () => {
+    const c = migrate(v1({ slotsOnShort: true, slotMax: [0, 2, 0, 2, 0, 0, 0, 0, 0, 0], slotUsed: [0, 1, 0, 1, 0, 0, 0, 0, 0, 0] }));
+    expect([c.pactMax, c.pactLvl, c.pactUsed]).toEqual([2, 3, 1]);
+    expect(c.slotMax[3]).toBe(0);
+    expect(c.slotMax[1]).toBe(2);
+    expect(c).not.toHaveProperty('slotsOnShort');
+  });
+  it('v1 hpUndo hdUsed number becomes {die, used}', () => {
+    const snap = { hp: 1, temp: 0, ds: 0, df: 0, conds: {}, conc: null, hdUsed: 2 };
+    const out = STEPS[1](v1({ hpUndo: { prev: snap, post: { ...snap, hdUsed: 3 }, text: 'x' } }));
+    const u = out.hpUndo as { prev: Raw; post: Raw };
+    expect(u.prev.hdUsed).toEqual({ die: 10, used: 2 });
+    expect(u.post.hdUsed).toEqual({ die: 10, used: 3 });
+  });
+  it('conBase: v1 gets its CON modifier, v2 keeps a valid 0, v2 with a missing or 1.5 conBase gets the modifier', () => {
+    const grant = { id: 'gc', kind: 'abil', name: 'CON', ab: 'con', val: '2', cap: 20, from: 'feature:f1' };
+    const fx = v1({ abil: { ...(v1().abil as Raw), con: 16 }, grants: [...(v1().grants as Raw[]), grant] });
+    const c = migrate(fx);
+    expect(c.conBase).toBe(4);
+    expect(abilityMod(c, 'con')).toBe(4);
+    expect(maxHpOf(c)).toBe(fx.maxHp);
+    const v2 = { ...c } as Raw;
+    expect(migrate({ ...v2, conBase: 0 }).conBase).toBe(0);
+    const { conBase: _, ...noBase } = v2;
+    expect(migrate(noBase).conBase).toBe(4);
+    expect(migrate({ ...v2, conBase: 1.5 }).conBase).toBe(4);
+  });
+  it('clamps the pact pool', () => {
+    const v2 = migrate(v1()) as unknown as Raw;
+    const c = migrate({ ...v2, pactMax: 99, pactLvl: 9, pactUsed: 50 });
+    expect([c.pactMax, c.pactLvl, c.pactUsed]).toEqual([9, 5, 9]);
+    const x = migrate({ ...v2, pactMax: 'x', pactLvl: 'x', pactUsed: 'x' });
+    expect([x.pactMax, x.pactLvl, x.pactUsed]).toEqual([0, 0, 0]);
+    expect(normalize({ ...c, pactMax: 2 }).pactUsed).toBe(2);
+  });
+  it('hdLast never survives a load', () => {
+    const v2 = migrate(v1()) as unknown as Raw;
+    expect(migrate({ ...v2, hdLast: 8 })).not.toHaveProperty('hdLast');
+  });
+});
+
+describe('save v2: repair', () => {
+  const base = () => migrate(files['./fixtures/save-v1-ilyra.json'].default) as unknown as Raw;
+  const row = (id: string, lvl: number, p: Raw = {}) => ({ id, name: id.toUpperCase(), clsId: '', sub: '', subId: '', lvl, hd: 8, prep: 0, ...p });
+  const rec = (n: number, cls: string, p: Raw = {}) => ({ n, cls, added: [], picks: {}, set: [], ...p });
+  it('caps the rows at 20 levels from the last row, with a notice', () => {
+    const c = migrate({ ...base(), classes: [row('a', 15), row('b', 8)], levels: [rec(15, 'a', { base: true }), rec(23, 'b', { base: true })] });
+    expect(c.classes.map((r) => r.lvl)).toEqual([15, 5]);
+    expect(c.restMsg?.title).toBe('Levels repaired');
+  });
+  it('drops a record naming no row, and a base record after a non-base one', () => {
+    const c = migrate({ ...base(), classes: [row('a', 6)], levels: [rec(5, 'a', { base: true }), rec(6, 'a'), rec(6, 'a', { base: true }), rec(7, 'gone')] });
+    expect(c.levels).toEqual([rec(5, 'a', { base: true }), rec(6, 'a')]);
+    expect(c.restMsg).toBeNull();
+  });
+  it('collapses records that do not add up to one base record, with a notice', () => {
+    const c = migrate({ ...base(), classes: [row('a', 5), row('b', 2)], levels: [rec(5, 'a', { base: true }), rec(6, 'a'), rec(7, 'b')] });
+    expect(c.levels).toEqual([rec(7, 'a', { base: true })]);
+    expect(c.restMsg?.title).toBe('Levels repaired');
+  });
+  it('clamps hdUsed per pool and drops other keys', () => {
+    const c = migrate({ ...base(), classes: [row('a', 5)], levels: [rec(5, 'a', { base: true })], hdUsed: { 8: 9, 7: 1 } });
+    expect(c.hdUsed).toEqual({ 8: 5 });
+  });
+  it('clears a Spell.cls naming no row', () => {
+    const b = base();
+    const spells = (b.spells as Raw[]).map((sp, i) => (i === 0 ? { ...sp, cls: 'gone' } : i === 1 ? { ...sp, cls: (b.classes as Raw[])[0].id } : sp));
+    const c = migrate({ ...b, spells });
+    expect(c.spells[0].cls).toBeUndefined();
+    expect(c.spells[1].cls).toBe((b.classes as Raw[])[0].id);
+  });
+  it('gives a character with no rows an empty one at level 1', () => {
+    const c = migrate({ ...base(), classes: [], levels: [] });
+    expect(c.classes).toMatchObject([{ name: '', lvl: 1, hd: 8, prep: 0, clsId: '', sub: '', subId: '' }]);
+    expect(c.levels).toEqual([rec(1, c.classes[0].id, { base: true })]);
+  });
+  it('keeps a class grant whose row is there, and drops one whose row is gone', () => {
+    const b = base(), id = (b.classes as Raw[])[0].id as string;
+    const g = { id: 'gp', kind: 'prof', name: 'Stealth', cat: 'skill', target: 'stealth' };
+    const c = migrate({ ...b, grants: [{ ...g, from: 'class:' + id }, { ...g, id: 'gq', from: 'class:gone' }] });
+    expect(c.grants.map((x) => x.id)).toEqual(['gp']);
+    expect(isActive(c, c.grants[0])).toBe(true);
+  });
+  it('hdSpent never shows more spent than a shrunk pool holds', () => {
+    const c = migrate(base());
+    expect(hdSpent({ ...c, hdUsed: { 10: 4 }, classes: [{ ...c.classes[0], lvl: 2 }] }, 10)).toBe(2);
+  });
+  it('the samples keep their HP', () => {
+    expect(maxHpOf(sampleCharacter())).toBe(44);
+    expect(maxHpOf(druidSample())).toBe(99);
   });
 });

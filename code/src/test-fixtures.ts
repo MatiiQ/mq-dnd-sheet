@@ -1,5 +1,11 @@
 import { blankCharacter } from './defaults';
-import type { Character, Grant, Item } from './types';
+import type { Character, ClassRow, Grant, Item } from './types';
+
+// One class row (the character's first, changed by `row`) and a matching base record: how a test sets the level.
+export function withClass(c: Character, row: Partial<ClassRow> = {}): Character {
+  const r: ClassRow = { ...(c.classes[0] ?? { id: 'c1', name: '', clsId: '', sub: '', subId: '', lvl: 1, hd: 8, prep: 0 }), ...row };
+  return { ...c, classes: [r], levels: [{ base: true, n: r.lvl, cls: r.id, added: [], picks: {}, set: [] }] };
+}
 
 // Weapons as plan 4's itemFromEntry builds them from the catalog (PHB pp.213–215), for the hands and actions tests.
 type W = Partial<Item> & { id: string };
@@ -23,7 +29,7 @@ export const shield = (p: W): Item => ({ name: 'Shield', qty: 1, eq: true, cat: 
 export const AOP = 'feature/paladin/aura-of-protection';
 export function paladin(level: number, p: Partial<Character> = {}): Character {
   return {
-    ...blankCharacter(), level, abil: { ...blankCharacter().abil, cha: 16 },
+    ...withClass(blankCharacter(), { lvl: level }), abil: { ...blankCharacter().abil, cha: 16 },
     feats: [
       { id: 'p', g: 'class', name: 'Aura of Protection', desc: '', cid: AOP, minLvl: 6 },
       { id: 'cour', g: 'class', name: 'Aura of Courage', desc: '', cid: 'feature/paladin/aura-of-courage', minLvl: 10 }

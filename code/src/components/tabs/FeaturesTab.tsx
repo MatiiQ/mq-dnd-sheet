@@ -3,7 +3,7 @@ import { PROF_NAMES, type ProfCat } from '../../catalog/names';
 import { entriesOf } from '../../catalog/merge';
 import { useCatalog } from '../../catalog/useCatalog';
 import { hasActiveEffect, linkOf, sourceLabel } from '../../links';
-import { removeRef, addGrants, grantChips, newId, normName, profList, type GrantInput } from '../../logic';
+import { classLine, removeRef, addGrants, grantChips, newId, normName, profList, type GrantInput } from '../../logic';
 import { removeEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { Character, Feature, FeatureGroup, SrcKind } from '../../types';
 import { GrantList, removalNote, SourceChips } from '../Chips';
@@ -20,7 +20,7 @@ export function FeaturesTab() {
   const f = useEntryForm('feat', BLANK, 'feature', 'Add a custom feature or trait');
   const picking = openForm?.kind === 'pick-feat';
   const titles: [FeatureGroup, string][] = [
-    ['class', 'Class · ' + (c.ch.cls || 'Class') + ' ' + c.level], ['sub', 'Subclass · ' + (c.ch.sub || '')], ['background', 'Background'], ['feat', 'Feats'],
+    ['class', 'Class · ' + classLine(c)], ['sub', 'Subclass · ' + c.classes.map((r) => r.sub).filter((x) => x).join(' / ')], ['background', 'Background'], ['feat', 'Feats'],
     ['species', 'Species · ' + (c.ch.species || '')], ['training', 'Training & proficiencies'], ['other', 'Other']
   ];
   const d = f.draft;

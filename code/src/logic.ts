@@ -3,8 +3,8 @@ import type { GrantSpec } from './catalog/schema';
 import { hasDice, isValue, valueAt, type ValueCtx } from './catalog/value';
 import type { ProfCat } from './catalog/names';
 import { canLoad, setHands } from './hands';
-import { activeGrants, dropLinkOnly, hasActiveEffect, INCAPACITATING, inactiveReason, isActive, isEquipped, LINKED_LISTS, srcKindOfLink, type SourceKind, linkOf, parseLink, sourceLabel, sourceOf, SRC_KINDS } from './links';
-import type { AcEffect, Ability, ArmorKind, CastAbility, Character, Coin, Concentration, Counter, DefenseKind, Grant, HpSnapshot, Item, Linked, Recharge, Resource, Size, Spell, SpeedKind, SpellSort, Tab, Unarmored } from './types';
+import { activeGrants, charLevel, dropLinkOnly, hasActiveEffect, INCAPACITATING, inactiveReason, isActive, isEquipped, LINKED_LISTS, srcKindOfLink, type SourceKind, linkOf, parseLink, sourceLabel, sourceOf, SRC_KINDS } from './links';
+import type { AcEffect, Ability, ArmorKind, CastAbility, Character, ClassRow, Coin, Die, Concentration, Counter, DefenseKind, Grant, HpSnapshot, Item, Linked, Recharge, Resource, Size, Spell, SpeedKind, SpellSort, Tab, Unarmored } from './types';
 
 export const ABILITIES: [Ability, string][] = [
   ['str', 'Strength'], ['dex', 'Dexterity'], ['con', 'Constitution'],
@@ -56,17 +56,18 @@ export const clamp = (n: number, min: number, max: number) => Math.max(min, Math
 export const fmt = (m: number) => (m >= 0 ? '+' + m : '−' + Math.abs(m));
 export const mod = (score: number) => Math.floor((score - 10) / 2);
 export const profBonus = (level: number) => 2 + Math.floor((level - 1) / 4);
+export { charLevel, totalLevel } from './links';
 // Context for grant values: level, Proficiency Bonus and ability modifiers, and with a grant, the magic (+N) of the item
 // it comes from (Wand of the War Mage's spell attack; 0 from no item or an item without magic, plan 7).
 export const valueCtx = (c: Character, g?: { from?: string }): ValueCtx => {
   const p = parseLink(g?.from), magic = p?.kind === 'item' ? c.inv.find((i) => i.id === p.id)?.magic : undefined;
-  return { level: c.level, pb: profBonus(c.level), mod: (a) => abilityMod(c, a), ...(magic ? { magic } : {}) };
+  return { level: charLevel(c), pb: profBonus(charLevel(c)), mod: (a) => abilityMod(c, a), ...(magic ? { magic } : {}) };
 };
 const numIn = (ctx: ValueCtx, v: string | undefined) => { const n = v === undefined ? 0 : valueAt(v, ctx); return typeof n === 'number' ? n : 0; };
 // A grant value as a number now; dice or no value count as 0. Pass the grant whenever v is its value (`magic`).
 export const num = (c: Character, v: string | undefined, g?: { from?: string }) => numIn(valueCtx(c, g), v);
 // Ability grant values are constants: read with modifiers of 0, so a score never depends on itself.
-const constCtx = (c: Character): ValueCtx => ({ level: c.level, pb: profBonus(c.level), mod: () => 0 });
+const constCtx = (c: Character): ValueCtx => ({ level: charLevel(c), pb: profBonus(charLevel(c)), mod: () => 0 });
 
 // A score and the parts it is made of. Fixed order (spec): the typed base; each active grant capped at 20 adds, never
 // past the cap and never lowering (no increase can raise a score above 20, PHB p.38); then cap-25 grants (Primal
@@ -120,7 +121,7 @@ const checkBonus = (c: Character, targets: string[]) => checkGrants(c, 'checkBon
 // Skill check: ability modifier + PB × level. Jack of All Trades adds half PB, rounded down, to a check with a skill
 // you aren't proficient in (PHB p.60).
 export function skillMod(c: Character, key: string, ab: Ability): number {
-  const pb = profBonus(c.level), lv = skillLevel(c, key).level;
+  const pb = profBonus(charLevel(c)), lv = skillLevel(c, key).level;
   const half = lv === 0 && activeGrants(c, 'prof', true).some((g) => g.cat === 'half') ? Math.floor(pb / 2) : 0;
   return abilityMod(c, ab) + pb * lv + half + checkBonus(c, [key, ab]);
 }
@@ -130,7 +131,7 @@ export function skillMod(c: Character, key: string, ab: Ability): number {
 // leaves it out, the concentration roll subtracts it on its own), then ±5 from always-on Advantage or Disadvantage:
 // checkAdv grants with `always` and Poisoned (Disadvantage on ability checks, PHB p.372). One of each cancels (PHB p.360).
 export function passiveParts(c: Character, key: string): AcPart[] {
-  const ab = SKILLS.find(([k]) => k === key)![2], pb = profBonus(c.level), lv = skillLevel(c, key);
+  const ab = SKILLS.find(([k]) => k === key)![2], pb = profBonus(charLevel(c)), lv = skillLevel(c, key);
   const at = (g: Grant) => ({ from: g.from, src: sourceLabel(c, g) });
   const parts: AcPart[] = [{ label: 'Base', value: 10 }, { label: ABILITIES.find(([k]) => k === ab)![1] + ' modifier', value: abilityMod(c, ab) }];
   if (lv.level) parts.push({ label: lv.level === 2 ? 'Expertise' : 'Proficiency', value: pb * lv.level, ...(lv.from ? { from: lv.from, src: lv.by } : {}) });
@@ -160,14 +161,14 @@ export function saveProficient(c: Character, k: Ability): { on: boolean; by?: st
   return g ? { on: true, by: sourceLabel(c, g) } : { on: false };
 }
 // Plus save bonus grants for this ability or for all saves (Aura of Protection).
-export const saveMod = (c: Character, k: Ability) => abilityMod(c, k) + (saveProficient(c, k).on ? profBonus(c.level) : 0) +
+export const saveMod = (c: Character, k: Ability) => abilityMod(c, k) + (saveProficient(c, k).on ? profBonus(charLevel(c)) : 0) +
   activeGrants(c, 'saveBonus').filter((g) => g.ab === k || g.ab === 'all').reduce((t, g) => t + num(c, g.val, g), 0);
 // Spell save DC = 8 + spellcasting ability modifier + PB; spell attack = modifier + PB (PHB p.41). null without a spellcasting
 // ability. Active spellDc and spellAtk grants add to their own number only (Wand of the War Mage: a bonus to spell attack
 // rolls; Robe of the Archmagi: spell save DC and spell attack bonus each +2, SRD 5.2.1 magic items).
 const castGrantParts = (c: Character, kind: 'spellAtk' | 'spellDc'): AcPart[] =>
   activeGrants(c, kind).map((g) => ({ label: sourceOf(c, g.from)?.name ?? g.name, value: num(c, g.val, g) })).filter((p) => p.value !== 0);
-const castBase = (c: Character, ab: Ability): AcPart[] => [{ label: CAST_NAMES[ab as CastAbility] + ' modifier', value: abilityMod(c, ab) }, { label: 'Proficiency Bonus', value: profBonus(c.level) }];
+const castBase = (c: Character, ab: Ability): AcPart[] => [{ label: CAST_NAMES[ab as CastAbility] + ' modifier', value: abilityMod(c, ab) }, { label: 'Proficiency Bonus', value: profBonus(charLevel(c)) }];
 export const partsTotal = (parts: AcPart[]): number => parts.reduce((t, p) => t + p.value, 0);
 // The same for one spell, which may cast with its own ability (Light Bearer: Light with CHA).
 export const castAbOf = (c: Character, sp: Spell): Ability | null => sp.castAb ?? (c.castAb === 'none' ? null : c.castAb);
@@ -317,6 +318,10 @@ export function sortSpells(c: Character, list: Spell[]): Spell[] {
   const key = (sp: Spell) => (c.spellSort === 'prep' ? (spellUsable(c, sp) ? 0 : 1) : c.spellSort === 'time' ? castRank(sp.time) : 0);
   return [...list].sort((a, b) => key(a) - key(b) || a.name.localeCompare(b.name));
 }
+// Class rows that cast: with a spellcasting ability or a prepared-spell maximum.
+export const castingRows = (c: Character): ClassRow[] => c.classes.filter((r) => r.castAb || r.prep > 0);
+// 'Ranger 5 / Rogue 1'; a row with no name reads 'Level N'.
+export const classLine = (c: Character): string => c.classes.map((r) => (r.name || 'Level') + ' ' + r.lvl).join(' / ');
 export const preparedCount = (c: Character) => c.spells.filter((x) => (x.lvl || 0) > 0 && !x.always && x.prep).length;
 export const slotsLeft = (c: Character, level: number) => Math.max(0, c.slotMax[level] - c.slotUsed[level]);
 export const setSlotUsed = (c: Character, l: number, n: number) => { const u = c.slotUsed.slice(); u[l] = n; return { slotUsed: u }; };
@@ -503,7 +508,7 @@ export const speedNow = (c: Character) => speedOf(c, walkSpeed(c));
 // The HP maximum every reader uses: the typed maxHp plus HP-per-level grants × level (Tough, PHB p.202). maxHp and
 // origHp stay typed (base) values, so a Long Rest restoring origHp never counts a grant twice.
 // A flat increase counts once (Boon of Fortitude, +40, PHB p.210).
-export const maxHpOf = (c: Character) => c.maxHp + activeGrants(c, 'hpLvl').reduce((t, g) => t + num(c, g.val, g) * c.level, 0) + activeGrants(c, 'hpFlat').reduce((t, g) => t + num(c, g.val, g), 0);
+export const maxHpOf = (c: Character) => c.maxHp + activeGrants(c, 'hpLvl').reduce((t, g) => t + num(c, g.val, g) * charLevel(c), 0) + activeGrants(c, 'hpFlat').reduce((t, g) => t + num(c, g.val, g), 0);
 // Current HP against max, temp HP ignored: green from 65%, yellow from 30%, red below.
 export const hpColor = (c: Character) =>
   (c.hp * 100 >= maxHpOf(c) * 65 ? 'var(--hp-high)' : c.hp * 100 >= maxHpOf(c) * 30 ? 'var(--hp-mid)' : 'var(--hp-low)');
@@ -622,7 +627,7 @@ export function undoHp(c: Character): Character {
   const { prev, post } = c.hpUndo;
   const back = (['ds', 'df', 'conds', 'conc'] as const).filter((k) => post && JSON.stringify(c[k]) === JSON.stringify(post[k]));
   const kept = Object.fromEntries(back.map((k) => [k, prev[k]]));
-  return { ...c, hp: prev.hp, temp: prev.temp, ...(prev.hdUsed === undefined ? {} : { hdUsed: prev.hdUsed }), ...kept, hpUndo: null, concCheck: null };
+  return { ...c, hp: prev.hp, temp: prev.temp, ...(prev.hdUsed === undefined ? {} : { hdUsed: { ...c.hdUsed, [prev.hdUsed.die]: prev.hdUsed.used } }), ...kept, hpUndo: null, concCheck: null };
 }
 
 // Hides the undo row, unless a newer HP action has replaced it since `shown`.
@@ -636,24 +641,36 @@ export function setMaxHp(c: Character, maxHp: number): Pick<Character, 'maxHp' |
   return { maxHp: m, hp: Math.min(c.hp, maxHpOf({ ...c, maxHp: m })) };
 }
 
-// A character has one Hit Die per level (PHB p.41–42).
-export const hdSpent = (c: Character) => Math.min(c.hdUsed, c.level);
+// A character has one Hit Die per level (PHB p.41–42), of its class's size; different dice are tracked separately
+// (PHB p.45). A pool's size is the sum of the levels of the rows with that die; a stored count past it (a row's die
+// edited, a level undone) reads as the pool's size.
+export const DICE: Die[] = [6, 8, 10, 12];
+const poolSize = (c: Character, die: Die) => c.classes.filter((r) => r.hd === die).reduce((t, r) => t + r.lvl, 0);
+export const hdSpent = (c: Character, die: Die) => Math.min(c.hdUsed[die] ?? 0, poolSize(c, die));
+// One pool per die size present, largest die first.
+export const hdPools = (c: Character): { die: Die; size: number; used: number }[] =>
+  [...DICE].reverse().map((die) => ({ die, size: poolSize(c, die), used: hdSpent(c, die) })).filter((p) => p.size > 0);
+export const hdLeft = (c: Character) => hdPools(c).reduce((t, p) => t + p.size - p.used, 0);
 
-// Hit Dice are spent during a Short Rest, which needs at least 1 HP (PHB p.373).
+// Hit Dice are spent during a Short Rest, which needs at least 1 HP (PHB p.373). Spends from the largest pool with a die left.
 export function spendHitDie(c: Character): Character {
-  const used = hdSpent(c);
-  if (used >= c.level || c.hp === 0 || isDead(c)) return c;
+  const pool = hdPools(c).find((p) => p.used < p.size);
+  if (!pool || c.hp === 0 || isDead(c)) return c;
   // Spending a die starts a new HP action, so the old undo (which may refund an earlier die) no longer applies.
-  return { ...c, hdUsed: used + 1, amount: 0, hpUndo: null };
+  return { ...c, hdUsed: { ...c.hdUsed, [pool.die]: pool.used + 1 }, amount: 0, hpUndo: null };
 }
 
 // Spending a Hit Die: roll it and add the Con modifier (PHB p.373).
-export const hitDieRoll = (c: Character) => '1d' + c.hdDie + ' ' + fmt(abilityMod(c, 'con'));
+export const hitDieRoll = (c: Character) => '1d' + (hdPools(c)[0]?.die ?? 8) + ' ' + fmt(abilityMod(c, 'con'));
 
 // Each spent Hit Die restores at least 1 HP, even with a negative Con modifier (PHB p.373).
 // Undoing a Hit Die heal also gives the die back, so the roll can be entered again.
-const undoGivesDie = (c: Character, next: Character): Character =>
-  (!next.hpUndo || next.hpUndo === c.hpUndo ? next : { ...next, hpUndo: { ...next.hpUndo, prev: { ...next.hpUndo.prev, hdUsed: Math.max(0, c.hdUsed - 1) } } });
+// The die refunded is the largest pool's (the one spendHitDie spends from first).
+const undoGivesDie = (c: Character, next: Character): Character => {
+  const pool = hdPools(c).find((p) => p.used > 0);
+  if (!pool || !next.hpUndo || next.hpUndo === c.hpUndo) return next;
+  return { ...next, hpUndo: { ...next.hpUndo, prev: { ...next.hpUndo.prev, hdUsed: { die: pool.die, used: (c.hdUsed[pool.die] ?? 0) - 1 } } } };
+};
 export const healHitDie = (c: Character): Character => undoGivesDie(c, applyHeal({ ...c, amount: Math.max(1, c.amount) }));
 // Damage or temp HP set while a spent die waits for its roll: Undo gives that die back too.
 export const damageHitDie = (c: Character): Character => undoGivesDie(c, applyDamage(c));
@@ -742,8 +759,8 @@ export function normalize(c0: Character): Character {
   const res = c.res.map(capped);
   const inv = c.inv.map(capped);
   const top = maxHpOf(c);
-  if (c.hp > top) changed = true;
-  return changed ? { ...c, res, inv, hp: Math.min(c.hp, top) } : c;
+  if (c.hp > top || c.pactUsed > c.pactMax) changed = true;
+  return changed ? { ...c, res, inv, hp: Math.min(c.hp, top), pactUsed: Math.min(c.pactUsed, c.pactMax) } : c;
 }
 
 // Resource groups: a custom type name, else the source kind, else Other. Source kinds in SRC_KINDS order, then custom
@@ -831,7 +848,7 @@ export function longRest(c: Character): Character {
     Object.values(c.abilAdj).some((v) => (v || 0) < 0) ? ', reduced ability scores restored' : ''
   ].join('');
   return {
-    ...c, maxHp, abilAdj, hp: maxHpOf({ ...c, maxHp, abilAdj }), temp: 0, slotUsed: slots([]), hdUsed: 0, ds: 0, df: 0, acOn: [], effectsOn: [],
+    ...c, maxHp, abilAdj, hp: maxHpOf({ ...c, maxHp, abilAdj }), temp: 0, slotUsed: slots([]), pactUsed: 0, hdUsed: {}, ds: 0, df: 0, acOn: [], effectsOn: [],
     hpUndo: null, ...setConc(null), res, inv, exh: Math.max(0, c.exh - 1),
     restMsg: {
       title: 'Long Rest complete',
@@ -847,12 +864,11 @@ export function shortRest(c: Character, rolls?: Record<string, number>): Charact
   const blocked = restBlocked(c, 'No Short Rest');
   if (blocked) return blocked;
   const { res, inv, names: refilled } = refillFor(c, 'short', rolls);
-  const left = c.level - hdSpent(c);
-  // Pact Magic slots come back on a Short Rest too (PHB p.154).
-  // shortcut: clears every slot level, because slotUsed doesn't separate Pact Magic slots from others, so a multiclass Warlock regains too many; upgrade if the sheet ever tracks them apart.
-  const slotsBack = c.slotsOnShort && c.slotUsed.some((n) => n > 0);
+  const left = hdLeft(c);
+  // Pact Magic slots come back on a Short Rest (PHB p.154); they are their own pool, so other slots stay spent.
+  const slotsBack = c.pactUsed > 0;
   return {
-    ...c, res, inv, ...(slotsBack ? { slotUsed: slots([]) } : {}),
+    ...c, res, inv, ...(slotsBack ? { pactUsed: 0 } : {}),
     restMsg: {
       title: 'Short Rest',
       body: (slotsBack ? 'Spell slots restored. ' : '') +
@@ -1093,7 +1109,7 @@ export function removalSummary(c: Character, ref: Ref): { goes: string[]; keep: 
     else if (g.kind === 'speed' && g.mode === 'walk') keep.push(`Speed ${walkSpeed(c)} ft still includes ${fmt(v)} ft from ${src}${hand}`);
     else if (g.kind === 'speed' && g.mode) keep.push(`${capital(g.mode)} ${modeSpeed(c, g.mode as SpeedKind).base} ft still includes this grant`);
     else if (g.kind === 'init') keep.push(`Initiative ${fmt(initiative(c))} still includes ${fmt(v)} from ${src}${hand}`);
-    else if (g.kind === 'hpLvl') keep.push(`Max HP ${maxHpOf(c)} still includes ${fmt(v * c.level)} from ${src}${hand}`);
+    else if (g.kind === 'hpLvl') keep.push(`Max HP ${maxHpOf(c)} still includes ${fmt(v * charLevel(c))} from ${src}${hand}`);
     else if (g.kind === 'hpFlat') keep.push(`Max HP ${maxHpOf(c)} still includes ${fmt(v)} from ${src}${hand}`);
     else if (g.kind === 'ac' && g.acMode === 'bonus') keep.push(`AC ${armorClass(c).total} still includes ${fmt(v)} from ${src} (in the custom AC bonuses)${hand}`);
   }
@@ -1192,7 +1208,7 @@ export function pillView(c: Character, key: string): PillView | null {
     case 'pp': return { key, label, value: String(passiveScore(c, 'perception')), target: { sec: 'sec-senses' } };
     case 'init': return { key, label, value: fmt(initiative(c)), target: { sec: 'sec-vitals' } };
     case 'atk': return { key, label, value: atk === null ? '—' : fmt(atk), target: { tab: 'spells' } };
-    case 'hd': return { key, label, value: String(c.level - hdSpent(c)), max: String(c.level), target: { sec: 'sec-hp' } };
+    case 'hd': return { key, label, value: String(hdLeft(c)), max: String(charLevel(c)), target: { sec: 'sec-hp' } };
     case 'insp': return c.inspOn ? { key, label, value: String(c.insp), target: { sec: 'sec-resources' } } : null;
   }
 }

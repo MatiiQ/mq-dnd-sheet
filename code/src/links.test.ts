@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { withClass } from './test-fixtures';
 import { sampleCharacter } from './defaults';
 import { activeGrants, charLevel, fixLinks, hasActiveEffect, inactiveReason, isActive, parseLink, sourceLabel, sourceOf, srcKindOfLink, totalLevel, wouldLoop } from './links';
 import { grantErrors } from './catalog/schema';
@@ -102,8 +103,8 @@ describe('when a grant counts', () => {
     expect(inactiveReason(base({ inv: [worn], attuneIds: ['r', '', ''] }), acRing)).toBeNull();
   });
   it('checks the character level, and armor and Shield conditions, on hand entries too', () => {
-    expect(inactiveReason(base({ level: 2 }), { minLvl: 3 })).toBe('from level 3');
-    expect(inactiveReason(base({ level: 3 }), { minLvl: 3 })).toBeNull();
+    expect(inactiveReason(withClass(base(), { lvl: 2 }), { minLvl: 3 })).toBe('from level 3');
+    expect(inactiveReason(withClass(base(), { lvl: 3 }), { minLvl: 3 })).toBeNull();
     expect(inactiveReason(base({ inv: [mail] }), { when: 'noHeavy' })).toBe('not with Heavy armor');
     expect(inactiveReason(base({ inv: [{ ...mail, eq: false }] }), { when: 'noHeavy' })).toBeNull();
     expect(inactiveReason(base(), { when: 'armor' })).toBe('needs armor');
@@ -131,7 +132,7 @@ describe('when a grant counts', () => {
     expect(inactiveReason(c, c.senses[0])).toBe('not equipped');
   });
   it('a spell level is not a gate', () => {
-    const c = base({ level: 1, spells: [{ id: 'a', name: 'Aid', lvl: 2, time: 'Action', range: '30 ft' }] });
+    const c = withClass(base({ spells: [{ id: 'a', name: 'Aid', lvl: 2, time: 'Action', range: '30 ft' }] }), { lvl: 1 });
     expect(isActive(c, c.spells[0])).toBe(true);
   });
   it('lists the active grants of a kind, counted ones only when asked', () => {

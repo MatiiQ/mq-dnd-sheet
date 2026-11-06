@@ -47,7 +47,8 @@ function FeatureList({ cat, onAdd, onCustom }: { cat: Catalog; onAdd: (e: Entry)
   const speciesId = ownSpecies || species;
   const speciesName = cat.byId.get(speciesId)?.name ?? '';
   // The character as the lists see it: with the class, subclass or species chosen here.
-  const seen: Character = { ...c, ch: { ...c.ch, clsId, subId: ownSub || sub, species: ownSpecies ? c.ch.species : speciesName } };
+  const row0 = c.classes[0] ?? { id: '', name: '', clsId: '', sub: '', subId: '', lvl: 1, hd: 8 as const, prep: 0 };
+  const seen: Character = { ...c, classes: [{ ...row0, clsId, subId: ownSub || sub }, ...c.classes.slice(1)], ch: { ...c.ch, species: ownSpecies ? c.ch.species : speciesName } };
   const select = (label: string, value: string, set: (v: string) => void, options: { id: string; name: string }[]) => (
     <label className="field">{label}
       <select className="input" value={value} onChange={(e) => set(e.target.value)}>

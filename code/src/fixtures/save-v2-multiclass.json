@@ -1,0 +1,904 @@
+{
+  "v": 2,
+  "ch": {
+    "name": "Fixture: Ranger 5 / Rogue 1",
+    "species": "Wood Elf",
+    "align": "Neutral Good"
+  },
+  "classes": [
+    {
+      "id": "c1",
+      "name": "Ranger",
+      "clsId": "class/ranger",
+      "sub": "Hunter",
+      "subId": "subclass/ranger/hunter",
+      "lvl": 5,
+      "hd": 10,
+      "prep": 6,
+      "castAb": "wis"
+    },
+    {
+      "id": "c2",
+      "name": "Rogue",
+      "clsId": "class/rogue",
+      "sub": "",
+      "subId": "",
+      "lvl": 1,
+      "hd": 8,
+      "prep": 0
+    }
+  ],
+  "levels": [
+    {
+      "n": 5,
+      "cls": "c1",
+      "base": true,
+      "added": [],
+      "picks": {},
+      "set": []
+    },
+    {
+      "n": 6,
+      "cls": "c2",
+      "hp": {
+        "mode": "fixed",
+        "val": 5,
+        "gain": 5
+      },
+      "added": [
+        "grant:gr1"
+      ],
+      "picks": {},
+      "set": []
+    }
+  ],
+  "conBase": 0,
+  "pactMax": 0,
+  "pactLvl": 0,
+  "pactUsed": 0,
+  "speeds": {
+    "climb": 0,
+    "swim": 0,
+    "fly": 0,
+    "burrow": 0
+  },
+  "speedOpen": false,
+  "acOpen": false,
+  "acUnarm": "none",
+  "acOn": [],
+  "acMods": [],
+  "size": "medium",
+  "carryUp": false,
+  "speedBase": 35,
+  "initMisc": 0,
+  "castAb": "wis",
+  "abil": {
+    "str": 12,
+    "dex": 18,
+    "con": 14,
+    "int": 10,
+    "wis": 14,
+    "cha": 8
+  },
+  "abilAdj": {},
+  "saveProf": {
+    "str": true,
+    "dex": true
+  },
+  "skillProf": {
+    "stealth": 1,
+    "nature": 1,
+    "animal": 1,
+    "insight": 1,
+    "perception": 1,
+    "survival": 2
+  },
+  "hp": 31,
+  "maxHp": 41,
+  "origHp": 41,
+  "origOn": false,
+  "temp": 0,
+  "amount": 5,
+  "insp": 1,
+  "inspOn": true,
+  "pills": [
+    "hp",
+    "ac",
+    "res:favored"
+  ],
+  "tab": "actions",
+  "spellFilter": "all",
+  "spellSort": "az",
+  "usePrep": true,
+  "hdUsed": {
+    "8": 0,
+    "10": 1
+  },
+  "ds": 0,
+  "df": 0,
+  "exh": 0,
+  "conds": {},
+  "conc": null,
+  "hpUndo": null,
+  "concCheck": null,
+  "restMsg": null,
+  "slotMax": [
+    0,
+    4,
+    2,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "slotUsed": [
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "defenses": [
+    {
+      "id": "d1",
+      "kind": "adv",
+      "name": "vs Charmed",
+      "from": "feature:f12",
+      "srcKind": "species"
+    }
+  ],
+  "senses": [
+    {
+      "id": "se1",
+      "name": "Darkvision",
+      "range": "60 ft",
+      "from": "feature:f11",
+      "srcKind": "species"
+    }
+  ],
+  "res": [
+    {
+      "id": "favored",
+      "name": "Favored Enemy",
+      "count": 2,
+      "maxV": "1:2,5:3,9:4,13:5,17:6",
+      "recharge": "long",
+      "note": "Cast Hunter’s Mark without a slot",
+      "casts": "sp4",
+      "from": "feature:f2",
+      "srcKind": "class"
+    },
+    {
+      "id": "fc8",
+      "name": "Goodberry",
+      "count": 1,
+      "max": 1,
+      "recharge": "long",
+      "note": "Free cast",
+      "casts": "sp8",
+      "from": "feature:f9",
+      "srcKind": "feat"
+    },
+    {
+      "id": "fc9",
+      "name": "Longstrider",
+      "count": 1,
+      "max": 1,
+      "recharge": "long",
+      "note": "Free cast",
+      "casts": "sp9",
+      "from": "feature:f15",
+      "srcKind": "species",
+      "minLvl": 3
+    },
+    {
+      "id": "fc12",
+      "name": "Pass without Trace",
+      "count": 1,
+      "max": 1,
+      "recharge": "long",
+      "note": "Free cast",
+      "casts": "sp12",
+      "from": "feature:f15",
+      "srcKind": "species",
+      "minLvl": 5
+    }
+  ],
+  "attacks": [],
+  "riders": [
+    {
+      "id": "r3",
+      "name": "Critical hit",
+      "dice": "Roll weapon dice twice"
+    }
+  ],
+  "coins": {
+    "cp": 0,
+    "sp": 14,
+    "ep": 0,
+    "gp": 38,
+    "pp": 0
+  },
+  "attuneIds": [
+    "i9",
+    "",
+    ""
+  ],
+  "notes": {
+    "appearance": "",
+    "personality": "",
+    "backstory": "",
+    "session": ""
+  },
+  "inv": [
+    {
+      "id": "i1",
+      "name": "Studded Leather Armor",
+      "qty": 1,
+      "eq": true,
+      "cat": "armor",
+      "cost": "45 GP",
+      "sec": "s2",
+      "cid": "item/studded-leather-armor",
+      "armor": "light",
+      "acBase": 12,
+      "wt": 13
+    },
+    {
+      "id": "i2",
+      "name": "Longbow",
+      "qty": 1,
+      "eq": true,
+      "cat": "weapon",
+      "cost": "50 GP",
+      "wcat": "martial",
+      "wrange": "ranged",
+      "dmg": "1d8",
+      "dtype": "Piercing",
+      "props": "ammunition,heavy,two-handed",
+      "ammo": "150/600;arrow",
+      "mastery": "slow",
+      "sec": "s1",
+      "cid": "item/longbow",
+      "wt": 2
+    },
+    {
+      "id": "i3",
+      "name": "Shortsword",
+      "qty": 1,
+      "eq": true,
+      "cat": "weapon",
+      "cost": "10 GP",
+      "wcat": "martial",
+      "wrange": "melee",
+      "dmg": "1d6",
+      "dtype": "Piercing",
+      "props": "finesse,light",
+      "mastery": "vex",
+      "sec": "s1",
+      "cid": "item/shortsword",
+      "wt": 2
+    },
+    {
+      "id": "i4",
+      "name": "Cartographer’s Tools",
+      "qty": 1,
+      "eq": false,
+      "cat": "tool",
+      "cost": "15 GP",
+      "sec": "s4",
+      "cid": "item/cartographers-tools",
+      "wt": 6
+    },
+    {
+      "id": "i5",
+      "name": "Explorer’s Pack",
+      "qty": 1,
+      "eq": false,
+      "cat": "pack",
+      "cost": "10 GP",
+      "sec": "s4",
+      "cid": "item/explorers-pack",
+      "wt": 55
+    },
+    {
+      "id": "i6",
+      "name": "Traveler’s Clothes",
+      "qty": 1,
+      "eq": false,
+      "cat": "gear",
+      "cost": "2 GP",
+      "sec": "s4",
+      "cid": "item/travelers-clothes",
+      "wt": 4
+    },
+    {
+      "id": "i7",
+      "name": "Arrows",
+      "qty": 20,
+      "eq": false,
+      "cat": "ammo",
+      "cost": "1 GP",
+      "sec": "s4",
+      "cid": "item/arrows",
+      "wt": 0.05,
+      "desc": "Tap − after each Longbow shot"
+    },
+    {
+      "id": "i8",
+      "name": "Potion of Healing",
+      "qty": 2,
+      "eq": false,
+      "cat": "gear",
+      "cost": "50 GP",
+      "sec": "s4",
+      "cid": "item/potion-of-healing",
+      "wt": 0.5,
+      "desc": "Bonus Action · roll 2d4 +2, then Heal"
+    },
+    {
+      "id": "i9",
+      "name": "Cloak of Elvenkind",
+      "qty": 1,
+      "eq": true,
+      "cat": "magic",
+      "rarity": "Uncommon",
+      "attune": true,
+      "sec": "s3",
+      "cid": "item/cloak-of-elvenkind"
+    }
+  ],
+  "spells": [
+    {
+      "id": "sp1",
+      "name": "Druidcraft",
+      "lvl": 0,
+      "time": "Action",
+      "range": "30 ft",
+      "dur": "Instantaneous",
+      "comp": "V, S",
+      "prep": true,
+      "school": "Transmutation",
+      "classes": "druid",
+      "fx": "other",
+      "from": "feature:f15",
+      "srcKind": "species",
+      "cid": "spell/druidcraft"
+    },
+    {
+      "id": "sp2",
+      "name": "Guidance",
+      "lvl": 0,
+      "time": "Action",
+      "range": "Touch",
+      "c": true,
+      "dice": "+1d4 to one check",
+      "dur": "Up to 1 minute",
+      "comp": "V, S",
+      "prep": true,
+      "school": "Divination",
+      "classes": "cleric,druid",
+      "fx": "other",
+      "from": "feature:f9",
+      "srcKind": "feat",
+      "cid": "spell/guidance"
+    },
+    {
+      "id": "sp3",
+      "name": "Produce Flame",
+      "lvl": 0,
+      "time": "Bonus Action",
+      "range": "Self · throw 60 ft",
+      "dice": "d20 +5 · 2d8 Fire",
+      "dur": "10 minutes",
+      "comp": "V, S",
+      "prep": true,
+      "school": "Conjuration",
+      "classes": "druid",
+      "scale": "cantrip",
+      "atk": "ranged",
+      "fx": "damage",
+      "dmg": "1d8",
+      "dtype": "Fire",
+      "from": "feature:f9",
+      "srcKind": "feat",
+      "cid": "spell/produce-flame"
+    },
+    {
+      "id": "sp4",
+      "name": "Hunter’s Mark",
+      "lvl": 1,
+      "time": "Bonus Action",
+      "range": "90 ft",
+      "c": true,
+      "dice": "+1d6 Force per hit",
+      "dur": "Up to 1 hour",
+      "comp": "V",
+      "always": true,
+      "school": "Divination",
+      "classes": "ranger",
+      "fx": "damage",
+      "dmg": "1d6",
+      "dtype": "Force",
+      "from": "feature:f2",
+      "srcKind": "class",
+      "cid": "spell/hunters-mark"
+    },
+    {
+      "id": "sp5",
+      "name": "Cure Wounds",
+      "lvl": 1,
+      "time": "Action",
+      "range": "Touch",
+      "dice": "Heal 2d8 +2 · +2d8 per slot level above 1",
+      "dur": "Instantaneous",
+      "comp": "V, S",
+      "prep": true,
+      "school": "Abjuration",
+      "classes": "bard,cleric,druid,paladin,ranger",
+      "scale": "2d8/slot",
+      "fx": "healing",
+      "dmg": "2d8",
+      "healMod": true,
+      "srcName": "Ranger",
+      "cid": "spell/cure-wounds"
+    },
+    {
+      "id": "sp6",
+      "name": "Ensnaring Strike",
+      "lvl": 1,
+      "time": "Bonus Action",
+      "range": "Self",
+      "c": true,
+      "dice": "STR save DC 13 · 1d6 Piercing/turn · +1d6 per slot level above 1",
+      "dur": "Up to 1 minute",
+      "comp": "V",
+      "prep": true,
+      "school": "Conjuration",
+      "classes": "ranger",
+      "scale": "1d6/slot",
+      "save": "str",
+      "fx": "damage",
+      "dmg": "1d6",
+      "dtype": "Piercing",
+      "srcName": "Ranger",
+      "cid": "spell/ensnaring-strike"
+    },
+    {
+      "id": "sp7",
+      "name": "Hail of Thorns",
+      "lvl": 1,
+      "time": "Bonus Action",
+      "range": "Self",
+      "dice": "DEX save DC 13 · 1d10 Piercing · +1d10 per slot level above 1",
+      "dur": "Instantaneous",
+      "comp": "V",
+      "prep": true,
+      "save": "dex",
+      "fx": "damage",
+      "dmg": "1d10",
+      "dtype": "Piercing",
+      "scale": "1d10/slot",
+      "srcName": "Ranger"
+    },
+    {
+      "id": "sp8",
+      "name": "Goodberry",
+      "lvl": 1,
+      "time": "Action",
+      "range": "Self",
+      "dice": "10 berries · heal 1 each",
+      "dur": "24 hours",
+      "comp": "V, S, M (a sprig of mistletoe)",
+      "always": true,
+      "school": "Conjuration",
+      "classes": "druid,ranger",
+      "fx": "other",
+      "from": "feature:f9",
+      "srcKind": "feat",
+      "cid": "spell/goodberry"
+    },
+    {
+      "id": "sp9",
+      "name": "Longstrider",
+      "lvl": 1,
+      "time": "Action",
+      "range": "Touch",
+      "dice": "+10 ft Speed",
+      "dur": "1 hour",
+      "comp": "V, S, M (a pinch of dirt)",
+      "always": true,
+      "school": "Transmutation",
+      "classes": "bard,druid,ranger,wizard",
+      "fx": "other",
+      "from": "feature:f15",
+      "srcKind": "species",
+      "minLvl": 3,
+      "cid": "spell/longstrider"
+    },
+    {
+      "id": "sp10",
+      "name": "Spike Growth",
+      "lvl": 2,
+      "time": "Action",
+      "range": "150 ft",
+      "c": true,
+      "dice": "2d4 Piercing per 5 ft",
+      "dur": "Up to 10 minutes",
+      "comp": "V, S, M (seven thorns)",
+      "prep": true,
+      "school": "Transmutation",
+      "classes": "druid,ranger",
+      "fx": "damage",
+      "dmg": "2d4",
+      "dtype": "Piercing",
+      "srcName": "Ranger",
+      "cid": "spell/spike-growth"
+    },
+    {
+      "id": "sp11",
+      "name": "Aid",
+      "lvl": 2,
+      "time": "Action",
+      "range": "30 ft",
+      "dice": "+5 HP max, 3 creatures",
+      "dur": "8 hours",
+      "comp": "V, S, M (a strip of white cloth)",
+      "prep": true,
+      "school": "Abjuration",
+      "classes": "bard,cleric,druid,paladin,ranger",
+      "fx": "other",
+      "srcName": "Ranger",
+      "cid": "spell/aid"
+    },
+    {
+      "id": "sp12",
+      "name": "Pass without Trace",
+      "lvl": 2,
+      "time": "Action",
+      "range": "Self",
+      "c": true,
+      "dice": "+10 Stealth",
+      "dur": "Up to 1 hour",
+      "comp": "V, S, M (ashes from mistletoe)",
+      "always": true,
+      "school": "Abjuration",
+      "classes": "druid,ranger",
+      "fx": "other",
+      "from": "feature:f15",
+      "srcKind": "species",
+      "minLvl": 5,
+      "cid": "spell/pass-without-trace"
+    }
+  ],
+  "feats": [
+    {
+      "id": "f1",
+      "g": "class",
+      "name": "Spellcasting",
+      "desc": "Wisdom-based; 6 prepared spells.",
+      "cid": "feature/ranger/spellcasting"
+    },
+    {
+      "id": "f2",
+      "g": "class",
+      "name": "Favored Enemy",
+      "desc": "Hunter’s Mark always prepared; free casts per Long Rest.",
+      "cid": "feature/ranger/favored-enemy"
+    },
+    {
+      "id": "f3",
+      "g": "class",
+      "name": "Weapon Mastery",
+      "desc": "Mastery properties of two weapons.",
+      "cid": "feature/ranger/weapon-mastery"
+    },
+    {
+      "id": "f4",
+      "g": "class",
+      "name": "Deft Explorer",
+      "desc": "Expertise in Survival; two extra languages.",
+      "cid": "feature/ranger/deft-explorer"
+    },
+    {
+      "id": "f21",
+      "g": "class",
+      "name": "Fighting Style",
+      "desc": "Archery feat.",
+      "cid": "feature/ranger/fighting-style"
+    },
+    {
+      "id": "f5",
+      "g": "feat",
+      "name": "Archery",
+      "desc": "+2 to attack rolls with Ranged weapons.",
+      "from": "feature:f21",
+      "srcKind": "class",
+      "cid": "feat/archery"
+    },
+    {
+      "id": "f6",
+      "g": "class",
+      "name": "Extra Attack",
+      "desc": "Attack twice when you take the Attack action.",
+      "cid": "feature/ranger/extra-attack"
+    },
+    {
+      "id": "f7",
+      "g": "sub",
+      "name": "Hunter’s Lore",
+      "desc": "Learn immunities, resistances and vulnerabilities of your marked target.",
+      "cid": "feature/ranger/hunter/hunters-lore"
+    },
+    {
+      "id": "f8",
+      "g": "sub",
+      "name": "Hunter’s Prey · Colossus Slayer",
+      "desc": "+1d8 damage once per turn to a creature missing Hit Points.",
+      "cid": "feature/ranger/hunter/hunters-prey"
+    },
+    {
+      "id": "f9",
+      "g": "feat",
+      "name": "Magic Initiate (Druid)",
+      "desc": "Origin feat from the Guide background.",
+      "from": "feature:f20",
+      "srcKind": "background",
+      "cid": "feat/magic-initiate"
+    },
+    {
+      "id": "f10",
+      "g": "feat",
+      "name": "Ability Score Improvement",
+      "desc": "Taken at level 4.",
+      "cid": "feat/ability-score-improvement"
+    },
+    {
+      "id": "f11",
+      "g": "species",
+      "name": "Darkvision",
+      "desc": "60 ft.",
+      "cid": "trait/elf/darkvision"
+    },
+    {
+      "id": "f12",
+      "g": "species",
+      "name": "Fey Ancestry",
+      "desc": "Advantage on saves to avoid or end Charmed.",
+      "cid": "trait/elf/fey-ancestry"
+    },
+    {
+      "id": "f13",
+      "g": "species",
+      "name": "Keen Senses",
+      "desc": "Proficiency in Insight.",
+      "cid": "trait/elf/keen-senses"
+    },
+    {
+      "id": "f14",
+      "g": "species",
+      "name": "Trance",
+      "desc": "Finish a Long Rest in 4 hours.",
+      "cid": "trait/elf/trance"
+    },
+    {
+      "id": "f15",
+      "g": "species",
+      "name": "Elven Lineage",
+      "desc": "Speed 35 ft; Druidcraft, Longstrider, Pass without Trace.",
+      "cid": "trait/elf/elven-lineage"
+    },
+    {
+      "id": "f20",
+      "g": "background",
+      "name": "Guide",
+      "desc": "Stealth and Survival, Cartographer’s Tools and the Magic Initiate (Druid) feat."
+    }
+  ],
+  "grants": [
+    {
+      "id": "g1",
+      "kind": "prof",
+      "name": "Stealth",
+      "cat": "skill",
+      "target": "stealth",
+      "from": "feature:f20",
+      "srcKind": "background"
+    },
+    {
+      "id": "g2",
+      "kind": "prof",
+      "name": "Survival",
+      "cat": "skill",
+      "target": "survival",
+      "from": "feature:f20",
+      "srcKind": "background"
+    },
+    {
+      "id": "g3",
+      "kind": "prof",
+      "name": "Cartographer’s Tools",
+      "cat": "tool",
+      "target": "Cartographer’s Tools",
+      "from": "feature:f20",
+      "srcKind": "background"
+    },
+    {
+      "id": "g4",
+      "kind": "prof",
+      "name": "Weapon Mastery: 2 kinds of weapons",
+      "cat": "mastery",
+      "val": "2",
+      "from": "feature:f3",
+      "srcKind": "class"
+    },
+    {
+      "id": "g5",
+      "kind": "prof",
+      "name": "Survival expertise",
+      "cat": "expertise",
+      "target": "survival",
+      "from": "feature:f4",
+      "srcKind": "class"
+    },
+    {
+      "id": "g6",
+      "kind": "atkBonus",
+      "name": "Archery",
+      "val": "2",
+      "wrange": "ranged",
+      "from": "feature:f5",
+      "srcKind": "feat"
+    },
+    {
+      "id": "g7",
+      "kind": "attacks",
+      "name": "Two attacks",
+      "val": "2",
+      "from": "feature:f6",
+      "srcKind": "class"
+    },
+    {
+      "id": "g8",
+      "kind": "xdmg",
+      "name": "Colossus Slayer",
+      "dice": "1d8",
+      "on": "target missing HP",
+      "perTurn": true,
+      "from": "feature:f8",
+      "srcKind": "subclass"
+    },
+    {
+      "id": "g9",
+      "kind": "abil",
+      "name": "DEX +2",
+      "ab": "dex",
+      "val": "2",
+      "cap": 20,
+      "counted": true,
+      "from": "feature:f10",
+      "srcKind": "feat"
+    },
+    {
+      "id": "g10",
+      "kind": "prof",
+      "name": "Insight",
+      "cat": "skill",
+      "target": "insight",
+      "from": "feature:f13",
+      "srcKind": "species"
+    },
+    {
+      "id": "g11",
+      "kind": "speed",
+      "name": "Speed +5 ft",
+      "mode": "walk",
+      "val": "5",
+      "counted": true,
+      "from": "feature:f15",
+      "srcKind": "species"
+    },
+    {
+      "id": "g-hm",
+      "kind": "xdmg",
+      "name": "Hunter’s Mark",
+      "dice": "1d6",
+      "dtype": "Force",
+      "on": "the marked target",
+      "from": "spell:sp4",
+      "srcKind": "spell",
+      "when": "active"
+    },
+    {
+      "id": "gr1",
+      "kind": "prof",
+      "name": "Sleight of Hand",
+      "cat": "skill",
+      "target": "sleight",
+      "from": "class:c2",
+      "srcKind": "class"
+    }
+  ],
+  "effectsOn": [],
+  "hands": [
+    "i2",
+    "i2"
+  ],
+  "mastery": [
+    "longbow",
+    "shortsword"
+  ],
+  "sections": [
+    {
+      "id": "s1",
+      "name": "Weapons"
+    },
+    {
+      "id": "s2",
+      "name": "Armour"
+    },
+    {
+      "id": "s3",
+      "name": "Magic items"
+    },
+    {
+      "id": "s4",
+      "name": "Gear"
+    }
+  ],
+  "profs": [
+    {
+      "id": "p1",
+      "cat": "armor",
+      "name": "Light armor"
+    },
+    {
+      "id": "p2",
+      "cat": "armor",
+      "name": "Medium armor"
+    },
+    {
+      "id": "p3",
+      "cat": "armor",
+      "name": "Shields"
+    },
+    {
+      "id": "p4",
+      "cat": "weapon",
+      "name": "Simple weapons"
+    },
+    {
+      "id": "p5",
+      "cat": "weapon",
+      "name": "Martial weapons"
+    },
+    {
+      "id": "p6",
+      "cat": "language",
+      "name": "Common"
+    },
+    {
+      "id": "p7",
+      "cat": "language",
+      "name": "Elvish"
+    },
+    {
+      "id": "p8",
+      "cat": "language",
+      "name": "Sylvan"
+    },
+    {
+      "id": "p9",
+      "cat": "language",
+      "name": "Draconic"
+    }
+  ]
+}

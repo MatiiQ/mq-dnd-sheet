@@ -3,22 +3,26 @@ import type { Character } from './types';
 // Sample character: Ilyra Moonbrook, Wood Elf Ranger 5 (Hunter).
 // The save format's version, stored as `v` on every character. Bump it with each reshape of a saved field and add the
 // step from the old version in migrate.ts (STEPS), next to a frozen fixture of the old format in src/fixtures/.
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
 
 export function sampleCharacter(): Character {
   return {
     v: SAVE_VERSION,
-    ch: { name: 'Ilyra Moonbrook', species: 'Wood Elf', cls: 'Ranger', sub: 'Hunter', align: 'Neutral Good', clsId: 'class/ranger', subId: 'subclass/ranger/hunter' },
+    ch: { name: 'Ilyra Moonbrook', species: 'Wood Elf', align: 'Neutral Good' },
+    classes: [{ id: 'c1', name: 'Ranger', clsId: 'class/ranger', sub: 'Hunter', subId: 'subclass/ranger/hunter', lvl: 5, hd: 10, prep: 6, castAb: 'wis' }],
+    levels: [{ base: true, n: 5, cls: 'c1', added: [], picks: {}, set: [] }],
+    // maxHp and origHp were written with CON included, so conBase is the CON modifier (+2).
+    conBase: 2, pactMax: 0, pactLvl: 0, pactUsed: 0,
     speeds: { climb: 0, swim: 0, fly: 0, burrow: 0 }, speedOpen: false,
     acOpen: false, acUnarm: 'none', acOn: [], acMods: [],
     size: 'medium', carryUp: false,
-    level: 5, speedBase: 35, initMisc: 0, hdDie: 10, castAb: 'wis',
+    speedBase: 35, initMisc: 0, castAb: 'wis',
     abil: { str: 12, dex: 18, con: 14, int: 10, wis: 14, cha: 8 }, abilAdj: {},
     saveProf: { str: true, dex: true },
     skillProf: { stealth: 1, nature: 1, animal: 1, insight: 1, perception: 1, survival: 2 },
-    hp: 31, maxHp: 44, origHp: 44, origOn: false, temp: 0, amount: 5, insp: 1, inspOn: true, pills: ['hp', 'ac', 'res:favored'], tab: 'actions', prepMax: 6, spellFilter: 'all', spellSort: 'az', usePrep: true,
-    hdUsed: 1, ds: 0, df: 0, exh: 0, conds: {}, conc: null, hpUndo: null, concCheck: null, restMsg: null,
-    slotMax: [0, 4, 2, 0, 0, 0, 0, 0, 0, 0], slotUsed: [0, 1, 0, 0, 0, 0, 0, 0, 0, 0], slotsOnShort: false,
+    hp: 31, maxHp: 44, origHp: 44, origOn: false, temp: 0, amount: 5, insp: 1, inspOn: true, pills: ['hp', 'ac', 'res:favored'], tab: 'actions', spellFilter: 'all', spellSort: 'az', usePrep: true,
+    hdUsed: { 10: 1 }, ds: 0, df: 0, exh: 0, conds: {}, conc: null, hpUndo: null, concCheck: null, restMsg: null,
+    slotMax: [0, 4, 2, 0, 0, 0, 0, 0, 0, 0], slotUsed: [0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
     defenses: [{ id: 'd1', kind: 'adv', name: 'vs Charmed', from: 'feature:f12', srcKind: 'species' }], // Fey Ancestry (PHB p.190)
     senses: [{ id: 'se1', name: 'Darkvision', range: '60 ft', from: 'feature:f11', srcKind: 'species' }],
     res: [
@@ -114,18 +118,21 @@ export function sampleCharacter(): Character {
 export function druidSample(): Character {
   return {
     v: SAVE_VERSION,
-    ch: { name: 'Seren Vale', species: 'Aasimar', cls: 'Druid', sub: 'Circle of the Stars', align: 'Neutral', clsId: 'class/druid', subId: '' },
+    ch: { name: 'Seren Vale', species: 'Aasimar', align: 'Neutral' },
+    classes: [{ id: 'c1', name: 'Druid', clsId: 'class/druid', sub: 'Circle of the Stars', subId: '', lvl: 12, hd: 8, prep: 16, castAb: 'wis' }],
+    levels: [{ base: true, n: 12, cls: 'c1', added: [], picks: {}, set: [] }],
+    conBase: 3, pactMax: 0, pactLvl: 0, pactUsed: 0,
     speeds: { climb: 0, swim: 0, fly: 0, burrow: 0 }, speedOpen: false,
     acOpen: false, acUnarm: 'none', acOn: [], acMods: [],
     size: 'medium', carryUp: false,
-    level: 12, speedBase: 30, initMisc: 0, hdDie: 8, castAb: 'wis',
+    speedBase: 30, initMisc: 0, castAb: 'wis',
     abil: { str: 8, dex: 13, con: 16, int: 13, wis: 20, cha: 10 }, abilAdj: {},
     saveProf: { int: true, wis: true },
     skillProf: { arcana: 1, history: 1, medicine: 1, perception: 1 },
-    hp: 71, maxHp: 99, origHp: 99, origOn: false, temp: 12, amount: 8, insp: 1, inspOn: true, pills: ['hp', 'ac', 'res:wild'], tab: 'actions', prepMax: 16, spellFilter: 'all', spellSort: 'az', usePrep: true,
-    hdUsed: 3, ds: 0, df: 0, exh: 1, conds: { Poisoned: true }, conc: { id: 'ds9', name: 'Moonbeam' },
+    hp: 71, maxHp: 99, origHp: 99, origOn: false, temp: 12, amount: 8, insp: 1, inspOn: true, pills: ['hp', 'ac', 'res:wild'], tab: 'actions', spellFilter: 'all', spellSort: 'az', usePrep: true,
+    hdUsed: { 8: 3 }, ds: 0, df: 0, exh: 1, conds: { Poisoned: true }, conc: { id: 'ds9', name: 'Moonbeam' },
     hpUndo: null, concCheck: null, restMsg: null,
-    slotMax: [0, 4, 3, 3, 3, 2, 1, 0, 0, 0], slotUsed: [0, 2, 1, 1, 0, 1, 0, 0, 0, 0], slotsOnShort: false,
+    slotMax: [0, 4, 3, 3, 3, 2, 1, 0, 0, 0], slotUsed: [0, 2, 1, 1, 0, 1, 0, 0, 0, 0],
     // Celestial Resistance; War Caster
     defenses: [{ id: 'd1', kind: 'res', name: 'Necrotic', from: 'feature:f16', srcKind: 'species' }, { id: 'd2', kind: 'res', name: 'Radiant', from: 'feature:f16', srcKind: 'species' },
       { id: 'd3', kind: 'adv', name: 'Concentration saves', from: 'feature:f15', srcKind: 'feat' }],
@@ -264,14 +271,17 @@ export function druidSample(): Character {
 export function blankCharacter(): Character {
   return {
     ...sampleCharacter(),
-    ch: { name: 'New character', species: '', cls: '', sub: '', align: '', clsId: '', subId: '' },
+    ch: { name: 'New character', species: '', align: '' },
+    classes: [{ id: 'c1', name: '', clsId: '', sub: '', subId: '', lvl: 1, hd: 8, prep: 0 }],
+    levels: [{ base: true, n: 1, cls: 'c1', added: [], picks: {}, set: [] }],
+    conBase: 0, pactMax: 0, pactLvl: 0, pactUsed: 0,
     size: 'medium', carryUp: false,
-    level: 1, speedBase: 30, initMisc: 0, hdDie: 8, castAb: 'none', insp: 0, inspOn: true, pills: ['hp', 'ac', ''], spellSort: 'az',
+    speedBase: 30, initMisc: 0, castAb: 'none', insp: 0, inspOn: true, pills: ['hp', 'ac', ''], spellSort: 'az',
     abil: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 }, abilAdj: {}, saveProf: {}, skillProf: {},
-    hp: 8, maxHp: 8, origHp: 8, amount: 0, hdUsed: 0,
-    slotMax: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], slotUsed: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], slotsOnShort: false,
+    hp: 8, maxHp: 8, origHp: 8, amount: 0, hdUsed: {},
+    slotMax: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], slotUsed: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     defenses: [], senses: [], res: [], attacks: [], riders: [],
-    coins: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 }, attuneIds: ['', '', ''], inv: [], spells: [], feats: [], prepMax: 0,
+    coins: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 }, attuneIds: ['', '', ''], inv: [], spells: [], feats: [],
     grants: [], effectsOn: [], profs: [], hands: [], mastery: [], sections: []
   };
 }

@@ -22,9 +22,8 @@ export type SpellSort = 'az' | 'prep' | 'time';
 export type Size = 'tiny' | 'small' | 'medium' | 'large' | 'huge' | 'gargantuan';
 export type SrcKind = 'species' | 'background' | 'class' | 'subclass' | 'feat' | 'item' | 'spell' | 'other';
 
-// The background is a feature (group 'background'), not a detail. clsId/subId: the catalog ids matched to the typed
-// class and subclass ('' for none); the text stays what the sheet shows.
-export interface Details { name: string; species: string; cls: string; sub: string; align: string; clsId: string; subId: string }
+// The background is a feature (group 'background'), not a detail. Classes and subclasses are in Character.classes.
+export interface Details { name: string; species: string; align: string }
 // What an entry came from and when it counts. from: 'feature:<id>' | 'item:<id>' | 'spell:<id>' in this character.
 // srcKind + srcName: a source named by hand ("Species · Wood Elf"), kept when a link goes. No srcKind means no kind given.
 // minLvl: counts from this character level (never `lvl`, which is the spell level on Spell). needEq / needAtt: the
@@ -95,6 +94,8 @@ export interface Spell extends Linked {
   healMod?: boolean; dmgMod?: boolean; dtypes?: string;
   // parts: more damage or healing rows of the spell, catalog-only (plan 7); a list, cleaned on load by cleanParts.
   parts?: SpellPart[];
+  // cls: the ClassRow id of the class that prepared it (prepared spells count per class, PHB p.45).
+  cls?: string;
 }
 // Hit die sizes (PHB p.45: different dice are tracked separately).
 export type Die = 6 | 8 | 10 | 12;
@@ -115,8 +116,9 @@ export interface LevelRecord {
 }
 export interface Feature extends Linked { id: string; g: FeatureGroup; name: string; desc: string; cid?: string }
 export interface Concentration { id: string; name: string }
-// hdUsed is set only by a Hit Die heal, so undoing it refunds the die.
-export interface HpSnapshot { hp: number; temp: number; ds: number; df: number; conds: Record<string, boolean>; conc: Concentration | null; hdUsed?: number }
+// hdUsed is set only when a spent Hit Die is linked to the change (undoGivesDie), so undoing it refunds that die:
+// the die size and that pool's spent count before the die was spent.
+export interface HpSnapshot { hp: number; temp: number; ds: number; df: number; conds: Record<string, boolean>; conc: Concentration | null; hdUsed?: { die: Die; used: number } }
 
 export interface Character {
   /** The save format's version (SAVE_VERSION in defaults.ts); migrate() upgrades an older save step by step. */
@@ -124,8 +126,14 @@ export interface Character {
   ch: Details;
   /** carryUp: counts as one size larger for carrying capacity (Powerful Build). */
   size: Size; carryUp: boolean;
-  level: number; speedBase: number; speeds: Record<SpeedKind, number>; speedOpen: boolean;
-  initMisc: number; hdDie: number; castAb: CastAbility;
+  /** Class rows (save v2), the first is the starting class; the character level is their sum (totalLevel). */
+  classes: ClassRow[];
+  /** Level history, oldest first; base records are the baseline (no history). */
+  levels: LevelRecord[];
+  /** The CON modifier already counted inside maxHp and origHp; maxHpOf adds level × (CON mod − conBase). */
+  conBase: number;
+  speedBase: number; speeds: Record<SpeedKind, number>; speedOpen: boolean;
+  initMisc: number; castAb: CastAbility;
   /** AC spells switched on (ids of non-Concentration spells with an AC effect), unarmored feature, custom bonuses. */
   acOpen: boolean; acUnarm: Unarmored; acOn: string[]; acMods: AcMod[];
   abil: Record<Ability, number>; abilAdj: Partial<Record<Ability, number>>;
@@ -137,13 +145,17 @@ export interface Character {
   inspOn: boolean;
   /** Top bar pills, 3 slots: a stat key, 'res:<resource id>', or '' for an empty slot. */
   pills: string[];
-  tab: Tab; prepMax: number; spellFilter: 'all' | 'prepared'; spellSort: SpellSort; usePrep: boolean;
-  hdUsed: number; ds: number; df: number; exh: number;
+  tab: Tab; spellFilter: 'all' | 'prepared'; spellSort: SpellSort; usePrep: boolean;
+  /** Spent Hit Dice per die size (PHB p.45: different dice are tracked separately). */
+  hdUsed: Partial<Record<Die, number>>;
+  /** The die size of a Hit Die just spent whose heal hasn't run yet (never loaded: migrate() drops it). */
+  hdLast?: Die;
+  ds: number; df: number; exh: number;
   conds: Record<string, boolean>; conc: Concentration | null;
   hpUndo: { prev: HpSnapshot; post?: HpSnapshot; text: string } | null; concCheck: string | null; restMsg: { title: string; body: string } | null;
   slotMax: number[]; slotUsed: number[];
-  // Pact Magic: every slot refills on a Short Rest too.
-  slotsOnShort: boolean;
+  // Pact Magic's own pool (PHB p.45): slot count, slot level, spent; refilled by a Short Rest too.
+  pactMax: number; pactLvl: number; pactUsed: number;
   defenses: Defense[];
   senses: Sense[]; res: Resource[]; attacks: Attack[]; riders: Rider[];
   /** Attunement slots: 3 item ids, '' for an empty slot. */

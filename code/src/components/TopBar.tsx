@@ -4,7 +4,7 @@ import { packSummary, parsePackFile } from '../catalog/pack';
 import { deletePack, getPack, putPack } from '../catalog/pack-db';
 import { SRD_VERSION } from '../catalog/schema';
 import { setLayoutMode, useLayoutMode, useWide, type LayoutMode } from '../layout';
-import { acOnOther, acSpellIdle, activeAuras, CONDITIONS, PILL_STATS, TABS, fmt, hpColor, maxHpOf, pillView, resPill, setConc, setPill, toggleAcSpell, type PillView, type RestEvent } from '../logic';
+import { classLine, acOnOther, acSpellIdle, activeAuras, CONDITIONS, PILL_STATS, TABS, fmt, hpColor, maxHpOf, pillView, resPill, setConc, setPill, toggleAcSpell, type PillView, type RestEvent } from '../logic';
 import { useSheet } from '../sheet';
 import { EXAMPLES, charInfo, charName, saveBackupFile, type CharacterStore } from '../storage';
 import type { Character, Spell, Tab } from '../types';
@@ -30,7 +30,7 @@ export function TopBar({ store, activeSec, setActiveSec, menuOpen, setMenuOpen, 
   const { c, update, edit } = useSheet();
   const ch = c.ch;
   const initials = (ch.name || '?').split(/\s+/).filter((x) => x).slice(0, 2).map((x) => x.charAt(0).toUpperCase()).join('') || '?';
-  const subtitle = [ch.species, [ch.cls, 'Lv ' + c.level].filter((x) => x).join(' ') + (ch.sub ? ' (' + ch.sub + ')' : ''), ch.align]
+  const subtitle = [ch.species, classLine(c), ch.align]
     .filter((x) => x && String(x).trim()).join(' · ');
   const condParts = CONDITIONS.filter((n) => c.conds[n]);
   const auras = activeAuras(c).filter((a) => a.why === null);

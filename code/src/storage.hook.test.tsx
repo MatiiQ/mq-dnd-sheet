@@ -61,7 +61,7 @@ describe('useCharacters', () => {
     expect(store.saveFailed).toBe(false);
     // happy-dom's localStorage doesn't call Storage.prototype.setItem, so the whole object is swapped.
     vi.stubGlobal('localStorage', { setItem: () => { throw new Error('QuotaExceededError'); } });
-    act(() => store.update({ level: 2 }));
+    act(() => store.update((c) => ({ classes: [{ ...c.classes[0], lvl: 2 }] })));
     expect(store.saveFailed).toBe(true);
   });
 });

@@ -140,7 +140,7 @@ function auraReason(c: Character, x: Linked, seen: Set<string>): string | null {
   return on ? null : 'aura not active';
 }
 function baseReason(c: Character, x: Linked, seen: Set<string>): string | null {
-  if (x.minLvl && x.minLvl > c.level) return 'from level ' + x.minLvl;
+  if (x.minLvl && x.minLvl > charLevel(c)) return 'from level ' + x.minLvl;
   const p = parseLink(x.from);
   if (p?.kind === 'item') {
     const item = c.inv.find((i) => i.id === p.id);

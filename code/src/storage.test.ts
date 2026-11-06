@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { withClass } from './test-fixtures';
 import { blankCharacter, druidSample, SAVE_VERSION, sampleCharacter } from './defaults';
 import { isActive } from './links';
 import { longRest } from './logic';
@@ -106,6 +107,34 @@ describe('save from a newer app', () => {
     m.set('dnd-sheet-v3:x', JSON.stringify(blankCharacter()));
     expect(load('x').restMsg).toBeNull();
     expect(m.has('dnd-sheet-v3:x:unreadable')).toBe(false);
+  });
+});
+
+describe('v1 saves', () => {
+  afterEach(() => vi.unstubAllGlobals());
+  it('load keeps the raw v1 text once', async () => {
+    const m = stubStorage();
+    const fx = (await import('./fixtures/save-v1-ilyra.json')).default;
+    const raw = JSON.stringify(fx);
+    m.set('dnd-sheet-v3:x', raw);
+    m.set('dnd-index-v3', JSON.stringify({ active: 'x', list: [{ id: 'x', name: 'Ilyra' }] }));
+    const c = load('x');
+    expect(m.get('dnd-sheet-v3:x:unreadable')).toBe(raw);
+    m.set('dnd-sheet-v3:x', JSON.stringify(c));
+    load('x');
+    expect(m.get('dnd-sheet-v3:x:unreadable')).toBe(raw);
+    expect(c.restMsg).toBeNull();
+    expect(unreadableSheets().map((u) => u.key)).toEqual(['dnd-sheet-v3:x:unreadable']);
+    expect(initialStore().list.map((e) => e.id)).toEqual(['x']);
+    const s = deleteFromStore({ id: 'x', list: [{ id: 'x', name: 'Ilyra' }], c });
+    persistStore(s);
+    expect(m.get('dnd-sheet-v3:x:unreadable')).toBe(raw);
+  });
+  it('keeps no copy of a v2 save', () => {
+    const m = stubStorage();
+    m.set('dnd-sheet-v3:y', JSON.stringify(blankCharacter()));
+    load('y');
+    expect(m.has('dnd-sheet-v3:y:unreadable')).toBe(false);
   });
 });
 
@@ -265,11 +294,11 @@ describe('example characters', () => {
 
 describe('one clamp after every change', () => {
   const wild = { id: 'wild', name: 'Wild Shape', count: 3, maxV: '2:2,6:3,17:4', recharge: 'long' as const };
-  const base = () => ({ ...druidSample(), level: 6, res: [wild] });
+  const base = () => (withClass({ ...druidSample(), res: [wild] }, { lvl: 6 }));
   it('lowers a count when the level lowers its maximum, and never gives it back', () => {
-    const lower = applyPatch(base(), { level: 5 });
+    const lower = applyPatch(base(), (c) => ({ classes: [{ ...c.classes[0], lvl: 5 }] }));
     expect(lower.res[0].count).toBe(2);
-    expect(applyPatch(lower, { level: 6 }).res[0].count).toBe(2);
+    expect(applyPatch(lower, (c) => ({ classes: [{ ...c.classes[0], lvl: 6 }] })).res[0].count).toBe(2);
   });
   const wis = (count = 5) => ({ ...druidSample(), res: [{ id: 'o', name: 'Omen', count, maxV: 'wis>=1', recharge: 'none' as const }] });
   it('follows a lower ability score, a negative adjustment and a removed ability grant', () => {

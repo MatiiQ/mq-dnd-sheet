@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
+import { withClass } from '../test-fixtures';
 import srdEntries from '../data/srd/index';
 import { blankCharacter, sampleCharacter } from '../defaults';
 import { removeRef, armorClass, skillLevel, spellUsable } from '../logic';
 import { migrate } from '../migrate';
 import { inactiveReason, isActive } from '../links';
 import { saveEntry } from '../sheet';
-import type { Character, Item, Spell } from '../types';
+import type { Character, ClassRow, Item, Spell } from '../types';
 import { entriesOf, mergeCatalog } from './merge';
 import type { Entry, FeatureEntry, ItemEntry, SpellEntry } from './schema';
 import {
@@ -268,7 +269,7 @@ describe('poolOptions', () => {
     expect(poolOptions(cat, c, 'skill:proficient', {}).map((o) => o.value)).toEqual(['stealth']);
   });
   it('marks feats whose prerequisites aren’t met', () => {
-    const c = { ...blankCharacter(), level: 5, abil: { str: 12, dex: 10, con: 10, int: 10, wis: 10, cha: 10 } };
+    const c = withClass({ ...blankCharacter(), abil: { str: 12, dex: 10, con: 10, int: 10, wis: 10, cha: 10 } }, { lvl: 5 });
     const opts = poolOptions(cat, c, 'feat:cat=general', {});
     expect(opts.find((o) => o.value === 'feat/grappler')!.unmet).toEqual(['Strength or Dexterity 13 or higher']);
     expect(opts.find((o) => o.value === 'feat/ability-score-improvement')!.unmet).toBeUndefined();
@@ -476,7 +477,7 @@ describe('addFromCatalog', () => {
 
   it('fills a formula charges maximum on adding', () => {
     const rod: ItemEntry = { id: 'item/test-rod', kind: 'item', name: 'Test Rod', src: 'srd', desc: 'Invented.', cat: 'magic', charges: 'pb', recharge: 'long' };
-    const c = addFromCatalog({ ...blankCharacter(), level: 5 }, cat, rod, A());
+    const c = addFromCatalog(withClass({ ...blankCharacter()}, { lvl: 5 }), cat, rod, A());
     expect(c.inv[0]).toMatchObject({ maxV: 'pb', count: 3 });
   });
 
@@ -509,14 +510,14 @@ describe('addFromCatalog', () => {
   });
 
   it('adds a feature above the character’s level with minLvl, its grants inactive until then', () => {
-    const r5 = withSkills(['stealth', 'survival'], { level: 5 });
+    const r5 = withClass(withSkills(['stealth', 'survival']), { lvl: 5 });
     const c = addFromCatalog(r5, cat, E('feature/ranger/expertise'), A({ exp: ['stealth', 'survival'] }));
     const f = c.feats[0];
     expect(f.minLvl).toBe(9);
     const exp = c.grants.filter((g) => g.cat === 'expertise');
     expect(exp).toHaveLength(2);
     for (const g of exp) expect(inactiveReason(c, g)).toBe('from level 9');
-    for (const g of exp) expect(isActive({ ...c, level: 9 }, g)).toBe(true);
+    for (const g of exp) expect(isActive(withClass({ ...c}, { lvl: 9 }), g)).toBe(true);
   });
 
   it('names a typed spell after the text, at the pool’s level', () => {
@@ -604,7 +605,7 @@ describe('addFromCatalog', () => {
 // ---- Task 5: class and subclass ids ----
 describe('matching names to catalog ids', () => {
   const srdOnly = cat;
-  const withCh = (ch: Partial<Character['ch']>): Character => ({ ...blankCharacter(), ch: { ...blankCharacter().ch, ...ch } });
+  const withCh = (row: Partial<ClassRow>): Character => withClass(blankCharacter(), row);
   it('matches a class, species or subclass by name', () => {
     expect(matchId(cat, 'class', ' ranger ')).toBe('class/ranger');
     expect(matchId(cat, 'species', 'Wood Elf')).toBe('species/elf');
@@ -614,20 +615,20 @@ describe('matching names to catalog ids', () => {
     expect(matchId(cat, 'subclass', 'Hunter', 'class/druid')).toBe('');
   });
   it('finds the class and subclass of an old save by name', () => {
-    expect(classIdOf(cat, withCh({ cls: 'Ranger' }))).toBe('class/ranger');
-    expect(subclassIdOf(cat, withCh({ cls: 'Ranger', sub: 'Hunter' }))).toBe('subclass/ranger/hunter');
-    expect(classIdOf(cat, withCh({ cls: 'Ranger', clsId: 'class/nope' }))).toBe('class/ranger');
-    expect(classIdOf(cat, withCh({ cls: 'Whatever', clsId: 'class/druid' }))).toBe('class/druid');
-    expect(subclassIdOf(cat, withCh({ cls: 'Druid', clsId: 'class/druid', sub: 'Circle of the Stars', subId: 'subclass/druid/circle-of-the-stars' }))).toBe('');
+    expect(classIdOf(cat, withCh({ name: 'Ranger' }))).toBe('class/ranger');
+    expect(subclassIdOf(cat, withCh({ name: 'Ranger', sub: 'Hunter' }))).toBe('subclass/ranger/hunter');
+    expect(classIdOf(cat, withCh({ name: 'Ranger', clsId: 'class/nope' }))).toBe('class/ranger');
+    expect(classIdOf(cat, withCh({ name: 'Whatever', clsId: 'class/druid' }))).toBe('class/druid');
+    expect(subclassIdOf(cat, withCh({ name: 'Druid', clsId: 'class/druid', sub: 'Circle of the Stars', subId: 'subclass/druid/circle-of-the-stars' }))).toBe('');
   });
   it('fills the subclass name and id from a subclass choice, never over a typed one', () => {
-    const c = addFromCatalog(withCh({ cls: 'Ranger' }), cat, E('feature/ranger/ranger-subclass'), A({ sub: ['subclass/ranger/hunter'] }));
-    expect([c.ch.sub, c.ch.subId]).toEqual(['Hunter', 'subclass/ranger/hunter']);
-    const typed = addFromCatalog(withCh({ cls: 'Ranger', sub: 'Gloom Stalker', subId: '' }), cat, E('feature/ranger/ranger-subclass'), A({ sub: ['subclass/ranger/hunter'] }));
-    expect([typed.ch.sub, typed.ch.subId]).toEqual(['Gloom Stalker', '']);
+    const c = addFromCatalog(withCh({ name: 'Ranger' }), cat, E('feature/ranger/ranger-subclass'), A({ sub: ['subclass/ranger/hunter'] }));
+    expect([c.classes[0].sub, c.classes[0].subId]).toEqual(['Hunter', 'subclass/ranger/hunter']);
+    const typed = addFromCatalog(withCh({ name: 'Ranger', sub: 'Gloom Stalker', subId: '' }), cat, E('feature/ranger/ranger-subclass'), A({ sub: ['subclass/ranger/hunter'] }));
+    expect([typed.classes[0].sub, typed.classes[0].subId]).toEqual(['Gloom Stalker', '']);
   });
   it('names a spell’s class source through the class id', () => {
-    const c = addFromCatalog(withCh({ cls: '', clsId: 'class/wizard' }), cat, E('spell/fireball'), A());
+    const c = addFromCatalog(withCh({ name: '', clsId: 'class/wizard' }), cat, E('spell/fireball'), A());
     expect(c.spells[0]).toMatchObject({ srcKind: 'class', srcName: 'Wizard' });
   });
 });
@@ -760,7 +761,7 @@ describe('withDetectedArmor', () => {
 
 // ---- Task 8: feature candidates ----
 describe('featureCandidates', () => {
-  const r5 = (over: Partial<Character['ch']> = {}): Character => ({ ...blankCharacter(), level: 5, ch: { ...blankCharacter().ch, cls: 'Ranger', clsId: 'class/ranger', ...over } });
+  const r5 = (over: Partial<ClassRow> = {}): Character => withClass(blankCharacter(), { name: 'Ranger', clsId: 'class/ranger', lvl: 5, ...over });
   const find = (xs: ReturnType<typeof featureCandidates>, id: string) => xs.find((x) => x.entry.id === id);
   it('lists the class’s features by level, marking those above the character’s', () => {
     const xs = featureCandidates(cat, r5(), 'class');
@@ -782,7 +783,7 @@ describe('featureCandidates', () => {
     expect(g.ok).toBe(false);
     expect(g.note).toContain('Strength or Dexterity 13');
     expect(find(featureCandidates(cat, sampleCharacter(), 'feat', 'general'), 'feat/grappler')!.ok).toBe(true);
-    expect(find(featureCandidates(cat, { ...r5(), level: 3 }, 'feat', 'general'), 'feat/ability-score-improvement')).toMatchObject({ ok: false, note: 'Level 4 or higher' });
+    expect(find(featureCandidates(cat, withClass({ ...r5()}, { lvl: 3 }), 'feat', 'general'), 'feat/ability-score-improvement')).toMatchObject({ ok: false, note: 'Level 4 or higher' });
     const general = featureCandidates(cat, weak, 'feat', 'general');
     const okFlags = general.map((x) => x.ok);
     expect(okFlags).toEqual([...okFlags].sort((a, b) => Number(b) - Number(a)));
@@ -839,18 +840,18 @@ describe('scaled picks and option features', () => {
   const one = opt('rep', 'invocation', { repeat: true });
   const local = mergeCatalog([low, high, other, one, host], null);
   it('offers only the pool\'s options, marking unmet prerequisites', () => {
-    const opts = poolOptions(local, { ...blankCharacter(), level: 1 }, 'feature:of=invocation', {});
+    const opts = poolOptions(local, withClass({ ...blankCharacter()}, { lvl: 1 }), 'feature:of=invocation', {});
     expect(opts.map((o) => o.value).sort()).toEqual([high.id, low.id, one.id].sort());
     expect(opts.find((o) => o.value === high.id)?.unmet).toEqual(['Level 5 or higher']);
-    expect(poolOptions(local, { ...blankCharacter(), level: 5 }, 'feature:of=invocation', {}).find((o) => o.value === high.id)?.unmet).toBeUndefined();
+    expect(poolOptions(local, withClass({ ...blankCharacter()}, { lvl: 5 }), 'feature:of=invocation', {}).find((o) => o.value === high.id)?.unmet).toBeUndefined();
   });
   it('sets the number of picks from the character at the time of adding', () => {
-    const ch = (lv: number) => atLevel({ ...blankCharacter(), level: lv }, host);
+    const ch = (lv: number) => atLevel(withClass({ ...blankCharacter()}, { lvl: lv }), host);
     expect((ch(1) as FeatureEntry).grants[0]).toMatchObject({ pick: 1 });
     expect((ch(5) as FeatureEntry).grants[0]).toMatchObject({ pick: 3 });
   });
   it('adds a picked option as its own feature, and a repeatable one stays pickable', () => {
-    const c0 = { ...blankCharacter(), level: 1 };
+    const c0 = withClass({ ...blankCharacter()}, { lvl: 1 });
     const c1 = addFromCatalog(c0, local, host, { picks: { c: [low.id] }, counted: {}, links: {} });
     expect(c1.feats.map((f) => f.cid)).toEqual(expect.arrayContaining([host.id, low.id]));
     const opts = poolOptions(local, c1, 'feature:of=invocation', {});
@@ -859,7 +860,7 @@ describe('scaled picks and option features', () => {
     expect(poolOptions(local, c2, 'feature:of=invocation', {}).find((o) => o.value === one.id)?.taken).toBeUndefined();
   });
   it('lists options with their prerequisites in the class features, after the rest', () => {
-    const c = { ...blankCharacter(), level: 1, ch: { ...blankCharacter().ch, cls: 'Warlock' } };
+    const c = withClass(blankCharacter(), { name: 'Warlock', lvl: 1 });
     const classCat = mergeCatalog([...srdEntries.filter((e) => e.kind === 'class'), low, high, host], null);
     const rows = featureCandidates(classCat, c, 'class');
     expect(rows.map((r) => r.entry.id)).toEqual([host.id, low.id, high.id]);
@@ -899,7 +900,7 @@ describe('effect grants through the add flow', () => {
 
 describe('granted spells with prepared tracking on', () => {
   it('Mystic Arcanum adds a spell the player can cast with prepared tracking on', () => {
-    const c: Character = { ...blankCharacter(), level: 20, usePrep: true, ch: { ...blankCharacter().ch, cls: 'Warlock' } };
+    const c: Character = withClass({ ...blankCharacter(), usePrep: true }, { name: 'Warlock', lvl: 20 });
     const id = poolOptions(cat, c, 'spell:list=warlock;lvl=6|7|8|9', {})[0].value;
     const sheet = addFromCatalog(c, cat, cat.byId.get('feature/warlock/mystic-arcanum')!, { picks: { arc: [id] }, counted: {}, links: {} });
     const sp = sheet.spells.find((x) => x.cid === id)!;
@@ -938,7 +939,7 @@ describe('a skill:proficient pool reads the entry\'s own skills', () => {
 });
 
 describe('a feat:any pool', () => {
-  const lvl = (level: number): Character => ({ ...blankCharacter(), level });
+  const lvl = (level: number): Character => (withClass({ ...blankCharacter() }, { lvl: level }));
   const opt = (c: Character, id: string) => poolOptions(cat, c, 'feat:any', {}).find((o) => o.value === id)!;
   it('lists every feat, whatever its category', () => {
     expect(poolOptions(cat, lvl(5), 'feat:any', {})).toHaveLength(entriesOf(cat, 'feat').length);

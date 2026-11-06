@@ -10,7 +10,7 @@ import { takeOut } from './inventory';
 import { addGrants, normalize } from './logic';
 import { migrate } from './migrate';
 import { applyPatch } from './storage';
-import { dagger, dart, handaxe, handCrossbow, longbow, longsword, quarterstaff, rapier, shield, shortsword, spear } from './test-fixtures';
+import { dagger, dart, handaxe, handCrossbow, longbow, longsword, quarterstaff, rapier, shield, shortsword, spear, withClass } from './test-fixtures';
 import type { Character, Grant, Item, Prof, Spell } from './types';
 
 const cat = mergeCatalog(srdEntries, null);
@@ -56,12 +56,12 @@ describe('weapon mastery', () => {
     expect(hasMastery(ilyra({ mastery: [], grants: [...sampleCharacter().grants, g] }), 'hand-crossbow')).toBe(true);
   });
   it('reads the slot count at the level (Fighter: 3, 4 from level 4)', () => {
-    const c: Character = {
-      ...blankCharacter(), level: 4, feats: [{ id: 'fw', g: 'class', name: 'Weapon Mastery', desc: '' }],
+    const c: Character = withClass({
+      ...blankCharacter(), feats: [{ id: 'fw', g: 'class', name: 'Weapon Mastery', desc: '' }],
       grants: [{ id: 'gm', kind: 'prof', name: 'Weapon Mastery', cat: 'mastery', val: '1:3,4:4', from: 'feature:fw' }]
-    };
+    }, { lvl: 4 });
     expect(masterySlots(c)).toBe(4);
-    expect(masterySlots({ ...c, level: 3 })).toBe(3);
+    expect(masterySlots(withClass({ ...c}, { lvl: 3 }))).toBe(3);
   });
   it('keeps the picks valid on load and on every change', () => {
     const { mastery: _m, ...noMastery } = raw(ilyra({ mastery: ['longbow'] }));
@@ -200,7 +200,7 @@ describe('Unarmed Strike (PHB p.377)', () => {
   });
   it('uses the Martial Arts die and the better ability (PHB p.101)', () => {
     const ma = grant({ kind: 'unarmed', name: 'Martial Arts', die: '1:1d6,5:1d8,11:1d10,17:1d12', abs: 'str,dex', when: 'noArmorNoShield' });
-    const monk = withGrants(fighter({ str: 10, dex: 16 }, [], ['Simple weapons'], { level: 5 }), ma);
+    const monk = withGrants(withClass(fighter({ str: 10, dex: 16 }, [], ['Simple weapons']), { lvl: 5 }), ma);
     expect(unarmedStrike(monk)).toMatchObject({ hit: 6, dmg: '1d8+3', dc: 14 });
   });
   it('adds bonuses for Unarmed Strikes from an equipped, attuned item', () => {
@@ -233,7 +233,7 @@ describe('attacks per Attack action', () => {
 describe('the Light extra attack (PHB p.213)', () => {
   // DEX 18 (+4), STR 10, PB 3, two Weapon Mastery picks.
   const duo = (inv: Item[], hands: string[], mastery: string[] = [], ...gs: Grant[]) => withGrants(
-    fighter({ dex: 18, str: 10 }, inv, undefined, { level: 5, hands, mastery }),
+    withClass(fighter({ dex: 18, str: 10 }, inv, undefined, { hands, mastery }), { lvl: 5 }),
     grant({ id: 'gm', kind: 'prof', name: 'Weapon Mastery', cat: 'mastery', val: '2' }), ...gs);
   const twf = grant({ id: 'gt2', kind: 'lightExtra', name: 'Two-Weapon Fighting', addMod: true });
   it('needs two Light weapons in hand and adds no positive modifier', () => {
@@ -282,7 +282,7 @@ const catSpell = (id: string, p: Partial<Spell> = {}): Spell => ({ ...spellFromE
 const actionOf = (c: Character, id: string) => spellActions(c).find((a) => a.spellId === id);
 // A level 5 Wizard, INT 16 (+3), PB 3.
 const wizard = (spells: Spell[], p: Partial<Character> = {}): Character =>
-  ({ ...blankCharacter(), level: 5, castAb: 'int', abil: { ...blankCharacter().abil, int: 16 }, spells, ...p });
+  (withClass({ ...blankCharacter(), castAb: 'int', abil: { ...blankCharacter().abil, int: 16 }, spells, ...p }, { lvl: 5 }));
 
 describe('spell actions', () => {
   it('puts a spell with a save under save, even when it deals damage (Fireball)', () => {
@@ -296,7 +296,7 @@ describe('spell actions', () => {
   });
   it('scales cantrip dice at levels 5, 11 and 17 (PHB p.239, Fire Bolt p.274)', () => {
     expect(actionOf(wizard([catSpell('spell/fire-bolt')]), 'fire-bolt')).toMatchObject({ group: 'damage', hit: 6, dice: '2d10' });
-    expect(actionOf(wizard([catSpell('spell/fire-bolt')], { level: 11 }), 'fire-bolt')!.dice).toBe('3d10');
+    expect(actionOf(withClass(wizard([catSpell('spell/fire-bolt')]), { lvl: 11 }), 'fire-bolt')!.dice).toBe('3d10');
     expect(actionOf(wizard([catSpell('spell/eldritch-blast')]), 'eldritch-blast')!.dice).toBe('2 beams × 1d10');
     expect([cantripDice('1d8', 1), cantripDice('1d8', 4), cantripDice('1d8', 5), cantripDice('1d8', 11), cantripDice('1d8', 17), cantripDice('2d6', 5)])
       .toEqual(['1d8', '1d8', '2d8', '3d8', '4d8', '4d6']);
@@ -315,7 +315,7 @@ describe('spell actions', () => {
     expect(orb.dtype).toBeUndefined();
   });
   it('gives Conjure Minor Elementals no row, and its extra damage only while it is on', () => {
-    const c = addFromCatalog({ ...ilyra(), level: 7 }, cat, cat.byId.get('spell/conjure-minor-elementals')!, { picks: {}, counted: {}, links: {} });
+    const c = addFromCatalog(withClass({ ...ilyra()}, { lvl: 7 }), cat, cat.byId.get('spell/conjure-minor-elementals')!, { picks: {}, counted: {}, links: {} });
     const sp = c.spells.find((s) => s.cid === 'spell/conjure-minor-elementals')!;
     expect(spellActions(c).some((a) => a.spellId === sp.id)).toBe(false);
     const extra = (x: Character) => extraDamage(x).filter((e) => e.name === 'Conjure Minor Elementals');
@@ -362,7 +362,7 @@ describe('spell actions', () => {
     const hm = catSpell('spell/healing-word');
     const c = wizard([{ ...hm, id: 'np', prep: false }, { ...hm, id: 'al', prep: false, always: true }, catSpell('spell/fire-bolt', { prep: false })]);
     expect(spellActions(c).map((a) => a.spellId).sort()).toEqual(['al', 'fire-bolt']);
-    const granted = (level: number) => ({ ...sampleCharacter(), level, spells: [...sampleCharacter().spells.filter((x) => x.id !== 'sp5'), { ...sampleCharacter().spells.find((x) => x.id === 'sp5')!, from: 'feature:f2', minLvl: 5 }] });
+    const granted = (level: number) => (withClass({ ...sampleCharacter(), spells: [...sampleCharacter().spells.filter((x) => x.id !== 'sp5'), { ...sampleCharacter().spells.find((x) => x.id === 'sp5')!, from: 'feature:f2', minLvl: 5 }] }, { lvl: level }));
     expect(actionOf(granted(4), 'sp5')).toBeUndefined();
     expect(actionOf(granted(5), 'sp5')).toBeDefined();
   });
@@ -479,7 +479,7 @@ it('falls back to the normal die for a blank Versatile die', () => {
 
 it('says 1 beam', () => {
   const sp: Spell = { id: 'e', name: 'Eldritch Blast', lvl: 0, time: 'Action', range: '120 ft', atk: 'ranged', fx: 'damage', dmg: '1d10', dtype: 'Force', scale: 'beams', cid: 'spell/eldritch-blast' };
-  const dice = (level: number) => spellActions({ ...blankCharacter(), level, castAb: 'cha', spells: [sp] })[0].dice;
+  const dice = (level: number) => spellActions(withClass({ ...blankCharacter(), castAb: 'cha', spells: [sp] }, { lvl: level }))[0].dice;
   expect(dice(1)).toBe('1 beam × 1d10');
   expect(dice(5)).toBe('2 beams × 1d10');
 });
@@ -521,17 +521,17 @@ describe('a feature row that spends another feature\'s counter', () => {
     expect(resOfFeature(c([b]), cd)).toBeUndefined();
   });
   it('carries a regain amount, a Value or all', () => {
-    const sheet = { ...c([a, b]), level: 5, grants: [
+    const sheet = withClass({ ...c([a, b]), grants: [
       { id: 'x', kind: 'action' as const, name: 'R', econ: 'free' as const, uses: cd, regainTo: '2', from: 'feature:b' },
-      { id: 'y', kind: 'action' as const, name: 'S', econ: 'free' as const, uses: cd, regainTo: 'all', from: 'feature:b' }] };
+      { id: 'y', kind: 'action' as const, name: 'S', econ: 'free' as const, uses: cd, regainTo: 'all', from: 'feature:b' }] }, { lvl: 5 });
     expect(featureActions(sheet).map((f) => f.regainTo)).toEqual([2, 'all']);
   });
 });
 
 describe('a feature row\'s save DC', () => {
   it('shows the DC when the grant has one', () => {
-    const c: Character = { ...blankCharacter(), level: 5, abil: { ...blankCharacter().abil, wis: 16 }, feats: [{ id: 'a', g: 'class', name: 'A', desc: '' }],
-      grants: [{ id: 'x', kind: 'action', name: 'Stun', econ: 'other', dc: '8+pb', dcAb: 'wis', from: 'feature:a' }, { id: 'y', kind: 'action', name: 'Run', econ: 'other', from: 'feature:a' }] };
+    const c: Character = withClass({ ...blankCharacter(), abil: { ...blankCharacter().abil, wis: 16 }, feats: [{ id: 'a', g: 'class', name: 'A', desc: '' }],
+      grants: [{ id: 'x', kind: 'action', name: 'Stun', econ: 'other', dc: '8+pb', dcAb: 'wis', from: 'feature:a' }, { id: 'y', kind: 'action', name: 'Run', econ: 'other', from: 'feature:a' }] }, { lvl: 5 });
     expect(featureActions(c).map((f) => f.dc)).toEqual([14, undefined]);
   });
 });
@@ -539,7 +539,7 @@ describe('a feature row\'s save DC', () => {
 describe('Rage damage, Strength attacks only (PHB p.51)', () => {
   // STR 16 (+3), DEX 18 (+4), level 9, so the Rage Damage bonus is +3.
   const rage = (on: boolean, inv: Item[], hands: string[]): Character => ({
-    ...fighter({ str: 16, dex: 18 }, inv, undefined, { level: 9, hands }), feats: [{ id: 'r', g: 'class', name: 'Rage', desc: '' }], effectsOn: on ? ['feature:r'] : [],
+    ...withClass(fighter({ str: 16, dex: 18 }, inv, undefined, { hands }), { lvl: 9 }), feats: [{ id: 'r', g: 'class', name: 'Rage', desc: '' }], effectsOn: on ? ['feature:r'] : [],
     grants: [{ id: 'a', kind: 'dmgBonus', name: 'Rage', val: '1:2,9:3,16:4', useAb: 'str', when: 'active', from: 'feature:r' },
       { id: 'b', kind: 'dmgBonus', name: 'Rage', val: '1:2,9:3,16:4', useAb: 'str', weapon: 'unarmed-strike', when: 'active', from: 'feature:r' }]
   });
@@ -561,7 +561,7 @@ describe('Rage damage, Strength attacks only (PHB p.51)', () => {
 describe('Sacred Weapon (PHB p.113)', () => {
   it('adds Charisma, at least 1, to a Melee weapon while on', () => {
     const add = (cha: number) => {
-      const base = fighter({ str: 10, cha }, [longsword({ id: 'ls' }), longbow({ id: 'lb' })], undefined, { level: 3, hands: ['ls'] });
+      const base = withClass(fighter({ str: 10, cha }, [longsword({ id: 'ls' }), longbow({ id: 'lb' })], undefined, { hands: ['ls'] }), { lvl: 3 });
       return addFromCatalog(base, cat, cat.byId.get('feature/paladin/oath-of-devotion/sacred-weapon')!, { picks: {}, counted: {}, links: {} });
     };
     const on = (c: Character) => ({ ...c, effectsOn: [c.grants.find((g) => g.kind === 'atkBonus')!.from] });
@@ -597,9 +597,9 @@ describe('an extra damage grant that swaps another (Foe Slayer, PHB p.121)', () 
 describe('a cantrip damage bonus for one spell (Agonizing Blast, PHB p.155)', () => {
   const eb = { ...spellFromEntry(cat.byId.get('spell/eldritch-blast') as SpellEntry), id: 'eb', prep: true };
   const fb = { ...spellFromEntry(cat.byId.get('spell/fire-bolt') as SpellEntry), id: 'fb', prep: true };
-  const c = (): Character => ({ ...blankCharacter(), level: 5, castAb: 'cha', abil: { ...blankCharacter().abil, cha: 16 }, spells: [eb, fb],
+  const c = (): Character => (withClass({ ...blankCharacter(), castAb: 'cha', abil: { ...blankCharacter().abil, cha: 16 }, spells: [eb, fb],
     feats: [{ id: 'a', g: 'class', name: 'Agonizing Blast', desc: '', cid: 'feature/warlock/agonizing-blast' }],
-    grants: [{ id: 'g', kind: 'dmgBonus', name: 'Agonizing Blast', cantrip: true, spell: 'spell/eldritch-blast', val: 'cha', from: 'feature:a' }] });
+    grants: [{ id: 'g', kind: 'dmgBonus', name: 'Agonizing Blast', cantrip: true, spell: 'spell/eldritch-blast', val: 'cha', from: 'feature:a' }] }, { lvl: 5 }));
   it('adds Charisma to each Eldritch Blast beam, and leaves another cantrip of the same class alone', () => {
     expect(spellActions(c()).find((x) => x.spellId === 'eb')!.dice).toBe('2 beams × 1d10+3');
     expect(spellActions(c()).find((x) => x.spellId === 'fb')!.dice).toBe('2d10');

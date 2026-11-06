@@ -1,7 +1,7 @@
 // Copying catalog entries onto a character, and the custom forms that build the same fields by hand. Pure functions:
 // the pickers and forms call them, then save through update().
 import { linkOf, srcKindOfLink } from '../links';
-import { ABILITIES, addGrants, capital, detectArmor, effScore, hasProf, maxFields, maxKindOf, maxOf, newId, normName, num, parseWeight, regainEvent, SKILLS, skillLevel, type GrantInput, type MaxKind } from '../logic';
+import { ABILITIES, addGrants, charLevel, capital, detectArmor, effScore, hasProf, maxFields, maxKindOf, maxOf, newId, normName, num, parseWeight, regainEvent, SKILLS, skillLevel, type GrantInput, type MaxKind } from '../logic';
 import type { AcEffect, Ability, ArmorKind, Character, Feature, FeatureGroup, Item, Linked, Recharge, Size, Spell, SrcKind } from '../types';
 import { entriesOf, type Catalog } from './merge';
 import { slug, type BackgroundEntry, type ChoiceSpec, type Entry, type FeatEntry, type FeatureEntry, type GrantSpec, type ItemEntry, type ProfEntry, type RuleEntry, type SpellEntry, type SpellPart, type TraitEntry } from './schema';
@@ -540,7 +540,7 @@ export function prereqMet(c: Character, prereq: string | undefined, adding: Entr
   const missing: string[] = [];
   for (const t of prereq ? prereq.split(';') : []) {
     let m: RegExpExecArray | null;
-    if ((m = /^lvl>=(\d+)$/.exec(t))) { if (c.level < Number(m[1])) missing.push(`Level ${m[1]} or higher`); }
+    if ((m = /^lvl>=(\d+)$/.exec(t))) { if (charLevel(c) < Number(m[1])) missing.push(`Level ${m[1]} or higher`); }
     else if ((m = /^([a-z|]+)>=(\d+)$/.exec(t))) {
       const abs = m[1].split('|') as Ability[];
       if (!abs.some((a) => effScore(c, a) >= Number(m![2]))) missing.push(`${abs.map((a) => ABILITY_NAME[a]).join(' or ')} ${m[2]} or higher`);
@@ -711,14 +711,18 @@ export function matchId(cat: Catalog, kind: 'class' | 'subclass' | 'species', te
   return option && cat.byId.has('species/' + option.species) ? 'species/' + option.species : '';
 }
 // The character's class id: the stored one when the loaded catalog has it, else the typed name matched again.
+// Reads the first class row (the starting class).
 export function classIdOf(cat: Catalog, c: Character): string {
-  return c.ch.clsId && cat.byId.get(c.ch.clsId)?.kind === 'class' ? c.ch.clsId : matchId(cat, 'class', c.ch.cls);
+  const row = c.classes[0];
+  if (!row) return '';
+  return row.clsId && cat.byId.get(row.clsId)?.kind === 'class' ? row.clsId : matchId(cat, 'class', row.name);
 }
 // The character's subclass id: the stored one when the catalog has it under the class, else the typed name matched.
 export function subclassIdOf(cat: Catalog, c: Character): string {
-  const cls = classIdOf(cat, c);
-  const stored = c.ch.subId ? cat.byId.get(c.ch.subId) : undefined;
-  return stored?.kind === 'subclass' && stored.cls === cls.split('/')[1] ? stored.id : matchId(cat, 'subclass', c.ch.sub, cls);
+  const cls = classIdOf(cat, c), row = c.classes[0];
+  if (!row) return '';
+  const stored = row.subId ? cat.byId.get(row.subId) : undefined;
+  return stored?.kind === 'subclass' && stored.cls === cls.split('/')[1] ? stored.id : matchId(cat, 'subclass', row.sub, cls);
 }
 
 // Adds a catalog entry with the player's answers: a spell or item with its grants, or a feature (feat, trait,
@@ -762,9 +766,10 @@ function addEntry(c: Character, cat: Catalog, entry: Entry, ans: AddChoices): Ch
       out.coins = { ...out.coins, gp: out.coins.gp + (e.gpA ?? 0) };
     } else if (e.equipA !== undefined && ans.equip === 'B') out.coins = { ...out.coins, gp: out.coins.gp + (e.gpB ?? 0) };
   }
-  if (e.kind === 'subclass' && !c.ch.sub.trim()) {
-    out.ch.sub = e.name;
-    out.ch.subId = e.id;
+  // A subclass names the row of its class (else the first row) when that row has none yet.
+  if (e.kind === 'subclass') {
+    const at = Math.max(0, c.classes.findIndex((r) => r.clsId === 'class/' + e.cls));
+    if (c.classes[at] && !c.classes[at].sub.trim()) out.classes = c.classes.map((r, i) => (i === at ? { ...r, sub: e.name, subId: e.id } : r));
   }
   if (e.kind === 'species' && !c.ch.species.trim()) {
     out.ch.species = e.name;
@@ -776,7 +781,7 @@ function addEntry(c: Character, cat: Catalog, entry: Entry, ans: AddChoices): Ch
   const lvl = e.kind === 'feature' || e.kind === 'trait' ? e.lvl : 0;
   const feature: Feature = {
     id, g, name: featureName(cat, c, e, ans.picks), desc: lines.filter((l) => l.trim()).join('\n'), cid: e.id,
-    ...link, ...(lvl > c.level ? { minLvl: lvl } : {})
+    ...link, ...(lvl > charLevel(c) ? { minLvl: lvl } : {})
   };
   out.feats = [...out.feats, feature];
   out = addWithSpells(out, cat, linkOf('feature', id), inputsOf(cat, e, ans, r.specs));
@@ -851,7 +856,7 @@ export function featureCandidates(cat: Catalog, c: Character, t: FeatureType, fe
       const { ok, missing } = prereqMet(c, e.prereq);
       return { entry: e as Entry, ok, taken: !e.repeat && hasFeature(c, e), ...(missing.length ? { note: missing.join(', ') } : {}) };
     }
-    return { entry: e as Entry, ok: e.lvl <= c.level, taken: hasFeature(c, e), ...(e.lvl > c.level ? { note: 'Level ' + e.lvl } : {}) };
+    return { entry: e as Entry, ok: e.lvl <= charLevel(c), taken: hasFeature(c, e), ...(e.lvl > charLevel(c) ? { note: 'Level ' + e.lvl } : {}) };
   };
   const optionsLast = (a: FeatureEntry, b: FeatureEntry) => Number(!!a.of) - Number(!!b.of) || byLevel(a, b);
   switch (t) {

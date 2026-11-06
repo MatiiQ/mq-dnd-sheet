@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { armorClass, armorSlowBy, fmt, untrainedArmor, initiative, modeSpeed, profBonus, speedNow, speedOf, UNARMORED, walkSpeed, zeroSpeedBy } from '../logic';
+import { armorClass, charLevel, armorSlowBy, fmt, untrainedArmor, initiative, modeSpeed, profBonus, speedNow, speedOf, UNARMORED, walkSpeed, zeroSpeedBy } from '../logic';
 import { removeEntry, saveEntry, useEntryForm, useSheet } from '../sheet';
 import type { AcMod, SpeedKind, Unarmored } from '../types';
 import { AddButton, Caret, EntryActions, EntryForm, NumInput, PartTiles, Step, TextField } from './ui';
@@ -44,7 +44,7 @@ export function Vitals() {
           <span className="row gap-4 stat-label">Speed<Caret open={c.speedOpen} /></span>
           <span className="stat-hint" style={{ color: zeroBy.length ? 'var(--danger)' : undefined }}>{hint}</span>
         </button>
-        <div className="stat"><span className="stat-value">+{profBonus(c.level)}</span><span className="stat-label">Proficiency</span></div>
+        <div className="stat"><span className="stat-value">+{profBonus(charLevel(c))}</span><span className="stat-label">Proficiency</span></div>
       </div>
 
       {c.acOpen && (

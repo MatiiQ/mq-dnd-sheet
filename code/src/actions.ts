@@ -4,7 +4,7 @@ import { slug, type SpellPart } from './catalog/schema';
 import { valueAt } from './catalog/value';
 import { hasProp, isWeapon, twoHanded, versatile, weaponKind, weaponMatches, weaponsHeld } from './hands';
 import { activeGrants, isActive, linkOf, sourceLabel, sourceOf } from './links';
-import { ABILITIES, abilityMod, abilityName, castAbOf, fmt, normName, num, partsTotal, profBonus, profList, hasProf, saveDc, spellAttackFor, spellSaveDcFor, spellUsable, valueCtx, type AcPart } from './logic';
+import { ABILITIES, abilityMod, charLevel, abilityName, castAbOf, fmt, normName, num, partsTotal, profBonus, profList, hasProf, saveDc, spellAttackFor, spellSaveDcFor, spellUsable, valueCtx, type AcPart } from './logic';
 import type { Ability, Character, Econ, Feature, Grant, Item, Resource, Spell } from './types';
 
 // The "Weapons not held" list: weapons not in hand, equipped first. A weapon inside a container is left out: the player
@@ -132,7 +132,7 @@ export function weaponAttacks(c: Character, it: Item): WeaponAttack[] {
 
 function attackFor(c: Character, it: Item, use: Use): { attack: WeaponAttack; die: string; mod: number } {
   const inHand = c.hands.filter((id) => id === it.id).length;
-  const pb = profBonus(c.level), ctx = valueCtx(c);
+  const pb = profBonus(charLevel(c)), ctx = valueCtx(c);
   const ab = weaponAbility(c, it, use), mod = abilityMod(c, ab);
   // Loaded magic ammunition adds its own bonus on a ranged use, next to the weapon's (plan 7): the two come from different
   // items and neither text limits the other (SRD 5.2.1 Ammunition, +1, +2, or +3; Ammunition property, PHB p.213).
@@ -169,7 +169,7 @@ function attackFor(c: Character, it: Item, use: Use): { attack: WeaponAttack; di
 // 'unarmed-strike'; a range, property or one-hand filter never matches it, a melee attack mode does. A damage total
 // below 0 shows 0 (PHB p.27: no negative damage).
 export function unarmedStrike(c: Character): WeaponAttack & { dc: number } {
-  const ctx = valueCtx(c), pb = profBonus(c.level);
+  const ctx = valueCtx(c), pb = profBonus(charLevel(c));
   const grants = activeGrants(c, 'unarmed');
   const abs: Ability[] = ['str', ...grants.flatMap((g) => (g.abs ?? '').split(',').map((a) => a.trim()).filter((a): a is Ability => ABILITIES.some(([k]) => k === a)))];
   const ab = abs.reduce((b, a) => (abilityMod(c, a) > abilityMod(c, b) ? a : b), 'str' as Ability), mod = abilityMod(c, ab);
@@ -319,10 +319,10 @@ function spellRow(c: Character, sp: Spell, r: RowFields): Omit<SpellAction, 'nam
   let dice = r.dice ?? '';
   if (dice && spellKey(sp) === 'eldritch-blast') {
     // Eldritch Blast adds beams instead of dice (PHB p.267).
-    const beams = cantripTier(c.level);
+    const beams = cantripTier(charLevel(c));
     dice = `${beams} ${beams === 1 ? 'beam' : 'beams'} × ${diceText(dice, cantripBonus(c, sp))}`;
   } else if (dice && r.scale === 'cantrip') {
-    dice = diceText(cantripDice(dice, c.level), cantripBonus(c, sp));
+    dice = diceText(cantripDice(dice, charLevel(c)), cantripBonus(c, sp));
   } else if (/\d+d\d+/.test(dice) && ((r.fx === 'healing' && r.healMod) || (r.fx === 'damage' && r.dmgMod))) {
     // Cure Wounds, Healing Word, Mass Cure Wounds: "+ your spellcasting ability modifier" (PHB pp.259, 284, 296);
     // damage that says the same: Spiritual Weapon, Flame Blade (PHB pp.319, 275).
