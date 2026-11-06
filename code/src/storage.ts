@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { isObj, slug } from './catalog/schema';
 import { blankCharacter, druidSample, SAVE_VERSION, sampleCharacter } from './defaults';
-import { classLine, newId, normalize } from './logic';
+import { classLine, maxHpOf, newId, normalize } from './logic';
 import { isNewerSave, migrate, saveVersion } from './migrate';
 import type { Character } from './types';
 
@@ -10,7 +10,8 @@ const SHEET_PREFIX = 'dnd-sheet-v3:';
 const sheetKey = (id: string) => SHEET_PREFIX + id;
 const UNREADABLE = ':unreadable';
 
-export interface IndexEntry { id: string; name: string; info?: string }
+// hp: [current, maximum] for the welcome screen's bar, written with info (an older entry has none until next saved).
+export interface IndexEntry { id: string; name: string; info?: string; hp?: [number, number] }
 export type Patch = Partial<Character> | ((c: Character) => Partial<Character>);
 
 // Every change goes through here: the patch, then the single clamp (normalize) on the result.
@@ -96,7 +97,7 @@ export function load(id: string): Character {
 }
 export const charName = (c: Character) => c.ch.name || 'Unnamed character';
 export const charInfo = (c: Character) => [c.ch.species, classLine(c)].filter((x) => x).join(' · ');
-const entryOf = (id: string, c: Character): IndexEntry => ({ id, name: charName(c), info: charInfo(c) });
+const entryOf = (id: string, c: Character): IndexEntry => ({ id, name: charName(c), info: charInfo(c), hp: [c.hp, maxHpOf(c)] });
 
 // c: null when no character is open (no character of your own and no example open): the app shows the welcome screen.
 export interface Store { id: string; list: IndexEntry[]; c: Character | null }

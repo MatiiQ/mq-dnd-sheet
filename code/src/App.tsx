@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Abilities } from './components/Abilities';
 import { Conditions } from './components/Conditions';
 import { Defenses } from './components/Defenses';
@@ -17,6 +17,7 @@ import { useWide } from './layout';
 import { RestPrompt } from './components/RestPrompt';
 import { LevelUpWizard, UndoLevelPrompt } from './components/LevelUpWizard';
 import { CreatorWizard } from './components/CreatorWizard';
+import { Welcome } from './components/Welcome';
 import { clearDraft, readDraft, type Draft } from './creator';
 import { undoLevel } from './levelup';
 import { TABS, dawn, longRest, restRolls, shortRest, type RestEvent, type RollAsk } from './logic';
@@ -27,17 +28,53 @@ import type { Character } from './types';
 
 export default function App() {
   const store = useCharacters();
-  // Nothing open (no character of your own, no example): Task 19's welcome screen goes here.
-  if (!store.c) return (
-    <main className="wizard" aria-label="No character open">
-      <h1 className="char-name">No character open</h1>
-      <button type="button" className="btn" onClick={() => store.newBlank()}>+ New character</button>
-    </main>
+  // Menu › Characters over an open sheet (UI only): the welcome screen with "Back to <name>".
+  const [welcome, setWelcome] = useState(false);
+  // The creator, full screen over either; from a draft or fresh.
+  const [creating, setCreating] = useState<{ from?: Draft } | null>(null);
+  // The creator's draft: read once on launch (a broken one is dropped with a notice); asked about before a new one.
+  const [draftAsk, setDraftAsk] = useState<{ draft: Draft | null; notice?: string }>(() => readDraft());
+  const openCreator = () => {
+    const r = readDraft();
+    if (r.draft) setDraftAsk(r);
+    else setCreating({});
+  };
+  const draftUi = (
+    <>
+      {draftAsk.notice && (
+        <div role="status" className="notice notice-blue row gap-8">
+          <span className="grow">{draftAsk.notice}</span>
+          <button type="button" className="btn" onClick={() => setDraftAsk((d) => ({ draft: d.draft }))}>OK</button>
+        </div>
+      )}
+      {draftAsk.draft && (
+        <div role="status" className="notice notice-blue row wrap gap-8">
+          <span className="grow">Continue creating {draftAsk.draft.answers.details?.name || 'a character'} (step {draftAsk.draft.step + 1} of 6)?</span>
+          <button type="button" className="btn" onClick={() => { setCreating({ from: draftAsk.draft! }); setDraftAsk({ draft: null }); }}>Continue</button>
+          <button type="button" className="btn" onClick={() => { clearDraft(); setDraftAsk({ draft: null }); }}>Discard</button>
+        </div>
+      )}
+    </>
   );
-  return <SheetApp store={store as CharacterStore & { c: Character }} />;
+  const creator = creating && <CreatorWizard initial={creating.from} onClose={() => setCreating(null)}
+    onCreate={(made) => { store.add(made); clearDraft(); setCreating(null); setWelcome(false); }} />;
+  // Nothing open (no character of your own, no example open), or Menu › Characters: the welcome screen.
+  if (!store.c || welcome) return (
+    <>
+      {creator}
+      <Welcome store={store} draft={draftUi} onNew={openCreator} onImported={() => setWelcome(false)}
+        onOpen={(id) => { store.switchTo(id); setWelcome(false); }} {...(store.c ? { onBack: () => setWelcome(false) } : {})} />
+    </>
+  );
+  return (
+    <>
+      {creator}
+      <SheetApp store={store as CharacterStore & { c: Character }} draftUi={draftUi} onCreate={openCreator} onCharacters={() => setWelcome(true)} />
+    </>
+  );
 }
 
-function SheetApp({ store }: { store: CharacterStore & { c: Character } }) {
+function SheetApp({ store, draftUi, onCreate, onCharacters }: { store: CharacterStore & { c: Character }; draftUi: ReactNode; onCreate: () => void; onCharacters: () => void }) {
   const { c, update } = store;
   const [edit, setEdit] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -45,15 +82,7 @@ function SheetApp({ store }: { store: CharacterStore & { c: Character } }) {
   const [activeSec, setActiveSec] = useState('sec-hp');
   const [hdPrompt, setHdPrompt] = useState(false);
   // A full-screen wizard over the sheet (UI only, never saved).
-  const [wizard, setWizard] = useState<'levelup' | 'create' | null>(null);
-  // The creator's draft: read once on launch (a broken one is dropped with a notice); asked about before a new one.
-  const [draftAsk, setDraftAsk] = useState<{ draft: Draft | null; notice?: string }>(() => readDraft());
-  const [createFrom, setCreateFrom] = useState<Draft | undefined>(undefined);
-  const openCreator = () => {
-    const r = readDraft();
-    if (r.draft) setDraftAsk(r);
-    else { setCreateFrom(undefined); setWizard('create'); }
-  };
+  const [wizard, setWizard] = useState<'levelup' | null>(null);
   const [undoAsk, setUndoAsk] = useState(false);
   // A rest or Dawn waiting for die rolls (restRolls). UI state only, never saved.
   const [restAsk, setRestAsk] = useState<{ event: RestEvent; asks: RollAsk[] } | null>(null);
@@ -120,13 +149,11 @@ function SheetApp({ store }: { store: CharacterStore & { c: Character } }) {
 
   return (
     <Sheet.Provider value={{ c, update, edit, form, setForm, focus, reveal, markFocusUsed }}>
-      {wizard === 'create' && <CreatorWizard initial={createFrom} onClose={() => setWizard(null)}
-        onCreate={(made) => { store.add(made); clearDraft(); setWizard(null); onSwitched(); }} />}
       {wizard === 'levelup' && <LevelUpWizard c={c} onApply={(next) => { update(() => next); setWizard(null); }} onClose={() => setWizard(null)} />}
       <div className={'sheet' + (wide ? ' wide' : '')}>
         <TopBar store={store} activeSec={activeSec} setActiveSec={setActiveSec} menuOpen={menuOpen} setMenuOpen={setMenuOpen}
           onToggleEdit={() => { setEdit(!edit); setForm(null); }} onSwitched={onSwitched} onRest={onRest}
-          onLevelUp={() => setWizard('levelup')} onUndoLevel={() => setUndoAsk(true)} onCreate={openCreator} />
+          onLevelUp={() => setWizard('levelup')} onUndoLevel={() => setUndoAsk(true)} onCreate={onCreate} onCharacters={onCharacters} />
         <div className="sheet-body">
           <div className="sheet-left">
             {store.isExample && (
@@ -135,19 +162,7 @@ function SheetApp({ store }: { store: CharacterStore & { c: Character } }) {
                 <button type="button" className="btn" onClick={() => { store.makeCopy(); onSwitched(); }}>Make my copy</button>
               </div>
             )}
-            {draftAsk.notice && (
-              <div role="status" className="notice notice-blue row gap-8">
-                <span className="grow">{draftAsk.notice}</span>
-                <button type="button" className="btn" onClick={() => setDraftAsk((d) => ({ draft: d.draft }))}>OK</button>
-              </div>
-            )}
-            {draftAsk.draft && (
-              <div role="status" className="notice notice-blue row wrap gap-8">
-                <span className="grow">Continue creating {draftAsk.draft.answers.details.name || 'a character'} (step {draftAsk.draft.step + 1} of 6)?</span>
-                <button type="button" className="btn" onClick={() => { setCreateFrom(draftAsk.draft!); setDraftAsk({ draft: null }); setWizard('create'); }}>Continue</button>
-                <button type="button" className="btn" onClick={() => { clearDraft(); setDraftAsk({ draft: null }); }}>Discard</button>
-              </div>
-            )}
+            {draftUi}
             {undoAsk && <UndoLevelPrompt c={c} onConfirm={() => { update(undoLevel); setUndoAsk(false); }} onCancel={() => setUndoAsk(false)} />}
             {restAsk && <RestPrompt event={restAsk.event} asks={restAsk.asks} onDone={(r) => runRest(restAsk.event, r)} onCancel={() => setRestAsk(null)} />}
             {edit && <EditDetails onReset={() => { store.resetCurrent(); onSwitched(true); }} />}

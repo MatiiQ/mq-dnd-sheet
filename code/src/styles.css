@@ -511,3 +511,6 @@ button.tile-btn { font: inherit; color: inherit; text-align: left; cursor: point
 .wizard-head { position: sticky; top: 0; background: var(--bg); padding: 8px 0; border-bottom: 1px solid var(--line); z-index: 1; }
 .wizard-bar { padding-bottom: 4px; }
 .wizard > .col, .wizard > div:not(.wizard-head) { max-width: 760px; width: 100%; margin: 0 auto; }
+.welcome-card { min-height: 64px; }
+.hp-bar { display: block; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; margin-top: 4px; }
+.hp-bar > span { display: block; height: 100%; background: var(--accent); }

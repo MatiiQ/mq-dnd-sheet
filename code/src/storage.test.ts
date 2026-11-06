@@ -12,7 +12,7 @@ const renamed = (): Store => ({
 
 describe('character list', () => {
   it('shows the active character as it is now', () => {
-    expect(freshList(renamed())[0]).toEqual({ id: 'a', name: 'Bob', info: 'Wood Elf · Ranger 5' });
+    expect(freshList(renamed())[0]).toEqual({ id: 'a', name: 'Bob', info: 'Wood Elf · Ranger 5', hp: [31, 44] });
   });
   it('keeps the renamed entry after switching to or adding another character', () => {
     const s = switchStore(renamed(), 'b', blankCharacter());
@@ -345,5 +345,18 @@ describe('openExampleOnNextLoad', () => {
     expect(s.id).toBe('example:ilyra');
     expect(s.list.map((x) => x.id)).toContain('a');
     expect(m.get('dnd-sheet-v3:a')).toBe(saved);
+  });
+});
+
+describe('index entries for the welcome screen', () => {
+  afterEach(() => vi.unstubAllGlobals());
+  it('writes hp beside info, and keeps an entry without it', () => {
+    const c = { ...blankCharacter(), hp: 5, maxHp: 8 };
+    const s = addToStore({ id: '', list: [], c: null }, [{ id: 'z', c }]);
+    expect(s.list[0].hp).toEqual([5, 8]);
+    const m = stubStorage();
+    m.set('dnd-sheet-v3:a', JSON.stringify(blankCharacter()));
+    m.set('dnd-index-v3', JSON.stringify({ active: 'a', list: [{ id: 'a', name: 'Ann', info: 'Level 1' }] }));
+    expect(initialStore().list).toEqual([{ id: 'a', name: 'Ann', info: 'Level 1' }]);
   });
 });

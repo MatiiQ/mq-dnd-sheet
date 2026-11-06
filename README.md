@@ -43,6 +43,11 @@ on a narrow one everything scrolls in one column. Menu › Layout forces 1 or 2 
 - HP per level from feats like Tough is added to the maximum; tap the max to see why.
 - When your Constitution modifier changes, the maximum follows it: 1 HP per level for each point.
 
+### Characters
+- With no character of your own, the app opens on the **Characters** screen: your characters (name, class and levels,
+  an HP bar), **+ New character**, **Import backup**, and the two examples. **Menu › Characters** shows it any time, with
+  "Back to" the open sheet. Delete and duplicate stay in the menu.
+
 ### Creating a character
 - **Menu › New character › Step by step** opens the creator: class (with its starting equipment and a starting level
   from 1 to 20), origin (background and its choices, species, two languages besides Common, then the class skills, with

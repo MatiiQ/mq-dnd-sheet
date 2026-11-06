@@ -28,9 +28,10 @@ interface Props {
   onLevelUp: () => void;
   onUndoLevel: () => void;
   onCreate: () => void;
+  onCharacters: () => void;
 }
 
-export function TopBar({ store, activeSec, setActiveSec, menuOpen, setMenuOpen, onToggleEdit, onSwitched, onRest, onLevelUp, onUndoLevel, onCreate }: Props) {
+export function TopBar({ store, activeSec, setActiveSec, menuOpen, setMenuOpen, onToggleEdit, onSwitched, onRest, onLevelUp, onUndoLevel, onCreate, onCharacters }: Props) {
   const { c, update, edit } = useSheet();
   const ch = c.ch;
   const initials = (ch.name || '?').split(/\s+/).filter((x) => x).slice(0, 2).map((x) => x.charAt(0).toUpperCase()).join('') || '?';
@@ -217,7 +218,7 @@ export function TopBar({ store, activeSec, setActiveSec, menuOpen, setMenuOpen, 
         </>
       )}
       {menuOpen && <Menu store={store} onClose={() => setMenuOpen(false)} onSwitched={onSwitched} onRest={onRest}
-        onLevelUp={() => { setMenuOpen(false); onLevelUp(); }} onUndoLevel={() => { setMenuOpen(false); onUndoLevel(); }} onCreate={() => { setMenuOpen(false); onCreate(); }} />}
+        onLevelUp={() => { setMenuOpen(false); onLevelUp(); }} onUndoLevel={() => { setMenuOpen(false); onUndoLevel(); }} onCreate={() => { setMenuOpen(false); onCreate(); }} onCharacters={() => { setMenuOpen(false); onCharacters(); }} />}
     </header>
   );
 }
@@ -258,7 +259,7 @@ function LevelButtons({ c, onLevelUp, onUndoLevel }: { c: Character; onLevelUp: 
   );
 }
 
-function Menu({ store, onClose, onSwitched, onRest, onLevelUp, onUndoLevel, onCreate }: { store: CharacterStore; onClose: () => void; onSwitched: (editOn?: boolean, keepMenu?: boolean) => void; onRest: (kind: RestEvent) => void; onLevelUp: () => void; onUndoLevel: () => void; onCreate: () => void }) {
+function Menu({ store, onClose, onSwitched, onRest, onLevelUp, onUndoLevel, onCreate, onCharacters }: { store: CharacterStore; onClose: () => void; onSwitched: (editOn?: boolean, keepMenu?: boolean) => void; onRest: (kind: RestEvent) => void; onLevelUp: () => void; onUndoLevel: () => void; onCreate: () => void; onCharacters: () => void }) {
   const { c } = useSheet();
   const [delArmed, tapDelete] = useArmed();
   const [longArmed, tapLong] = useArmed();
@@ -307,6 +308,7 @@ function Menu({ store, onClose, onSwitched, onRest, onLevelUp, onUndoLevel, onCr
         <span className="label">Levels</span>
         <LevelButtons c={c} onLevelUp={onLevelUp} onUndoLevel={onUndoLevel} />
 
+        <button type="button" className="menu-btn" onClick={onCharacters}>Characters</button>
         <span className="label">Your characters</span>
         {!store.list.length && <span className="small">No characters yet.</span>}
         {store.list.map((x) => {
