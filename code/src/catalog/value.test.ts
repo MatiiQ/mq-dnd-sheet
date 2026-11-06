@@ -8,6 +8,7 @@ it('evaluates numbers, PB, level and ability modifiers with a minimum', () => {
   expect(valueAt('wis>=1', ctx(1, -1))).toBe(1);
   expect(valueAt('wis+pb', ctx(5))).toBe(5);
   expect(valueAt('lvl', ctx(12))).toBe(12);
+  expect(['dex', '1+dex', '1d4+dex'].map((v) => valueAt(v, { ...ctx(5), mod: () => 2 }))).toEqual([2, 3, '1d4+2']);
 });
 it('reads level tables, including dice and levels before the first step', () => {
   expect([1, 2, 6, 16, 17].map((l) => valueAt('2:2,6:3,17:4', ctx(l)))).toEqual([0, 2, 3, 3, 4]); // Wild Shape (PHB p.80)
@@ -38,7 +39,7 @@ describe('diceRange', () => {
   });
 });
 
-describe('the magic term (plan 7, Task 9a)', () => {
+describe('the magic term', () => {
   const ctx: ValueCtx = { level: 5, pb: 3, mod: () => 1 };
   it('reads the item’s magic, 0 when it has none', () => {
     expect(isValue('magic')).toBe(true);

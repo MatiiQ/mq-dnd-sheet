@@ -40,7 +40,7 @@ describe('ActionsTab', () => {
     expect(html).toContain('Ice Knife · Burst');
     expect(html.match(/aria-label="Cast Ice Knife with/g)).toHaveLength(1);
   });
-  it('offers the Longbow the ammunition it can load, never Bolts (plan 7)', () => {
+  it('offers the Longbow the ammunition it can load, never Bolts', () => {
     const s = sampleCharacter();
     const extra = [{ id: 'a2', name: 'Arrows +2', qty: 20, eq: false, cat: 'magic' as const, cid: 'item/ammunition-1-2-or-3', base: 'item/arrows', magic: 2 },
       { id: 'bo', name: 'Bolts', qty: 20, eq: false, cat: 'ammo' as const, cid: 'item/bolts' }];

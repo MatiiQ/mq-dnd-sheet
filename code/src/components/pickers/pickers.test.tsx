@@ -71,7 +71,7 @@ describe('ItemQuestions', () => {
 });
 
 describe('PickerResult', () => {
-  it('no longer sends a base of the player’s choice to Edit: the add flow asks for it (plan 7)', () => {
+  it('no longer sends a base of the player’s choice to Edit: the add flow asks for it', () => {
     const r = (id: string) => render(blankCharacter(), <PickerResult entry={cat.byId.get(id)!} taken={false} onAdd={() => {}} />);
     expect(r('item/armor-1-2-or-3')).not.toContain('Set its armor');
   });

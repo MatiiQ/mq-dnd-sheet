@@ -46,7 +46,7 @@ describe('gear and tools', () => {
     // "Clothes, Traveler's" in the table reads as the name used in play
     expect(by(gear, 'Traveler’s Clothes')).toMatchObject({ id: 'item/travelers-clothes', wt: 4, cost: '2 GP' });
   });
-  it('reads a capacity in pounds, or else the volume or count a container holds (plan 7)', () => {
+  it('reads a capacity in pounds, or else the volume or count a container holds', () => {
     expect(capacityOf('A Backpack holds up to 30 pounds within 1 cubic foot. It can also serve as a saddlebag.')).toEqual({ cap: 30, capVol: '1 cubic foot' });
     expect(capacityOf('A Chest holds up to 12 cubic feet of contents.')).toEqual({ capVol: '12 cubic feet of contents' });
     expect(capacityOf('A Quiver holds up to 20 Arrows.')).toEqual({ capVol: '20 Arrows' });
@@ -57,7 +57,7 @@ describe('gear and tools', () => {
     expect(srdLines('A Glass Bottle holds up to 11/2 pints.')[0].text).toBe('A Glass Bottle holds up to 1½ pints.');
     expect(srdLines('Range 11/2 miles')[0].text).toBe('Range 11/2 miles');
   });
-  it('reads a heading split over two lines, and gives both Spell Scrolls its text (plan 7)', () => {
+  it('reads a heading split over two lines, and gives both Spell Scrolls its text', () => {
     const text = 'Signal Whistle (5 CP)\nWhen blown, it sounds.\n\nSpell Scroll (Cantrip, 30 GP;\nLevel 1, 50 GP)\n\nA Spell Scroll (Cantrip) or Spell Scroll (Level 1) is a magic item.\n';
     const layout = '  Signal Whistle    —    5 CP    Spell Scroll (Cantrip)    —    30 GP\n  Spell Scroll (Level 1)    —    50 GP\n';
     const gear = parseGear(text, layout);

@@ -153,7 +153,7 @@ describe('switching effects', () => {
   });
 });
 
-describe('items inside a container (plan 6)', () => {
+describe('items inside a container', () => {
   // Built without migrate(), so an equipped item inside the bag stays as a damaged save would have it.
   const bag: Item = { id: 'bag', name: 'Bag of Holding', qty: 1, eq: false, xdim: true, cap: 500, wt: 5 };
   const ring: Item = { id: 'ring', name: 'Ring of Protection', qty: 1, eq: true, attune: true, in: 'bag' };
@@ -187,8 +187,10 @@ describe('items inside a container (plan 6)', () => {
 
 describe('when: empty (hands free)', () => {
   const x = { when: 'empty' as const };
-  it('counts with empty hands and no Shield', () => expect(inactiveReason(make({ hands: [], inv: [] }), x)).toBeNull());
-  it('stops with a weapon in hand', () => expect(inactiveReason(make({ hands: ['w'], inv: [] }), x)).toBe('a weapon is in hand'));
+  it('counts with empty hands and no Shield, and stops with a weapon in hand', () => {
+    expect(inactiveReason(make({ hands: [], inv: [] }), x)).toBeNull();
+    expect(inactiveReason(make({ hands: ['w'], inv: [] }), x)).toBe('a weapon is in hand');
+  });
   it('stops with a Shield on', () => {
     const sh: Item = { id: 's', name: 'Shield', qty: 1, eq: true, armor: 'shield' };
     expect(inactiveReason(make({ hands: [], inv: [sh] }), x)).toBe('not with a Shield');

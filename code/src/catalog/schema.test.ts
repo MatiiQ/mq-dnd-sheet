@@ -143,6 +143,9 @@ describe('grantErrors (a grant stored on a character)', () => {
     expect(grantErrors({ id: 'g', kind: 'resource', name: 'X', recharge: 'long', max: '1d4' }, 'feature')).not.toEqual([]);
     expect(grantErrors({ id: 'g', kind: 'resource', name: 'X', recharge: 'long', max: 'pb' }, 'feature')).toEqual([]);
   });
+  it('needs a range on a sense grant', () => {
+    expect(grantErrors({ id: 'g', kind: 'sense', name: 'Blindsight' }, 'feature')).toHaveLength(1);
+  });
 });
 
 describe('a choice with ifPick', () => {
@@ -170,13 +173,21 @@ describe('an action grant with uses', () => {
   });
 });
 
+it('checks a checkAdv grant', () => {
+  const e = (g: object) => validateEntry({ id: 'feat/x', kind: 'feat', name: 'X', src: 'srd', desc: '', cat: 'general', grants: [{ id: 'a', kind: 'checkAdv', name: 'A', target: 'perception', ...g }] });
+  expect(e({ adv: 'adv', always: true, note: 'n' })).toEqual([]);
+  expect(e({ adv: 'maybe' })).not.toEqual([]);
+});
+
 it('lets a resource grant carry a note (addGrants copies it)', () => {
   expect(validateEntry({ id: 'feat/x', kind: 'feat', name: 'X', src: 'srd', desc: '', cat: 'general', grants: [{ id: 'r', kind: 'resource', name: 'R', recharge: 'long', note: 'Type the rolls here.' }] })).toEqual([]);
 });
 
 describe('a background\'s equipment packages', () => {
   const b = (p: object) => ({ id: 'background/x', kind: 'background', name: 'X', src: 'srd', desc: '', feat: 'feat/a', equip: '', grants: [], ...p });
-  it('are valid with both coin amounts', () => expect(validateEntry(b({ equipA: 'item/dagger;Rope*2', gpA: 15, gpB: 50 }))).toEqual([]));
-  it('need gpA and gpB with equipA', () => expect(validateEntry(b({ equipA: 'item/dagger', gpB: 50 }))).toEqual(['background/x: equipA needs gpA and gpB']));
-  it('take whole coins', () => expect(validateEntry(b({ equipA: 'item/dagger', gpA: 1.5, gpB: 50 }))).not.toEqual([]));
+  it('are valid with both coin amounts, which must be whole and both present', () => {
+    expect(validateEntry(b({ equipA: 'item/dagger;Rope*2', gpA: 15, gpB: 50 }))).toEqual([]);
+    expect(validateEntry(b({ equipA: 'item/dagger', gpB: 50 }))).toEqual(['background/x: equipA needs gpA and gpB']);
+    expect(validateEntry(b({ equipA: 'item/dagger', gpA: 1.5, gpB: 50 }))).not.toEqual([]);
+  });
 });

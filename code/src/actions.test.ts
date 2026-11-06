@@ -28,7 +28,7 @@ describe('weapon mastery', () => {
     expect(hasMastery(ilyra({ mastery: ['dagger', 'longbow'] }), 'dagger')).toBe(true);
     expect(hasMastery(ilyra({ mastery: [] }), 'longbow')).toBe(false);
   });
-  it('attacks with a catalog magic weapon’s chosen base, its +N and the base’s mastery (plan 7)', () => {
+  it('attacks with a catalog magic weapon’s chosen base, its +N and the base’s mastery', () => {
     const c0 = addFromCatalog(ilyra({ mastery: ['longsword'] }), cat, cat.byId.get('item/holy-avenger')!, { picks: {}, counted: {}, links: {}, item: { base: 'item/longsword' } });
     const av = c0.inv.at(-1)!;
     expect(weaponKind(av)).toBe('longsword');
@@ -39,7 +39,7 @@ describe('weapon mastery', () => {
     expect(melee.dmg).toMatch(/^1d8/);
     expect(melee.mastery).toBe('sap');
   });
-  it('adds loaded magic ammunition’s bonus to a ranged attack, next to the bow’s own (plan 7)', () => {
+  it('adds loaded magic ammunition’s bonus to a ranged attack, next to the bow’s own', () => {
     const arrows: Item = { id: 'ar', name: 'Arrows', qty: 20, eq: false, cat: 'ammo', cid: 'item/arrows' };
     const arrows2: Item = { id: 'a2', name: 'Arrows +2', qty: 20, eq: false, cat: 'magic', cid: 'item/ammunition-1-2-or-3', base: 'item/arrows', magic: 2 };
     const at = (bow: Item) => weaponAttacks({ ...ilyra(), inv: [bow, arrows, arrows2] }, bow)[0];
@@ -184,6 +184,12 @@ describe('weapon attacks', () => {
     expect(weaponAbility(quick, quick.inv[0], 'melee')).toBe('dex');
     expect(use(quick, quick.inv[0], 'melee').dmg).toBe('1d6+3');
   });
+  it('reach is 10 ft', () => {
+    const glaive = catItem('item/glaive'), sword = longsword({ id: 'w' });
+    const c: Character = { ...blankCharacter(), inv: [glaive, sword] };
+    expect(weaponAttacks(c, glaive)[0].range).toBe('Melee 10 ft');
+    expect(weaponAttacks(c, sword)[0].range).toBe('Melee 5 ft');
+  });
 });
 
 describe('Unarmed Strike (PHB p.377)', () => {
@@ -209,6 +215,11 @@ describe('Unarmed Strike (PHB p.377)', () => {
     const base = ilyra({ inv: [...sampleCharacter().inv.filter((i) => i.id !== 'i1'), catItem('item/demon-armor')], attuneIds: ['i9', 'demon-armor', ''] });
     const c = addGrants(base, 'item:demon-armor', e.grants!.map((spec) => ({ spec: spec as Exclude<typeof spec, { kind: 'choice' }> })));
     expect(unarmedStrike(c)).toMatchObject({ hit: 5, dmg: '1d8+2', dtype: 'Slashing' });
+  });
+  it('ranged bonuses skip Unarmed Strike', () => {
+    const c: Character = { ...blankCharacter(), feats: [{ id: 'f', g: 'feat', name: 'Feat', desc: '' }],
+      grants: [{ id: 'g', kind: 'atkBonus', name: 'Far', val: '2', weapon: 'unarmed-strike', amode: 'ranged', from: 'feature:f' }] };
+    expect(unarmedStrike(c).hitParts.map((p) => p.label)).not.toContain('Far');
   });
 });
 
@@ -259,6 +270,11 @@ describe('the Light extra attack (PHB p.213)', () => {
     expect(nick).toMatchObject({ nick: true, econ: 'action', note: 'part of the Attack action, once per turn' });
     expect(lightExtra(duo([dagger({ id: 'd' }), shortsword({ id: 'ss' })], ['d', 'ss'], ['dagger']))).toMatchObject({ itemId: 'd', nick: true });
     expect(lightExtra(duo([dagger({ id: 'd' }), shortsword({ id: 'ss' })], ['d', 'ss'], []))).toMatchObject({ itemId: 'ss', nick: false });
+  });
+  it('the Light extra attack keeps a negative modifier', () => {
+    const at = (str: number): Character => ({ ...blankCharacter(), abil: { ...blankCharacter().abil, str, dex: 8 }, inv: [dagger({ id: 'a' }), dagger({ id: 'b' })], hands: ['a', 'b'] });
+    expect(lightExtra(at(8))!.dmg).toBe('1d4−1');
+    expect(lightExtra(at(16))!.dmg).toBe('1d4');
   });
 });
 
@@ -395,7 +411,7 @@ describe('extra damage', () => {
   });
 });
 
-describe('other weapons (plan 6)', () => {
+describe('other weapons', () => {
   const bag: Item = { id: 'bag', name: 'Bag of Holding', qty: 1, eq: false, xdim: true, cap: 500 };
   it('lists weapons not in hand, equipped first, and none inside a container', () => {
     const c = { ...blankCharacter(), inv: [bag, dagger({ id: 'dg', eq: false }), shortsword({ id: 'sw', in: 'bag' }), longsword({ id: 'ls' }), longbow({ id: 'bow' })], hands: ['bow', 'bow'] };
@@ -478,26 +494,7 @@ it('names a missing Proficiency Bonus', () => {
   expect(trained.hitParts).toContainEqual({ label: 'Proficiency Bonus', value: 2 });
 });
 
-describe('pinned rules', () => {
-  it('reach is 10 ft', () => {
-    const glaive = catItem('item/glaive'), sword = longsword({ id: 'w' });
-    const c: Character = { ...blankCharacter(), inv: [glaive, sword] };
-    expect(weaponAttacks(c, glaive)[0].range).toBe('Melee 10 ft');
-    expect(weaponAttacks(c, sword)[0].range).toBe('Melee 5 ft');
-  });
-  it('ranged bonuses skip Unarmed Strike', () => {
-    const c: Character = { ...blankCharacter(), feats: [{ id: 'f', g: 'feat', name: 'Feat', desc: '' }],
-      grants: [{ id: 'g', kind: 'atkBonus', name: 'Far', val: '2', weapon: 'unarmed-strike', amode: 'ranged', from: 'feature:f' }] };
-    expect(unarmedStrike(c).hitParts.map((p) => p.label)).not.toContain('Far');
-  });
-  it('the Light extra attack keeps a negative modifier', () => {
-    const at = (str: number): Character => ({ ...blankCharacter(), abil: { ...blankCharacter().abil, str, dex: 8 }, inv: [dagger({ id: 'a' }), dagger({ id: 'b' })], hands: ['a', 'b'] });
-    expect(lightExtra(at(8))!.dmg).toBe('1d4−1');
-    expect(lightExtra(at(16))!.dmg).toBe('1d4');
-  });
-});
-
-describe('spell row notes (catalog audit)', () => {
+describe('spell row notes', () => {
   it('says when a spell’s damage comes, on rows that would read as damage on casting', () => {
     const row = (cid: string) => spellActions({ ...sampleCharacter(), spells: [{ id: 'x', name: 'X', cid, lvl: 1, time: 'Bonus Action', range: 'Self', prep: true, fx: 'damage', dmg: '1d6' }] as Character['spells'] })[0].note;
     expect(row('spell/hex')).toBe('Extra damage on your hits while it lasts');
@@ -515,8 +512,10 @@ describe('a feature row that spends another feature\'s counter', () => {
     grants: [{ id: 'x', kind: 'action', name: 'Preserve Life', econ: 'action', uses: cd, from: 'feature:b' }]
   });
   const a = { id: 'a', g: 'class' as const, name: 'Channel Divinity', desc: '', cid: cd }, b = { id: 'b', g: 'sub' as const, name: 'Life', desc: '' };
-  it('shows the counter of the feature it names', () => expect(featureActions(c([a, b]))[0].resId).toBe('r1'));
-  it('shows no counter, and throws nothing, when the sheet lacks that feature', () => expect(featureActions(c([b]))[0].resId).toBeUndefined());
+  it('shows the counter of the feature it names, and none, throwing nothing, when the sheet lacks that feature', () => {
+    expect(featureActions(c([a, b]))[0].resId).toBe('r1');
+    expect(featureActions(c([b]))[0].resId).toBeUndefined();
+  });
   it('resOfFeature finds the first resource of that feature', () => {
     expect(resOfFeature(c([a, b]), cd)?.id).toBe('r1');
     expect(resOfFeature(c([b]), cd)).toBeUndefined();
@@ -589,8 +588,10 @@ describe('an extra damage grant that swaps another (Foe Slayer, PHB p.121)', () 
   it('replaces that row while both are on, whichever apostrophe it was named with', () => {
     expect(extraDamage(c([mark, foe])).map((x) => x.dice)).toEqual(['1d10']);
   });
-  it('shows nothing without the row it swaps', () => expect(extraDamage(c([foe]))).toEqual([]));
-  it('leaves the row alone without the swapper', () => expect(extraDamage(c([mark])).map((x) => x.dice)).toEqual(['1d6']));
+  it('shows nothing without the row it swaps, and leaves the row alone without the swapper', () => {
+    expect(extraDamage(c([foe]))).toEqual([]);
+    expect(extraDamage(c([mark])).map((x) => x.dice)).toEqual(['1d6']);
+  });
 });
 
 describe('a cantrip damage bonus for one spell (Agonizing Blast, PHB p.155)', () => {
@@ -599,6 +600,8 @@ describe('a cantrip damage bonus for one spell (Agonizing Blast, PHB p.155)', ()
   const c = (): Character => ({ ...blankCharacter(), level: 5, castAb: 'cha', abil: { ...blankCharacter().abil, cha: 16 }, spells: [eb, fb],
     feats: [{ id: 'a', g: 'class', name: 'Agonizing Blast', desc: '', cid: 'feature/warlock/agonizing-blast' }],
     grants: [{ id: 'g', kind: 'dmgBonus', name: 'Agonizing Blast', cantrip: true, spell: 'spell/eldritch-blast', val: 'cha', from: 'feature:a' }] });
-  it('adds Charisma to each Eldritch Blast beam', () => expect(spellActions(c()).find((x) => x.spellId === 'eb')!.dice).toBe('2 beams × 1d10+3'));
-  it('leaves another cantrip alone, even of the same class', () => expect(spellActions(c()).find((x) => x.spellId === 'fb')!.dice).toBe('2d10'));
+  it('adds Charisma to each Eldritch Blast beam, and leaves another cantrip of the same class alone', () => {
+    expect(spellActions(c()).find((x) => x.spellId === 'eb')!.dice).toBe('2 beams × 1d10+3');
+    expect(spellActions(c()).find((x) => x.spellId === 'fb')!.dice).toBe('2d10');
+  });
 });

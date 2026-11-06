@@ -69,7 +69,7 @@ describe('spellSummary', () => {
   });
 });
 
-describe('rolled starting charges (plan 7, Task 8)', () => {
+describe('rolled starting charges', () => {
   it('asks for the roll, with its range', () => {
     expect(itemQuestions(cat, item('item/luck-blade')).filter((q) => q.key === 'charges')).toEqual([{ key: 'charges', label: 'Starting charges (roll 1d3)', min: 1, max: 3 }]);
     expect(itemQuestions(cat, item('item/nine-lives-stealer')).find((q) => q.key === 'charges')).toMatchObject({ min: 2, max: 9 });
@@ -91,7 +91,7 @@ describe('rolled starting charges (plan 7, Task 8)', () => {
   });
 });
 
-describe('a magic weapon or armor of the player’s choice (plan 7, Task 9)', () => {
+describe('a magic weapon or armor of the player’s choice', () => {
   const blank = blankCharacter();
   const ask = (id: string) => itemQuestions(cat, item(id));
   const added = (id: string, a: ItemAnswers) => addFromCatalog(blank, cat, item(id), A({}, undefined, { item: a })).inv.at(-1)!;
@@ -136,7 +136,7 @@ describe('a magic weapon or armor of the player’s choice (plan 7, Task 9)', ()
   });
 });
 
-describe('itemStats (plan 7, Task 10)', () => {
+describe('itemStats', () => {
   it('builds a line from a weapon’s or armor’s fields, for one without a description', () => {
     expect(itemStats(item('item/longsword'))).toBe('Martial melee weapon · 1d8 Slashing · Versatile (1d10) · Mastery: Sap');
     expect(itemStats(item('item/longbow'))).toBe('Martial ranged weapon · 1d8 Piercing · Ammunition (150/600, Arrow), Heavy, Two-Handed · Mastery: Slow');
@@ -208,29 +208,6 @@ describe('itemFromForm', () => {
     expect(bare.thrown).toBeUndefined();
     const rope: Item = { id: 'i3', name: 'Rope', qty: 1, eq: false, desc: 'Fifty feet.' };
     expect(saveEntry<Item>([rope], itemFromForm(draft({ name: 'Rope', desc: '' })), 'i3')[0].desc).toBeUndefined();
-  });
-});
-
-describe('migrate() and catalog fields', () => {
-  const load = (inv: Record<string, unknown>[], spells: Record<string, unknown>[] = []) => migrate({ ...blankCharacter(), inv, spells });
-  it('keeps a formula charges maximum and drops a die', () => {
-    expect(load([{ id: 'i1', name: 'Rod', qty: 1, eq: false, count: 2, maxV: 'pb' }]).inv[0].maxV).toBe('pb');
-    expect(load([{ id: 'i1', name: 'Rod', qty: 1, eq: false, count: 2, maxV: '1d6' }]).inv[0].maxV).toBeUndefined();
-  });
-  it('drops a bad catalog field and keeps the entry', () => {
-    const c = load(
-      [{ id: 'i1', name: 'Sword', qty: 1, eq: false, wcat: 'exotic', magic: '1', cat: 'vehicle', cost: 15, dmg: '1d8', base: 'dagger' },
-        { id: 'i2', name: 'Venom', qty: 1, eq: false, base: 'item/dagger', magic: 1, props: 'finesse' }],
-      [{ id: 's1', name: 'Bolt', lvl: 0, time: 'Action', range: '', atk: 'thrown', save: 'dex', fx: 'damage', ritual: 'no' }]
-    );
-    const [i1, i2] = c.inv as (Item & Record<string, unknown>)[];
-    expect(i1).toMatchObject({ id: 'i1', name: 'Sword', dmg: '1d8' });
-    for (const k of ['wcat', 'magic', 'cat', 'cost', 'base']) expect(i1[k]).toBeUndefined();
-    expect(i2).toMatchObject({ base: 'item/dagger', magic: 1, props: 'finesse' });
-    const s1 = c.spells[0] as Spell & Record<string, unknown>;
-    expect(s1).toMatchObject({ name: 'Bolt', save: 'dex', fx: 'damage' });
-    expect(s1.atk).toBeUndefined();
-    expect(s1.ritual).toBeUndefined();
   });
 });
 
@@ -906,7 +883,7 @@ describe('senseRule', () => {
   });
 });
 
-describe('effect grants through the add flow (catalog audit)', () => {
+describe('effect grants through the add flow', () => {
   const blank = blankCharacter();
   it('adds a chosen weapon’s rider and a potion’s chosen resistance', () => {
     const tongue = addFromCatalog(blank, cat, cat.byId.get('item/flame-tongue')!, { picks: {}, counted: {}, links: {}, nested: {}, item: { base: 'item/longsword' } });

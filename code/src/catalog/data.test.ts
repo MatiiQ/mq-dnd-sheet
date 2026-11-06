@@ -153,7 +153,7 @@ describe('SRD classes', () => {
 
 // The audit's pattern checks (plan 7, Task 12): a rebuild can't bring a fixed problem back. Each allow-list names the
 // entries that are right by design, with the reason.
-describe('SRD data patterns (plan 7)', () => {
+describe('SRD data patterns', () => {
   const sps = spells as SpellEntry[], its = items as ItemEntry[];
   const T = 'Acid|Bludgeoning|Cold|Fire|Force|Lightning|Necrotic|Piercing|Poison|Psychic|Radiant|Slashing|Thunder';
   const ABIL = ['Strength', 'Dexterity', 'Constitution', 'Intelligence', 'Wisdom', 'Charisma'];
@@ -218,7 +218,7 @@ describe('SRD data patterns (plan 7)', () => {
 // The examples are rebuilt from defaults.ts on every open, so their copied catalog fields don't follow a rebuild
 // (plan 7, Task 13). The entry's dice is the spell's dmg; an item's charges are its max (or maxV). The spell's `dice`
 // is a hand-written row summary in the examples, left out.
-describe('the examples match the catalog in the fields plan 7 changed', () => {
+describe('the examples match the catalog’s copied fields', () => {
   const byId = new Map(all.map((e) => [e.id, e]));
   const SPELL_KEYS = ['fx', 'save', 'dtype', 'dtypes', 'dmgMod', 'parts'] as const;
   const ITEM_KEYS = ['magic', 'recharge', 'cap', 'capVol'] as const;

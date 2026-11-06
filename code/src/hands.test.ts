@@ -97,6 +97,11 @@ describe('weapons in hand', () => {
     const { hands: _h, ...noHands } = raw({ ...sampleCharacter(), hands: ['i3'] });
     expect(migrate(noHands).hands).toEqual([]);
   });
+  it('quantity 0 leaves the hand', () => {
+    const c = (qty: number): Character => ({ ...blankCharacter(), inv: [dagger({ id: 'd', qty })] });
+    expect(trimHands(c(0), ['d'])).toEqual([]);
+    expect(trimHands(c(1), ['d'])).toEqual(['d']);
+  });
 });
 
 describe('letting go ends Shillelagh (PHB p.316)', () => {
@@ -148,7 +153,7 @@ describe('weapon kinds', () => {
   });
 });
 
-describe('items inside a container (plan 6)', () => {
+describe('items inside a container', () => {
   const bag: Item = { id: 'bag', name: 'Bag of Holding', qty: 1, eq: false, xdim: true, cap: 500 };
   it('a Shield inside the bag takes no hand', () => {
     const c = make([bag, shield({ id: 'sh', in: 'bag' }), longbow({ id: 'bow' })], ['bow', 'bow']);
@@ -156,7 +161,7 @@ describe('items inside a container (plan 6)', () => {
   });
 });
 
-describe('ammunition types (plan 7, Task 9b)', () => {
+describe('ammunition types', () => {
   // A weapon's ammunition type is the part of its Ammunition field after ';' (PHB p.213: "Ammo type listed with the range").
   const arrows: Item = { id: 'ar', name: 'Arrows', qty: 20, eq: false, cat: 'ammo', cid: 'item/arrows' };
   const arrows1: Item = { id: 'a1', name: 'Arrows +1', qty: 20, eq: false, cat: 'magic', cid: 'item/ammunition-1-2-or-3', base: 'item/arrows', magic: 1 };
@@ -183,6 +188,10 @@ describe('ammunition types (plan 7, Task 9b)', () => {
     expect([canLoad(longbow({ id: 'lb' }), arrows), canLoad(longbow({ id: 'lb' }), arrows1), canLoad(longbow({ id: 'lb' }), bolts), canLoad(longbow({ id: 'lb' }), typed), canLoad(longbow({ id: 'lb' }), firearm)]).toEqual([true, true, false, false, false]);
     expect(canLoad(longsword({ id: 'ls' }), arrows)).toBe(false);
     expect(canLoad({ ...longbow({ id: 'lb' }), props: 'heavy,two-handed' }, arrows)).toBe(false);
+  });
+  it('a weapon isn’t ammunition', () => {
+    const short: Item = { ...longbow({ id: 's' }), name: 'Shortbow', cid: 'item/shortbow', ammo: '80/320;arrow' };
+    expect(canLoad(longbow({ id: 'b' }), short)).toBe(false);
   });
 });
 
@@ -216,18 +225,6 @@ it('moves a Versatile weapon to one hand for a Shield', () => {
   expect(equipShield(c, 's').hands).toEqual(['q']);
   const bow: Character = { ...blankCharacter(), inv: [longbow({ id: 'b' }), shield({ id: 's', eq: false })], hands: ['b', 'b'] };
   expect(equipShield(bow, 's').hands).toEqual([]);
-});
-
-describe('pinned rules', () => {
-  it('a weapon isn’t ammunition', () => {
-    const short: Item = { ...longbow({ id: 's' }), name: 'Shortbow', cid: 'item/shortbow', ammo: '80/320;arrow' };
-    expect(canLoad(longbow({ id: 'b' }), short)).toBe(false);
-  });
-  it('quantity 0 leaves the hand', () => {
-    const c = (qty: number): Character => ({ ...blankCharacter(), inv: [dagger({ id: 'd', qty })] });
-    expect(trimHands(c(0), ['d'])).toEqual([]);
-    expect(trimHands(c(1), ['d'])).toEqual(['d']);
-  });
 });
 
 // Equipping a weapon includes drawing it (PHB p.361).
