@@ -7,7 +7,7 @@ import type { FlowAnswers } from '../catalog/flow';
 import { entriesOf, type Catalog } from '../catalog/merge';
 import type { ClassEntry, Entry } from '../catalog/schema';
 import { useCatalog } from '../catalog/useCatalog';
-import { CREATOR_STEPS, DRAFT_VERSION, dropLowest, POINT_BUDGET, pointsSpent, replay, STANDARD_ARRAY, staleStep, writeDraft, type CreatorAnswers, type Draft } from '../creator';
+import { CREATOR_STEPS, DRAFT_VERSION, dropLowest, POINT_BUDGET, pointsSpent, replay, replayOrigin, STANDARD_ARRAY, staleStep, writeDraft, type CreatorAnswers, type Draft } from '../creator';
 import { emptyCharacter, type ClassPick } from '../levelup';
 import { ABILITIES, classLine, effScore, maxHpOf } from '../logic';
 import { Sheet } from '../sheet';
@@ -88,7 +88,7 @@ function Creator({ cat, initial, onCreate, notice }: { cat: Catalog; initial?: D
       <div className="row wrap gap-8">
         {step > 0 && <button type="button" className="btn" onClick={() => go(step - 1)}>Back</button>}
         {step < SUMMARY && step !== 4 && <button type="button" className="btn btn-primary" aria-disabled={!readyAt[step]} onClick={() => readyAt[step] && go(step + 1)}>Next</button>}
-        {step === 4 && a.start === 1 && <button type="button" className="btn btn-primary" onClick={() => go(SUMMARY)}>Next</button>}
+        {step === 4 && a.start === 1 && a.firstDone && <button type="button" className="btn btn-primary" onClick={() => go(SUMMARY)}>Next</button>}
         {step === SUMMARY && <button type="button" className="btn btn-primary" aria-disabled={!preview} onClick={() => preview && onCreate(preview)}>Create character</button>}
       </div>
     </div>
@@ -107,7 +107,7 @@ function ClassStep({ cat, a, set }: { cat: Catalog; a: CreatorAnswers; set: (f: 
         {entriesOf(cat, 'class').map((e) => (
           // A new class clears the class skill picks and the first level's answers (one copy of each).
           <button key={e.id} type="button" className="pick-opt" aria-pressed={a.cls === e.id}
-            onClick={() => a.cls !== e.id && set((x) => ({ ...x, cls: e.id, skills: [], first: { flows: {}, spells: {} }, equip: 'none' }))}>{e.name}</button>
+            onClick={() => a.cls !== e.id && set((x) => ({ ...x, cls: e.id, skills: [], first: { flows: {}, spells: {} }, firstDone: false, equip: 'none' }))}>{e.name}</button>
         ))}
       </div>
       {cls && (
@@ -264,7 +264,20 @@ function DetailsStep({ a, set }: { a: CreatorAnswers; set: (f: (x: CreatorAnswer
 
 // Levels 2..start, one at a time, each on the preview as it stands after the earlier ones ("Level 3 of 5").
 function LevelsStep({ cat, a, set, onDone }: { cat: Catalog; a: CreatorAnswers; set: (f: (x: CreatorAnswers) => CreatorAnswers) => void; onDone: () => void }) {
-  if (a.start <= 1) return <span className="muted">Starting at level 1: no more levels to choose.</span>;
+  // Level 1 first: its features' own choices (Fighting Style, Expertise, Invocations), cantrips and spells. The class
+  // skills were asked in Origin, so that step is skipped here.
+  // The character the level-1 steps read: the origin, with the class skills picked in Origin (as replay adds them before
+  // the features, so Expertise can offer them).
+  const origin = replayOrigin(cat, a).c;
+  const withSkills = { ...origin, skillProf: { ...origin.skillProf, ...Object.fromEntries(a.skills.map((k) => [k, Math.max(1, origin.skillProf[k] ?? 0)])) } };
+  if (!a.firstDone) return (
+    <div className="col gap-6">
+      <h3 className="block-title">Level 1{a.start > 1 ? ' of ' + a.start : ''}</h3>
+      <LevelSteps key={a.cls} c={withSkills} cat={cat} fixedPick={{ cls: a.cls }} skip={(s) => s.key === 'profs/skills'}
+        onFinish={(_, __, ans) => set((x) => ({ ...x, first: ans, firstDone: true }))} />
+    </div>
+  );
+  if (a.start <= 1) return <span className="muted">Level 1 is chosen. Starting at level 1: no more levels to choose.</span>;
   const i = Math.min(a.levels.length, a.start - 2);
   if (a.levels.length >= a.start - 1) return (
     <div className="col gap-6">

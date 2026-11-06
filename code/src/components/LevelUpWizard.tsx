@@ -52,17 +52,20 @@ const asks = (s: Step) => s.kind === 'hp' || s.kind === 'subclass' || s.kind ===
   || (s.kind === 'feature' && !s.onSheet && !!s.entry && choicesOf(s.entry).length > 0);
 
 // The class pick, then the steps of one level. The creator reuses it, one level at a time.
-// onFinish also gets the class pick and the answers, which the creator stores instead of the character.
-export function LevelSteps({ c, cat, onFinish }: { c: Character; cat: Catalog | null; onFinish: (next: Character, pick: ClassPick, answers: LevelAnswers) => void }) {
+// onFinish also gets the class pick and the answers, which the creator stores instead of the character. fixedPick: the
+// class is given (the creator's level 1), so there is no class screen; skip: steps answered elsewhere (its class skills).
+export function LevelSteps({ c, cat, onFinish, fixedPick, skip }: {
+  c: Character; cat: Catalog | null; onFinish: (next: Character, pick: ClassPick, answers: LevelAnswers) => void; fixedPick?: ClassPick; skip?: (s: Step) => boolean;
+}) {
   const only = c.classes.length === 1 ? c.classes[0] : undefined;
-  const [pick, setPick] = useState<ClassPick | null>(only ? { row: only.id } : null);
+  const [pick, setPick] = useState<ClassPick | null>(fixedPick ?? (only ? { row: only.id } : null));
   const [answers, setAnswers] = useState<LevelAnswers>(EMPTY);
-  const [at, setAt] = useState(-1);   // -1: the class screen
+  const [at, setAt] = useState(fixedPick ? 0 : -1);   // -1: the class screen
   if (totalLevel(c) >= 20) return <span role="status">Level 20: nothing more to gain.</span>;
   const plan = pick ? levelPlan(c, pick, cat, answers) : null;
   const w = pick ? withLevel(c, pick, cat) : null;
   const raised = w?.c ?? c;
-  const screens: Screen[] = plan ? [...plan.steps.filter(asks).map((step): Screen => ({ kind: 'step', step })), { kind: 'overview' }, { kind: 'summary' }] : [];
+  const screens: Screen[] = plan ? [...plan.steps.filter((s) => asks(s) && !skip?.(s)).map((step): Screen => ({ kind: 'step', step })), { kind: 'overview' }, { kind: 'summary' }] : [];
   const choose = (p: ClassPick) => { setPick(p); setAnswers(EMPTY); };
   const set = (f: (a: LevelAnswers) => LevelAnswers) => setAnswers(f);
 
@@ -82,7 +85,7 @@ export function LevelSteps({ c, cat, onFinish }: { c: Character; cat: Catalog | 
   }
   const idx = Math.min(at, screens.length - 1);
   const screen = screens[idx];
-  const go = (i: number) => setAt(Math.max(-1, Math.min(screens.length - 1, i)));
+  const go = (i: number) => setAt(Math.max(fixedPick ? 0 : -1, Math.min(screens.length - 1, i)));
   const ctx = { c: raised, update: () => {}, edit: false, form: null, setForm: () => {}, focus: null, reveal: () => {}, markFocusUsed: () => {} };
   const bar = (
     <div role="group" aria-label="Level-up steps" className="row wrap gap-4 wizard-bar">
@@ -160,7 +163,7 @@ export function LevelSteps({ c, cat, onFinish }: { c: Character; cat: Catalog | 
       <div className="col gap-12">
         {bar}
         {body}
-        <Nav back={() => go(idx - 1)} next={showNext ? next : null} />
+        <Nav back={fixedPick && idx === 0 ? null : () => go(idx - 1)} next={showNext ? next : null} />
       </div>
     </Sheet.Provider>
   );

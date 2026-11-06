@@ -21,6 +21,7 @@ export interface CreatorAnswers {
   method: AbilityMethod; scores: Partial<Record<Ability, number>>;    // base scores, before the background bonus
   details: { name: string; align: string; appearance: string; notes: string };
   first: LevelAnswers;                                                // level 1 of `cls`; its skill flow is built from `skills`
+  firstDone?: boolean;                                                // level 1's own choices were answered (Levels step)
   levels: { pick: { cls: string } | { name: string; hd: Die }; ans: LevelAnswers }[];  // levels[0] is level 2
 }
 export interface Draft { v: number; step: number; answers: CreatorAnswers }
@@ -38,10 +39,9 @@ export const dropLowest = (dice: number[]) => [...dice].sort((a, b) => b - a).sl
 
 const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
-// What Finish builds, in the spec's order: the empty character (no class, no HP), background and species, languages,
-// the class's starting equipment, the scores, level 1 of the class, then levels 2..start; details last. Never throws on
-// stored answers: what no longer fits goes in dropped (named for the player), and later levels stop there.
-export function replay(cat: Catalog, a: CreatorAnswers): { c: Character; dropped: string[] } {
+// The character before level 1: background and species, languages, the class's starting equipment and the scores.
+// The creator's level-1 step reads it; replay goes on from it.
+export function replayOrigin(cat: Catalog, a: CreatorAnswers): { c: Character; dropped: string[] } {
   const dropped: string[] = [];
   let c = emptyCharacter();
   for (const [id, flow, label] of [[a.background, a.bgFlow, 'Background'], [a.species, a.spFlow, 'Species']] as const) {
@@ -59,12 +59,20 @@ export function replay(cat: Catalog, a: CreatorAnswers): { c: Character; dropped
     if (!c.profs.some((p) => p.cat === 'language' && p.name === e.name)) c = { ...c, profs: [...c.profs, { id: newId(), cat: 'language', name: e.name }] };
   }
   const cls = cat.byId.get(a.cls);
-  if (cls?.kind !== 'class') {
-    dropped.push('Class: not in the loaded catalog');
-    return { c: details(c, a), dropped };
-  }
-  c = addClassEquipment(c, cat, cls as ClassEntry, a.equip);
+  if (cls?.kind !== 'class') dropped.push('Class: not in the loaded catalog');
+  else c = addClassEquipment(c, cat, cls as ClassEntry, a.equip);
   c = { ...c, abil: { ...c.abil, ...a.scores } };
+  return { c, dropped };
+}
+
+// What Finish builds, in the spec's order: the empty character (no class, no HP), background and species, languages,
+// the class's starting equipment, the scores, level 1 of the class, then levels 2..start; details last. Never throws on
+// stored answers: what no longer fits goes in dropped (named for the player), and later levels stop there.
+export function replay(cat: Catalog, a: CreatorAnswers): { c: Character; dropped: string[] } {
+  const { c: o, dropped } = replayOrigin(cat, a);
+  let c = o;
+  const cls = cat.byId.get(a.cls);
+  if (cls?.kind !== 'class') return { c: details(c, a), dropped };
   // Level 1: the class skill flow comes from `skills`, minus skills the origin already gives.
   const held = a.skills.filter((k) => skillLevel(c, k).level >= 1);
   for (const k of held) dropped.push('Class skill ' + k + ': already proficient from your origin');

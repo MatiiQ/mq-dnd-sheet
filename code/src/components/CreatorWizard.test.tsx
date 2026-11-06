@@ -14,6 +14,8 @@ const cls = (name: string): ClassEntry => ({ id: 'class/' + name.toLowerCase(), 
   skills: { kind: 'choice', id: 'skills', name: 'Skills', pick: 2, pool: 'skill:stealth|insight|survival' }, armor: '', weapons: '', slots: [] });
 const lang = (name: string): Entry => ({ id: 'prof/' + name.toLowerCase(), kind: 'prof', name, src: 'srd', desc: '', cat: 'language' } as Entry);
 const entries: Entry[] = [cls('Ranger'), cls('Rogue'),
+  { id: 'feature/rogue/expertise', kind: 'feature', name: 'Expertise', src: 'srd', desc: '', cls: 'rogue', lvl: 1,
+    grants: [{ kind: 'choice', id: 'exp', name: 'Expertise', pick: 1, pool: 'skill:proficient' }, { id: 'g1', kind: 'prof', name: 'Expertise', cat: 'expertise', target: '$exp' }] } as Entry,
   { id: 'background/sage', kind: 'background', name: 'Sage', src: 'srd', desc: '', feat: 'feat/none', equip: '',
     grants: [{ kind: 'choice', id: 'abil', name: 'Ability scores', pick: 2, options: [{ id: 'o1', kind: 'abil', name: 'INT +1', ab: 'int', val: '1', cap: 20 }, { id: 'o2', kind: 'abil', name: 'WIS +1', ab: 'wis', val: '1', cap: 20 }] }] } as Entry,
   { id: 'species/elf', kind: 'species', name: 'Elf', src: 'srd', desc: '', sizes: 'medium', speed: 30 } as Entry,
@@ -62,7 +64,13 @@ function toCreate() {
   tap(btn('Next'));
   type(document.querySelector('.wizard input[type="text"]'), 'Thorin');
   tap(btn('Next'));
+  level1();
   tap(btn('Next'));
+}
+// The Levels step's level 1 (no choices for the synthetic Ranger): to its summary, then Finish.
+function level1() {
+  for (let i = 0; i < 6 && !btn('Finish'); i++) tap(btn('Next'));
+  tap(btn('Finish'));
 }
 
 describe('CreatorWizard', () => {
@@ -109,6 +117,8 @@ describe('CreatorWizard', () => {
     throughOriginRest();
     tap(btn('Next')); // abilities (Standard Array, unassigned)
     tap(btn('Next')); // details
+    expect(document.body.textContent).toContain('Level 1 of 5');
+    level1();
     for (let n = 2; n <= 5; n++) {
       expect(document.body.textContent).toContain('Level ' + n + ' of 5');
       tap(btn('Next'));
@@ -138,3 +148,25 @@ function throughOriginRest() {
   tap(btn('Survival'));
   tap(btn('Next'));
 }
+
+describe('level 1 choices in the creator', () => {
+  it('asks a level-1 feature choice, so a Rogue is created with its class', () => {
+    const onCreate = vi.fn();
+    render(onCreate);
+    tap(btn('Rogue'));
+    tap(btn('Next'));
+    throughOriginRest();
+    tap(btn('Next')); // abilities
+    tap(btn('Next')); // details
+    expect(document.body.textContent).toContain('Level 1');
+    tap(btn('Stealth'));
+    tap(btn('Add'));
+    for (let i = 0; i < 6 && !btn('Finish'); i++) tap(btn('Next'));
+    tap(btn('Finish'));
+    tap(btn('Next'));
+    tap(btn('Create character'));
+    const c: Character = onCreate.mock.calls[0][0];
+    expect(c.classes.map((r) => r.clsId)).toEqual(['class/rogue']);
+    expect(c.grants.some((g) => g.cat === 'expertise' && g.target === 'stealth')).toBe(true);
+  });
+});
