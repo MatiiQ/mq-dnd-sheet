@@ -18,6 +18,8 @@ const entries: Entry[] = [cls('Ranger'), cls('Rogue'),
     grants: [{ kind: 'choice', id: 'exp', name: 'Expertise', pick: 1, pool: 'skill:proficient' }, { id: 'g1', kind: 'prof', name: 'Expertise', cat: 'expertise', target: '$exp' }] } as Entry,
   { id: 'background/sage', kind: 'background', name: 'Sage', src: 'srd', desc: '', feat: 'feat/none', equip: '',
     grants: [{ kind: 'choice', id: 'abil', name: 'Ability scores', pick: 2, options: [{ id: 'o1', kind: 'abil', name: 'INT +1', ab: 'int', val: '1', cap: 20 }, { id: 'o2', kind: 'abil', name: 'WIS +1', ab: 'wis', val: '1', cap: 20 }] }] } as Entry,
+  { id: 'background/acolyte', kind: 'background', name: 'Acolyte', src: 'srd', desc: '', feat: 'feat/none', equip: '',
+    grants: [{ id: 'g1', kind: 'prof', name: 'Insight', cat: 'skill', target: 'insight' }] } as Entry,
   { id: 'species/elf', kind: 'species', name: 'Elf', src: 'srd', desc: '', sizes: 'medium', speed: 30 } as Entry,
   lang('Common'), lang('Elvish'), lang('Dwarvish')];
 const cat = mergeCatalog(entries, null);
@@ -168,5 +170,24 @@ describe('level 1 choices in the creator', () => {
     const c: Character = onCreate.mock.calls[0][0];
     expect(c.classes.map((r) => r.clsId)).toEqual(['class/rogue']);
     expect(c.grants.some((g) => g.cat === 'expertise' && g.target === 'stealth')).toBe(true);
+  });
+});
+
+describe('class skills after a background change', () => {
+  it('a skill the new background gives can be dropped and replaced', () => {
+    render(() => {});
+    tap(btn('Ranger'));
+    tap(btn('Next'));
+    throughOriginRest();          // Sage, Elf, Stealth + Survival
+    tap(btn('Origin'));
+    tap(btn('Stealth'));          // out
+    tap(btn('Insight'));          // in: Insight + Survival
+    tap(btn('Acolyte'));          // now gives Insight
+    const insight = [...document.querySelectorAll('button')].find((b) => b.textContent?.startsWith('Insight'))!;
+    expect(insight.textContent).toContain('from your origin');
+    tap(insight);                 // drop it
+    tap(btn('Stealth'));          // replace it
+    tap(btn('Next'));
+    expect(draft().answers.skills.sort()).toEqual(['stealth', 'survival']);
   });
 });

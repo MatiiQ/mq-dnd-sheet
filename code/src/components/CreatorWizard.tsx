@@ -160,7 +160,9 @@ function OriginStep({ cat, a, set, preview, cls }: { cat: Catalog; a: CreatorAns
               {skillOpts.map((o) => {
                 const held = fromOrigin.has(o.value);
                 return <button key={o.value} type="button" className="pick-opt" aria-pressed={a.skills.includes(o.value)} aria-disabled={held || undefined}
-                  style={held ? { textDecoration: 'line-through' } : undefined} onClick={() => !held && toggleSkill(o.value)}>{o.label}{held ? ' (from your origin)' : ''}</button>;
+                  style={held ? { textDecoration: 'line-through' } : undefined}
+                  // A skill the origin now gives can still be dropped (after a background change), never picked.
+                  onClick={() => (!held || a.skills.includes(o.value)) && toggleSkill(o.value)}>{o.label}{held ? ' (from your origin)' : ''}</button>;
               })}
             </div>
           </div>
