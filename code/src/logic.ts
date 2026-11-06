@@ -323,7 +323,12 @@ export function sortSpells(c: Character, list: Spell[]): Spell[] {
 export const castingRows = (c: Character): ClassRow[] => c.classes.filter((r) => r.castAb || r.prep > 0);
 // 'Ranger 5 / Rogue 1'; a row with no name reads 'Level N'.
 export const classLine = (c: Character): string => c.classes.map((r) => (r.name || 'Level') + ' ' + r.lvl).join(' / ');
-export const preparedCount = (c: Character) => c.spells.filter((x) => (x.lvl || 0) > 0 && !x.always && x.prep).length;
+// Prepared spells (level 1+, not always prepared). Counted per class (PHB p.45): with a row, the spells it prepared,
+// plus those with no class when it is the first casting row.
+export const preparedCount = (c: Character, row?: ClassRow) => c.spells.filter((x) => (x.lvl || 0) > 0 && !x.always && x.prep &&
+  (!row || x.cls === row.id || (!x.cls && castingRows(c)[0]?.id === row.id))).length;
+// A spell prepared for a row: tied to it, casting with its ability (a prepared spell is tied to one class, PHB p.45).
+export const spellForRow = (sp: Spell, row: ClassRow): Spell => ({ ...sp, cls: row.id, ...(row.castAb ? { castAb: row.castAb } : {}) });
 export const slotsLeft = (c: Character, level: number) => Math.max(0, c.slotMax[level] - c.slotUsed[level]);
 export const setSlotUsed = (c: Character, l: number, n: number) => { const u = c.slotUsed.slice(); u[l] = n; return { slotUsed: u }; };
 

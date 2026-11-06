@@ -2,7 +2,7 @@
 // the pickers and forms call them, then save through update().
 import { linkOf, srcKindOfLink } from '../links';
 import { ABILITIES, addGrants, charLevel, levelIn, capital, detectArmor, effScore, hasProf, maxFields, maxKindOf, maxOf, newId, normName, num, parseWeight, regainEvent, SKILLS, skillLevel, type GrantInput, type MaxKind } from '../logic';
-import type { AcEffect, Ability, ArmorKind, Character, Feature, FeatureGroup, Item, Linked, Recharge, Size, Spell, SrcKind } from '../types';
+import type { AcEffect, Ability, ArmorKind, Character, ClassRow, Feature, FeatureGroup, Item, Linked, Recharge, Size, Spell, SrcKind } from '../types';
 import { entriesOf, type Catalog } from './merge';
 import { slug, type BackgroundEntry, type ChoiceSpec, type Entry, type FeatEntry, type FeatureEntry, type GrantSpec, type ItemEntry, type ProfEntry, type RuleEntry, type SpellEntry, type SpellPart, type TraitEntry } from './schema';
 import { withBase } from './base';
@@ -692,9 +692,13 @@ function addWithSpells(c: Character, cat: Catalog, from: string, inputs: GrantIn
 }
 
 // The spell's source when the character's class has it on its list.
+// The first class row whose class list has the spell names its source.
 function classSource(cat: Catalog, c: Character, e: SpellEntry): Pick<Spell, 'srcKind' | 'srcName'> {
-  const cls = cat.byId.get(classIdOf(cat, c));
-  return cls && e.classes.split(',').includes(cls.id.split('/')[1]) ? { srcKind: 'class', srcName: cls.name } : {};
+  for (const row of c.classes) {
+    const cls = cat.byId.get(classIdOf(cat, c, row));
+    if (cls && e.classes.split(',').includes(cls.id.split('/')[1])) return { srcKind: 'class', srcName: cls.name };
+  }
+  return {};
 }
 
 // ---- Class, subclass and species ids ----
@@ -714,15 +718,14 @@ export function matchId(cat: Catalog, kind: 'class' | 'subclass' | 'species', te
   return option && cat.byId.has('species/' + option.species) ? 'species/' + option.species : '';
 }
 // The character's class id: the stored one when the loaded catalog has it, else the typed name matched again.
-// Reads the first class row (the starting class).
-export function classIdOf(cat: Catalog, c: Character): string {
-  const row = c.classes[0];
+// A class row's catalog class id (the first row, the starting class, by default).
+export function classIdOf(cat: Catalog, c: Character, row: ClassRow | undefined = c.classes[0]): string {
   if (!row) return '';
   return row.clsId && cat.byId.get(row.clsId)?.kind === 'class' ? row.clsId : matchId(cat, 'class', row.name);
 }
 // The character's subclass id: the stored one when the catalog has it under the class, else the typed name matched.
-export function subclassIdOf(cat: Catalog, c: Character): string {
-  const cls = classIdOf(cat, c), row = c.classes[0];
+export function subclassIdOf(cat: Catalog, c: Character, row: ClassRow | undefined = c.classes[0]): string {
+  const cls = classIdOf(cat, c, row);
   if (!row) return '';
   const stored = row.subId ? cat.byId.get(row.subId) : undefined;
   return stored?.kind === 'subclass' && stored.cls === cls.split('/')[1] ? stored.id : matchId(cat, 'subclass', row.sub, cls);
@@ -851,7 +854,8 @@ export type FeatureType = 'class' | 'sub' | 'feat' | 'species' | 'background' | 
 // The catalog entries of one feature type for this character. ok false: shown but marked (above the character's level,
 // or a feat's prerequisites unmet; note says which). taken: on the sheet already (a non-repeatable feat can't be added
 // again). Nothing is filtered out: higher-level features stay addable (not a levelling flow).
-export function featureCandidates(cat: Catalog, c: Character, t: FeatureType, featCat?: FeatEntry['cat']):
+// row: the class row whose class and subclass features 'class' and 'sub' list (the first by default).
+export function featureCandidates(cat: Catalog, c: Character, t: FeatureType, featCat?: FeatEntry['cat'], row: ClassRow | undefined = c.classes[0]):
   { entry: Entry; note?: string; ok: boolean; taken: boolean }[] {
   const byLevel = <T extends { lvl: number; name: string }>(a: T, b: T) => a.lvl - b.lvl || a.name.localeCompare(b.name);
   const leveled = (e: FeatureEntry | TraitEntry) => {
@@ -865,11 +869,11 @@ export function featureCandidates(cat: Catalog, c: Character, t: FeatureType, fe
   const optionsLast = (a: FeatureEntry, b: FeatureEntry) => Number(!!a.of) - Number(!!b.of) || byLevel(a, b);
   switch (t) {
     case 'class': {
-      const cls = classIdOf(cat, c).split('/')[1];
+      const cls = classIdOf(cat, c, row).split('/')[1];
       return entriesOf(cat, 'feature').filter((e) => cls && e.cls === cls && !e.sub).sort(optionsLast).map(leveled);
     }
     case 'sub': {
-      const sub = subclassIdOf(cat, c).split('/');
+      const sub = subclassIdOf(cat, c, row).split('/');
       return entriesOf(cat, 'feature').filter((e) => sub.length === 3 && e.cls === sub[1] && e.sub === sub[2]).sort(optionsLast).map(leveled);
     }
     case 'feat': {

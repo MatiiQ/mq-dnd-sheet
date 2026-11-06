@@ -381,3 +381,27 @@ describe('the pact slot pool', () => {
     expect(saved()).toMatchObject({ pactMax: 1, pactLvl: 1 });
   });
 });
+
+describe('prepared spells per class', () => {
+  const sp = (id: string, p: object = {}) => ({ id, name: id, lvl: 1, time: 'Action', range: '60 feet', prep: true, ...p });
+  it('shows a counter per casting row only', () => {
+    renderSheet(withClasses({ ...blankCharacter(), usePrep: true, spells: [sp('a')] }, [{ name: 'Fighter', lvl: 1 }, { name: 'Wizard', lvl: 3, castAb: 'int', prep: 5 }]));
+    tab('Spells');
+    expect(document.body.textContent).toContain('Wizard 1/5');
+    expect(document.body.textContent).not.toContain('Fighter 0');
+  });
+  it('edits each row’s maximum and casting ability, and lists both abilities', () => {
+    renderSheet(withClasses({ ...blankCharacter(), usePrep: true, spells: [sp('a'), sp('b', { cls: 'c2' })] },
+      [{ name: 'Ranger', castAb: 'wis', prep: 5 }, { name: 'Sorcerer', castAb: 'cha', prep: 6 }]));
+    tab('Spells');
+    expect(document.body.textContent).toContain('Ranger 1/5 · Sorcerer 1/6');
+    expect(document.body.textContent).toContain('Ranger Wisdom · Sorcerer Charisma');
+    editMode();
+    expect(label('Maximum prepared, Ranger')).not.toBeNull();
+    tap(label('Raise maximum prepared, Ranger'));
+    expect(saved().classes[0].prep).toBe(6);
+    const sel = label('Spellcasting ability, Sorcerer') as HTMLSelectElement;
+    act(() => { sel.value = 'int'; sel.dispatchEvent(new Event('change', { bubbles: true })); });
+    expect(saved().classes[1].castAb).toBe('int');
+  });
+});

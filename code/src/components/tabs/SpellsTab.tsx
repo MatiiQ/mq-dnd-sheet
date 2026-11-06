@@ -6,7 +6,7 @@ import {
 import { hasActiveEffect, inactiveReason, linkOf, sourceLabel } from '../../links';
 import { BLANK_SPELL, draftFromSpell, keepPrep, spellFromForm, type SpellDraft } from '../../catalog/copy';
 import { patchEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
-import type { AcEffect, Character, Spell } from '../../types';
+import type { AcEffect, Ability, CastAbility, Character, ClassRow, Spell } from '../../types';
 import { removalNote } from '../Chips';
 import { SpellPicker } from '../pickers/SpellPicker';
 import { SourcePicker } from '../SourcePicker';
@@ -127,30 +127,42 @@ export function SpellsTab() {
     <UsePips used={c.slotUsed[l]} max={max} color="var(--accent)" size={20} noun={'level ' + l + ' slot'} onChange={(n) => update((p) => setSlotUsed(p, l, n))} />
   );
 
-  // Until each casting class gets its own counter (Task 6), the first casting row's maximum is the one shown.
-  const prepRow = castingRows(c)[0] ?? c.classes[0];
-  const prepMax = prepRow?.prep ?? 0;
-  const setPrep = (d: number) => update((p) => ({ classes: p.classes.map((r) => (r.id === prepRow?.id ? { ...r, prep: clamp(r.prep + d, 0, 40) } : r)) }));
+  // Prepared spells are counted per casting class (PHB p.45); Edit mode sets each row's maximum and ability (every row,
+  // so a class can become a caster).
+  const casters = castingRows(c);
+  const setRow = (id: string, f: (r: ClassRow) => ClassRow) => update((p) => ({ classes: p.classes.map((r) => (r.id === id ? f(r) : r)) }));
+  const rowName = (r: ClassRow) => r.name || 'Level ' + r.lvl;
+  const abilityCard = casters.filter((r) => r.castAb).length > 1
+    ? casters.filter((r) => r.castAb).map((r) => rowName(r) + ' ' + CAST_NAMES[r.castAb as CastAbility]).join(' · ') : CAST_NAMES[c.castAb];
   return (
     <div className="col gap-12">
       <div className="row wrap gap-12" style={{ alignItems: 'stretch' }}>
-        <StatCard label="Spellcasting ability" value={CAST_NAMES[c.castAb]} />
+        <StatCard label="Spellcasting ability" value={abilityCard} />
         <DieStat label="Spell save DC" value={dc === null ? '' : String(dc)} open={statOpen === 'dc'} onToggle={dc === null ? undefined : () => toggleStat('dc')} />
         <DieStat label="Spell attack" value={atk === null ? '' : fmt(atk)} open={statOpen === 'atk'} onToggle={atk === null ? undefined : () => toggleStat('atk')} />
         {usePrep && (
           <div className="well col" style={{ flex: '1 1 140px' }}>
             <span className="small">Prepared spells</span>
-            <span style={{ fontSize: 20, fontWeight: 700, color: prepMax && prepCount > prepMax ? 'var(--danger)' : 'var(--text)' }}>
-              {prepCount + (prepMax ? ' / ' + prepMax : '')}
-            </span>
-            {edit && (
-              <div className="row gap-6" style={{ marginTop: 4 }}>
-                <span className="small">Max</span>
-                <Step small label="Lower maximum prepared spells" onClick={() => setPrep(-1)}>−</Step>
-                <span style={{ minWidth: 24, textAlign: 'center', fontWeight: 700 }}>{prepMax}</span>
-                <Step small label="Raise maximum prepared spells" onClick={() => setPrep(1)}>+</Step>
+            {casters.length === 0
+              ? <span style={{ fontSize: 20, fontWeight: 700 }}>{prepCount}</span>
+              : <span style={{ fontSize: 20, fontWeight: 700 }}>{casters.map((r, i) => {
+                const n = preparedCount(c, r);
+                return <span key={r.id} style={{ color: r.prep && n > r.prep ? 'var(--danger)' : 'var(--text)' }}>{(i ? ' · ' : '') + rowName(r) + ' ' + n + (r.prep ? '/' + r.prep : '')}</span>;
+              })}</span>}
+            {edit && c.classes.map((r) => (
+              <div key={r.id} className="row wrap gap-6" style={{ marginTop: 4 }}>
+                <div role="group" aria-label={'Maximum prepared, ' + rowName(r)} className="row gap-6">
+                  <span className="small">{rowName(r)} max</span>
+                  <Step small label={'Lower maximum prepared, ' + rowName(r)} onClick={() => setRow(r.id, (x) => ({ ...x, prep: clamp(x.prep - 1, 0, 40) }))}>−</Step>
+                  <span style={{ minWidth: 24, textAlign: 'center', fontWeight: 700 }}>{r.prep}</span>
+                  <Step small label={'Raise maximum prepared, ' + rowName(r)} onClick={() => setRow(r.id, (x) => ({ ...x, prep: clamp(x.prep + 1, 0, 40) }))}>+</Step>
+                </div>
+                <select className="input" aria-label={'Spellcasting ability, ' + rowName(r)} value={r.castAb ?? 'none'}
+                  onChange={(e) => setRow(r.id, (x) => { const { castAb: _, ...rest } = x; return e.target.value === 'none' ? rest : { ...rest, castAb: e.target.value as Ability }; })}>
+                  {Object.entries(CAST_NAMES).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+                </select>
               </div>
-            )}
+            ))}
           </div>
         )}
       </div>

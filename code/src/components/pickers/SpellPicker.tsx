@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { classIdOf, hasSpell } from '../../catalog/copy';
 import { entriesOf, type Catalog } from '../../catalog/merge';
 import type { SpellEntry } from '../../catalog/schema';
+import type { ClassRow } from '../../types';
 import { useCatalog } from '../../catalog/useCatalog';
-import { normName } from '../../logic';
+import { castingRows, normName, spellForRow } from '../../logic';
 import { useSheet } from '../../sheet';
 import { ChoiceFlow } from './ChoiceFlow';
 import { PickerResult } from './PickerResult';
@@ -15,29 +16,46 @@ const LEVELS = ['Cantrip', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
 export function SpellPicker({ onClose }: { onClose: () => void }) {
   const state = useCatalog(true);
   const pf = usePickerFlow();
+  const { c } = useSheet();
+  // With two or more casting classes the spell is prepared for one of them (PHB p.45): tied to that row, with its ability.
+  const casters = castingRows(c);
+  const [rowId, setRowId] = useState(casters[0]?.id ?? '');
+  const row = casters.length > 1 ? casters.find((r) => r.id === rowId) : undefined;
   return (
     <PickerFrame title="Add a spell" state={state} msg={pf.msg} onClose={onClose}>
       {(cat) => <>
         {pf.flow && <ChoiceFlow entry={pf.flow.entry} cat={cat} onCancel={pf.cancel} onDone={(ans) => {
-          const r = pf.finish(cat, ans);
+          const r = pf.finish(cat, ans, row && ((before, next) => {
+            const old = new Set(before.spells.map((x) => x.id));
+            return { ...next, spells: next.spells.map((x) => (old.has(x.id) || x.from ? x : spellForRow(x, row))) };
+          }));
           if (!r) return;
           const added = firstNew(r.before.spells, r.next.spells);
           onClose();
           if (added) scrollToEntry('spell-' + added.id);
         }} />}
         {/* Kept mounted while a flow is open, so Cancel returns to the same list, level and search. */}
-        <div hidden={!!pf.flow}><SpellList cat={cat} onAdd={pf.start} /></div>
+        <div hidden={!!pf.flow}>
+          {casters.length > 1 && (
+            <label className="field">Prepare for
+              <select className="input" value={rowId} onChange={(e) => setRowId(e.target.value)}>
+                {casters.map((r) => <option key={r.id} value={r.id}>{r.name || 'Level ' + r.lvl}</option>)}
+              </select>
+            </label>
+          )}
+          <SpellList key={row?.id ?? ''} cat={cat} onAdd={pf.start} row={row} />
+        </div>
       </>}
     </PickerFrame>
   );
 }
 
-function SpellList({ cat, onAdd }: { cat: Catalog; onAdd: (e: SpellEntry) => void }) {
+function SpellList({ cat, onAdd, row }: { cat: Catalog; onAdd: (e: SpellEntry) => void; row?: ClassRow }) {
   const { c } = useSheet();
   const spells = entriesOf(cat, 'spell');
   // Every class with spells; the character's own class first chosen.
   const lists = entriesOf(cat, 'class').filter((cl) => spells.some((s) => s.classes.split(',').includes(cl.id.split('/')[1])));
-  const own = classIdOf(cat, c);
+  const own = classIdOf(cat, c, row);
   const [list, setList] = useState(lists.some((l) => l.id === own) ? own : lists[0]?.id ?? '');
   const [lvl, setLvl] = useState(0);
   const [q, setQ] = useState('');

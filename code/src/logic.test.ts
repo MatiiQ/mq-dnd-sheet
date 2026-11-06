@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { newId } from './logic';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import {
-  ABILITIES, charLevel, pactLeft, valueCtx, conHpPart, maxHpRaw, profBonus, regainTo, saveDc, acCanTargetOther, acOnOther, toggleAcTarget, regainLabel, damageHitDie, setTempHitDie, castAbOf, removeChip, speedOf, armorSlowBy, stealthDisBy, acSpellIdle, untrainedArmor, grantChips, addGrants, findUnlinked, removalChain, removalSummary, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, dawn, refillFor, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, parseWeight, passiveScore, passiveParts, passiveNotes, activeAuras, pillView, resPill, setPill, preparedCount, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft, num, setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, undoHp
+  ABILITIES, charLevel, pactLeft, spellForRow, valueCtx, conHpPart, maxHpRaw, profBonus, regainTo, saveDc, acCanTargetOther, acOnOther, toggleAcTarget, regainLabel, damageHitDie, setTempHitDie, castAbOf, removeChip, speedOf, armorSlowBy, stealthDisBy, acSpellIdle, untrainedArmor, grantChips, addGrants, findUnlinked, removalChain, removalSummary, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, dawn, refillFor, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, parseWeight, passiveScore, passiveParts, passiveNotes, activeAuras, pillView, resPill, setPill, preparedCount, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft, num, setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, undoHp
 } from './logic';
 import { migrate } from './migrate';
 import { AOP, haAura, holyAvenger, paladin, withClass, withClasses } from './test-fixtures';
@@ -1776,5 +1776,25 @@ describe('the Pact Magic pool (PHB p.45, p.154)', () => {
     const c = w({ pactUsed: 2, slotMax: [0, 2, 0, 0, 0, 0, 0, 0, 0, 0], slotUsed: [0, 2, 0, 0, 0, 0, 0, 0, 0, 0] });
     expect(shortRest(c)).toMatchObject({ pactUsed: 0, slotUsed: c.slotUsed });
     expect(longRest(c)).toMatchObject({ pactUsed: 0, slotUsed: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0] });
+  });
+});
+
+describe('prepared spells per class (PHB p.45)', () => {
+  const sp = (id: string, p: Partial<Spell> = {}): Spell => ({ id, name: id, lvl: 1, time: 'Action', range: '60 feet', prep: true, ...p });
+  it('counts a classless prepared spell against the first casting row', () => {
+    const c = withClasses({ ...blankCharacter(), spells: [sp('a')] }, [{ name: 'Fighter', lvl: 1 }, { name: 'Wizard', lvl: 3, castAb: 'int', prep: 5 }]);
+    expect(preparedCount(c, c.classes[1])).toBe(1);
+    expect(preparedCount(c, c.classes[0])).toBe(0);
+    expect(preparedCount(c)).toBe(1);
+  });
+  it('counts a spell tied to a row for that row only', () => {
+    const c = withClasses({ ...blankCharacter(), spells: [sp('a'), sp('b', { cls: 'c2' }), sp('c', { cls: 'c2', prep: false })] },
+      [{ name: 'Ranger', castAb: 'wis', prep: 5 }, { name: 'Sorcerer', castAb: 'cha', prep: 6 }]);
+    expect([preparedCount(c, c.classes[0]), preparedCount(c, c.classes[1])]).toEqual([1, 1]);
+  });
+  it('ties a spell to a row with its casting ability', () => {
+    const row = { id: 'c2', name: 'Sorcerer', clsId: '', sub: '', subId: '', lvl: 1, hd: 6 as const, prep: 6, castAb: 'cha' as const };
+    expect(spellForRow(sp('a'), row)).toMatchObject({ cls: 'c2', castAb: 'cha' });
+    expect(spellForRow(sp('a'), { ...row, castAb: undefined })).not.toHaveProperty('castAb');
   });
 });

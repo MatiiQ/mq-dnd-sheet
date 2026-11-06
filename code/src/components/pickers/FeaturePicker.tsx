@@ -42,13 +42,17 @@ function FeatureList({ cat, onAdd, onCustom }: { cat: Catalog; onAdd: (e: Entry)
   const [cls, setCls] = useState('');
   const [sub, setSub] = useState('');
   const [species, setSpecies] = useState('');
-  const ownCls = classIdOf(cat, c), ownSub = subclassIdOf(cat, c), ownSpecies = matchId(cat, 'species', c.ch.species);
+  // Class and subclass features list one class row's (asked first with two or more rows).
+  const [rowId, setRowId] = useState(c.classes[0]?.id ?? '');
+  const row = c.classes.find((r) => r.id === rowId) ?? c.classes[0];
+  const ownCls = classIdOf(cat, c, row), ownSub = subclassIdOf(cat, c, row), ownSpecies = matchId(cat, 'species', c.ch.species);
   const clsId = ownCls || cls;
   const speciesId = ownSpecies || species;
   const speciesName = cat.byId.get(speciesId)?.name ?? '';
   // The character as the lists see it: with the class, subclass or species chosen here.
-  const row0 = c.classes[0] ?? { id: '', name: '', clsId: '', sub: '', subId: '', lvl: 1, hd: 8 as const, prep: 0 };
-  const seen: Character = { ...c, classes: [{ ...row0, clsId, subId: ownSub || sub }, ...c.classes.slice(1)], ch: { ...c.ch, species: ownSpecies ? c.ch.species : speciesName } };
+  const base = row ?? { id: '', name: '', clsId: '', sub: '', subId: '', lvl: 1, hd: 8 as const, prep: 0 };
+  const seenRow = { ...base, clsId, subId: ownSub || sub };
+  const seen: Character = { ...c, classes: row ? c.classes.map((r) => (r.id === row.id ? seenRow : r)) : [seenRow], ch: { ...c.ch, species: ownSpecies ? c.ch.species : speciesName } };
   const select = (label: string, value: string, set: (v: string) => void, options: { id: string; name: string }[]) => (
     <label className="field">{label}
       <select className="input" value={value} onChange={(e) => set(e.target.value)}>
@@ -58,6 +62,13 @@ function FeatureList({ cat, onAdd, onCustom }: { cat: Catalog; onAdd: (e: Entry)
     </label>
   );
 
+  const pickRow = (type === 'class' || type === 'sub') && c.classes.length > 1 && (
+    <label className="field">Which class
+      <select className="input" value={row?.id ?? ''} onChange={(e) => { setRowId(e.target.value); setCls(''); setSub(''); }}>
+        {c.classes.map((r) => <option key={r.id} value={r.id}>{(r.name || 'Level') + ' ' + r.lvl}</option>)}
+      </select>
+    </label>
+  );
   let head = null;
   if (type === 'class' && !ownCls) head = select('Class', cls, setCls, entriesOf(cat, 'class'));
   if (type === 'sub') head = <>
@@ -73,7 +84,7 @@ function FeatureList({ cat, onAdd, onCustom }: { cat: Catalog; onAdd: (e: Entry)
       {FEAT_CATS.map(([k, label]) => <button key={k} type="button" className="filter-btn" aria-pressed={featCat === k} onClick={() => setFeatCat(k)}>{label}</button>)}
     </div>
   );
-  const rows = type && type !== 'other' ? featureCandidates(cat, seen, type, type === 'feat' ? featCat : undefined) : [];
+  const rows = type && type !== 'other' ? featureCandidates(cat, seen, type, type === 'feat' ? featCat : undefined, row && seenRow) : [];
   return (
     <div className="col gap-8">
       <div role="group" aria-label="Kind of feature" className="row wrap gap-4">
@@ -81,6 +92,7 @@ function FeatureList({ cat, onAdd, onCustom }: { cat: Catalog; onAdd: (e: Entry)
           <button key={k} type="button" className="filter-btn" aria-pressed={type === k} onClick={() => (k === 'other' ? onCustom() : setType(k))}>{label}</button>
         ))}
       </div>
+      {pickRow}
       {head}
       {type && rows.length === 0 && <span className="muted">Nothing to list yet.</span>}
       <div className="col gap-6 picker-results">

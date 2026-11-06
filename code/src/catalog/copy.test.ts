@@ -1043,3 +1043,17 @@ describe('class levels in the catalog flow', () => {
     expect(prereqMet(c, 'lvl>=5').ok).toBe(true);
   });
 });
+
+describe('class features and spells per row', () => {
+  const c = withClasses(blankCharacter(), [{ name: 'Ranger', clsId: 'class/ranger', lvl: 3 }, { name: 'Rogue', clsId: 'class/rogue', lvl: 3 }]);
+  it('lists a second class’s features for its row', () => {
+    const xs = featureCandidates(cat, c, 'class', undefined, c.classes[1]);
+    expect(xs.length).toBeGreaterThan(0);
+    expect(xs.every((x) => x.entry.id.startsWith('feature/rogue/'))).toBe(true);
+  });
+  it('tags a spell with the first row whose class list has it', () => {
+    const sp: SpellEntry = { ...(cat.byId.get('spell/fire-bolt') as SpellEntry), id: 'spell/zz-test', name: 'Zz', classes: 'rogue' };
+    const local = mergeCatalog([...srdEntries.filter((e) => e.kind === 'class'), sp], null);
+    expect(addFromCatalog(c, local, sp, A()).spells.at(-1)).toMatchObject({ srcKind: 'class', srcName: 'Rogue' });
+  });
+});
