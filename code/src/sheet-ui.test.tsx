@@ -358,3 +358,26 @@ describe('Hit Dice pools', () => {
     expect(label('Hit Die size')).toBeNull();
   });
 });
+
+describe('the pact slot pool', () => {
+  const hex = { id: 's', name: 'Hex', lvl: 1, time: 'Bonus Action', range: '90 feet', prep: true };
+  it('shows the pact slots and casts with one', () => {
+    renderSheet({ pactMax: 2, pactLvl: 3, pactUsed: 0, spells: [hex] });
+    tab('Spells');
+    expect(document.body.textContent).toContain('Pact slots (3rd)');
+    expect(document.body.textContent).toContain('2 of 2 left');
+    const cast = [...document.querySelectorAll('button')].find((b) => b.textContent === '3rd (pact)');
+    tap(cast);
+    expect(saved().pactUsed).toBe(1);
+  });
+  it('edits the pact slot count and level in Edit mode', () => {
+    renderSheet({ spells: [hex] });
+    tab('Spells');
+    expect(label('Pact slot count')).toBeNull();
+    editMode();
+    expect(label('Pact slot count')).not.toBeNull();
+    tap(label('More pact slots'));
+    tap(label('Raise pact slot level'));
+    expect(saved()).toMatchObject({ pactMax: 1, pactLvl: 1 });
+  });
+});

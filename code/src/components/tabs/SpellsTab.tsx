@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  removeRef, ABILITIES, castingRows, clamp, CAST_NAMES, newId, ORDINAL, ownFreeCasts, setOwnFreeCast, SPELL_SORTS, acAfterEdit, castSpell, concAfterEdit, detectAcSpell, effectsAfterEdit, fmt, preparedCount, setConc, setSlotUsed,
+  removeRef, ABILITIES, castingRows, pactLeft, clamp, CAST_NAMES, newId, ORDINAL, ownFreeCasts, setOwnFreeCast, SPELL_SORTS, acAfterEdit, castSpell, concAfterEdit, detectAcSpell, effectsAfterEdit, fmt, preparedCount, setConc, setSlotUsed,
   slotsLeft, sortSpells, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, freeCastsOf, spellAttackFor, spellSaveDcFor
 } from '../../logic';
 import { hasActiveEffect, inactiveReason, linkOf, sourceLabel } from '../../links';
@@ -214,7 +214,32 @@ export function SpellsTab() {
             </div>
           );
         })}
-        {slotLevels.length === 0 && <span className="muted" style={{ padding: '8px 0' }}>No spell slots. Turn on Edit to set them.</span>}
+        {(c.pactMax > 0 || edit) && (
+          <div className="well row wrap" style={{ gap: '4px 10px', minHeight: 44, padding: '0 12px' }}>
+            <span style={{ minWidth: 64, fontWeight: 700 }}>Pact slots{c.pactLvl ? ' (' + ORDINAL[c.pactLvl] + ')' : ''}</span>
+            <div className="row wrap">
+              <UsePips used={c.pactUsed} max={c.pactMax} color="var(--accent)" size={20} noun="pact slot" onChange={(n) => update({ pactUsed: clamp(n, 0, c.pactMax) })} />
+            </div>
+            <span className="muted">{c.pactMax ? pactLeft(c) + ' of ' + c.pactMax + ' left' : 'none'}</span>
+            {edit && (
+              <div className="row wrap gap-6" style={{ marginLeft: 'auto' }}>
+                <div role="group" aria-label="Pact slot count" className="row gap-6">
+                  <span className="muted">Count</span>
+                  <Step label="Fewer pact slots" onClick={() => update((p) => ({ pactMax: Math.max(0, p.pactMax - 1), pactUsed: Math.min(p.pactUsed, Math.max(0, p.pactMax - 1)) }))}>−</Step>
+                  <span style={{ minWidth: 24, textAlign: 'center', fontWeight: 700 }}>{c.pactMax}</span>
+                  <Step label="More pact slots" onClick={() => update((p) => ({ pactMax: Math.min(9, p.pactMax + 1) }))}>+</Step>
+                </div>
+                <div role="group" aria-label="Pact slot level" className="row gap-6">
+                  <span className="muted">Level</span>
+                  <Step label="Lower pact slot level" onClick={() => update((p) => ({ pactLvl: Math.max(1, p.pactLvl - 1) }))}>−</Step>
+                  <span style={{ minWidth: 24, textAlign: 'center', fontWeight: 700 }}>{c.pactLvl}</span>
+                  <Step label="Raise pact slot level" onClick={() => update((p) => ({ pactLvl: Math.min(5, p.pactLvl + 1) }))}>+</Step>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+        {slotLevels.length === 0 && c.pactMax === 0 && <span className="muted" style={{ padding: '8px 0' }}>No spell slots. Turn on Edit to set them.</span>}
       </div>
 
       <div className="row wrap between" style={{ gap: '8px 14px' }}>
@@ -307,6 +332,8 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
     update((p) => castSpell(p, sp, l));
     setPicking(false);
   };
+  // A pact slot casts any spell up to the pact level (PHB p.45).
+  const pact = lvl > 0 && c.pactMax > 0 && c.pactLvl >= lvl ? pactLeft(c) : null;
 
   const prepBox = (on: boolean, dashed: boolean) => ({
     flex: 'none', width: 44, height: 44, padding: 0, borderRadius: 10, font: '700 15px var(--sans)',
@@ -351,10 +378,12 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
       <AcTargetSwitch sp={sp} />
       {effect && <EffectSwitch link={link} name={sp.name} />}
       {(lvl === 0 || usable) && frees.map((r) => <FreeCastButton key={r.id} sp={sp} r={r} />)}
-      {!!first && usable && (
+      {(!!first || !!pact) && usable && (
         <div role="group" aria-label={'Spell slots for ' + sp.name} className="row wrap gap-6">
-          <button type="button" aria-label={'Cast ' + sp.name + ' with a level ' + first.l + ' slot, ' + first.left + ' left'}
-            className="btn btn-sm" style={{ border: '1px solid var(--accent)', background: 'transparent', color: 'var(--accent)' }} onClick={() => castWith(first.l)}>Cast {ORDINAL[first.l]}</button>
+          {first && <button type="button" aria-label={'Cast ' + sp.name + ' with a level ' + first.l + ' slot, ' + first.left + ' left'}
+            className="btn btn-sm" style={{ border: '1px solid var(--accent)', background: 'transparent', color: 'var(--accent)' }} onClick={() => castWith(first.l)}>Cast {ORDINAL[first.l]}</button>}
+          {!!pact && <button type="button" aria-label={'Cast ' + sp.name + ' with a level ' + c.pactLvl + ' pact slot, ' + pact + ' left'}
+            className="btn btn-sm" style={{ border: '1px solid var(--accent)', background: 'transparent', color: 'var(--accent)' }} onClick={() => update((p) => castSpell(p, sp, p.pactLvl, 'pact'))}>{ORDINAL[c.pactLvl]} (pact)</button>}
           {upcasts.length > 0 && (
             <button type="button" aria-expanded={picking} aria-label={'Upcast ' + sp.name + ' with a higher slot'} className="btn btn-sm row gap-4"
               style={{ border: '1px solid var(--line-2)', background: 'transparent', color: 'var(--text-2)' }} onClick={() => setPicking(!picking)}>
@@ -366,7 +395,7 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
     </div>
   );
 
-  const noSlots = lvl > 0 && !frees.some((r) => r.count > 0) && !first && usable;
+  const noSlots = lvl > 0 && !frees.some((r) => r.count > 0) && !first && !pact && usable;
   return (
     <EntryRow id={'spell-' + sp.id} name={sp.name} before={before} head={head} side={side}
       body={sp.desc || sourceLabel(c, sp) ? <>

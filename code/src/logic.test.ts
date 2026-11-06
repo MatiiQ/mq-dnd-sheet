@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { newId } from './logic';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import {
-  ABILITIES, charLevel, valueCtx, conHpPart, maxHpRaw, profBonus, regainTo, saveDc, acCanTargetOther, acOnOther, toggleAcTarget, regainLabel, damageHitDie, setTempHitDie, castAbOf, removeChip, speedOf, armorSlowBy, stealthDisBy, acSpellIdle, untrainedArmor, grantChips, addGrants, findUnlinked, removalChain, removalSummary, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, dawn, refillFor, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, parseWeight, passiveScore, passiveParts, passiveNotes, activeAuras, pillView, resPill, setPill, preparedCount, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft, num, setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, undoHp
+  ABILITIES, charLevel, pactLeft, valueCtx, conHpPart, maxHpRaw, profBonus, regainTo, saveDc, acCanTargetOther, acOnOther, toggleAcTarget, regainLabel, damageHitDie, setTempHitDie, castAbOf, removeChip, speedOf, armorSlowBy, stealthDisBy, acSpellIdle, untrainedArmor, grantChips, addGrants, findUnlinked, removalChain, removalSummary, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, dawn, refillFor, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, parseWeight, passiveScore, passiveParts, passiveNotes, activeAuras, pillView, resPill, setPill, preparedCount, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft, num, setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, undoHp
 } from './logic';
 import { migrate } from './migrate';
 import { AOP, haAura, holyAvenger, paladin, withClass, withClasses } from './test-fixtures';
@@ -1760,5 +1760,21 @@ describe('Hit Dice pools (PHB p.45)', () => {
   });
   it('the pill shows the total left over the total level', () => {
     expect(pillView(spendHitDie(two(), 8), 'hd')).toMatchObject({ value: '6', max: '7' });
+  });
+});
+
+describe('the Pact Magic pool (PHB p.45, p.154)', () => {
+  const sp = { id: 's', name: 'Hex', lvl: 1, time: 'Bonus Action', range: '90 feet' } as Spell;
+  const w = (p: Partial<Character> = {}) => ({ ...blankCharacter(), hp: 8, pactMax: 2, pactLvl: 3, pactUsed: 0, spells: [sp], ...p });
+  it('casts any spell with a pact slot at the pact level', () => {
+    expect(castSpell(w(), sp, 3, 'pact')).toMatchObject({ pactUsed: 1 });
+    expect(castSpell(w({ pactLvl: 2 }), sp, 3, 'pact')).toEqual({});
+    expect(castSpell(w({ pactUsed: 2 }), sp, 3, 'pact')).toEqual({});
+    expect(pactLeft(w({ pactUsed: 1 }))).toBe(1);
+  });
+  it('a Short Rest refills the pact pool and not the other slots; a Long Rest both', () => {
+    const c = w({ pactUsed: 2, slotMax: [0, 2, 0, 0, 0, 0, 0, 0, 0, 0], slotUsed: [0, 2, 0, 0, 0, 0, 0, 0, 0, 0] });
+    expect(shortRest(c)).toMatchObject({ pactUsed: 0, slotUsed: c.slotUsed });
+    expect(longRest(c)).toMatchObject({ pactUsed: 0, slotUsed: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0] });
   });
 });

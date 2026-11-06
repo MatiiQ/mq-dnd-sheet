@@ -345,7 +345,10 @@ const castEffects = (c: Character, sp: Spell): Partial<Character> =>
   ({ ...(sp.c ? setConc({ id: sp.id, name: sp.name }) : {}), ...acOnCast(c, sp), ...effectOnCast(c, sp) });
 
 // Casting with a slot uses one slot of that level. A Concentration spell starts Concentration, which ends any other (PHB p.363).
-export function castSpell(c: Character, sp: Spell, level: number): Partial<Character> {
+// Pact slots and Spellcasting slots can cast each other's spells (PHB p.45); a pact slot is always of the pact level.
+export const pactLeft = (c: Character) => Math.max(0, c.pactMax - c.pactUsed);
+export function castSpell(c: Character, sp: Spell, level: number, pool: 'slot' | 'pact' = 'slot'): Partial<Character> {
+  if (pool === 'pact') return level === c.pactLvl && level >= (sp.lvl || 0) && pactLeft(c) > 0 ? { pactUsed: c.pactUsed + 1, ...castEffects(c, sp) } : {};
   if (!slotsLeft(c, level)) return {};
   return { ...setSlotUsed(c, level, c.slotUsed[level] + 1), ...castEffects(c, sp) };
 }

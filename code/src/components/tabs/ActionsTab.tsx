@@ -9,7 +9,7 @@ import { useCatalog } from '../../catalog/useCatalog';
 import { RuleNotes } from '../RuleNotes';
 import { canLoad, hasProp, isWeapon, NO_SHIELD, putAway, putInHand, shieldOn as shieldOf, twoHanded, versatile, weaponKind, weaponsHeld } from '../../hands';
 import { linkOf, sourceLabel } from '../../links';
-import { castSpell, COMBAT_ACTIONS, fmt, freeCastsOf, ORDINAL, regainTo, removeRef, slotsLeft, spellUsable, toggled, type AcPart } from '../../logic';
+import { castSpell, COMBAT_ACTIONS, pactLeft, fmt, freeCastsOf, ORDINAL, regainTo, removeRef, slotsLeft, spellUsable, toggled, type AcPart } from '../../logic';
 import { patchEntry, removeEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { Attack, Econ, Item, Rider, Spell } from '../../types';
 import { AcTargetSwitch, AddButton, Caret, DieBadge, EffectSwitch, EntryForm, EntryRow, FreeCastButton, Step, TextField } from '../ui';
@@ -389,12 +389,18 @@ function CastButtons({ sp, effect }: { sp: Spell; effect: boolean }) {
   if (effect && !sp.c) return <EffectSwitch link={link} name={sp.name} />;
   const lvl = sp.lvl || 0;
   const first = lvl > 0 && spellUsable(c, sp) ? [lvl, 2, 3, 4, 5, 6, 7, 8, 9].filter((l) => l >= lvl).find((l) => c.slotMax[l] && slotsLeft(c, l) > 0) : undefined;
+  const pact = lvl > 0 && spellUsable(c, sp) && c.pactLvl >= lvl && pactLeft(c) > 0;
   return <>
     <AcTargetSwitch sp={sp} />
     {freeCastsOf(c, sp.id).map((r) => <FreeCastButton key={r.id} sp={sp} r={r} short />)}
     {first !== undefined && (
       <button type="button" className="btn btn-sm toggle-btn" aria-label={'Cast ' + sp.name + ' with a level ' + first + ' slot, ' + slotsLeft(c, first) + ' left'}
         onClick={() => update((p) => castSpell(p, sp, first))}>Cast {ORDINAL[first]}</button>
+    )}
+    {/* With no regular slot left, a pact slot (PHB p.45). */}
+    {first === undefined && pact && (
+      <button type="button" className="btn btn-sm toggle-btn" aria-label={'Cast ' + sp.name + ' with a level ' + c.pactLvl + ' pact slot, ' + pactLeft(c) + ' left'}
+        onClick={() => update((p) => castSpell(p, sp, p.pactLvl, 'pact'))}>Cast {ORDINAL[c.pactLvl]} (pact)</button>
     )}
   </>;
 }
