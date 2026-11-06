@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { mergeCatalog } from './catalog/merge';
 import type { ChoiceSpec, ClassEntry, Entry, FeatureEntry, SubclassEntry } from './catalog/schema';
-import { applyLevel, emptyCharacter, fixedHp, hpGain, levelPlan, levelSet, prereqCheck, withLevel, type ClassPick, type LevelAnswers } from './levelup';
-import { abilityMod, longRest, maxHpOf } from './logic';
+import { applyLevel, emptyCharacter, fixedHp, hpGain, levelPlan, levelSet, prereqCheck, undoLevel, undoPreview, withLevel, type ClassPick, type LevelAnswers } from './levelup';
+import { abilityMod, hdSpent, longRest, maxHpOf, removeRef } from './logic';
 import { migrate } from './migrate';
+import { blankCharacter } from './defaults';
 import type { Character } from './types';
 
 // ---- A synthetic catalog (invented names and numbers; only the shapes match the SRD) ----
@@ -214,5 +215,82 @@ describe('multiclass prerequisite and subclass [11b]', () => {
     expect(keys).toEqual(expect.arrayContaining([`row.${c2.classes[0].id}.sub`, `row.${c2.classes[0].id}.subId`]));
     const typed = applyLevel(c2, levelPlan(c2, { row: c2.classes[0].id }, cat, fixed({ sub: 'name:Beast Master' }))!, fixed({ sub: 'name:Beast Master' }), cat).c;
     expect(typed.classes[0]).toMatchObject({ sub: 'Beast Master', subId: '' });
+  });
+});
+
+// A character compared with its generated ids blanked out.
+const noIds = (c: Character) => JSON.parse(JSON.stringify(c).replace(/"n[0-9a-z]{8,}"/g, '"ID"'));
+
+describe('level undo [11c]', () => {
+  it('undo restores the maximum and lowers current HP by the raw change', () => {
+    const c = { ...ranger1({ con: 16 }), conBase: 3, maxHp: 13 };
+    const next = up(c, { row: c.classes[0].id }, fixed());
+    const back = undoLevel(next);
+    expect(back.maxHp).toBe(c.maxHp);
+    expect(maxHpOf(back)).toBe(maxHpOf(c));
+    expect(back.hp).toBe(c.hp);
+  });
+  it('undo back to level 1 restores the level-1 state', () => {
+    const one = ranger1();
+    const three = levelTo(one, 'class/ranger', 2);
+    const back = undoLevel(three);
+    expect(noIds(back)).toEqual(noIds(one));
+    expect(undoPreview(one)).toBeNull();
+    expect(undoPreview(blankCharacter())).toBeNull();
+    expect(undoLevel(one)).toBe(one);
+  });
+  it('undo skips an added entry removed by hand', () => {
+    const one = ranger1();
+    const two = up(one, { row: one.classes[0].id }, fixed());
+    const f = two.feats.find((x) => x.cid === 'feature/ranger/fighting')!;
+    const hand = removeRef(two, { kind: 'feature', id: f.id });
+    const prev = undoPreview(hand)!;
+    expect(prev.summary.goes).not.toContain(f.name);
+    const back = undoLevel(hand);
+    expect(back.classes[0].lvl).toBe(1);
+  });
+  it('undo of a subclass pick clears sub and subId, and no added ref remains', () => {
+    const c2 = levelTo(ranger1(), 'class/ranger', 2);
+    const ans = fixed({ sub: 'subclass/ranger/hunter' });
+    const c3 = applyLevel(c2, levelPlan(c2, { row: c2.classes[0].id }, cat, ans)!, ans, cat).c;
+    const added = c3.levels.at(-1)!.added;
+    const back = undoLevel(c3);
+    expect(back.classes[0]).toMatchObject({ sub: '', subId: '', lvl: 2 });
+    const present = new Set([...back.feats, ...back.grants, ...back.senses, ...back.defenses, ...back.res].map((x) => x.id));
+    for (const ref of added) expect(present.has(ref.split(':')[1])).toBe(false);
+  });
+  it('undo after a reload clears a first caster row’s castAb', () => {
+    const r = ranger1();
+    const two = up(r, { row: r.classes[0].id }, fixed());
+    const rec = two.levels.at(-1)!;
+    const withCast = { ...two, classes: [{ ...two.classes[0], castAb: 'wis' as const }], levels: [...two.levels.slice(0, -1), { ...rec, set: [...rec.set, { key: `row.${r.classes[0].id}.castAb` as const, was: '', now: 'wis' }] }] };
+    const back = undoLevel(migrate(JSON.parse(JSON.stringify(withCast))));
+    expect(back.classes[0].castAb).toBeUndefined();
+  });
+  it('undo removes a new class row whole, with its grants and spell ties', () => {
+    const r = ranger1({ dex: 13, wis: 13, cha: 13 });
+    const two = up(r, { cls: 'class/sorcerer' }, fixed());
+    const id = row(two, 'class/sorcerer').id;
+    const tied = { ...two, spells: [{ id: 's', name: 'S', lvl: 1, time: 'Action', range: 'Self', cls: id }] };
+    const back = undoLevel(tied);
+    expect(back.classes.map((x) => x.clsId)).toEqual(['class/ranger']);
+    expect(back.spells[0].cls).toBeUndefined();
+  });
+  it('undo clamps hdUsed so the level’s die comes back unspent', () => {
+    const r = ranger1({ dex: 13, wis: 13 });
+    const two = up(r, { cls: 'class/rogue' }, fixed());
+    const spent = { ...two, hdUsed: { ...two.hdUsed, 8: 1 } };
+    const back = undoLevel(spent);
+    expect(back.hdUsed[8] ?? 0).toBe(0);
+    const again = up(back, { cls: 'class/rogue' }, fixed());
+    expect(hdSpent(again, 8)).toBe(0);
+  });
+  it('undo keeps a changed field and lists it', () => {
+    const r = ranger1();
+    const two = up(r, { row: r.classes[0].id }, fixed());
+    const rec = two.levels.at(-1)!;
+    const c = { ...two, pactMax: 3, levels: [...two.levels.slice(0, -1), { ...rec, set: [{ key: 'pactMax' as const, was: 0, now: 2 }] }] };
+    expect(undoPreview(c)!.unrestored).toEqual(['pactMax']);
+    expect(undoLevel(c).pactMax).toBe(3);
   });
 });

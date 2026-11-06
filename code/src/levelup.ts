@@ -7,7 +7,7 @@ import { entriesOf, type Catalog } from './catalog/merge';
 import type { ChoiceSpec, ClassEntry, Entry, FeatureEntry } from './catalog/schema';
 import { atLevel } from './catalog/copy';
 import { blankCharacter } from './defaults';
-import { ABILITIES, abilityMod, addGrants, effScore, LEVEL_KEYS, LIST_KIND, maxHpOf, maxHpRaw, newId, normalize, ROW_FIELDS, totalLevel, type RefKind } from './logic';
+import { ABILITIES, abilityMod, addGrants, effScore, LEVEL_KEYS, LIST_KIND, maxHpOf, maxHpRaw, newId, normalize, removalSummary, removeRef, ROW_FIELDS, totalLevel, withoutKeys, type Ref, type RefKind } from './logic';
 import type { Ability, Character, ClassRow, Die, LevelKey, LevelRecord, LevelSet } from './types';
 
 // { row }: that row (the level-up wizard). { cls }: the row whose clsId is cls, or a new row of that catalog class (the
@@ -211,4 +211,70 @@ export function applyLevel(c: Character, plan: Plan, ans: LevelAnswers, cat: Cat
   const added = [...refsOf(x)].filter((ref) => !before.has(ref));
   const rec: LevelRecord = { n: totalLevel(x), cls: row, hp, added, picks, set: levelSet(c, x) };
   return { c: normalize({ ...x, levels: [...x.levels, rec] }), kept: [] };
+}
+
+// ---- Undo ----
+
+// The record undo takes: the last one, unless it is a baseline or the one that reached level 1 (the character would
+// have no class).
+const undoable = (c: Character): LevelRecord | null => { const rec = c.levels.at(-1); return rec && !rec.base && rec.n > 1 ? rec : null; };
+const toRef = (s: string): Ref => { const i = s.indexOf(':'); return { kind: s.slice(0, i) as RefKind, id: s.slice(i + 1) }; };
+const listOf = (kind: RefKind) => LISTS.find(([, k]) => k === kind)![0];
+const entryOf = (c: Character, r: Ref) => (c[listOf(r.kind)] as { id: string; name: string }[]).find((x) => x.id === r.id);
+const same = (a: unknown, b: unknown) => JSON.stringify(a ?? '') === JSON.stringify(b ?? '');
+function fieldOf(c: Character, key: LevelKey): unknown {
+  const m = /^row\.(.+)\.(\w+)$/.exec(key);
+  if (!m) return c[key as 'castAb'];
+  return (c.classes.find((r) => r.id === m[1]) as Record<string, unknown> | undefined)?.[m[2]] ?? '';
+}
+// Writes a field back; '' for a row's optional castAb deletes the key.
+function writeField(c: Character, key: LevelKey, v: unknown): Character {
+  const m = /^row\.(.+)\.(\w+)$/.exec(key);
+  if (!m) return { ...c, [key]: v };
+  return { ...c, classes: c.classes.map((r) => (r.id !== m[1] ? r : m[2] === 'castAb' && v === '' ? withoutKeys(r, ['castAb']) : { ...r, [m[2]]: v })) };
+}
+
+// What undoing the last level removes (the entries it added that are still there, and what goes with them) and the
+// fields it changed that were edited since (left as they are). Null when nothing can be undone.
+export function undoPreview(c: Character): { summary: { goes: string[]; keep: string[] }; unrestored: LevelKey[] } | null {
+  const rec = undoable(c);
+  if (!rec) return null;
+  const goes: string[] = [], keep: string[] = [];
+  let x = c;
+  for (const r of rec.added.map(toRef)) {
+    const e = entryOf(x, r);
+    if (!e) continue;
+    const sum = removalSummary(x, r);
+    goes.push(e.name, ...sum.goes);
+    keep.push(...sum.keep);
+    x = removeRef(x, r);
+  }
+  return { summary: { goes: [...new Set(goes)], keep: [...new Set(keep)] }, unrestored: rec.set.filter((e) => !same(fieldOf(c, e.key), e.now)).map((e) => e.key) };
+}
+
+// Takes the last level back (spec §2): removes what it added (an entry already gone is skipped), restores each field
+// still holding the level's value, takes off its HP, lowers the class level (a row at 0 goes, and spells tied to it
+// lose the tie), clamps each Hit Dice pool (so the level's die comes back unspent when gained again), drops its
+// Weapon Mastery picks, and pops the record.
+export function undoLevel(c: Character): Character {
+  const rec = undoable(c);
+  if (!rec) return c;
+  let x = c;
+  for (const r of rec.added.map(toRef)) if (entryOf(x, r)) x = removeRef(x, r);
+  for (const e of rec.set) if (same(fieldOf(x, e.key), e.now)) x = writeField(x, e.key, e.was);
+  const gain = rec.hp?.gain ?? 0;
+  x = { ...x, maxHp: x.maxHp - gain, ...(x.origOn ? { origHp: x.origHp - gain } : {}) };
+  const row = x.classes.find((r) => r.id === rec.cls);
+  if (row) {
+    x = row.lvl > 1
+      ? { ...x, classes: x.classes.map((r) => (r === row ? { ...r, lvl: r.lvl - 1 } : r)) }
+      : { ...x, classes: x.classes.filter((r) => r !== row), spells: x.spells.map((sp) => (sp.cls === row.id ? withoutKeys(sp, ['cls']) : sp)) };
+  }
+  // Current HP falls by the drop in the unfloored maximum, taken now; it stays above 0 when it was (normalize clamps).
+  const drop = maxHpRaw(c) - maxHpRaw(x);
+  const hp = c.hp > 0 ? Math.max(1, c.hp - drop) : c.hp;
+  const pool = (d: Die) => x.classes.filter((r) => r.hd === d).reduce((t, r) => t + r.lvl, 0);
+  const hdUsed = Object.fromEntries(Object.entries(x.hdUsed).map(([d, n]) => [d, Math.min(n ?? 0, pool(Number(d) as Die))]).filter(([d, n]) => n || pool(Number(d) as Die)));
+  const gone = rec.picks['mastery'] ?? [];
+  return normalize({ ...x, hp, hdUsed, mastery: x.mastery.filter((k) => !gone.includes(k)), levels: x.levels.slice(0, -1) });
 }
