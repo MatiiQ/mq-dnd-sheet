@@ -16,7 +16,15 @@
     },
     "armor": "Light armor,Medium armor,Shields",
     "weapons": "Simple weapons,Martial weapons",
-    "slots": []
+    "primary": "str",
+    "gpA": 15,
+    "gpB": 75,
+    "multi": {
+      "weapons": "Martial weapons",
+      "armor": "Shields"
+    },
+    "slots": [],
+    "equipA": "item/greataxe;item/handaxe*4;item/explorers-pack"
   },
   {
     "id": "class/bard",
@@ -35,7 +43,33 @@
     },
     "armor": "Light armor",
     "weapons": "Simple weapons",
-    "tools": "Choose 3 Musical Instruments (see “Equipment”)",
+    "tools": {
+      "kind": "choice",
+      "id": "tools",
+      "name": "Tool proficiencies",
+      "pick": 3,
+      "pool": "tool:musical-instrument"
+    },
+    "primary": "cha",
+    "gpA": 19,
+    "gpB": 90,
+    "multi": {
+      "armor": "Light armor",
+      "skills": {
+        "kind": "choice",
+        "id": "mskills",
+        "name": "Skill proficiency",
+        "pick": 1,
+        "pool": "skill:any"
+      },
+      "tools": {
+        "kind": "choice",
+        "id": "mtools",
+        "name": "Tool proficiency",
+        "pick": 1,
+        "pool": "tool:musical-instrument"
+      }
+    },
     "castAb": "cha",
     "slots": [
       [
@@ -260,7 +294,8 @@
       ]
     ],
     "cantrips": "1:2,4:3,10:4",
-    "prepared": "1:4,2:5,3:6,4:7,5:9,6:10,7:11,8:12,9:14,10:15,11:16,13:17,15:18,17:19,18:20,19:21,20:22"
+    "prepared": "1:4,2:5,3:6,4:7,5:9,6:10,7:11,8:12,9:14,10:15,11:16,13:17,15:18,17:19,18:20,19:21,20:22",
+    "equipA": "item/leather-armor;item/dagger*2;item/musical-instrument;item/entertainers-pack"
   },
   {
     "id": "class/cleric",
@@ -279,6 +314,12 @@
     },
     "armor": "Light armor,Medium armor,Shields",
     "weapons": "Simple weapons",
+    "primary": "wis",
+    "gpA": 7,
+    "gpB": 110,
+    "multi": {
+      "armor": "Light armor,Medium armor,Shields"
+    },
     "castAb": "wis",
     "slots": [
       [
@@ -503,7 +544,8 @@
       ]
     ],
     "cantrips": "1:3,4:4,10:5",
-    "prepared": "1:4,2:5,3:6,4:7,5:9,6:10,7:11,8:12,9:14,10:15,11:16,13:17,15:18,17:19,18:20,19:21,20:22"
+    "prepared": "1:4,2:5,3:6,4:7,5:9,6:10,7:11,8:12,9:14,10:15,11:16,13:17,15:18,17:19,18:20,19:21,20:22",
+    "equipA": "item/chain-shirt;item/shield;item/mace;item/holy-symbol;item/priests-pack"
   },
   {
     "id": "class/druid",
@@ -523,6 +565,12 @@
     "armor": "Light armor,Shields",
     "weapons": "Simple weapons",
     "tools": "Herbalism Kit",
+    "primary": "wis",
+    "gpA": 9,
+    "gpB": 50,
+    "multi": {
+      "armor": "Light armor,Shields"
+    },
     "castAb": "wis",
     "slots": [
       [
@@ -747,7 +795,8 @@
       ]
     ],
     "cantrips": "1:2,4:3,10:4",
-    "prepared": "1:4,2:5,3:6,4:7,5:9,6:10,7:11,8:12,9:14,10:15,11:16,13:17,15:18,17:19,18:20,19:21,20:22"
+    "prepared": "1:4,2:5,3:6,4:7,5:9,6:10,7:11,8:12,9:14,10:15,11:16,13:17,15:18,17:19,18:20,19:21,20:22",
+    "equipA": "item/leather-armor;item/shield;item/sickle;item/druidic-focus-wooden-staff;item/explorers-pack;item/herbalism-kit"
   },
   {
     "id": "class/fighter",
@@ -766,7 +815,15 @@
     },
     "armor": "Light armor,Medium armor,Heavy armor,Shields",
     "weapons": "Simple weapons,Martial weapons",
-    "slots": []
+    "primary": "str|dex",
+    "gpA": 4,
+    "gpB": 155,
+    "multi": {
+      "weapons": "Martial weapons",
+      "armor": "Light armor,Medium armor,Shields"
+    },
+    "slots": [],
+    "equipA": "item/chain-mail;item/greatsword;item/flail;item/javelin*8;item/dungeoneers-pack"
   },
   {
     "id": "class/monk",
@@ -785,8 +842,19 @@
     },
     "armor": "",
     "weapons": "Simple weapons,Martial weapons that have the Light property",
-    "tools": "Choose one type of Artisan’s Tools or Musical Instrument (see “Equipment”)",
-    "slots": []
+    "tools": {
+      "kind": "choice",
+      "id": "tools",
+      "name": "Tool proficiencies",
+      "pick": 1,
+      "pool": "tool:artisan|musical-instrument"
+    },
+    "primary": "dex,wis",
+    "gpA": 11,
+    "gpB": 50,
+    "multi": {},
+    "slots": [],
+    "equipA": "item/spear;item/dagger*5;Artisan’s Tools or Musical Instrument (the one chosen for the tool proficiency);item/explorers-pack"
   },
   {
     "id": "class/paladin",
@@ -805,6 +873,13 @@
     },
     "armor": "Light armor,Medium armor,Heavy armor,Shields",
     "weapons": "Simple weapons,Martial weapons",
+    "primary": "str,cha",
+    "gpA": 9,
+    "gpB": 150,
+    "multi": {
+      "weapons": "Martial weapons",
+      "armor": "Light armor,Medium armor,Shields"
+    },
     "castAb": "cha",
     "slots": [
       [
@@ -1028,7 +1103,8 @@
         0
       ]
     ],
-    "prepared": "1:2,2:3,3:4,4:5,5:6,7:7,9:9,11:10,13:11,15:12,17:14,19:15"
+    "prepared": "1:2,2:3,3:4,4:5,5:6,7:7,9:9,11:10,13:11,15:12,17:14,19:15",
+    "equipA": "item/chain-mail;item/shield;item/longsword;item/javelin*6;item/holy-symbol;item/priests-pack"
   },
   {
     "id": "class/ranger",
@@ -1047,6 +1123,20 @@
     },
     "armor": "Light armor,Medium armor,Shields",
     "weapons": "Simple weapons,Martial weapons",
+    "primary": "dex,wis",
+    "gpA": 7,
+    "gpB": 150,
+    "multi": {
+      "weapons": "Martial weapons",
+      "armor": "Light armor,Medium armor,Shields",
+      "skills": {
+        "kind": "choice",
+        "id": "mskills",
+        "name": "Skill proficiency",
+        "pick": 1,
+        "pool": "skill:animal|athletics|insight|investigation|nature|perception|stealth|survival"
+      }
+    },
     "castAb": "wis",
     "slots": [
       [
@@ -1270,7 +1360,8 @@
         0
       ]
     ],
-    "prepared": "1:2,2:3,3:4,4:5,5:6,7:7,9:9,11:10,13:11,15:12,17:14,19:15"
+    "prepared": "1:2,2:3,3:4,4:5,5:6,7:7,9:9,11:10,13:11,15:12,17:14,19:15",
+    "equipA": "item/studded-leather-armor;item/scimitar;item/shortsword;item/longbow;item/arrows*20;item/quiver;item/druidic-focus-sprig-of-mistletoe;item/explorers-pack"
   },
   {
     "id": "class/rogue",
@@ -1290,7 +1381,22 @@
     "armor": "Light armor",
     "weapons": "Simple weapons,Martial weapons that have the Finesse or Light property",
     "tools": "Thieves’ Tools",
-    "slots": []
+    "primary": "dex",
+    "gpA": 8,
+    "gpB": 100,
+    "multi": {
+      "armor": "Light armor",
+      "skills": {
+        "kind": "choice",
+        "id": "mskills",
+        "name": "Skill proficiency",
+        "pick": 1,
+        "pool": "skill:acrobatics|athletics|deception|insight|intimidation|investigation|perception|persuasion|sleight|stealth"
+      },
+      "tools": "Thieves’ Tools"
+    },
+    "slots": [],
+    "equipA": "item/leather-armor;item/dagger*2;item/shortsword;item/shortbow;item/arrows*20;item/quiver;item/thieves-tools;item/burglars-pack"
   },
   {
     "id": "class/sorcerer",
@@ -1309,6 +1415,10 @@
     },
     "armor": "",
     "weapons": "Simple weapons",
+    "primary": "cha",
+    "gpA": 28,
+    "gpB": 50,
+    "multi": {},
     "castAb": "cha",
     "slots": [
       [
@@ -1533,7 +1643,8 @@
       ]
     ],
     "cantrips": "1:4,4:5,10:6",
-    "prepared": "1:2,2:4,3:6,4:7,5:9,6:10,7:11,8:12,9:14,10:15,11:16,13:17,15:18,17:19,18:20,19:21,20:22"
+    "prepared": "1:2,2:4,3:6,4:7,5:9,6:10,7:11,8:12,9:14,10:15,11:16,13:17,15:18,17:19,18:20,19:21,20:22",
+    "equipA": "item/spear;item/dagger*2;item/arcane-focus-crystal;item/dungeoneers-pack"
   },
   {
     "id": "class/warlock",
@@ -1552,6 +1663,12 @@
     },
     "armor": "Light armor",
     "weapons": "Simple weapons",
+    "primary": "cha",
+    "gpA": 15,
+    "gpB": 100,
+    "multi": {
+      "armor": "Light armor"
+    },
     "castAb": "cha",
     "pact": true,
     "slots": [
@@ -1777,7 +1894,8 @@
       ]
     ],
     "cantrips": "1:2,4:3,10:4",
-    "prepared": "1:2,2:3,3:4,4:5,5:6,6:7,7:8,8:9,9:10,11:11,13:12,15:13,17:14,19:15"
+    "prepared": "1:2,2:3,3:4,4:5,5:6,6:7,7:8,8:9,9:10,11:11,13:12,15:13,17:14,19:15",
+    "equipA": "item/leather-armor;item/sickle;item/dagger*2;item/arcane-focus-orb;item/book;item/scholars-pack"
   },
   {
     "id": "class/wizard",
@@ -1796,6 +1914,10 @@
     },
     "armor": "",
     "weapons": "Simple weapons",
+    "primary": "int",
+    "gpA": 5,
+    "gpB": 55,
+    "multi": {},
     "castAb": "int",
     "slots": [
       [
@@ -2020,7 +2142,8 @@
       ]
     ],
     "cantrips": "1:3,4:4,10:5",
-    "prepared": "1:4,2:5,3:6,4:7,5:9,6:10,7:11,8:12,9:14,10:15,11:16,13:17,14:18,15:19,16:21,17:22,18:23,19:24,20:25"
+    "prepared": "1:4,2:5,3:6,4:7,5:9,6:10,7:11,8:12,9:14,10:15,11:16,13:17,14:18,15:19,16:21,17:22,18:23,19:24,20:25",
+    "equipA": "item/dagger*2;item/arcane-focus-staff;item/robe;Spellbook;item/scholars-pack"
   },
   {
     "id": "feature/barbarian/ability-score-improvement",

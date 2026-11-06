@@ -4,7 +4,7 @@ import { linkOf, srcKindOfLink } from '../links';
 import { ABILITIES, addGrants, charLevel, levelIn, capital, detectArmor, effScore, hasProf, maxFields, maxKindOf, maxOf, newId, normName, num, parseWeight, regainEvent, SKILLS, skillLevel, type GrantInput, type MaxKind } from '../logic';
 import type { AcEffect, Ability, ArmorKind, Character, ClassRow, Feature, FeatureGroup, Item, Linked, Recharge, Size, Spell, SrcKind } from '../types';
 import { entriesOf, type Catalog } from './merge';
-import { slug, type BackgroundEntry, type ChoiceSpec, type Entry, type FeatEntry, type FeatureEntry, type GrantSpec, type ItemEntry, type ProfEntry, type RuleEntry, type SpellEntry, type SpellPart, type TraitEntry } from './schema';
+import { slug, type BackgroundEntry, type ChoiceSpec, type ClassEntry, type Entry, type FeatEntry, type FeatureEntry, type GrantSpec, type ItemEntry, type ProfEntry, type RuleEntry, type SpellEntry, type SpellPart, type TraitEntry } from './schema';
 import { withBase } from './base';
 import { diceRange } from './value';
 
@@ -402,7 +402,8 @@ export function poolOptions(cat: Catalog, c: Character, pool: string, picks: Rec
       return filter === 'any' ? profsOf(cat, 'language').map((e) => prof('language', e)) : [];
     case 'tool': {
       const tools = profsOf(cat, 'tool').filter((e) => !GENERIC_TOOLS.includes(e.id));
-      const list = filter === 'any' ? tools : tools.filter((e) => TOOL_GROUPS[filter]?.includes(e.id));
+      // 'artisan|musical-instrument': any of those groups (the Monk's tool choice).
+      const list = filter === 'any' ? tools : tools.filter((e) => filter.split('|').some((g) => TOOL_GROUPS[g]?.includes(e.id)));
       return list.map((e) => prof('tool', e)).sort(byName);
     }
     case 'weapon':
@@ -581,15 +582,42 @@ export function groupOf(e: Entry): FeatureGroup | null {
 
 const titleOfId = (id: string) => titled(id.split('/').pop() ?? id);
 // A background's package A, item by item: a catalog item, or a name the catalog lacks as typed; '*N' is the count.
-export function equipItems(cat: Catalog, e: BackgroundEntry): { name: string; qty: number; entry?: ItemEntry }[] {
+export function equipItems(cat: Catalog, e: BackgroundEntry | ClassEntry): { name: string; qty: number; entry?: ItemEntry }[] {
   return (e.equipA ?? '').split(';').map((t) => t.trim()).filter(Boolean).map((t) => {
     const m = /^(.*?)\*(\d+)$/.exec(t), term = m ? m[1].trim() : t, qty = m ? Number(m[2]) : 1;
     const en = term.startsWith('item/') ? cat.byId.get(term) : undefined;
     return en?.kind === 'item' ? { name: en.name, qty, entry: en } : { name: term.startsWith('item/') ? titleOfId(term) : term, qty };
   });
 }
+// Starting equipment (PHB p.36 for a background, p.43 for the first class): package A's items, unequipped, and its
+// coins; package B is coins only; none adds nothing.
+export function addPackage(c: Character, cat: Catalog, e: BackgroundEntry | ClassEntry, pick: 'A' | 'B' | 'none' | undefined): Character {
+  if (e.equipA === undefined || !pick || pick === 'none') return c;
+  if (pick === 'B') return { ...c, coins: { ...c.coins, gp: c.coins.gp + (e.gpB ?? 0) } };
+  const items = equipItems(cat, e).map((x): Item => (x.entry ? { id: newId(), ...itemFromEntry(x.entry), qty: x.qty } : { id: newId(), name: x.name, qty: x.qty, eq: false }));
+  return { ...c, inv: [...c.inv, ...items], coins: { ...c.coins, gp: c.coins.gp + (e.gpA ?? 0) } };
+}
+// A class's starting equipment: a class isn't a feature, so it isn't added through addFromCatalog. Only the first class
+// gets it (PHB p.44).
+export const addClassEquipment = (c: Character, cat: Catalog, e: ClassEntry, pick: 'A' | 'B' | 'none'): Character => addPackage(c, cat, e, pick);
+// A class's proficiencies as prof grants: saves, armor, weapons, tools and the picked skills (and tool picks); with
+// multi, only what a later class gives (PHB p.44). picks: by choice id ('skills', 'tools', 'mskills', 'mtools').
+export function classProfInputs(cat: Catalog, e: ClassEntry, multi: boolean, picks: Record<string, string[]>): GrantInput[] {
+  const src = multi ? e.multi ?? {} : e;
+  const out: GrantInput[] = [];
+  const prof = (pc: string, name: string, target?: string) => out.push({ spec: { id: 'cp' + out.length, kind: 'prof', name, cat: pc as GrantSpec['cat'], ...(target ? { target } : {}) } });
+  if (!multi) for (const a of e.saves.split(',').filter(Boolean)) prof('save', ABILITY_NAME[a as Ability], a);
+  for (const a of (src.armor ?? '').split(',').filter(Boolean)) prof('armor', a);
+  for (const w of (src.weapons ?? '').split(',').filter(Boolean)) prof('weapon', w);
+  const tools = src.tools;
+  if (typeof tools === 'string') for (const t of tools.split(',').map((x) => x.trim()).filter(Boolean)) prof('tool', t);
+  else if (tools) for (const t of picks[tools.id] ?? []) prof('tool', t);
+  if (src.skills) for (const k of picks[src.skills.id] ?? []) prof('skill', SKILL_NAME[k] ?? k, k);
+  void cat;
+  return out;
+}
 // 'Dagger, 2 × Pouch, 15 GP': package A as the add flow shows it.
-export const equipText = (cat: Catalog, e: BackgroundEntry) =>
+export const equipText = (cat: Catalog, e: BackgroundEntry | ClassEntry) =>
   [...equipItems(cat, e).map((x) => (x.qty > 1 ? `${x.qty} × ${x.name}` : x.name)), `${e.gpA ?? 0} GP`].join(', ');
 // What addFromCatalog adds as features below e: picked feats, traits and subclasses; a background's origin feat
 // ('feat/magic-initiate:cleric' presets the list); a species' traits (not its lineage options, which come by choice).
@@ -766,11 +794,7 @@ function addEntry(c: Character, cat: Catalog, entry: Entry, ans: AddChoices): Ch
     if (e.equip) lines.push('Equipment: ' + e.equip);
     const featId = e.feat.split(':')[0];
     if (!cat.byId.has(featId)) lines.push(`Origin feat: ${titleOfId(featId)} (not in the loaded catalog)`);
-    // Starting equipment (PHB p.36): package A's items, unequipped, and its coins; package B is coins only.
-    if (e.equipA !== undefined && ans.equip === 'A') {
-      out.inv = [...out.inv, ...equipItems(cat, e).map((x): Item => (x.entry ? { id: newId(), ...itemFromEntry(x.entry), qty: x.qty } : { id: newId(), name: x.name, qty: x.qty, eq: false }))];
-      out.coins = { ...out.coins, gp: out.coins.gp + (e.gpA ?? 0) };
-    } else if (e.equipA !== undefined && ans.equip === 'B') out.coins = { ...out.coins, gp: out.coins.gp + (e.gpB ?? 0) };
+    out = addPackage(out, cat, e, ans.equip);
   }
   // A subclass names the row of its class (else the first row) when that row has none yet.
   if (e.kind === 'subclass') {

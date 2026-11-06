@@ -98,6 +98,44 @@ export function parseOptions(lines: string[], names: string[], o: { cls: string;
       desc: [...(pre ? [pre] : []), ...paragraphs(body)].join('\n'), grants: [] };
   });
 }
+// "Strength or Dexterity" → 'str|dex' (any one); "Dexterity and Wisdom" → 'dex,wis' (all of them).
+export function primaryOf(text: string): string {
+  const any = / or /.test(text);
+  return split(text).map((a) => ABILITY_NAMES[a]).join(any ? '|' : ',');
+}
+// The gold of package A and of the last package (coins only): "(A) …, and 15 GP; or (B) 75 GP". A third package
+// (the Fighter's B) has no field: the sheet offers A or the gold.
+export function goldOf(text: string): [number, number] {
+  const gp = [...text.matchAll(/(\d+) GP/g)].map((m) => Number(m[1]));
+  return [gp[0], gp[gp.length - 1]];
+}
+// Tool groups a choice can name, as TOOL_GROUPS keys (copy.ts).
+const TOOL_GROUP: Record<string, string> = { 'artisan’s tools': 'artisan', "artisan's tools": 'artisan', 'musical instrument': 'musical-instrument', 'musical instruments': 'musical-instrument' };
+const NUMBER: Record<string, number> = { one: 1, two: 2, three: 3 };
+// "Choose 3 Musical Instruments" → a choice over that tool group; a plain list stays a name list.
+export function toolsOf(text: string): string | ChoiceSpec {
+  const m = /^Choose (\w+)(?: type of)? (.+?)(?: \(.*\))?$/.exec(text.trim());
+  if (!m) return text.trim();
+  const groups = split(m[2]).map((g) => TOOL_GROUP[g.toLowerCase()]);
+  return { kind: 'choice', id: 'tools', name: 'Tool proficiencies', pick: NUMBER[m[1]] ?? Number(m[1]), pool: 'tool:' + groups.join('|') };
+}
+// "As a Multiclass Character": the traits gained besides the Hit Point Die (PHB p.44 rules, the SRD's per-class lists).
+export function multiOf(text: string, skills: ChoiceSpec): NonNullable<ClassEntry['multi']> {
+  const out: NonNullable<ClassEntry['multi']> = {};
+  const t = text.replace(/\s+/g, ' ');
+  const weapons = /proficiency with (Martial weapons)/.exec(t);
+  if (weapons) out.weapons = weapons[1];
+  const armor = /training with (.+?)\.?$/.exec(t.replace(/\.\s*$/, ''));
+  if (armor) out.armor = profList(armor[1]);
+  if (/proficiency in one skill of your choice from the \w+’s skill list/.test(t)) out.skills = { kind: 'choice', id: 'mskills', name: 'Skill proficiency', pick: 1, pool: skills.pool };
+  else if (/proficiency in one skill of your choice/.test(t)) out.skills = { kind: 'choice', id: 'mskills', name: 'Skill proficiency', pick: 1, pool: 'skill:any' };
+  const inst = /proficiency with one (Musical Instrument) of your choice/.exec(t);
+  if (inst) out.tools = { kind: 'choice', id: 'mtools', name: 'Tool proficiency', pick: 1, pool: 'tool:musical-instrument' };
+  const tool = /proficiency with (Thieves’ Tools)/.exec(t);
+  if (tool) out.tools = tool[1];
+  return out;
+}
+
 const METAMAGIC = ['Careful Spell', 'Distant Spell', 'Empowered Spell', 'Extended Spell', 'Heightened Spell', 'Quickened Spell', 'Seeking Spell', 'Subtle Spell', 'Transmuted Spell', 'Twinned Spell'];
 const INVOCATIONS = ['Agonizing Blast', 'Armor of Shadows', 'Ascendant Step', 'Devil’s Sight', 'Devouring Blade', 'Eldritch Mind', 'Eldritch Smite', 'Eldritch Spear', 'Fiendish Vigor', 'Gaze of Two Minds',
   'Gift of the Depths', 'Gift of the Protectors', 'Investment of the Chain Master', 'Lessons of the First Ones', 'Lifedrinker', 'Mask of Many Faces', 'Master of Myriad Forms', 'Misty Visions', 'One with Shadows',
@@ -127,7 +165,17 @@ export function parseClass(text: string, layout: string): [ClassEntry, SubclassE
     hd: Number(/D(\d+) per/.exec(f['Hit Point Die'])![1]), saves: split(f['Saving Throw Proficiencies']).map((a) => ABILITY_NAMES[a]).join(','),
     skills, armor: profList(f['Armor Training']), weapons: profList(f['Weapon Proficiencies'])
   };
-  if (f['Tool Proficiencies']) c.tools = f['Tool Proficiencies'];
+  if (f['Tool Proficiencies']) c.tools = toolsOf(f['Tool Proficiencies']);
+  c.primary = primaryOf(f['Primary Ability']);
+  const [gpA, gpB] = goldOf(f['Starting Equipment']);
+  if (gpA !== undefined && gpB !== undefined && gpA !== gpB) Object.assign(c, { gpA, gpB });
+  // The multiclass traits: the bullet after "As a Multiclass Character", up to the level 1 features bullet.
+  const mi = lines.indexOf('As a Multiclass Character');
+  if (mi >= 0) {
+    const rest = lines.slice(mi + 1).join(' ').replace(/\s+/g, ' ');
+    const first = rest.split('•').map((x) => x.trim()).filter(Boolean)[0] ?? '';
+    c.multi = multiOf(first, skills);
+  }
   if (cast) c.castAb = ABILITY_NAMES[cast[1]] as Ability;
   if (table.pact) {
     c.pact = true;

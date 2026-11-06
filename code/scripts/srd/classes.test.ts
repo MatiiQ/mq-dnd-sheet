@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { expect, it } from 'vitest';
-import { parseClass, parseOptions } from './classes.ts';
+import { goldOf, multiOf, parseClass, parseOptions, primaryOf, toolsOf } from './classes.ts';
 
 const fx = (f: string) => readFileSync(new URL(`./fixtures/${f}`, import.meta.url), 'utf8');
 const [cls, subs, feats] = parseClass(fx('ranger.txt'), fx('ranger-layout.txt'));
@@ -52,4 +52,29 @@ it('reads option features from a section, with prerequisites, repeat and wrapped
 it('reads a Cost line right under the heading', () => {
   const [o] = parseOptions(['Empowered Spell', 'Cost: 1 Sorcery Point', '', 'Reroll dice.', ''], ['Empowered Spell'], { cls: 'Sorcerer', of: 'metamagic', lvl: 2 });
   expect(o).toMatchObject({ id: 'feature/sorcerer/empowered-spell', of: 'metamagic', lvl: 2, desc: 'Cost: 1 Sorcery Point\nReroll dice.' });
+});
+
+it('reads the primary abilities and the gold of the starting packages', () => {
+  // The fixture is an excerpt without the packages' gold or the multiclass bullet: those are checked on the strings
+  // below and on the built data (data.test.ts).
+  expect(cls.primary).toBe('dex,wis');
+  expect(cls.gpA).toBeUndefined();
+  expect(cls.multi).toBeUndefined();
+  expect(primaryOf('Strength or Dexterity')).toBe('str|dex');
+  expect(primaryOf('Charisma')).toBe('cha');
+  expect(goldOf('Choose A or B: (A) Greataxe, 4 Handaxes, Explorer’s Pack, and 15 GP; or (B) 75 GP')).toEqual([15, 75]);
+  expect(goldOf('Choose A, B, or C: (A) Chain Mail, and 4 GP; (B) Scimitar, and 11 GP; or (C) 155 GP')).toEqual([4, 155]);
+});
+it('reads tool choices and multiclass skill and tool picks', () => {
+  expect(toolsOf('Choose 3 Musical Instruments (see “Equipment”)')).toEqual({ kind: 'choice', id: 'tools', name: 'Tool proficiencies', pick: 3, pool: 'tool:musical-instrument' });
+  expect(toolsOf('Choose one type of Artisan’s Tools or Musical Instrument (see “Equipment”)')).toMatchObject({ pick: 1, pool: 'tool:artisan|musical-instrument' });
+  expect(toolsOf('Thieves’ Tools')).toBe('Thieves’ Tools');
+  expect(toolsOf("Choose one type of Artisan's Tools or Musical Instrument (chapter 6)")).toMatchObject({ pick: 1, pool: 'tool:artisan|musical-instrument' });
+  const skills = { kind: 'choice' as const, id: 'skills', name: 'Skill proficiencies', pick: 2, pool: 'skill:arcana|history' };
+  expect(multiOf('Gain the following traits from the Core Bard Traits table: Hit Point Die, proficiency in one skill of your choice, proficiency with one Musical Instrument of your choice, and training with Light armor.', skills))
+    .toEqual({ armor: 'Light armor', skills: { kind: 'choice', id: 'mskills', name: 'Skill proficiency', pick: 1, pool: 'skill:any' },
+      tools: { kind: 'choice', id: 'mtools', name: 'Tool proficiency', pick: 1, pool: 'tool:musical-instrument' } });
+  expect(multiOf('Gain the following traits from the Core Rogue Traits table: Hit Point Die, proficiency in one skill of your choice from the Rogue’s skill list, proficiency with Thieves’ Tools, and training with Light armor.', skills))
+    .toEqual({ armor: 'Light armor', tools: 'Thieves’ Tools', skills: { kind: 'choice', id: 'mskills', name: 'Skill proficiency', pick: 1, pool: 'skill:arcana|history' } });
+  expect(multiOf('Gain the Hit Point Die trait from the Core Monk Traits table.', skills)).toEqual({});
 });

@@ -51,9 +51,14 @@ export interface SpeciesEntry extends EntryBase { kind: 'species'; sizes: string
 // A species trait or a lineage option. of: the trait an option belongs to (Wood Elf → trait/elf/elven-lineage), which
 // offers its options as a choice with the pool 'trait:of=<trait id>'.
 export interface TraitEntry extends EntryBase { kind: 'trait'; species: string; lvl: number; of?: string; grants: Spec[] }
+// primary: the primary abilities, ',' all of them, '|' any one ('str|dex'), for the multiclass prerequisite (PHB p.44).
+// tools: a name list, or a choice over a tool group. multi: what a later class gives (PHB p.44 and each class's
+// "As a Multiclass Character"). equipA/gpA/gpB: starting equipment as on a background.
 export interface ClassEntry extends EntryBase {
-  kind: 'class'; hd: number; saves: string; skills: ChoiceSpec; armor: string; weapons: string; tools?: string;
+  kind: 'class'; hd: number; saves: string; skills: ChoiceSpec; armor: string; weapons: string; tools?: string | ChoiceSpec;
   castAb?: Ability; slots?: number[][]; pact?: boolean; cantrips?: string; prepared?: string;
+  primary?: string; multi?: { armor?: string; weapons?: string; tools?: string | ChoiceSpec; skills?: ChoiceSpec };
+  equipA?: string; gpA?: number; gpB?: number;
 }
 export interface SubclassEntry extends EntryBase { kind: 'subclass'; cls: string }
 // again: later levels at which the same feature is gained again, as a comma list ('8,12,16').
@@ -248,8 +253,10 @@ const FIELDS: Record<Kind, Record<string, [Check, boolean]>> = {
   species: { sizes: [(v) => typeof v === 'string' && v.split(',').every((s) => SIZE_KEYS.includes(s as Size)), true], speed: [num, true] },
   trait: { species: [str, true], lvl: [whole(1, 20), true], of: [(v) => typeof v === 'string' && v.startsWith('trait/'), false] },
   class: {
-    hd: [oneOf(6, 8, 10, 12), true], saves: [list(ability), true], armor: [str, true], weapons: [str, true], tools: [str, false],
-    castAb: [ability, false], slots: [slotRows, false], pact: [bool, false], cantrips: [value, false], prepared: [value, false]
+    hd: [oneOf(6, 8, 10, 12), true], saves: [list(ability), true], armor: [str, true], weapons: [str, true], tools: [(v) => typeof v === 'string' || (typeof v === 'object' && v !== null && !Array.isArray(v)), false],
+    castAb: [ability, false], slots: [slotRows, false], pact: [bool, false], cantrips: [value, false], prepared: [value, false],
+    primary: [(v) => typeof v === 'string' && /^(str|dex|con|int|wis|cha)([,|](str|dex|con|int|wis|cha))*$/.test(v) && !(v.includes(',') && v.includes('|')), false],
+    multi: [(v) => typeof v === 'object' && v !== null && !Array.isArray(v), false], equipA: [str, false], gpA: [whole(0, 99999), false], gpB: [whole(0, 99999), false]
   },
   subclass: { cls: [str, true] },
   feature: { cls: [str, true], sub: [str, false], lvl: [whole(1, 20), true], again: [str, false], of: [oneOf('invocation', 'maneuver', 'metamagic'), false], prereq: [str, false], repeat: [bool, false] },
@@ -347,6 +354,20 @@ export function validateEntry(x: unknown): string[] {
   if (e.kind === 'background' && e.equipA !== undefined && (e.gpA === undefined || e.gpB === undefined)) errs.push(`${at}: equipA needs gpA and gpB`);
   if (e.kind === 'class') {
     if (e.pact && !e.slots?.length) errs.push(`${at}: pact needs slots`);
+    if (e.equipA !== undefined && (e.gpA === undefined || e.gpB === undefined)) errs.push(`${at}: equipA needs gpA and gpB`);
+    const choice = (v: unknown, where: string) => {
+      if (!isObj(v) || v.kind !== 'choice') errs.push(`${where} is not a choice`);
+      else checkChoice(v, x, where, errs);
+    };
+    if (isObj(e.tools)) choice(e.tools, `${at}.tools`);
+    if (isObj(e.multi)) {
+      for (const [k, v] of Object.entries(e.multi)) {
+        if (k === 'armor' || k === 'weapons') { if (typeof v !== 'string') errs.push(`${at}.multi.${k} is not text`); }
+        else if (k === 'tools') { if (typeof v !== 'string') choice(v, `${at}.multi.tools`); }
+        else if (k === 'skills') choice(v, `${at}.multi.skills`);
+        else errs.push(`${at}.multi: unknown field ${k}`);
+      }
+    }
     if (!isObj(e.skills) || e.skills.kind !== 'choice') errs.push(`${at}: skills is not a choice`);
     else {
       checkChoice(e.skills as unknown as Record<string, unknown>, x, `${at}.skills`, errs);

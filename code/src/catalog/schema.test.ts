@@ -191,3 +191,19 @@ describe('a background\'s equipment packages', () => {
     expect(validateEntry(b({ equipA: 'item/dagger', gpA: 1.5, gpB: 50 }))).not.toEqual([]);
   });
 });
+
+describe('class starting equipment and multiclass traits', () => {
+  const base = { id: 'class/x', kind: 'class', name: 'X', src: 'srd', desc: '', hd: 8, saves: 'str,dex', armor: '', weapons: '',
+    skills: { kind: 'choice', id: 'skills', name: 'Skills', pick: 2, pool: 'skill:any' } };
+  it('accepts the new fields', () => {
+    expect(validateEntry({ ...base, primary: 'dex,wis', equipA: 'item/dagger', gpA: 5, gpB: 50,
+      tools: { kind: 'choice', id: 'tools', name: 'Tools', pick: 1, pool: 'tool:artisan' },
+      multi: { armor: 'Light armor', tools: 'Thieves’ Tools', skills: { kind: 'choice', id: 'mskills', name: 'Skill', pick: 1, pool: 'skill:any' } } })).toEqual([]);
+  });
+  it('refuses equipA without both gold amounts, a bad multiclass pick and a bad primary', () => {
+    expect(validateEntry({ ...base, equipA: 'item/dagger', gpA: 5 })).not.toEqual([]);
+    expect(validateEntry({ ...base, multi: { skills: { kind: 'choice', id: 'mskills', name: 'Skill', pick: 0, pool: 'skill:any' } } })).not.toEqual([]);
+    expect(validateEntry({ ...base, multi: { feats: 'x' } })).not.toEqual([]);
+    expect(validateEntry({ ...base, primary: 'str|dex,wis' })).not.toEqual([]);
+  });
+});

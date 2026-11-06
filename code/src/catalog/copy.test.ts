@@ -2,15 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { withClass, withClasses } from '../test-fixtures';
 import srdEntries from '../data/srd/index';
 import { blankCharacter, sampleCharacter } from '../defaults';
-import { removeRef, armorClass, skillLevel, spellUsable } from '../logic';
+import { removeRef, armorClass, skillLevel, spellUsable, type GrantInput } from '../logic';
 import { migrate } from '../migrate';
 import { inactiveReason, isActive } from '../links';
 import { saveEntry } from '../sheet';
 import type { Character, ClassRow, Item, Spell } from '../types';
 import { entriesOf, mergeCatalog } from './merge';
-import type { Entry, FeatureEntry, ItemEntry, SpellEntry } from './schema';
+import type { ClassEntry, Entry, FeatureEntry, ItemEntry, SpellEntry } from './schema';
 import {
-  keepPrep, atLevel, choiceActive, featureName,
+  keepPrep, atLevel, choiceActive, featureName, addClassEquipment, classProfInputs,
   addFromCatalog, armorBaseMissing, draftFromItem, featureCandidates, grantSpellName, withDetectedArmor, BLANK_ITEM, BLANK_SPELL, catForKind, countedDefault, draftFromSpell, spellFromForm, type SpellDraft, choicesOf, classIdOf, matchId, nestedEntries, subclassIdOf, type AddChoices, freeText, itemFromEntry, itemFromForm, missingPicks, needed, optionGroups, poolOptions, prereqMet, resolveChoices,
   spellFromEntry, spellSummary, validPicks, itemQuestions, itemStats, answeredName, hasSenseRule, senseRule, weaponRules, type ItemAnswers, type ItemDraft
 } from './copy';
@@ -1055,5 +1055,26 @@ describe('class features and spells per row', () => {
     const sp: SpellEntry = { ...(cat.byId.get('spell/fire-bolt') as SpellEntry), id: 'spell/zz-test', name: 'Zz', classes: 'rogue' };
     const local = mergeCatalog([...srdEntries.filter((e) => e.kind === 'class'), sp], null);
     expect(addFromCatalog(c, local, sp, A()).spells.at(-1)).toMatchObject({ srcKind: 'class', srcName: 'Rogue' });
+  });
+});
+
+describe('class proficiencies and starting equipment', () => {
+  const barb = () => E('class/barbarian') as ClassEntry;
+  it('turns a class’s proficiencies into prof grants, all of them or the multiclass set', () => {
+    const g = classProfInputs(cat, barb(), false, { skills: ['athletics', 'survival'] });
+    const key = (x: GrantInput) => x.spec.cat + ':' + x.spec.name;
+    expect(g.map(key)).toEqual(['save:Strength', 'save:Constitution', 'armor:Light armor', 'armor:Medium armor', 'armor:Shields',
+      'weapon:Simple weapons', 'weapon:Martial weapons', 'skill:Athletics', 'skill:Survival']);
+    expect(classProfInputs(cat, barb(), true, {}).map(key)).toEqual(['armor:Shields', 'weapon:Martial weapons']);
+  });
+  it('adds starting equipment A or B, or nothing', () => {
+    const c = blankCharacter();
+    const a = addClassEquipment(c, cat, barb(), 'A');
+    expect(a.inv.map((i) => [i.name, i.qty, i.eq])).toEqual([['Greataxe', 1, false], ['Handaxe', 4, false], ['Explorer’s Pack', 1, false]]);
+    expect(a.coins.gp).toBe(15);
+    const b = addClassEquipment(c, cat, barb(), 'B');
+    expect([b.inv.length, b.coins.gp]).toEqual([0, 75]);
+    expect(addClassEquipment(c, cat, barb(), 'none')).toBe(c);
+    expect(() => addFromCatalog(c, cat, barb(), A())).toThrow();
   });
 });

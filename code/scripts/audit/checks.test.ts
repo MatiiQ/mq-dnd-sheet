@@ -64,6 +64,8 @@ describe('source checks', () => {
     const cls = (extra: object) => ({ id: 'class/x', kind: 'class', name: 'X', src: 'srd', desc: '', hd: 8, saves: 'str', armor: 'light', weapons: 'simple', skills: { kind: 'choice', id: 's', name: 'S', pick: 2, pool: 'skill:arc|his' }, ...extra }) as unknown as Entry;
     expect(referenceChecks([cls({ skills: { kind: 'choice', id: 's', name: 'S', pick: 2, pool: 'skill:his|arc' } })], [cls({})])).toEqual([]);
     expect(keys(referenceChecks([cls({ armor: 'heavy', tools: 'Lute', skills: { kind: 'choice', id: 's', name: 'S', pick: 3, pool: 'skill:arc|his' } })], [cls({})]))).toEqual(['srd-phb-field|class/x:armor', 'srd-phb-field|class/x:tools', 'srd-phb-field|class/x:skills']);
+    const pick = (pool: string) => ({ kind: 'choice' as const, id: 'tools', name: 'T', pick: 1, pool });
+    expect(keys(referenceChecks([cls({ tools: pick('tool:artisan|musical-instrument') })], [cls({ tools: pick('tool:musical-instrument|artisan') })]))).toEqual([]);
     const bg = (extra: object) => ({ id: 'background/x', kind: 'background', name: 'X', src: 'srd', desc: '', feat: 'feat/a', ...extra }) as unknown as Entry;
     expect(keys(referenceChecks([bg({ feat: 'feat/b' })], [bg({})]))).toEqual(['srd-phb-field|background/x:feat']);
   });

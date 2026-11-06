@@ -4361,5 +4361,41 @@
         "note": "DEX save for half damage: none on a success, half on a failure."
       }
     ]
+  },
+  "class/barbarian": {
+    "equipA": "item/greataxe;item/handaxe*4;item/explorers-pack"
+  },
+  "class/bard": {
+    "equipA": "item/leather-armor;item/dagger*2;item/musical-instrument;item/entertainers-pack"
+  },
+  "class/cleric": {
+    "equipA": "item/chain-shirt;item/shield;item/mace;item/holy-symbol;item/priests-pack"
+  },
+  "class/druid": {
+    "equipA": "item/leather-armor;item/shield;item/sickle;item/druidic-focus-wooden-staff;item/explorers-pack;item/herbalism-kit"
+  },
+  "class/fighter": {
+    "equipA": "item/chain-mail;item/greatsword;item/flail;item/javelin*8;item/dungeoneers-pack"
+  },
+  "class/monk": {
+    "equipA": "item/spear;item/dagger*5;Artisan’s Tools or Musical Instrument (the one chosen for the tool proficiency);item/explorers-pack"
+  },
+  "class/paladin": {
+    "equipA": "item/chain-mail;item/shield;item/longsword;item/javelin*6;item/holy-symbol;item/priests-pack"
+  },
+  "class/ranger": {
+    "equipA": "item/studded-leather-armor;item/scimitar;item/shortsword;item/longbow;item/arrows*20;item/quiver;item/druidic-focus-sprig-of-mistletoe;item/explorers-pack"
+  },
+  "class/rogue": {
+    "equipA": "item/leather-armor;item/dagger*2;item/shortsword;item/shortbow;item/arrows*20;item/quiver;item/thieves-tools;item/burglars-pack"
+  },
+  "class/sorcerer": {
+    "equipA": "item/spear;item/dagger*2;item/arcane-focus-crystal;item/dungeoneers-pack"
+  },
+  "class/warlock": {
+    "equipA": "item/leather-armor;item/sickle;item/dagger*2;item/arcane-focus-orb;item/book;item/scholars-pack"
+  },
+  "class/wizard": {
+    "equipA": "item/dagger*2;item/arcane-focus-staff;item/robe;Spellbook;item/scholars-pack"
   }
 }

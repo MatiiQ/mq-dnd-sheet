@@ -72,7 +72,8 @@ const same = (a: unknown, b: unknown) => (typeof a === 'string' && typeof b === 
 function comparable(f: string, v: unknown): unknown {
   if (f === 'classes') return [...String(v).split(',')].sort().join();
   if (f === 'tools' && typeof v === 'string') return v.replace(/\s*\([^)]*\)$/, ''); // the "see …" pointer differs by book
-  if (f !== 'skills' || typeof v !== 'object' || !v) return v;
+  // A choice (skills, or tools as a choice over a tool group) compares as its pick and sorted pool.
+  if ((f !== 'skills' && f !== 'tools') || typeof v !== 'object' || !v) return v;
   const c = v as { pick?: number; pool?: string };
   return `${c.pick} ${(c.pool ?? '').split(/[:|]/).sort().join()}`;
 }

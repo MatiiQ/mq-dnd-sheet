@@ -6,7 +6,7 @@ import {
 } from '../../src/catalog/schema.ts';
 import type { Ability, ArmorKind } from '../../src/types.ts';
 import { skillKey } from '../lib/skills.ts';
-import { optionPrereq, profList } from '../srd/classes.ts';
+import { optionPrereq, profList, toolsOf } from '../srd/classes.ts';
 import { playName, pounds, weaponProps } from '../srd/items.ts';
 import { ABIL_ALT, DAMAGE_ALT } from '../srd/spells.ts';
 
@@ -221,7 +221,7 @@ export function parseClassMd(md: string): [ClassEntry, SubclassEntry[], FeatureE
     slots: pact ? rows.map((r) => { const s = Array(9).fill(0); s[num(r['Slot Level']) - 1] = num(r['Spell Slots']); return s; })
       : slotCols.length ? rows.map((r) => [...slotCols.map((k) => num(r[k])), ...Array(9 - slotCols.length).fill(0)]) : []
   };
-  if (!none(core['Tool Proficiencies'])) cls.tools = core['Tool Proficiencies'];
+  if (!none(core['Tool Proficiencies'])) cls.tools = toolsOf(core['Tool Proficiencies']);
   if (cast) cls.castAb = ab(cast[1]);
   if (pact) cls.pact = true;
   if (head.includes('Cantrips')) cls.cantrips = levelTable('Cantrips');
