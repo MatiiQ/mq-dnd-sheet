@@ -1,8 +1,13 @@
 import type { Character } from './types';
 
 // Sample character: Ilyra Moonbrook, Wood Elf Ranger 5 (Hunter).
+// The save format's version, stored as `v` on every character. Bump it with each reshape of a saved field and add the
+// step from the old version in migrate.ts (STEPS), next to a frozen fixture of the old format in src/fixtures/.
+export const SAVE_VERSION = 1;
+
 export function sampleCharacter(): Character {
   return {
+    v: SAVE_VERSION,
     ch: { name: 'Ilyra Moonbrook', species: 'Wood Elf', cls: 'Ranger', sub: 'Hunter', align: 'Neutral Good', clsId: 'class/ranger', subId: 'subclass/ranger/hunter' },
     speeds: { climb: 0, swim: 0, fly: 0, burrow: 0 }, speedOpen: false,
     acOpen: false, acUnarm: 'none', acOn: [], acMods: [],
@@ -108,6 +113,7 @@ export function sampleCharacter(): Character {
 // HP uses fixed values: 8 + 11 × 5, plus CON +3 per level = 99 (PHB p.42). No attuned items.
 export function druidSample(): Character {
   return {
+    v: SAVE_VERSION,
     ch: { name: 'Seren Vale', species: 'Aasimar', cls: 'Druid', sub: 'Circle of the Stars', align: 'Neutral', clsId: 'class/druid', subId: '' },
     speeds: { climb: 0, swim: 0, fly: 0, burrow: 0 }, speedOpen: false,
     acOpen: false, acUnarm: 'none', acOn: [], acMods: [],

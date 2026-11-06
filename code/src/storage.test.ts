@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { blankCharacter, druidSample, sampleCharacter } from './defaults';
+import { blankCharacter, druidSample, SAVE_VERSION, sampleCharacter } from './defaults';
 import { isActive } from './links';
 import { longRest } from './logic';
 import { addToStore, applyPatch, deleteFromStore, exportStore, freshList, initialStore, load, openExampleOnNextLoad, persistStore, rawBackup, switchStore, unreadableSheets, writeBackup, type Store } from './storage';
@@ -67,6 +67,37 @@ describe('unreadable sheet', () => {
     m.set('dnd-sheet-v3:x', '{second');
     load('x');
     expect(m.get('dnd-sheet-v3:x:unreadable')).toBe('{not json');
+  });
+});
+
+describe('save from a newer app', () => {
+  afterEach(() => { vi.unstubAllGlobals(); });
+  const newer = () => JSON.stringify({ ...blankCharacter(), v: SAVE_VERSION + 1, ch: { ...blankCharacter().ch, name: 'Future' }, futureField: { a: 1 } });
+  it('keeps the raw text, then opens what this version knows, with a notice', () => {
+    const m = stubStorage();
+    m.set('dnd-sheet-v3:x', newer());
+    const c = load('x');
+    expect(c.ch.name).toBe('Future');
+    expect(c.v).toBe(SAVE_VERSION);
+    expect(c.restMsg?.title).toBe('Saved by a newer version');
+    expect(c.restMsg?.body).toContain('stays on this device');
+    expect(m.get('dnd-sheet-v3:x:unreadable')).toBe(newer());
+    expect(unreadableSheets().map((x) => x.key)).toEqual(['dnd-sheet-v3:x:unreadable']);
+  });
+  it('does not promise a copy it could not keep', () => {
+    const m = stubStorage();
+    m.set('dnd-sheet-v3:x', newer());
+    const setItem = localStorage.setItem;
+    localStorage.setItem = () => { throw new Error('full'); };
+    const body = load('x').restMsg?.body;
+    localStorage.setItem = setItem;
+    expect(body).toContain('no copy');
+  });
+  it('opens a current save without a copy or a notice', () => {
+    const m = stubStorage();
+    m.set('dnd-sheet-v3:x', JSON.stringify(blankCharacter()));
+    expect(load('x').restMsg).toBeNull();
+    expect(m.has('dnd-sheet-v3:x:unreadable')).toBe(false);
   });
 });
 

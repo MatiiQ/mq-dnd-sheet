@@ -102,6 +102,8 @@ export interface Concentration { id: string; name: string }
 export interface HpSnapshot { hp: number; temp: number; ds: number; df: number; conds: Record<string, boolean>; conc: Concentration | null; hdUsed?: number }
 
 export interface Character {
+  /** The save format's version (SAVE_VERSION in defaults.ts); migrate() upgrades an older save step by step. */
+  v: number;
   ch: Details;
   /** carryUp: counts as one size larger for carrying capacity (Powerful Build). */
   size: Size; carryUp: boolean;

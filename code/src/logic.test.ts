@@ -519,7 +519,7 @@ describe('AC spells', () => {
   });
 });
 
-describe('AC migration', () => {
+describe('AC fields on load', () => {
   const old = (p: Record<string, unknown>) => ({ ...blankCharacter(), ...p }) as Record<string, unknown>;
   it('drops damaged or stale AC state', () => {
     const c = migrate(old({
@@ -550,16 +550,10 @@ describe('AC migration', () => {
 });
 
 describe('saves keep working', () => {
-  it('migrate leaves both samples unchanged', () => {
-    expect(migrate(sampleCharacter())).toEqual(sampleCharacter());
-    expect(migrate(druidSample())).toEqual(druidSample());
-  });
-  it('fills every new field from the blank character, not the sample, when a save lacks it or holds the wrong type', () => {
+  it('fills a field from the blank character, not the sample, when a save lacks it or holds the wrong type', () => {
     for (const k of ['spellSort', 'size', 'carryUp', 'attuneIds', 'grants', 'effectsOn', 'profs', 'defenses', 'hands', 'mastery', 'sections', 'slotsOnShort'] as const) {
       const raw = { ...sampleCharacter() } as Record<string, unknown>;
       delete raw[k];
-      // A save without profs also has its Training features split (Training migration); leave none to split here.
-      if (k === 'profs') raw.feats = sampleCharacter().feats.filter((f) => f.g !== 'training');
       expect(migrate(raw)[k]).toEqual(blankCharacter()[k]);
       expect(migrate({ ...sampleCharacter(), [k]: 7 })[k]).toEqual(blankCharacter()[k]); // no new field is a number
     }

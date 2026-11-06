@@ -1,0 +1,1307 @@
+{
+  "v": 1,
+  "ch": {
+    "name": "Seren Vale",
+    "species": "Aasimar",
+    "cls": "Druid",
+    "sub": "Circle of the Stars",
+    "align": "Neutral",
+    "clsId": "class/druid",
+    "subId": ""
+  },
+  "speeds": {
+    "climb": 0,
+    "swim": 0,
+    "fly": 0,
+    "burrow": 0
+  },
+  "speedOpen": false,
+  "acOpen": false,
+  "acUnarm": "none",
+  "acOn": [],
+  "acMods": [],
+  "size": "medium",
+  "carryUp": false,
+  "level": 12,
+  "speedBase": 30,
+  "initMisc": 0,
+  "hdDie": 8,
+  "castAb": "wis",
+  "abil": {
+    "str": 8,
+    "dex": 13,
+    "con": 16,
+    "int": 13,
+    "wis": 20,
+    "cha": 10
+  },
+  "abilAdj": {},
+  "saveProf": {
+    "int": true,
+    "wis": true
+  },
+  "skillProf": {
+    "arcana": 1,
+    "history": 1,
+    "medicine": 1,
+    "perception": 1
+  },
+  "hp": 71,
+  "maxHp": 99,
+  "origHp": 99,
+  "origOn": false,
+  "temp": 12,
+  "amount": 8,
+  "insp": 1,
+  "inspOn": true,
+  "pills": [
+    "hp",
+    "ac",
+    "res:wild"
+  ],
+  "tab": "actions",
+  "prepMax": 16,
+  "spellFilter": "all",
+  "spellSort": "az",
+  "usePrep": true,
+  "hdUsed": 3,
+  "ds": 0,
+  "df": 0,
+  "exh": 1,
+  "conds": {
+    "Poisoned": true
+  },
+  "conc": {
+    "id": "ds9",
+    "name": "Moonbeam"
+  },
+  "hpUndo": null,
+  "concCheck": null,
+  "restMsg": null,
+  "slotMax": [
+    0,
+    4,
+    3,
+    3,
+    3,
+    2,
+    1,
+    0,
+    0,
+    0
+  ],
+  "slotUsed": [
+    0,
+    2,
+    1,
+    1,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0
+  ],
+  "slotsOnShort": false,
+  "defenses": [
+    {
+      "id": "d1",
+      "kind": "res",
+      "name": "Necrotic",
+      "from": "feature:f16",
+      "srcKind": "species"
+    },
+    {
+      "id": "d2",
+      "kind": "res",
+      "name": "Radiant",
+      "from": "feature:f16",
+      "srcKind": "species"
+    },
+    {
+      "id": "d3",
+      "kind": "adv",
+      "name": "Concentration saves",
+      "from": "feature:f15",
+      "srcKind": "feat"
+    }
+  ],
+  "senses": [
+    {
+      "id": "se1",
+      "name": "Darkvision",
+      "range": "60 ft",
+      "from": "feature:f17",
+      "srcKind": "species"
+    }
+  ],
+  "res": [
+    {
+      "id": "wild",
+      "name": "Wild Shape",
+      "note": "Bonus Action · beast form or Starry Form",
+      "count": 2,
+      "maxV": "2:2,6:3,17:4",
+      "recharge": "long",
+      "regain": "1",
+      "regainOn": "short",
+      "from": "feature:f4",
+      "srcKind": "class"
+    },
+    {
+      "id": "bolt",
+      "name": "Star Map · Guiding Bolt",
+      "note": "Cast Guiding Bolt without a slot",
+      "count": 4,
+      "maxV": "wis>=1",
+      "recharge": "long",
+      "casts": "ds11",
+      "from": "feature:f8",
+      "srcKind": "subclass"
+    },
+    {
+      "id": "omen",
+      "name": "Cosmic Omen · Weal",
+      "note": "Reaction · add 1d6 to a D20 Test within 30 ft (re-roll even/odd each Long Rest)",
+      "count": 5,
+      "maxV": "wis>=1",
+      "recharge": "long",
+      "from": "feature:f10",
+      "srcKind": "subclass"
+    },
+    {
+      "id": "resurge",
+      "name": "Wild Resurgence",
+      "note": "Spend 1 Wild Shape use for a level 1 slot",
+      "count": 1,
+      "max": 1,
+      "recharge": "long",
+      "from": "feature:f6",
+      "srcKind": "class"
+    },
+    {
+      "id": "hands",
+      "name": "Healing Hands",
+      "note": "Magic action · touch, heal 4d4",
+      "count": 1,
+      "max": 1,
+      "recharge": "long",
+      "from": "feature:f18",
+      "srcKind": "species"
+    },
+    {
+      "id": "reveal",
+      "name": "Celestial Revelation",
+      "note": "Bonus Action · 1 minute · wings, radiance or shroud",
+      "count": 0,
+      "max": 1,
+      "recharge": "long",
+      "from": "feature:f20",
+      "srcKind": "species"
+    },
+    {
+      "id": "fc12",
+      "name": "Shield",
+      "note": "Free cast",
+      "count": 0,
+      "max": 1,
+      "recharge": "long",
+      "casts": "ds12",
+      "from": "feature:f12",
+      "srcKind": "feat"
+    }
+  ],
+  "attacks": [
+    {
+      "id": "a1",
+      "name": "Starry Form · Archer",
+      "hit": "+9",
+      "dmg": "2d8 +5 Radiant",
+      "info": "Bonus Action in Starry Form · ranged spell attack, 60 ft",
+      "mastery": "",
+      "econ": "bonus",
+      "group": "other"
+    }
+  ],
+  "riders": [
+    {
+      "id": "r2",
+      "name": "Celestial Revelation · once per turn",
+      "dice": "+4 Radiant or Necrotic"
+    },
+    {
+      "id": "r3",
+      "name": "Critical hit",
+      "dice": "Roll damage dice twice"
+    }
+  ],
+  "coins": {
+    "cp": 37,
+    "sp": 52,
+    "ep": 4,
+    "gp": 368,
+    "pp": 6
+  },
+  "attuneIds": [
+    "",
+    "",
+    ""
+  ],
+  "notes": {
+    "appearance": "Tall, with silver-flecked dark skin and pale eyes that glint like starlight. Wears a deep blue robe stitched with constellations.",
+    "personality": "Patient and curious. Reads omens in everything and quotes old star charts at the worst moments.",
+    "backstory": "Raised in a mountain observatory library, Seren left to find the grove where the stars of her map are said to touch the earth.",
+    "session": "Fought the blight-wolves at the ruined observatory. Still poisoned from the hag’s bite. Moonbeam is up on the wolf den."
+  },
+  "inv": [
+    {
+      "id": "i1",
+      "name": "Leather Armor",
+      "qty": 1,
+      "eq": true,
+      "armor": "light",
+      "acBase": 11,
+      "wt": 10,
+      "cid": "item/leather-armor",
+      "cat": "armor",
+      "cost": "10 GP",
+      "sec": "s2"
+    },
+    {
+      "id": "i2",
+      "name": "Shield",
+      "qty": 1,
+      "eq": true,
+      "armor": "shield",
+      "acBase": 2,
+      "wt": 6,
+      "cid": "item/shield",
+      "cat": "shield",
+      "cost": "10 GP",
+      "sec": "s2"
+    },
+    {
+      "id": "i3",
+      "name": "Quarterstaff",
+      "qty": 1,
+      "eq": true,
+      "wt": 4,
+      "cid": "item/quarterstaff",
+      "cat": "weapon",
+      "cost": "2 SP",
+      "wcat": "simple",
+      "wrange": "melee",
+      "dmg": "1d6",
+      "dtype": "Bludgeoning",
+      "props": "versatile",
+      "vers": "1d8",
+      "mastery": "topple",
+      "sec": "s1"
+    },
+    {
+      "id": "i4",
+      "name": "Star Map (crystal engraved with starry patterns)",
+      "qty": 1,
+      "eq": true,
+      "sec": "s4"
+    },
+    {
+      "id": "i5",
+      "name": "Sickle",
+      "qty": 1,
+      "eq": false,
+      "wt": 2,
+      "cid": "item/sickle",
+      "cat": "weapon",
+      "cost": "1 GP",
+      "wcat": "simple",
+      "wrange": "melee",
+      "dmg": "1d4",
+      "dtype": "Slashing",
+      "props": "light",
+      "mastery": "nick",
+      "sec": "s1"
+    },
+    {
+      "id": "i6",
+      "name": "Herbalism Kit",
+      "qty": 1,
+      "eq": false,
+      "wt": 3,
+      "cid": "item/herbalism-kit",
+      "cat": "tool",
+      "cost": "5 GP",
+      "sec": "s4"
+    },
+    {
+      "id": "i7",
+      "name": "Calligrapher’s Supplies",
+      "qty": 1,
+      "eq": false,
+      "wt": 5,
+      "cid": "item/calligraphers-supplies",
+      "cat": "tool",
+      "cost": "10 GP",
+      "sec": "s4"
+    },
+    {
+      "id": "i8",
+      "name": "Book (history)",
+      "qty": 1,
+      "eq": false,
+      "wt": 5,
+      "in": "i14"
+    },
+    {
+      "id": "i9",
+      "name": "Parchment",
+      "qty": 8,
+      "eq": false,
+      "cid": "item/parchment",
+      "cat": "gear",
+      "cost": "1 SP",
+      "in": "i14"
+    },
+    {
+      "id": "i10",
+      "name": "Robe",
+      "qty": 1,
+      "eq": false,
+      "wt": 4,
+      "cid": "item/robe",
+      "cat": "gear",
+      "cost": "1 GP",
+      "sec": "s4"
+    },
+    {
+      "id": "i11",
+      "name": "Explorer’s Pack",
+      "qty": 1,
+      "eq": false,
+      "wt": 55,
+      "cid": "item/explorers-pack",
+      "cat": "pack",
+      "cost": "10 GP",
+      "sec": "s4"
+    },
+    {
+      "id": "i12",
+      "name": "Potion of Healing",
+      "qty": 3,
+      "eq": false,
+      "wt": 0.5,
+      "desc": "Bonus Action · roll 2d4 +2, then Heal",
+      "cid": "item/potion-of-healing",
+      "cat": "gear",
+      "cost": "50 GP",
+      "sec": "s4"
+    },
+    {
+      "id": "i13",
+      "name": "Diamond (300 GP)",
+      "qty": 1,
+      "eq": false,
+      "desc": "Consumed by Revivify",
+      "sec": "s4"
+    },
+    {
+      "id": "i14",
+      "name": "Bag of Holding",
+      "qty": 1,
+      "eq": false,
+      "wt": 5,
+      "desc": "Holds up to 500 lb; its contents and coins don’t count toward your load",
+      "cid": "item/bag-of-holding",
+      "cat": "magic",
+      "rarity": "Uncommon",
+      "xdim": true,
+      "cap": 500,
+      "capVol": "64 cubic feet",
+      "sec": "s3",
+      "gp": 50
+    }
+  ],
+  "spells": [
+    {
+      "id": "ds1",
+      "name": "Druidcraft",
+      "lvl": 0,
+      "time": "Action",
+      "range": "30 ft",
+      "srcName": "Druid",
+      "dur": "Instantaneous",
+      "comp": "V, S",
+      "prep": true,
+      "school": "Transmutation",
+      "classes": "druid",
+      "fx": "other",
+      "cid": "spell/druidcraft"
+    },
+    {
+      "id": "ds2",
+      "name": "Produce Flame",
+      "lvl": 0,
+      "time": "Bonus Action",
+      "range": "Self · throw 60 ft",
+      "srcName": "Druid",
+      "dice": "d20 +9 · 3d8 Fire",
+      "dur": "10 minutes",
+      "comp": "V, S",
+      "prep": true,
+      "school": "Conjuration",
+      "classes": "druid",
+      "scale": "cantrip",
+      "atk": "ranged",
+      "fx": "damage",
+      "dmg": "1d8",
+      "dtype": "Fire",
+      "cid": "spell/produce-flame"
+    },
+    {
+      "id": "ds3",
+      "name": "Shillelagh",
+      "lvl": 0,
+      "time": "Bonus Action",
+      "range": "Self",
+      "srcName": "Druid",
+      "dice": "d20 +9 · 1d12 +5",
+      "dur": "1 minute",
+      "comp": "V, S, M (mistletoe)",
+      "prep": true,
+      "school": "Transmutation",
+      "classes": "druid",
+      "scale": "cantrip",
+      "fx": "other",
+      "cid": "spell/shillelagh"
+    },
+    {
+      "id": "ds4",
+      "name": "Starry Wisp",
+      "lvl": 0,
+      "time": "Action",
+      "range": "60 ft",
+      "srcName": "Druid",
+      "dice": "d20 +9 · 3d8 Radiant",
+      "dur": "Instantaneous",
+      "comp": "V, S",
+      "prep": true,
+      "school": "Evocation",
+      "classes": "bard,druid",
+      "scale": "cantrip",
+      "atk": "ranged",
+      "fx": "damage",
+      "dmg": "1d8",
+      "dtype": "Radiant",
+      "cid": "spell/starry-wisp"
+    },
+    {
+      "id": "ds5",
+      "name": "Thorn Whip",
+      "lvl": 0,
+      "time": "Action",
+      "range": "30 ft",
+      "dice": "d20 +9 · 3d6 Piercing",
+      "dur": "Instantaneous",
+      "comp": "V, S, M (the stem of a thorny plant)",
+      "prep": true,
+      "from": "feature:f3",
+      "srcKind": "class",
+      "atk": "melee",
+      "fx": "damage",
+      "dmg": "1d6",
+      "dtype": "Piercing",
+      "scale": "cantrip"
+    },
+    {
+      "id": "ds6",
+      "name": "Guidance",
+      "lvl": 0,
+      "time": "Action",
+      "range": "Touch",
+      "c": true,
+      "dice": "+1d4 to one skill",
+      "dur": "Up to 1 minute",
+      "comp": "V, S",
+      "prep": true,
+      "from": "feature:f8",
+      "srcKind": "subclass",
+      "cid": "spell/guidance",
+      "school": "Divination",
+      "classes": "cleric,druid",
+      "fx": "other"
+    },
+    {
+      "id": "ds7",
+      "name": "Light",
+      "lvl": 0,
+      "time": "Action",
+      "range": "Touch",
+      "dur": "1 hour",
+      "comp": "V, M (a firefly or phosphorescent moss)",
+      "prep": true,
+      "castAb": "cha",
+      "from": "feature:f19",
+      "srcKind": "species",
+      "cid": "spell/light",
+      "school": "Evocation",
+      "classes": "bard,cleric,sorcerer,wizard",
+      "fx": "other"
+    },
+    {
+      "id": "ds8",
+      "name": "Fire Bolt",
+      "lvl": 0,
+      "time": "Action",
+      "range": "120 ft",
+      "dice": "d20 +9 · 3d10 Fire",
+      "dur": "Instantaneous",
+      "comp": "V, S",
+      "prep": true,
+      "from": "feature:f12",
+      "srcKind": "feat",
+      "cid": "spell/fire-bolt",
+      "school": "Evocation",
+      "classes": "sorcerer,wizard",
+      "scale": "cantrip",
+      "atk": "ranged",
+      "fx": "damage",
+      "dmg": "1d10",
+      "dtype": "Fire"
+    },
+    {
+      "id": "ds10",
+      "name": "Mage Hand",
+      "lvl": 0,
+      "time": "Action",
+      "range": "30 ft",
+      "dur": "1 minute",
+      "comp": "V, S",
+      "prep": true,
+      "from": "feature:f12",
+      "srcKind": "feat",
+      "cid": "spell/mage-hand",
+      "school": "Conjuration",
+      "classes": "bard,sorcerer,warlock,wizard",
+      "fx": "other"
+    },
+    {
+      "id": "ds11",
+      "name": "Guiding Bolt",
+      "lvl": 1,
+      "time": "Action",
+      "range": "120 ft",
+      "dice": "d20 +9 · 4d6 Radiant · +1d6 per slot level above 1",
+      "dur": "1 round",
+      "comp": "V, S",
+      "always": true,
+      "from": "feature:f8",
+      "srcKind": "subclass",
+      "cid": "spell/guiding-bolt",
+      "school": "Evocation",
+      "classes": "cleric",
+      "scale": "1d6/slot",
+      "atk": "ranged",
+      "fx": "damage",
+      "dmg": "4d6",
+      "dtype": "Radiant"
+    },
+    {
+      "id": "ds12",
+      "name": "Shield",
+      "lvl": 1,
+      "time": "Reaction",
+      "range": "Self",
+      "dice": "+5 AC",
+      "dur": "1 round",
+      "comp": "V, S",
+      "always": true,
+      "acFx": "bonus",
+      "acVal": 5,
+      "from": "feature:f12",
+      "srcKind": "feat",
+      "cid": "spell/shield",
+      "school": "Abjuration",
+      "classes": "sorcerer,wizard",
+      "fx": "other"
+    },
+    {
+      "id": "ds13",
+      "name": "Speak with Animals",
+      "lvl": 1,
+      "time": "Action or Ritual",
+      "range": "Self",
+      "dur": "10 minutes",
+      "comp": "V, S",
+      "always": true,
+      "from": "feature:f2",
+      "srcKind": "class",
+      "cid": "spell/speak-with-animals",
+      "school": "Divination",
+      "classes": "bard,druid,ranger,warlock",
+      "fx": "other"
+    },
+    {
+      "id": "ds14",
+      "name": "Cure Wounds",
+      "lvl": 1,
+      "time": "Action",
+      "range": "Touch",
+      "srcName": "Druid",
+      "dice": "Heal 2d8 +5 · +2d8 per slot level above 1",
+      "dur": "Instantaneous",
+      "comp": "V, S",
+      "prep": true,
+      "school": "Abjuration",
+      "classes": "bard,cleric,druid,paladin,ranger",
+      "scale": "2d8/slot",
+      "fx": "healing",
+      "dmg": "2d8",
+      "cid": "spell/cure-wounds",
+      "healMod": true
+    },
+    {
+      "id": "ds15",
+      "name": "Healing Word",
+      "lvl": 1,
+      "time": "Bonus Action",
+      "range": "60 ft",
+      "srcName": "Druid",
+      "dice": "Heal 2d4 +5 · +2d4 per slot level above 1",
+      "dur": "Instantaneous",
+      "comp": "V",
+      "prep": true,
+      "school": "Abjuration",
+      "classes": "bard,cleric,druid",
+      "scale": "2d4/slot",
+      "fx": "healing",
+      "dmg": "2d4",
+      "cid": "spell/healing-word",
+      "healMod": true
+    },
+    {
+      "id": "ds16",
+      "name": "Faerie Fire",
+      "lvl": 1,
+      "time": "Action",
+      "range": "60 ft",
+      "srcName": "Druid",
+      "c": true,
+      "dice": "DEX save DC 17 · attacks have Advantage",
+      "dur": "Up to 1 minute",
+      "comp": "V",
+      "prep": true,
+      "school": "Evocation",
+      "classes": "bard,druid",
+      "save": "dex",
+      "fx": "other",
+      "cid": "spell/faerie-fire"
+    },
+    {
+      "id": "ds17",
+      "name": "Entangle",
+      "lvl": 1,
+      "time": "Action",
+      "range": "90 ft",
+      "srcName": "Druid",
+      "c": true,
+      "dice": "STR save DC 17 · Restrained",
+      "dur": "Up to 1 minute",
+      "comp": "V, S",
+      "prep": true,
+      "school": "Conjuration",
+      "classes": "druid,ranger",
+      "save": "str",
+      "fx": "other",
+      "cid": "spell/entangle"
+    },
+    {
+      "id": "ds18",
+      "name": "Detect Magic",
+      "lvl": 1,
+      "time": "Action or Ritual",
+      "range": "Self",
+      "srcName": "Druid",
+      "c": true,
+      "dur": "Up to 10 minutes",
+      "comp": "V, S",
+      "prep": true,
+      "school": "Divination",
+      "classes": "bard,cleric,druid,paladin,ranger,sorcerer,warlock,wizard",
+      "fx": "other",
+      "cid": "spell/detect-magic"
+    },
+    {
+      "id": "ds9",
+      "name": "Moonbeam",
+      "lvl": 2,
+      "time": "Action",
+      "range": "120 ft",
+      "srcName": "Druid",
+      "c": true,
+      "dice": "CON save DC 17 · 2d10 Radiant · +1d10 per slot level above 2",
+      "dur": "Up to 1 minute",
+      "comp": "V, S, M (a moonseed leaf)",
+      "prep": true,
+      "school": "Evocation",
+      "classes": "druid",
+      "scale": "1d10/slot",
+      "save": "con",
+      "fx": "damage",
+      "dmg": "2d10",
+      "dtype": "Radiant",
+      "cid": "spell/moonbeam"
+    },
+    {
+      "id": "ds19",
+      "name": "Pass without Trace",
+      "lvl": 2,
+      "time": "Action",
+      "range": "Self",
+      "srcName": "Druid",
+      "c": true,
+      "dice": "+10 Stealth",
+      "dur": "Up to 1 hour",
+      "comp": "V, S, M (ashes from burned mistletoe)",
+      "prep": true,
+      "school": "Abjuration",
+      "classes": "druid,ranger",
+      "fx": "other",
+      "cid": "spell/pass-without-trace"
+    },
+    {
+      "id": "ds20",
+      "name": "Lesser Restoration",
+      "lvl": 2,
+      "time": "Bonus Action",
+      "range": "Touch",
+      "srcName": "Druid",
+      "dice": "End Blinded, Deafened, Paralyzed or Poisoned",
+      "dur": "Instantaneous",
+      "comp": "V, S",
+      "prep": true,
+      "school": "Abjuration",
+      "classes": "bard,cleric,druid,paladin,ranger",
+      "fx": "other",
+      "cid": "spell/lesser-restoration"
+    },
+    {
+      "id": "ds21",
+      "name": "Call Lightning",
+      "lvl": 3,
+      "time": "Action",
+      "range": "120 ft",
+      "srcName": "Druid",
+      "c": true,
+      "dice": "DEX save DC 17 · 3d10 Lightning · +1d10 per slot level above 3",
+      "dur": "Up to 10 minutes",
+      "comp": "V, S",
+      "prep": true,
+      "school": "Conjuration",
+      "classes": "druid",
+      "scale": "1d10/slot",
+      "save": "dex",
+      "fx": "damage",
+      "dmg": "3d10",
+      "dtype": "Lightning",
+      "cid": "spell/call-lightning"
+    },
+    {
+      "id": "ds22",
+      "name": "Conjure Animals",
+      "lvl": 3,
+      "time": "Action",
+      "range": "60 ft",
+      "srcName": "Druid",
+      "c": true,
+      "dice": "DEX save DC 17 · 3d10 Slashing · +1d10 per slot level above 3",
+      "dur": "Up to 10 minutes",
+      "comp": "V, S",
+      "prep": true,
+      "school": "Conjuration",
+      "classes": "druid,ranger",
+      "scale": "1d10/slot",
+      "save": "dex",
+      "fx": "damage",
+      "dmg": "3d10",
+      "dtype": "Slashing",
+      "cid": "spell/conjure-animals"
+    },
+    {
+      "id": "ds23",
+      "name": "Dispel Magic",
+      "lvl": 3,
+      "time": "Action",
+      "range": "120 ft",
+      "srcName": "Druid",
+      "dice": "WIS check DC 10 + spell level for level 4+",
+      "dur": "Instantaneous",
+      "comp": "V, S",
+      "prep": true,
+      "school": "Abjuration",
+      "classes": "bard,cleric,druid,paladin,ranger,sorcerer,warlock,wizard",
+      "fx": "other",
+      "cid": "spell/dispel-magic"
+    },
+    {
+      "id": "ds24",
+      "name": "Revivify",
+      "lvl": 3,
+      "time": "Action",
+      "range": "Touch",
+      "srcName": "Druid",
+      "dice": "Revive with 1 HP",
+      "dur": "Instantaneous",
+      "comp": "V, S, M (a diamond worth 300+ GP, consumed)",
+      "prep": true,
+      "school": "Necromancy",
+      "classes": "cleric,druid,paladin,ranger",
+      "fx": "other",
+      "cid": "spell/revivify"
+    },
+    {
+      "id": "ds25",
+      "name": "Polymorph",
+      "lvl": 4,
+      "time": "Action",
+      "range": "60 ft",
+      "srcName": "Druid",
+      "c": true,
+      "dice": "WIS save DC 17",
+      "dur": "Up to 1 hour",
+      "comp": "V, S, M (a caterpillar cocoon)",
+      "prep": true,
+      "school": "Transmutation",
+      "classes": "bard,druid,sorcerer,wizard",
+      "save": "wis",
+      "fx": "other",
+      "cid": "spell/polymorph"
+    },
+    {
+      "id": "ds26",
+      "name": "Freedom of Movement",
+      "lvl": 4,
+      "time": "Action",
+      "range": "Touch",
+      "srcName": "Druid",
+      "dice": "+1 creature per slot level above 4",
+      "dur": "1 hour",
+      "comp": "V, S, M (a leather strap)",
+      "prep": true,
+      "school": "Abjuration",
+      "classes": "bard,cleric,druid,ranger",
+      "fx": "other",
+      "cid": "spell/freedom-of-movement"
+    },
+    {
+      "id": "ds27",
+      "name": "Mass Cure Wounds",
+      "lvl": 5,
+      "time": "Action",
+      "range": "60 ft",
+      "srcName": "Druid",
+      "dice": "Heal 5d8 +5, up to six creatures · +1d8 per slot level above 5",
+      "dur": "Instantaneous",
+      "comp": "V, S",
+      "prep": true,
+      "school": "Abjuration",
+      "classes": "bard,cleric,druid",
+      "scale": "1d8/slot",
+      "fx": "healing",
+      "dmg": "5d8",
+      "cid": "spell/mass-cure-wounds",
+      "healMod": true
+    },
+    {
+      "id": "ds28",
+      "name": "Commune with Nature",
+      "lvl": 5,
+      "time": "1 minute or Ritual",
+      "range": "Self",
+      "srcName": "Druid",
+      "dur": "Instantaneous",
+      "comp": "V, S",
+      "prep": false,
+      "school": "Divination",
+      "classes": "druid,ranger",
+      "fx": "other",
+      "cid": "spell/commune-with-nature"
+    },
+    {
+      "id": "ds29",
+      "name": "Sunbeam",
+      "lvl": 6,
+      "time": "Action",
+      "range": "Self · 60 ft Line",
+      "srcName": "Druid",
+      "c": true,
+      "dice": "CON save DC 17 · 6d8 Radiant · Blinded",
+      "dur": "Up to 1 minute",
+      "comp": "V, S, M (a magnifying glass)",
+      "prep": true,
+      "school": "Evocation",
+      "classes": "cleric,druid,sorcerer,wizard",
+      "save": "con",
+      "fx": "damage",
+      "dmg": "6d8",
+      "dtype": "Radiant",
+      "cid": "spell/sunbeam"
+    }
+  ],
+  "feats": [
+    {
+      "id": "f1",
+      "g": "class",
+      "name": "Spellcasting",
+      "desc": "Wisdom-based; 16 prepared spells, changed on a Long Rest.",
+      "cid": "feature/druid/spellcasting"
+    },
+    {
+      "id": "f2",
+      "g": "class",
+      "name": "Druidic",
+      "desc": "Know Druidic; Speak with Animals always prepared.",
+      "cid": "feature/druid/druidic"
+    },
+    {
+      "id": "f3",
+      "g": "class",
+      "name": "Primal Order · Magician",
+      "desc": "One extra Druid cantrip; +5 to INT (Arcana or Nature) checks.",
+      "cid": "feature/druid/primal-order"
+    },
+    {
+      "id": "f4",
+      "g": "class",
+      "name": "Wild Shape",
+      "desc": "Bonus Action; lasts 6 hours; Temp HP 12 on assuming a form. 3 uses: regain 1 on a Short Rest, all on a Long Rest.",
+      "cid": "feature/druid/wild-shape"
+    },
+    {
+      "id": "f5",
+      "g": "class",
+      "name": "Wild Companion",
+      "desc": "Spend a slot or a Wild Shape use to cast Find Familiar (Fey) without Material components.",
+      "cid": "feature/druid/wild-companion"
+    },
+    {
+      "id": "f6",
+      "g": "class",
+      "name": "Wild Resurgence",
+      "desc": "With no Wild Shape uses left, spend a slot for one (once per turn). Once per Long Rest, trade a use for a level 1 slot.",
+      "cid": "feature/druid/wild-resurgence"
+    },
+    {
+      "id": "f7",
+      "g": "class",
+      "name": "Elemental Fury · Primal Strike",
+      "desc": "Once per turn, a weapon or beast attack hit deals +1d8 Cold, Fire, Lightning or Thunder.",
+      "cid": "feature/druid/elemental-fury"
+    },
+    {
+      "id": "f8",
+      "g": "sub",
+      "name": "Star Map",
+      "desc": "Spellcasting focus. Guidance and Guiding Bolt prepared; 5 free Guiding Bolts per Long Rest."
+    },
+    {
+      "id": "f9",
+      "g": "sub",
+      "name": "Starry Form",
+      "desc": "Spend a Wild Shape use; 10 minutes; Bright Light 10 ft. Archer: Bonus Action attack. Chalice: slot healing also heals 2d8 +5. Dragon: INT/WIS checks and Concentration saves treat 9 or lower as 10."
+    },
+    {
+      "id": "f10",
+      "g": "sub",
+      "name": "Cosmic Omen",
+      "desc": "Roll on each Long Rest. Even = Weal (+1d6), odd = Woe (−1d6) to a D20 Test within 30 ft. 5 uses."
+    },
+    {
+      "id": "f11",
+      "g": "sub",
+      "name": "Twinkling Constellations",
+      "desc": "Archer and Chalice use 2d8. Dragon grants Fly 20 ft (hover). Change constellation at the start of each turn."
+    },
+    {
+      "id": "f12",
+      "g": "feat",
+      "name": "Magic Initiate (Wizard)",
+      "desc": "Origin feat from the Sage background. Fire Bolt, Mage Hand, Shield (one free cast per Long Rest). WIS is the casting ability.",
+      "from": "feature:f26",
+      "srcKind": "background",
+      "cid": "feat/magic-initiate"
+    },
+    {
+      "id": "f13",
+      "g": "feat",
+      "name": "Ability Score Improvement",
+      "desc": "Level 4: WIS +1, CON +1.",
+      "cid": "feat/ability-score-improvement"
+    },
+    {
+      "id": "f14",
+      "g": "feat",
+      "name": "Ability Score Improvement",
+      "desc": "Level 8: WIS +2.",
+      "cid": "feat/ability-score-improvement"
+    },
+    {
+      "id": "f15",
+      "g": "feat",
+      "name": "War Caster",
+      "desc": "Level 12, INT +1. Advantage on Concentration saves; cast a spell as an Opportunity Attack; Somatic components with full hands."
+    },
+    {
+      "id": "f16",
+      "g": "species",
+      "name": "Celestial Resistance",
+      "desc": "Resistance to Necrotic and Radiant damage."
+    },
+    {
+      "id": "f17",
+      "g": "species",
+      "name": "Darkvision",
+      "desc": "60 ft."
+    },
+    {
+      "id": "f18",
+      "g": "species",
+      "name": "Healing Hands",
+      "desc": "Magic action: touch a creature, it regains 4d4 HP. Once per Long Rest."
+    },
+    {
+      "id": "f19",
+      "g": "species",
+      "name": "Light Bearer",
+      "desc": "Light cantrip (CHA)."
+    },
+    {
+      "id": "f20",
+      "g": "species",
+      "name": "Celestial Revelation",
+      "desc": "Bonus Action, 1 minute: Heavenly Wings (Fly 30 ft), Inner Radiance (4 Radiant around you) or Necrotic Shroud (CHA save DC 12 or Frightened). +4 damage once per turn. Once per Long Rest."
+    },
+    {
+      "id": "f25",
+      "g": "other",
+      "name": "Wild Shape forms",
+      "desc": "8 known, up to CR 1, flying allowed: Brown Bear, Dire Wolf, Giant Spider, Giant Seahorse, Riding Horse, Hawk, Owl, Rat (PHB appendix B)."
+    },
+    {
+      "id": "f26",
+      "g": "background",
+      "name": "Sage",
+      "desc": "Arcana and History, Calligrapher’s Supplies and the Magic Initiate (Wizard) feat.",
+      "cid": "background/sage"
+    }
+  ],
+  "grants": [
+    {
+      "id": "g1",
+      "kind": "prof",
+      "name": "Arcana",
+      "cat": "skill",
+      "target": "arcana",
+      "from": "feature:f26",
+      "srcKind": "background"
+    },
+    {
+      "id": "g2",
+      "kind": "prof",
+      "name": "History",
+      "cat": "skill",
+      "target": "history",
+      "from": "feature:f26",
+      "srcKind": "background"
+    },
+    {
+      "id": "g3",
+      "kind": "prof",
+      "name": "Calligrapher’s Supplies",
+      "cat": "tool",
+      "target": "Calligrapher’s Supplies",
+      "from": "feature:f26",
+      "srcKind": "background"
+    },
+    {
+      "id": "g4",
+      "kind": "prof",
+      "name": "Druidic",
+      "cat": "language",
+      "target": "Druidic",
+      "from": "feature:f2",
+      "srcKind": "class"
+    },
+    {
+      "id": "g5",
+      "kind": "checkBonus",
+      "name": "Magician: Arcana",
+      "target": "arcana",
+      "val": "wis>=1",
+      "from": "feature:f3",
+      "srcKind": "class"
+    },
+    {
+      "id": "g6",
+      "kind": "checkBonus",
+      "name": "Magician: Nature",
+      "target": "nature",
+      "val": "wis>=1",
+      "from": "feature:f3",
+      "srcKind": "class"
+    },
+    {
+      "id": "g7",
+      "kind": "action",
+      "name": "Wild Shape",
+      "econ": "bonus",
+      "res": "wild",
+      "from": "feature:f4",
+      "srcKind": "class"
+    },
+    {
+      "id": "g8",
+      "kind": "xdmg",
+      "name": "Primal Strike",
+      "dice": "1d8",
+      "on": "weapon or Beast form hit",
+      "perTurn": true,
+      "from": "feature:f7",
+      "srcKind": "class"
+    },
+    {
+      "id": "g9",
+      "kind": "abil",
+      "name": "WIS +1",
+      "ab": "wis",
+      "val": "1",
+      "cap": 20,
+      "counted": true,
+      "from": "feature:f13",
+      "srcKind": "feat"
+    },
+    {
+      "id": "g10",
+      "kind": "abil",
+      "name": "CON +1",
+      "ab": "con",
+      "val": "1",
+      "cap": 20,
+      "counted": true,
+      "from": "feature:f13",
+      "srcKind": "feat"
+    },
+    {
+      "id": "g11",
+      "kind": "abil",
+      "name": "WIS +2",
+      "ab": "wis",
+      "val": "2",
+      "cap": 20,
+      "counted": true,
+      "from": "feature:f14",
+      "srcKind": "feat"
+    },
+    {
+      "id": "g12",
+      "kind": "abil",
+      "name": "INT +1",
+      "ab": "int",
+      "val": "1",
+      "cap": 20,
+      "counted": true,
+      "from": "feature:f15",
+      "srcKind": "feat"
+    },
+    {
+      "id": "g13",
+      "kind": "action",
+      "name": "Healing Hands",
+      "econ": "action",
+      "res": "hands",
+      "dice": "4d4",
+      "from": "feature:f18",
+      "srcKind": "species"
+    },
+    {
+      "id": "g14",
+      "kind": "action",
+      "name": "Celestial Revelation",
+      "econ": "bonus",
+      "res": "reveal",
+      "from": "feature:f20",
+      "srcKind": "species"
+    },
+    {
+      "id": "g15",
+      "kind": "atkAbil",
+      "name": "Shillelagh",
+      "ab": "cast",
+      "weapons": "club,quarterstaff",
+      "amode": "melee",
+      "die": "1:1d8,5:1d10,11:1d12,17:2d6",
+      "when": "active",
+      "from": "spell:ds3",
+      "srcKind": "spell"
+    }
+  ],
+  "effectsOn": [],
+  "hands": [
+    "i3"
+  ],
+  "mastery": [],
+  "sections": [
+    {
+      "id": "s1",
+      "name": "Weapons"
+    },
+    {
+      "id": "s2",
+      "name": "Armour"
+    },
+    {
+      "id": "s3",
+      "name": "Magic items"
+    },
+    {
+      "id": "s4",
+      "name": "Gear"
+    }
+  ],
+  "profs": [
+    {
+      "id": "p1",
+      "cat": "armor",
+      "name": "Light armor"
+    },
+    {
+      "id": "p2",
+      "cat": "armor",
+      "name": "Shields"
+    },
+    {
+      "id": "p3",
+      "cat": "weapon",
+      "name": "Simple weapons"
+    },
+    {
+      "id": "p4",
+      "cat": "tool",
+      "name": "Herbalism Kit"
+    },
+    {
+      "id": "p5",
+      "cat": "language",
+      "name": "Common"
+    },
+    {
+      "id": "p6",
+      "cat": "language",
+      "name": "Elvish"
+    },
+    {
+      "id": "p7",
+      "cat": "language",
+      "name": "Dwarvish"
+    }
+  ]
+}

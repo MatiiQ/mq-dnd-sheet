@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { isObj, slug } from './catalog/schema';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import { newId, normalize } from './logic';
-import { migrate } from './migrate';
+import { isNewerSave, migrate } from './migrate';
 import type { Character } from './types';
 
 const INDEX_KEY = 'dnd-index-v3';
@@ -50,21 +50,35 @@ export function unreadableSheets(): { key: string; text: string }[] {
   } catch { return []; }
 }
 
+// Copies a sheet's raw text to `<key>:unreadable`. Only into an empty key: the first copy is never overwritten, which
+// also makes this safe to repeat inside setS updaters (StrictMode runs them twice). kept: false when storage refused.
+// Deleting the character leaves the copy behind on purpose, as it may be the only copy of that data.
+// shortcut: a key already holding an older copy keeps it and this text is not kept; give each copy its own key if that happens.
+function keepRaw(key: string): { raw: string | null; kept: boolean } {
+  let raw: string | null = null;
+  try {
+    raw = localStorage.getItem(key);
+    if (raw && localStorage.getItem(key + UNREADABLE) === null) localStorage.setItem(key + UNREADABLE, raw);
+    return { raw, kept: true };
+  } catch { return { raw, kept: false }; }
+}
+
 // A sheet that isn't a character (it doesn't parse, or parses to `5`) opens blank, and the save effect then writes the
-// blank over it. So the raw text is copied to `<key>:unreadable` first. Only into an empty key: the first copy is never
-// overwritten, which also makes this safe to repeat inside setS updaters (StrictMode runs them twice).
-// Deleting the character leaves the copy behind on purpose, as it is the only copy of that data.
+// blank over it; a save from a newer app opens with what this version knows, and the save effect writes that back. So
+// either one's raw text is kept first (keepRaw).
 export function load(id: string): Character {
   const ex = example(id);
   if (ex) return ex.make();
   const key = sheetKey(id), data = readJSON(key);
+  if (isNewerSave(data)) {
+    const { kept } = keepRaw(key);
+    return {
+      ...migrate(data),
+      restMsg: { title: 'Saved by a newer version', body: 'This character was saved by a newer version of the app, so anything this version doesn’t know was left out. ' + (kept ? 'The full data stays on this device and goes into every backup file. Open the app online to update it.' : 'Storage is full, so no copy of the full data could be kept.') }
+    };
+  }
   if (isObj(data)) return migrate(data);
-  let raw: string | null = null, kept = false;
-  try {
-    raw = localStorage.getItem(key);
-    if (raw && localStorage.getItem(key + UNREADABLE) === null) localStorage.setItem(key + UNREADABLE, raw);
-    kept = true;
-  } catch { /* ignore */ }
+  const { raw, kept } = keepRaw(key);
   const blank = blankCharacter();
   const list = (readJSON(INDEX_KEY) as { list?: unknown } | null)?.list;
   const name = Array.isArray(list) ? list.find((x) => x?.id === id)?.name : undefined;
