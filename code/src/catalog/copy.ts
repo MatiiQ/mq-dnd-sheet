@@ -4,7 +4,7 @@ import { linkOf, srcKindOfLink } from '../links';
 import { ABILITIES, addGrants, charLevel, levelIn, capital, detectArmor, effScore, hasProf, maxFields, maxKindOf, maxOf, newId, normName, num, parseWeight, regainEvent, SKILLS, skillLevel, type GrantInput, type MaxKind } from '../logic';
 import type { AcEffect, Ability, ArmorKind, Character, ClassRow, Feature, FeatureGroup, Item, Linked, Recharge, Size, Spell, SrcKind } from '../types';
 import { entriesOf, type Catalog } from './merge';
-import { slug, type BackgroundEntry, type ChoiceSpec, type ClassEntry, type Entry, type FeatEntry, type FeatureEntry, type GrantSpec, type ItemEntry, type ProfEntry, type RuleEntry, type SpellEntry, type SpellPart, type TraitEntry } from './schema';
+import { slug, type BackgroundEntry, type ChoiceSpec, type ClassEntry, type Entry, type Spec, type FeatEntry, type FeatureEntry, type GrantSpec, type ItemEntry, type ProfEntry, type RuleEntry, type SpellEntry, type SpellPart, type TraitEntry } from './schema';
 import { withBase } from './base';
 import { diceRange } from './value';
 
@@ -816,6 +816,19 @@ function addEntry(c: Character, cat: Catalog, entry: Entry, ans: AddChoices): Ch
   out.feats = [...out.feats, feature];
   out = addWithSpells(out, cat, linkOf('feature', id), inputsOf(cat, e, ans, r.specs));
   for (const n of nestedEntries(cat, e, ans.picks)) out = addEntry(out, cat, n.entry, { ...answersFor(ans, n), from: linkOf('feature', id) });
+  return out;
+}
+
+// More picks for one choice of an entry already on the sheet (Metamagic +2, Expertise at 6): only that choice is
+// resolved, and its grants and entries are added under the feature, never a second copy of the entry.
+export function addChoicePicks(c: Character, cat: Catalog, featureId: string, e: Entry, choiceId: string, ans: AddChoices): Character {
+  if (!('grants' in e) || !e.grants) return c;
+  const uses = (g: Spec) => (g.kind === 'choice' ? g.id === choiceId : JSON.stringify(g).includes('$' + choiceId));
+  const only = { ...e, grants: e.grants.filter(uses) } as Entry;
+  const r = resolveChoices(cat, atLevel(c, only), ans.picks, c);
+  const from = linkOf('feature', featureId);
+  let out = addWithSpells(c, cat, from, inputsOf(cat, only, ans, r.specs));
+  for (const n of r.entries) out = addEntry(out, cat, n.entry, { ...answersFor(ans, n), from });
   return out;
 }
 

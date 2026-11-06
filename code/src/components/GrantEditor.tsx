@@ -61,7 +61,8 @@ export const GRANT_FIELDS: Record<GrantKind, FieldDef[]> = {
   aura: [v('range', 'Range (ft)'), t('note', 'Affects'), b('incap', 'Ends while Incapacitated')],
   checkAdv: [t('target', 'Skill or ability'), sel('adv', 'Kind', [['adv', 'Advantage'], ['dis', 'Disadvantage']]), b('always', 'Always applies'), t('note', 'When (e.g. relies on sight)')]
 };
-export const LINKABLE: Partial<Record<GrantKind, 'resource' | 'spell' | 'action'>> = { resource: 'resource', spell: 'spell', action: 'action' };
+import { LINKABLE } from '../catalog/flow';
+export { LINKABLE };
 const WHEN: [string, string][] = [['', 'Always'], ['armor', 'While wearing armor'], ['noHeavy', 'Not in Heavy armor'], ['noArmor', 'Without armor'],
   ['noShield', 'Without a Shield'], ['noArmorNoShield', 'Without armor or a Shield'], ['active', 'While switched on'], ['empty', 'With empty hands']];
 const DEFAULTS: Record<string, string | boolean> = { shieldOk: true, recharge: 'long', def: 'res', ab: 'str', cap: '20', cat: 'skill', mode: 'walk', acMode: 'bonus', size: 'medium', econ: 'action', spellLvl: '0', adv: 'adv' };

@@ -48,3 +48,23 @@ describe('ChoiceFlow hands on its answers', () => {
   it('for a feat with a skill choice', () => expect(runFlow(blankCharacter(), 'feat/skilled', SKILLED)).toEqual(SKILLED_OUT));
   it('for a background with a nested feat and starting equipment', () => expect(runFlow(blankCharacter(), 'background/acolyte', ACOLYTE)).toEqual(ACOLYTE_OUT));
 });
+
+describe('ChoiceFlow for the level-up wizard', () => {
+  it('crosses out held options and asks only the count owed', () => {
+    let got: AddChoices | null = null;
+    root = createRoot(document.body.appendChild(document.createElement('div')));
+    act(() => root.render(
+      <Sheet.Provider value={{ c: blankCharacter(), update: () => {}, edit: false, form: null, setForm: () => {}, focus: null, reveal: () => {}, markFocusUsed: () => {} }}>
+        <ChoiceFlow entry={cat.byId.get('feat/skilled')!} cat={cat} held={['athletics']} pick={{ c1: 1 }} onDone={(a) => { got = a; }} onCancel={() => {}} />
+      </Sheet.Provider>));
+    const opt = (t: string) => [...document.querySelectorAll('button.pick-opt')].find((b) => b.textContent?.startsWith(t))!;
+    const tapEl = (el: Element) => act(() => { el.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    expect(opt('Athletics').getAttribute('aria-disabled')).toBe('true');
+    tapEl(opt('Athletics'));
+    expect(opt('Athletics').getAttribute('aria-pressed')).toBe('false');
+    expect(document.body.textContent).toContain('choose 1');
+    tapEl(opt('Stealth'));
+    tapEl([...document.querySelectorAll('button')].find((b) => b.textContent === 'Add')!);
+    expect(got).toMatchObject({ picks: { c1: ['stealth'] } });
+  });
+});
