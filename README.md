@@ -16,7 +16,7 @@ on a narrow one everything scrolls in one column. Menu › Layout forces 1 or 2 
 
 - **Play mode** (default) is for use at the table: tap to damage, heal, spend a slot, tick a resource. Nothing
   can be changed by accident.
-- **Edit mode** (pencil) unlocks the setup: name, class, level, ability scores, proficiencies, max HP, speeds,
+- **Edit mode** (pencil) unlocks the setup: name, classes (one row per class, for a multiclass character), ability scores, proficiencies, max HP, speeds,
   spell slots, and the add, edit and remove buttons on every list. Tap **Done** to go back. Changes save as you
   type.
 - **Everything derived shows its working.** Tap AC, Speed, an ability modifier or a spell DC to see the parts
@@ -35,10 +35,13 @@ on a narrow one everything scrolls in one column. Menu › Layout forces 1 or 2 
 - Type an **Amount**, then tap **Damage**, **Heal** or **Set Temp**. Damage takes temporary HP first, applies
   massive damage and, when it hits 0, starts death saves. **Undo** shows for a few seconds after each.
 - Damage while concentrating shows the Constitution save DC to roll.
-- **Spend Hit Die** uses a die and tells you what to roll; type the total in Amount, then tap Heal.
+- **Hit Dice** are counted per die size, so a multiclass character has a pool per die (a d10 pool and a d8
+  pool). **Spend Hit Die** uses a die (pick the size when you have several) and tells you what to roll; type the
+  total in Amount, then tap Heal. Undo gives back that die.
 - At 0 HP the **death saves** appear (successes, failures, Stable and Dead notices).
 - Edit mode: base max HP, and an optional "original max" so a reduced maximum shows how far it is from normal.
 - HP per level from feats like Tough is added to the maximum; tap the max to see why.
+- When your Constitution modifier changes, the maximum follows it: 1 HP per level for each point.
 
 ### Armor Class, Initiative, Speed, Proficiency
 - AC comes from armor and shield in Inventory, an unarmored formula (Edit), AC spells and your own
@@ -65,8 +68,8 @@ on a narrow one everything scrolls in one column. Menu › Layout forces 1 or 2 
   **Long Rest**, **Dawn**, or by hand, with optional partial regains such as "1d6+1 at dawn".
 - Inspiration is a separate counter.
 - **Rest · More › Short Rest / Long Rest / Dawn** apply the 2024 rules in one tap (a rest needs at least 1 HP).
-  - *Short Rest* refills what recharges on one (and spell slots if you turned on Pact Magic). Then you spend Hit
-    Dice yourself: **Spend Hit Die** tells you what to roll.
+  - *Short Rest* refills what recharges on one and the Pact Magic slots. Then you spend Hit Dice yourself:
+    **Spend Hit Die** tells you what to roll.
   - *Long Rest* sets HP to max, clears temp HP, restores all spell slots and Hit Dice, resets death saves, lowers
     exhaustion by 1, restores a reduced HP maximum or ability scores, refills long-rest resources, and ends
     concentration and spell effects such as Mage Armor.
@@ -88,9 +91,11 @@ on a narrow one everything scrolls in one column. Menu › Layout forces 1 or 2 
 - **+ Add attack** and **+ Add extra damage** (such as Sneak Attack) for anything the catalog doesn't know.
 
 ### Spells tab
-- Spellcasting ability, save DC, spell attack and prepared count (tap DC or attack for the breakdown).
-- **Spell slots:** tap a circle to mark one used. Edit mode sets the maximums, and *All slots refill on a Short
-  Rest* is there for Pact Magic.
+- Spellcasting ability, save DC, spell attack and prepared count (tap DC or attack for the breakdown). A
+  multiclass caster has one prepared count per casting class ("Ranger 3/5 · Sorcerer 4/6"); Edit mode sets each
+  class's maximum and spellcasting ability.
+- **Spell slots:** tap a circle to mark one used. Edit mode sets the maximums. **Pact slots** (Warlock) are their
+  own pool, at one slot level, refilled by a Short Rest; either kind of slot casts any of your spells.
 - **+ Add spell** searches the catalog by list and level or by name; **Custom spell** is the hand form.
 - **Prepared spells:** turn on *Track prepared spells*, tap **P** to prepare. Always-prepared spells don't
   count towards the limit. Show all or prepared only, and sort the list.

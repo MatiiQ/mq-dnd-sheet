@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { newId } from './logic';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import {
-  ABILITIES, charLevel, pactLeft, spellForRow, valueCtx, conHpPart, maxHpRaw, profBonus, regainTo, saveDc, acCanTargetOther, acOnOther, toggleAcTarget, regainLabel, damageHitDie, setTempHitDie, castAbOf, removeChip, speedOf, armorSlowBy, stealthDisBy, acSpellIdle, untrainedArmor, grantChips, addGrants, findUnlinked, removalChain, removalSummary, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, dawn, refillFor, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, parseWeight, passiveScore, passiveParts, passiveNotes, activeAuras, pillView, resPill, setPill, preparedCount, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft, num, setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, undoHp
+  ABILITIES, charLevel, hasHistory, pactLeft, setBaseRows, spellForRow, valueCtx, conHpPart, maxHpRaw, profBonus, regainTo, saveDc, acCanTargetOther, acOnOther, toggleAcTarget, regainLabel, damageHitDie, setTempHitDie, castAbOf, removeChip, speedOf, armorSlowBy, stealthDisBy, acSpellIdle, untrainedArmor, grantChips, addGrants, findUnlinked, removalChain, removalSummary, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, dawn, refillFor, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, parseWeight, passiveScore, passiveParts, passiveNotes, activeAuras, pillView, resPill, setPill, preparedCount, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft, num, setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, undoHp
 } from './logic';
 import { migrate } from './migrate';
 import { AOP, haAura, holyAvenger, paladin, withClass, withClasses } from './test-fixtures';
@@ -14,7 +14,7 @@ import { extraDamage } from './actions';
 import { effectCanTargetOther, inactiveReason, isActive } from './links';
 import { applyPatch } from './storage';
 import type { FeatureEntry } from './catalog/schema';
-import type { Character, Feature, Grant, Item, Spell } from './types';
+import type { Character, ClassRow, Feature, Grant, Item, Spell } from './types';
 
 const make = (p: Partial<Character> = {}): Character => ({ ...sampleCharacter(), ...p });
 const sp = (p: Partial<Spell> = {}): Spell => ({ id: 's1', name: 'Bless', lvl: 1, time: 'Action', range: '30 ft', srcName: 'Cleric', ...p });
@@ -1796,5 +1796,27 @@ describe('prepared spells per class (PHB p.45)', () => {
     const row = { id: 'c2', name: 'Sorcerer', clsId: '', sub: '', subId: '', lvl: 1, hd: 6 as const, prep: 6, castAb: 'cha' as const };
     expect(spellForRow(sp('a'), row)).toMatchObject({ cls: 'c2', castAb: 'cha' });
     expect(spellForRow(sp('a'), { ...row, castAb: undefined })).not.toHaveProperty('castAb');
+  });
+});
+
+describe('class rows edited by hand', () => {
+  const row = (id: string, lvl: number): ClassRow => ({ id, name: id, clsId: '', sub: '', subId: '', lvl, hd: 8, prep: 0 });
+  it('rewrites the base records from the rows', () => {
+    const c = setBaseRows(blankCharacter(), [row('A', 3), row('B', 2)]);
+    expect(c.levels).toEqual([{ base: true, n: 3, cls: 'A', added: [], picks: {}, set: [] }, { base: true, n: 5, cls: 'B', added: [], picks: {}, set: [] }]);
+    expect(hasHistory(c)).toBe(false);
+    expect(hasHistory({ ...c, levels: [...c.levels, { n: 6, cls: 'B', added: [], picks: {}, set: [] }] })).toBe(true);
+  });
+  it('caps the total at 20 from the last row', () => {
+    expect(setBaseRows(blankCharacter(), [row('A', 15), row('B', 7)]).classes.map((r) => r.lvl)).toEqual([15, 5]);
+  });
+  it('a removed row takes its grants and its spells’ ties with it', () => {
+    const c0 = setBaseRows({ ...blankCharacter(),
+      grants: [{ id: 'g', kind: 'prof', name: 'Stealth', cat: 'skill', target: 'stealth', from: 'class:B' }],
+      spells: [{ id: 's', name: 'S', lvl: 1, time: 'Action', range: 'Self', cls: 'B' }] }, [row('A', 3), row('B', 2)]);
+    const c = setBaseRows(c0, [row('A', 3)]);
+    expect(c.grants).toEqual([]);
+    expect(c.spells[0].cls).toBeUndefined();
+    expect(c.levels).toEqual([{ base: true, n: 3, cls: 'A', added: [], picks: {}, set: [] }]);
   });
 });

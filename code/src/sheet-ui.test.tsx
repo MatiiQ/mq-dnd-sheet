@@ -405,3 +405,30 @@ describe('prepared spells per class', () => {
     expect(saved().classes[1].castAb).toBe('int');
   });
 });
+
+describe('class rows in Edit details', () => {
+  const two = () => withClasses(blankCharacter(), [{ name: 'Ranger', lvl: 3, hd: 10 }, { name: 'Rogue', lvl: 2 }]);
+  it('lists each row, with a remove button on all but the first and level inputs while there is no history', () => {
+    renderSheet(two());
+    editMode();
+    expect(label('Remove class Ranger')).toBeNull();
+    expect(label('Remove class Rogue')).not.toBeNull();
+    expect(label('Level, Rogue')).not.toBeNull();
+    expect(label('Hit die, Rogue')).not.toBeNull();
+    tap([...document.querySelectorAll('button')].find((b) => b.textContent === '+ Add class'));
+    expect(saved().classes).toHaveLength(3);
+    expect(saved().levels.map((r) => r.n)).toEqual([3, 5, 6]);
+    tap(label('Remove class Rogue'));
+    tap(label('Tap again to remove class Rogue'));
+    expect(saved().classes.map((r) => r.name)).toEqual(['Ranger', '']);
+  });
+  it('keeps name, subclass and die editable but not levels once there is history', () => {
+    const c = two();
+    renderSheet({ ...c, classes: [c.classes[0], { ...c.classes[1], lvl: 3 }], levels: [...c.levels, { n: 6, cls: 'c2', added: [], picks: {}, set: [] }] });
+    editMode();
+    expect(label('Level, Rogue')).toBeNull();
+    expect([...document.querySelectorAll('button')].some((b) => b.textContent === '+ Add class')).toBe(false);
+    expect(label('Class name, Rogue')).not.toBeNull();
+    expect(label('Hit die, Rogue')).not.toBeNull();
+  });
+});

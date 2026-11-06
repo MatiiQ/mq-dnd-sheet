@@ -1260,4 +1260,29 @@ let idSeq = 0;
 export const LEVEL_KEYS = ['castAb', 'slotMax', 'pactMax', 'pactLvl'] as const;
 export const ROW_FIELDS = ['sub', 'subId', 'prep', 'castAb'] as const;
 
+// True once a level was gained through the app (a record that isn't the baseline): levels then change only by level-up and undo.
+export const hasHistory = (c: Character) => c.levels.some((r) => !r.base);
+// Class rows set by hand while there is no history (EditDetails): the total is capped at 20 from the last row, and
+// the base records are rewritten from the rows, one per row in order, n cumulative. A removed row takes the entries
+// and grants it granted (class:<id>) with it at once (normalize() doesn't run fixLinks) and its spells lose their tie.
+export function setBaseRows(c: Character, rows0: ClassRow[]): Character {
+  const rows = rows0.map((r) => ({ ...r }));
+  let over = rows.reduce((t, r) => t + r.lvl, 0) - 20;
+  for (let i = rows.length - 1; i >= 0 && over > 0; i--) {
+    const cut = Math.min(over, rows[i].lvl - 1);
+    rows[i].lvl -= cut;
+    over -= cut;
+  }
+  let out: Character = c;
+  for (const gone of c.classes.filter((r) => !rows.some((x) => x.id === r.id))) {
+    const from = 'class:' + gone.id;
+    for (const [list, kind] of LIST_KIND) {
+      for (const x of (out[list] as (Linked & { id: string })[]).filter((e) => e.from === from)) out = removeRef(out, { kind, id: x.id });
+    }
+    out = { ...out, spells: out.spells.map((sp) => (sp.cls === gone.id ? withoutKeys(sp, ['cls']) : sp)) };
+  }
+  let n = 0;
+  return normalize({ ...out, classes: rows, levels: rows.map((r) => ({ base: true as const, n: (n += r.lvl), cls: r.id, added: [], picks: {}, set: [] })) });
+}
+
 export const newId = () => 'n' + Date.now().toString(36) + (idSeq++).toString(36) + Math.random().toString(36).slice(2, 6);
