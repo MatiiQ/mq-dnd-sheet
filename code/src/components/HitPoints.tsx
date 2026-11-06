@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { activeGrants, sourceLabel } from '../links';
-import { abilityMod, applyDamage, capital, conHpPart, damageHitDie, maxHpOf, num, applyHeal, applySetTemp, clearHpUndo, charLevel, fmt, hdLeft as hdLeftOf, hdPools, healHitDie, hitDieRoll, hpColor, hpRingStops, isDead, setHp, setMaxHp, setTempHitDie, spendHitDie, undoHp } from '../logic';
+import { abilityMod, applyDamage, capital, classLevel, conHpPart, damageHitDie, maxHpOf, num, applyHeal, applySetTemp, clearHpUndo, charLevel, fmt, hdLeft as hdLeftOf, hdPools, healHitDie, hitDieRoll, hpColor, hpRingStops, isDead, setHp, setMaxHp, setTempHitDie, spendHitDie, undoHp } from '../logic';
 import { useWide } from '../layout';
 import { useSheet } from '../sheet';
 import type { Character } from '../types';
@@ -85,7 +85,7 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
             ? <button type="button" className="hp-max link-btn" aria-expanded={maxOpen} aria-label={'Max HP ' + max + '. Show breakdown.'} onClick={() => setMaxOpen(!maxOpen)}>/ {max}</button>
             : <span className="hp-max">/ {max}</span>}
           {maxOpen && (perLevel.length > 0 || conPart !== 0) && (
-            <span className="small">Base {c.maxHp}{conPart !== 0 ? ' · CON ×level ' + fmt(conPart) : ''}{perLevel.map((g) => ' · ' + g.name + ' ' + fmt(num(c, g.val, g) * level) + ' (' + fmt(num(c, g.val, g)) + ' × level ' + level + (sourceLabel(c, g) ? ', ' + sourceLabel(c, g) : '') + ')')}</span>
+            <span className="small">Base {c.maxHp}{conPart !== 0 ? ' · CON ×level ' + fmt(conPart) : ''}{perLevel.map((g) => ' · ' + g.name + ' ' + fmt(num(c, g.val, g) * classLevel(c, g)) + ' (' + fmt(num(c, g.val, g)) + ' × level ' + classLevel(c, g) + (sourceLabel(c, g) ? ', ' + sourceLabel(c, g) : '') + ')')}</span>
           )}
           {!edit && c.origOn && delta !== 0 && <span className="hp-delta" style={{ color: deltaColor }}>max {fmt(delta)} (original {origShown})</span>}
         </div>

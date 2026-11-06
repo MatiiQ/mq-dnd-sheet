@@ -1,6 +1,12 @@
 import { blankCharacter } from './defaults';
 import type { Character, ClassRow, Grant, Item } from './types';
 
+// Class rows in order (ids c1, c2…; '' names, d8, no casting unless given), with base records adding up.
+export function withClasses(c: Character, rows: Partial<ClassRow>[]): Character {
+  const rs: ClassRow[] = rows.map((r, i) => ({ id: 'c' + (i + 1), name: '', clsId: '', sub: '', subId: '', lvl: 1, hd: 8, prep: 0, ...r }));
+  let n = 0;
+  return { ...c, classes: rs, levels: rs.map((r) => ({ base: true as const, n: (n += r.lvl), cls: r.id, added: [], picks: {}, set: [] })) };
+}
 // One class row (the character's first, changed by `row`) and a matching base record: how a test sets the level.
 export function withClass(c: Character, row: Partial<ClassRow> = {}): Character {
   const r: ClassRow = { ...(c.classes[0] ?? { id: 'c1', name: '', clsId: '', sub: '', subId: '', lvl: 1, hd: 8, prep: 0 }), ...row };

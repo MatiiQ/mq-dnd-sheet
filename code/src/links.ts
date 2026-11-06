@@ -18,6 +18,23 @@ const SOURCE_KINDS: SourceKind[] = ['feature', 'item', 'spell', 'class'];
 // charLevel is what every total-level reader uses (the Proficiency Bonus, cantrips): never below 1.
 export const totalLevel = (c: { classes: { lvl: number }[] }): number => c.classes.reduce((t, r) => t + r.lvl, 0);
 export const charLevel = (c: { classes: { lvl: number }[] }): number => Math.max(1, totalLevel(c));
+// The level in one class ('monk'): its row's level, else (no row for it) the character level.
+export const levelIn = (c: Character, cls: string): number => c.classes.find((r) => r.clsId === 'class/' + cls)?.lvl ?? charLevel(c);
+// The level a grant or entry reads (spec §1, "Class level"): a class or subclass feature's (its cid, or the cid of the
+// feature it comes from) reads its class level; a class row's own grant reads that row's; anything else (a feat,
+// species, item, a hand-added feature without cid) the character level. The Proficiency Bonus and cantrip scaling
+// always read the total (PHB p.44, Multiclassing).
+export function classLevel(c: Character, x?: { from?: string; cid?: string }): number {
+  const m = /^(?:feature|subclass)\/([^/]+)\//.exec(x?.cid ?? '');
+  if (m) return levelIn(c, m[1]);
+  const p = parseLink(x?.from);
+  if (p?.kind === 'class') return c.classes.find((r) => r.id === p.id)?.lvl ?? charLevel(c);
+  if (p?.kind === 'feature') {
+    const cid = c.feats.find((f) => f.id === p.id)?.cid;
+    if (cid) return classLevel(c, { cid });
+  }
+  return charLevel(c);
+}
 
 // 'feature:<id>', 'item:<id>', 'spell:<id>' or 'class:<row id>'; anything else is not a link.
 export function parseLink(s: unknown): { kind: SourceKind; id: string } | null {
@@ -140,7 +157,7 @@ function auraReason(c: Character, x: Linked, seen: Set<string>): string | null {
   return on ? null : 'aura not active';
 }
 function baseReason(c: Character, x: Linked, seen: Set<string>): string | null {
-  if (x.minLvl && x.minLvl > charLevel(c)) return 'from level ' + x.minLvl;
+  if (x.minLvl && x.minLvl > classLevel(c, x)) return 'from level ' + x.minLvl;
   const p = parseLink(x.from);
   if (p?.kind === 'item') {
     const item = c.inv.find((i) => i.id === p.id);

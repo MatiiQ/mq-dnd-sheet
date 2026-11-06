@@ -10,7 +10,7 @@ import { takeOut } from './inventory';
 import { addGrants, normalize } from './logic';
 import { migrate } from './migrate';
 import { applyPatch } from './storage';
-import { dagger, dart, handaxe, handCrossbow, longbow, longsword, quarterstaff, rapier, shield, shortsword, spear, withClass } from './test-fixtures';
+import { dagger, dart, handaxe, handCrossbow, longbow, longsword, quarterstaff, rapier, shield, shortsword, spear, withClass, withClasses } from './test-fixtures';
 import type { Character, Grant, Item, Prof, Spell } from './types';
 
 const cat = mergeCatalog(srdEntries, null);
@@ -603,5 +603,14 @@ describe('a cantrip damage bonus for one spell (Agonizing Blast, PHB p.155)', ()
   it('adds Charisma to each Eldritch Blast beam, and leaves another cantrip of the same class alone', () => {
     expect(spellActions(c()).find((x) => x.spellId === 'eb')!.dice).toBe('2 beams × 1d10+3');
     expect(spellActions(c()).find((x) => x.spellId === 'fb')!.dice).toBe('2d10');
+  });
+});
+
+describe('class levels in a multiclass', () => {
+  it('Martial Arts die reads the Monk level', () => {
+    const base = withClasses(blankCharacter(), [{ clsId: 'class/monk', lvl: 3 }, { clsId: 'class/fighter', lvl: 5 }]);
+    const c: Character = { ...base, feats: [{ id: 'ma', g: 'class', name: 'Martial Arts', desc: '', cid: 'feature/monk/martial-arts' }],
+      grants: [{ id: 'u', kind: 'unarmed', name: 'Martial Arts', die: '1:1d6,5:1d8', from: 'feature:ma' }] };
+    expect(unarmedStrike(c).dmg).toMatch(/^1d6/);
   });
 });

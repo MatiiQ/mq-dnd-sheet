@@ -3,7 +3,7 @@ import type { GrantSpec } from './catalog/schema';
 import { hasDice, isValue, valueAt, type ValueCtx } from './catalog/value';
 import type { ProfCat } from './catalog/names';
 import { canLoad, setHands } from './hands';
-import { activeGrants, charLevel, dropLinkOnly, hasActiveEffect, INCAPACITATING, inactiveReason, isActive, isEquipped, LINKED_LISTS, srcKindOfLink, type SourceKind, linkOf, parseLink, sourceLabel, sourceOf, SRC_KINDS } from './links';
+import { activeGrants, charLevel, classLevel, dropLinkOnly, hasActiveEffect, INCAPACITATING, inactiveReason, isActive, isEquipped, LINKED_LISTS, srcKindOfLink, type SourceKind, linkOf, parseLink, sourceLabel, sourceOf, SRC_KINDS } from './links';
 import type { AcEffect, Ability, ArmorKind, CastAbility, Character, ClassRow, Coin, Die, Concentration, Counter, DefenseKind, Grant, HpSnapshot, Item, Linked, Recharge, Resource, Size, Spell, SpeedKind, SpellSort, Tab, Unarmored } from './types';
 
 export const ABILITIES: [Ability, string][] = [
@@ -56,16 +56,17 @@ export const clamp = (n: number, min: number, max: number) => Math.max(min, Math
 export const fmt = (m: number) => (m >= 0 ? '+' + m : '−' + Math.abs(m));
 export const mod = (score: number) => Math.floor((score - 10) / 2);
 export const profBonus = (level: number) => 2 + Math.floor((level - 1) / 4);
-export { charLevel, totalLevel } from './links';
+export { charLevel, classLevel, levelIn, totalLevel } from './links';
 // Context for grant values: level, Proficiency Bonus and ability modifiers, and with a grant, the magic (+N) of the item
 // it comes from (Wand of the War Mage's spell attack; 0 from no item or an item without magic, plan 7).
-export const valueCtx = (c: Character, g?: { from?: string }): ValueCtx => {
+// The level is the class level of what the value belongs to (classLevel), so pass the grant or entry; pb is always the total's.
+export const valueCtx = (c: Character, g?: { from?: string; cid?: string }): ValueCtx => {
   const p = parseLink(g?.from), magic = p?.kind === 'item' ? c.inv.find((i) => i.id === p.id)?.magic : undefined;
-  return { level: charLevel(c), pb: profBonus(charLevel(c)), mod: (a) => abilityMod(c, a), ...(magic ? { magic } : {}) };
+  return { level: g ? classLevel(c, g) : charLevel(c), pb: profBonus(charLevel(c)), mod: (a) => abilityMod(c, a), ...(magic ? { magic } : {}) };
 };
 const numIn = (ctx: ValueCtx, v: string | undefined) => { const n = v === undefined ? 0 : valueAt(v, ctx); return typeof n === 'number' ? n : 0; };
 // A grant value as a number now; dice or no value count as 0. Pass the grant whenever v is its value (`magic`).
-export const num = (c: Character, v: string | undefined, g?: { from?: string }) => numIn(valueCtx(c, g), v);
+export const num = (c: Character, v: string | undefined, g?: { from?: string; cid?: string }) => numIn(valueCtx(c, g), v);
 // Ability grant values are constants: read with modifiers of 0, so a score never depends on itself.
 const constCtx = (c: Character): ValueCtx => ({ level: charLevel(c), pb: profBonus(charLevel(c)), mod: () => 0 });
 
@@ -514,7 +515,7 @@ export const speedNow = (c: Character) => speedOf(c, walkSpeed(c));
 // modifier counts, a temporary one from an equipped item's abil grant included.
 export const conHpPart = (c: Character) => charLevel(c) * (abilityMod(c, 'con') - c.conBase);
 // The maximum unfloored: what a change in the maximum is measured on (a level's current-HP rise).
-export const maxHpRaw = (c: Character) => c.maxHp + conHpPart(c) + activeGrants(c, 'hpLvl').reduce((t, g) => t + num(c, g.val, g) * charLevel(c), 0) + activeGrants(c, 'hpFlat').reduce((t, g) => t + num(c, g.val, g), 0);
+export const maxHpRaw = (c: Character) => c.maxHp + conHpPart(c) + activeGrants(c, 'hpLvl').reduce((t, g) => t + num(c, g.val, g) * classLevel(c, g), 0) + activeGrants(c, 'hpFlat').reduce((t, g) => t + num(c, g.val, g), 0);
 export const maxHpOf = (c: Character) => Math.max(1, maxHpRaw(c));
 // Current HP against max, temp HP ignored: green from 65%, yellow from 30%, red below.
 export const hpColor = (c: Character) =>
@@ -690,8 +691,8 @@ export const regainEvent = (rc: Recharge | undefined): Counter['regainOn'] => (r
 
 // A counter's maximum now: a formula (maxV, never below 0), else a fixed max of at least 1, else none (null). It
 // ignores whether the counter's source is active, so an inactive resource keeps its count (spec).
-export function maxOf(c: Character, x: Partial<Counter>): number | null {
-  if (x.maxV !== undefined) return Math.max(0, num(c, x.maxV));
+export function maxOf(c: Character, x: Partial<Counter> & { from?: string }): number | null {
+  if (x.maxV !== undefined) return Math.max(0, num(c, x.maxV, x));
   return x.max && x.max >= 1 ? x.max : null;
 }
 // A feature row's save DC: 8 + the ability modifier + PB in the PHB (Stunning Strike's Focus Save DC, p.103; Cunning Strike,
@@ -711,9 +712,9 @@ export function regainTo(c: Character, resId: string, to: number | 'all'): Chara
 }
 // A counter's partial regain as words: '' when it is 0 now (Font of Inspiration before level 5, PHB p.61), 'all' at its
 // maximum or above, else the number or the dice.
-export function regainLabel(c: Character, x: Partial<Counter>): string {
+export function regainLabel(c: Character, x: Partial<Counter> & { from?: string }): string {
   if (!x.regain) return '';
-  const v = valueAt(x.regain, valueCtx(c));
+  const v = valueAt(x.regain, valueCtx(c, x));
   if (typeof v === 'string') return v;
   const m = maxOf(c, x);
   return v <= 0 ? '' : m !== null && v >= m ? 'all' : String(v);
@@ -804,7 +805,7 @@ export function restRolls(c: Character, e: RestEvent): RollAsk[] {
   if (e !== 'dawn' && (c.hp === 0 || isDead(c))) return [];
   return counters(c).flatMap(([kind, x]) => {
     const g = regainFor(x, e), m = maxOf(c, x);
-    const dice = g && g !== 'all' ? valueAt(g, valueCtx(c)) : 0;
+    const dice = g && g !== 'all' ? valueAt(g, valueCtx(c, x as { from?: string })) : 0;
     return typeof dice === 'string' && m !== null && (x.count ?? 0) < m ? [{ key: counterKey(kind, x.id), name: x.name, dice }] : [];
   });
 }
@@ -815,7 +816,7 @@ export function refillFor(c: Character, e: RestEvent, rolls: Record<string, numb
   const fill = <T extends Counted>(kind: 'res' | 'item', x: T): T => {
     const g = regainFor(x, e), m = maxOf(c, x), n = x.count ?? 0;
     if (!g || m === null) return x;
-    const add = g === 'all' ? m : hasDice(g) ? rolls[counterKey(kind, x.id)] ?? 0 : num(c, g);
+    const add = g === 'all' ? m : hasDice(g) ? rolls[counterKey(kind, x.id)] ?? 0 : num(c, g, x as { from?: string });
     const next = Math.max(n, Math.min(m, n + add));
     if (next > n) names.push(x.name + ' +' + (next - n));
     return next === n ? x : { ...x, count: next };
@@ -1117,7 +1118,7 @@ export function removalSummary(c: Character, ref: Ref): { goes: string[]; keep: 
     else if (g.kind === 'speed' && g.mode === 'walk') keep.push(`Speed ${walkSpeed(c)} ft still includes ${fmt(v)} ft from ${src}${hand}`);
     else if (g.kind === 'speed' && g.mode) keep.push(`${capital(g.mode)} ${modeSpeed(c, g.mode as SpeedKind).base} ft still includes this grant`);
     else if (g.kind === 'init') keep.push(`Initiative ${fmt(initiative(c))} still includes ${fmt(v)} from ${src}${hand}`);
-    else if (g.kind === 'hpLvl') keep.push(`Max HP ${maxHpOf(c)} still includes ${fmt(v * charLevel(c))} from ${src}${hand}`);
+    else if (g.kind === 'hpLvl') keep.push(`Max HP ${maxHpOf(c)} still includes ${fmt(v * classLevel(c, g))} from ${src}${hand}`);
     else if (g.kind === 'hpFlat') keep.push(`Max HP ${maxHpOf(c)} still includes ${fmt(v)} from ${src}${hand}`);
     else if (g.kind === 'ac' && g.acMode === 'bonus') keep.push(`AC ${armorClass(c).total} still includes ${fmt(v)} from ${src} (in the custom AC bonuses)${hand}`);
   }

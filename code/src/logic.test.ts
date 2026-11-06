@@ -2,14 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { newId } from './logic';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import {
-  ABILITIES, charLevel, conHpPart, maxHpRaw, profBonus, regainTo, saveDc, acCanTargetOther, acOnOther, toggleAcTarget, regainLabel, damageHitDie, setTempHitDie, castAbOf, removeChip, speedOf, armorSlowBy, stealthDisBy, acSpellIdle, untrainedArmor, grantChips, addGrants, findUnlinked, removalChain, removalSummary, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, dawn, refillFor, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, parseWeight, passiveScore, passiveParts, passiveNotes, activeAuras, pillView, resPill, setPill, preparedCount, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft, num, setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, undoHp
+  ABILITIES, charLevel, valueCtx, conHpPart, maxHpRaw, profBonus, regainTo, saveDc, acCanTargetOther, acOnOther, toggleAcTarget, regainLabel, damageHitDie, setTempHitDie, castAbOf, removeChip, speedOf, armorSlowBy, stealthDisBy, acSpellIdle, untrainedArmor, grantChips, addGrants, findUnlinked, removalChain, removalSummary, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, dawn, refillFor, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, parseWeight, passiveScore, passiveParts, passiveNotes, activeAuras, pillView, resPill, setPill, preparedCount, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft, num, setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, undoHp
 } from './logic';
 import { migrate } from './migrate';
-import { AOP, haAura, holyAvenger, paladin, withClass } from './test-fixtures';
+import { AOP, haAura, holyAvenger, paladin, withClass, withClasses } from './test-fixtures';
 import { validateEntry, type GrantSpec } from './catalog/schema';
 import { addFromCatalog, type ItemAnswers } from './catalog/copy';
 import { mergeCatalog } from './catalog/merge';
 import srdEntries from './data/srd/index';
+import { extraDamage } from './actions';
 import { effectCanTargetOther, inactiveReason, isActive } from './links';
 import { applyPatch } from './storage';
 import type { FeatureEntry } from './catalog/schema';
@@ -1691,5 +1692,43 @@ describe('HP and Constitution', () => {
     const m = migrate({ ...blankCharacter(), maxHp: -5 });
     expect(m.maxHp).toBe(-5);
     expect(maxHpOf(m)).toBe(1);
+  });
+});
+
+describe('class levels in formulas and gates', () => {
+  const monk = (p: Partial<Character> = {}) => withClasses({ ...blankCharacter(), hp: 10, ...p }, [{ clsId: 'class/monk', lvl: 3 }, { clsId: 'class/fighter', lvl: 5 }]);
+  const mf: Feature = { id: 'mf', g: 'class', name: 'Monk’s Focus', desc: '', cid: 'feature/monk/monks-focus' };
+  it('reads a monk resource at the Monk level, and PB at the total level', () => {
+    const c = monk({ feats: [mf], res: [{ id: 'ki', name: 'Focus', count: 0, maxV: 'lvl', recharge: 'long', regain: 'lvl', regainOn: 'short', from: 'feature:mf' }] });
+    expect(maxOf(c, c.res[0])).toBe(3);
+    expect(regainLabel(c, c.res[0])).toBe('all');
+    expect(valueCtx(c, c.res[0]).pb).toBe(3);
+    expect(valueCtx(c, c.res[0]).level).toBe(3);
+    expect(valueCtx(c).level).toBe(8);
+  });
+  it('asks for rest dice at the class level', () => {
+    const c = monk({ feats: [mf], res: [{ id: 'r', name: 'R', count: 0, max: 9, recharge: 'long', regain: '1:1d4,5:1d6', regainOn: 'short', from: 'feature:mf' }] });
+    expect(restRolls(c, 'short')[0].dice).toBe('1d4');
+  });
+  it('reads a subclass feature’s resource at its class level', () => {
+    const sub: Feature = { id: 'sf', g: 'sub', name: 'X', desc: '', cid: 'subclass/monk/x' };
+    const c = monk({ feats: [sub], res: [{ id: 'r', name: 'R', count: 0, maxV: 'lvl', from: 'feature:sf' }] });
+    expect(maxOf(c, c.res[0])).toBe(3);
+  });
+  it('gates minLvl on a class feature by the class level', () => {
+    expect(inactiveReason(monk(), { ...mf, minLvl: 4 })).toBe('from level 4');
+    expect(inactiveReason(monk(), { ...mf, minLvl: 3 })).toBeNull();
+  });
+  it('reads Sneak Attack at the Rogue level', () => {
+    const c: Character = { ...withClasses(blankCharacter(), [{ clsId: 'class/rogue', lvl: 3 }, { clsId: 'class/fighter', lvl: 5 }]),
+      feats: [{ id: 'sa', g: 'class', name: 'Sneak Attack', desc: '', cid: 'feature/rogue/sneak-attack' }],
+      grants: [{ id: 'x', kind: 'xdmg', name: 'Sneak Attack', dice: '1:1d6,3:2d6,5:3d6', from: 'feature:sa' }] };
+    expect(extraDamage(c)[0].dice).toBe('2d6');
+  });
+  it('multiplies Draconic Resilience by the Sorcerer level', () => {
+    const base = withClasses({ ...blankCharacter(), maxHp: 20 }, [{ clsId: 'class/sorcerer', lvl: 3 }, { clsId: 'class/fighter', lvl: 2 }]);
+    const c: Character = { ...base, feats: [{ id: 'dr', g: 'sub', name: 'Draconic Resilience', desc: '', cid: 'feature/sorcerer/draconic/draconic-resilience' }],
+      grants: [{ id: 'h', kind: 'hpLvl', name: 'Draconic Resilience', val: '1', from: 'feature:dr' }] };
+    expect(maxHpOf(c)).toBe(maxHpOf(base) + 3);
   });
 });

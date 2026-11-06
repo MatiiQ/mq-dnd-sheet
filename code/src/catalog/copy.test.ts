@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { withClass } from '../test-fixtures';
+import { withClass, withClasses } from '../test-fixtures';
 import srdEntries from '../data/srd/index';
 import { blankCharacter, sampleCharacter } from '../defaults';
 import { removeRef, armorClass, skillLevel, spellUsable } from '../logic';
@@ -1021,4 +1021,25 @@ describe('background starting equipment', () => {
   });
   it('none adds neither', () => expect([add('none').inv, add('none').coins.gp]).toEqual([[], gp]));
   it('asks for it', () => expect(() => add()).toThrow('Test: choose starting equipment'));
+});
+
+describe('class levels in the catalog flow', () => {
+  it('reads a pickAt table at the class level of the entry', () => {
+    const mm: FeatureEntry = { id: 'feature/sorcerer/metamagic', kind: 'feature', name: 'Metamagic', src: 'srd', desc: '', cls: 'sorcerer', lvl: 2,
+      grants: [{ kind: 'choice', id: 'mm', name: 'Metamagic', pick: 2, pickAt: '2:2,10:4', pool: 'other:any' }] };
+    const c = withClasses(blankCharacter(), [{ clsId: 'class/sorcerer', lvl: 3 }, { clsId: 'class/fighter', lvl: 8 }]);
+    expect((atLevel(c, mm).grants[0] as { pick: number }).pick).toBe(2);
+  });
+  it('gates a class feature above the class level, in the add flow and the picker', () => {
+    const x: FeatureEntry = { id: 'feature/ranger/zz-test', kind: 'feature', name: 'Zz', src: 'srd', desc: 'Invented.', cls: 'ranger', lvl: 5, grants: [] };
+    const local = mergeCatalog([...srdEntries.filter((e) => e.kind === 'class'), x], null);
+    const c = withClasses(blankCharacter(), [{ name: 'Ranger', clsId: 'class/ranger', lvl: 3 }, { name: 'Rogue', clsId: 'class/rogue', lvl: 3 }]);
+    expect(addFromCatalog(c, local, x, A()).feats.at(-1)!.minLvl).toBe(5);
+    expect(featureCandidates(local, c, 'class').find((r) => r.entry.id === x.id)).toMatchObject({ ok: false });
+  });
+  it('reads an option’s lvl>= prerequisite at its class level', () => {
+    const c = withClasses(blankCharacter(), [{ clsId: 'class/warlock', lvl: 2 }, { clsId: 'class/fighter', lvl: 5 }]);
+    expect(prereqMet(c, 'lvl>=5', [], 'warlock').ok).toBe(false);
+    expect(prereqMet(c, 'lvl>=5').ok).toBe(true);
+  });
 });
