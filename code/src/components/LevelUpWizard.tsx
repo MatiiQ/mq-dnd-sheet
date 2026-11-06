@@ -52,7 +52,8 @@ const asks = (s: Step) => s.kind === 'hp' || s.kind === 'subclass' || s.kind ===
   || (s.kind === 'feature' && !s.onSheet && !!s.entry && choicesOf(s.entry).length > 0);
 
 // The class pick, then the steps of one level. The creator reuses it, one level at a time.
-export function LevelSteps({ c, cat, onFinish }: { c: Character; cat: Catalog | null; onFinish: (next: Character) => void }) {
+// onFinish also gets the class pick and the answers, which the creator stores instead of the character.
+export function LevelSteps({ c, cat, onFinish }: { c: Character; cat: Catalog | null; onFinish: (next: Character, pick: ClassPick, answers: LevelAnswers) => void }) {
   const only = c.classes.length === 1 ? c.classes[0] : undefined;
   const [pick, setPick] = useState<ClassPick | null>(only ? { row: only.id } : null);
   const [answers, setAnswers] = useState<LevelAnswers>(EMPTY);
@@ -142,7 +143,7 @@ export function LevelSteps({ c, cat, onFinish }: { c: Character; cat: Catalog | 
       : <div role="status" className="notice notice-blue">{error}</div>;
     showNext = false;
     next = undefined;
-    const finish = dry ? () => onFinish(dry!.c) : undefined;
+    const finish = dry ? () => onFinish(dry!.c, pick!, answers) : undefined;
     return (
       <div className="col gap-12">
         {bar}

@@ -16,6 +16,8 @@ import { SpellsTab } from './components/tabs/SpellsTab';
 import { useWide } from './layout';
 import { RestPrompt } from './components/RestPrompt';
 import { LevelUpWizard, UndoLevelPrompt } from './components/LevelUpWizard';
+import { CreatorWizard } from './components/CreatorWizard';
+import { clearDraft, readDraft, type Draft } from './creator';
 import { undoLevel } from './levelup';
 import { TABS, dawn, longRest, restRolls, shortRest, type RestEvent, type RollAsk } from './logic';
 import { revealPlace, type RevealTarget } from './components/nav';
@@ -31,7 +33,15 @@ export default function App() {
   const [activeSec, setActiveSec] = useState('sec-hp');
   const [hdPrompt, setHdPrompt] = useState(false);
   // A full-screen wizard over the sheet (UI only, never saved).
-  const [wizard, setWizard] = useState<'levelup' | null>(null);
+  const [wizard, setWizard] = useState<'levelup' | 'create' | null>(null);
+  // The creator's draft: read once on launch (a broken one is dropped with a notice); asked about before a new one.
+  const [draftAsk, setDraftAsk] = useState<{ draft: Draft | null; notice?: string }>(() => readDraft());
+  const [createFrom, setCreateFrom] = useState<Draft | undefined>(undefined);
+  const openCreator = () => {
+    const r = readDraft();
+    if (r.draft) setDraftAsk(r);
+    else { setCreateFrom(undefined); setWizard('create'); }
+  };
   const [undoAsk, setUndoAsk] = useState(false);
   // A rest or Dawn waiting for die rolls (restRolls). UI state only, never saved.
   const [restAsk, setRestAsk] = useState<{ event: RestEvent; asks: RollAsk[] } | null>(null);
@@ -98,17 +108,32 @@ export default function App() {
 
   return (
     <Sheet.Provider value={{ c, update, edit, form, setForm, focus, reveal, markFocusUsed }}>
+      {wizard === 'create' && <CreatorWizard initial={createFrom} onClose={() => setWizard(null)}
+        onCreate={(made) => { store.add(made); clearDraft(); setWizard(null); onSwitched(); }} />}
       {wizard === 'levelup' && <LevelUpWizard c={c} onApply={(next) => { update(() => next); setWizard(null); }} onClose={() => setWizard(null)} />}
       <div className={'sheet' + (wide ? ' wide' : '')}>
         <TopBar store={store} activeSec={activeSec} setActiveSec={setActiveSec} menuOpen={menuOpen} setMenuOpen={setMenuOpen}
           onToggleEdit={() => { setEdit(!edit); setForm(null); }} onSwitched={onSwitched} onRest={onRest}
-          onLevelUp={() => setWizard('levelup')} onUndoLevel={() => setUndoAsk(true)} />
+          onLevelUp={() => setWizard('levelup')} onUndoLevel={() => setUndoAsk(true)} onCreate={openCreator} />
         <div className="sheet-body">
           <div className="sheet-left">
             {store.isExample && (
               <div className="notice notice-blue row gap-8">
                 <span className="grow">Example character: changes reset when you open it again.</span>
                 <button type="button" className="btn" onClick={() => { store.makeCopy(); onSwitched(); }}>Make my copy</button>
+              </div>
+            )}
+            {draftAsk.notice && (
+              <div role="status" className="notice notice-blue row gap-8">
+                <span className="grow">{draftAsk.notice}</span>
+                <button type="button" className="btn" onClick={() => setDraftAsk((d) => ({ draft: d.draft }))}>OK</button>
+              </div>
+            )}
+            {draftAsk.draft && (
+              <div role="status" className="notice notice-blue row wrap gap-8">
+                <span className="grow">Continue creating {draftAsk.draft.answers.details.name || 'a character'} (step {draftAsk.draft.step + 1} of 6)?</span>
+                <button type="button" className="btn" onClick={() => { setCreateFrom(draftAsk.draft!); setDraftAsk({ draft: null }); setWizard('create'); }}>Continue</button>
+                <button type="button" className="btn" onClick={() => { clearDraft(); setDraftAsk({ draft: null }); }}>Discard</button>
               </div>
             )}
             {undoAsk && <UndoLevelPrompt c={c} onConfirm={() => { update(undoLevel); setUndoAsk(false); }} onCancel={() => setUndoAsk(false)} />}

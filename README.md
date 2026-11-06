@@ -43,6 +43,14 @@ on a narrow one everything scrolls in one column. Menu › Layout forces 1 or 2 
 - HP per level from feats like Tough is added to the maximum; tap the max to see why.
 - When your Constitution modifier changes, the maximum follows it: 1 HP per level for each point.
 
+### Creating a character
+- **Menu › New character › Step by step** opens the creator: class (with its starting equipment and a starting level
+  from 1 to 20), origin (background and its choices, species, two languages besides Common, then the class skills, with
+  your background's shown as already known), ability scores (Standard Array, Point Buy with a live 27-point counter, or
+  typed rolls: six totals or four dice each, lowest dropped), details, and for a starting level above 1 each level in
+  turn, multiclassing allowed. One summary, then **Create character**.
+- Your answers are saved as a draft after every step: reopening the app offers to continue or discard it.
+
 ### Levels and classes
 - **Menu › Level up** (or tap the class line in the header) opens a full-screen wizard: pick which class gets the level
   (or add a class: the multiclass prerequisite is checked, with "Do it anyway"), then HP (the fixed value or your roll),

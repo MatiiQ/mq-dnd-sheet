@@ -226,6 +226,7 @@ export function useCharacters() {
     c: s.c, charId: s.id, list, saveFailed, isExample: isExample(s.id),
     update: (patch: Patch) => setS((p) => ({ ...p, c: applyPatch(p.c, patch) })),
     switchTo: (id: string) => setS((p) => switchStore(p, id, load(id))),
+    add,
     newBlank: () => add(blankCharacter()),
     newSample: () => add(sampleCharacter()),
     newDruid: () => add(druidSample()),

@@ -27,9 +27,10 @@ interface Props {
   onRest: (kind: RestEvent) => void;
   onLevelUp: () => void;
   onUndoLevel: () => void;
+  onCreate: () => void;
 }
 
-export function TopBar({ store, activeSec, setActiveSec, menuOpen, setMenuOpen, onToggleEdit, onSwitched, onRest, onLevelUp, onUndoLevel }: Props) {
+export function TopBar({ store, activeSec, setActiveSec, menuOpen, setMenuOpen, onToggleEdit, onSwitched, onRest, onLevelUp, onUndoLevel, onCreate }: Props) {
   const { c, update, edit } = useSheet();
   const ch = c.ch;
   const initials = (ch.name || '?').split(/\s+/).filter((x) => x).slice(0, 2).map((x) => x.charAt(0).toUpperCase()).join('') || '?';
@@ -216,7 +217,7 @@ export function TopBar({ store, activeSec, setActiveSec, menuOpen, setMenuOpen, 
         </>
       )}
       {menuOpen && <Menu store={store} onClose={() => setMenuOpen(false)} onSwitched={onSwitched} onRest={onRest}
-        onLevelUp={() => { setMenuOpen(false); onLevelUp(); }} onUndoLevel={() => { setMenuOpen(false); onUndoLevel(); }} />}
+        onLevelUp={() => { setMenuOpen(false); onLevelUp(); }} onUndoLevel={() => { setMenuOpen(false); onUndoLevel(); }} onCreate={() => { setMenuOpen(false); onCreate(); }} />}
     </header>
   );
 }
@@ -257,7 +258,7 @@ function LevelButtons({ c, onLevelUp, onUndoLevel }: { c: Character; onLevelUp: 
   );
 }
 
-function Menu({ store, onClose, onSwitched, onRest, onLevelUp, onUndoLevel }: { store: CharacterStore; onClose: () => void; onSwitched: (editOn?: boolean, keepMenu?: boolean) => void; onRest: (kind: RestEvent) => void; onLevelUp: () => void; onUndoLevel: () => void }) {
+function Menu({ store, onClose, onSwitched, onRest, onLevelUp, onUndoLevel, onCreate }: { store: CharacterStore; onClose: () => void; onSwitched: (editOn?: boolean, keepMenu?: boolean) => void; onRest: (kind: RestEvent) => void; onLevelUp: () => void; onUndoLevel: () => void; onCreate: () => void }) {
   const { c } = useSheet();
   const [delArmed, tapDelete] = useArmed();
   const [longArmed, tapLong] = useArmed();
@@ -325,6 +326,7 @@ function Menu({ store, onClose, onSwitched, onRest, onLevelUp, onUndoLevel }: { 
           onClick={() => setChoosing(!choosing)}>+ New character</button>
         {choosing && (
           <div id="new-choice" className="new-choice">
+            <button type="button" className="menu-btn plain" onClick={onCreate}>Step by step (creator)</button>
             <button type="button" className="menu-btn plain" onClick={() => { store.newBlank(); onSwitched(true); }}>Blank sheet</button>
             <button type="button" className="menu-btn plain" onClick={() => { store.newSample(); onSwitched(); }}>Copy of Ilyra · Ranger 5</button>
             <button type="button" className="menu-btn plain" onClick={() => { store.newDruid(); onSwitched(); }}>Copy of Seren · Druid 12</button>
