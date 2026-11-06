@@ -148,7 +148,7 @@ describe('reaching every saved character', () => {
     const s = initialStore();
     expect(s.list.map((x) => x.id)).toEqual(['a']);
     expect(s.id).toBe('a');
-    expect(s.c.ch.name).toBe('Ann');
+    expect(s.c!.ch.name).toBe('Ann');
     expect(s.list[0].name).toBe('Ann');
   });
   it('adds a sheet missing from a good index, keeping the active one', () => {
@@ -163,7 +163,7 @@ describe('reaching every saved character', () => {
   it('never lists an :unreadable key as a character', () => {
     const m = stubStorage();
     m.set('dnd-sheet-v3:a:unreadable', '{bad');
-    expect(initialStore()).toMatchObject({ id: 'example:ilyra', list: [] });
+    expect(initialStore()).toEqual({ id: '', list: [], c: null });
   });
   it('names a rebuilt entry whose sheet does not parse', () => {
     const m = stubStorage();
@@ -255,12 +255,13 @@ describe('example characters', () => {
     m.set('dnd-sheet-v3:example:seren', JSON.stringify({ ...druidSample(), hp: 1 }));
     expect(load('example:seren')).toEqual(druidSample());
   });
-  it('opens Ilyra as an example on a fresh install and saves no sheet for her', () => {
+  it('opens no character on a fresh install (the welcome screen) and writes only the index', () => {
     const m = stubStorage();
     const s = initialStore();
-    expect(s).toMatchObject({ id: 'example:ilyra', list: [] });
-    persistStore(s);
+    expect(s).toEqual({ id: '', list: [], c: null });
+    expect(persistStore(s)).toBe(true);
     expect([...m.keys()]).toEqual(['dnd-index-v3']);
+    expect(JSON.parse(m.get('dnd-index-v3')!)).toEqual({ active: '', list: [] });
   });
   it('reopens an active example fresh after a reload', () => {
     const m = stubStorage();
@@ -282,9 +283,15 @@ describe('example characters', () => {
     expect(data.characters).toHaveLength(1);
     expect((data.characters[0] as { ch: { name: string } }).ch.name).toBe('New character');
   });
-  it('opens an example after deleting the last own character', () => {
+  it('opens no character after deleting the last own character', () => {
     const s = deleteFromStore({ id: 'a', list: [{ id: 'a', name: 'Bob' }], c: blankCharacter() });
-    expect(s).toMatchObject({ id: 'example:ilyra', list: [] });
+    expect(s).toEqual({ id: '', list: [], c: null });
+  });
+  it('still reopens an active example when you have characters of your own', () => {
+    const m = stubStorage();
+    m.set('dnd-sheet-v3:a', JSON.stringify(blankCharacter()));
+    m.set('dnd-index-v3', JSON.stringify({ active: 'example:ilyra', list: [{ id: 'a', name: 'New character' }] }));
+    expect(initialStore()).toMatchObject({ id: 'example:ilyra' });
   });
   it('never deletes an example', () => {
     const s: Store = { id: 'example:ilyra', list: [{ id: 'a', name: 'Bob' }], c: sampleCharacter() };

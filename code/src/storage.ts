@@ -98,19 +98,19 @@ export const charName = (c: Character) => c.ch.name || 'Unnamed character';
 export const charInfo = (c: Character) => [c.ch.species, classLine(c)].filter((x) => x).join(' · ');
 const entryOf = (id: string, c: Character): IndexEntry => ({ id, name: charName(c), info: charInfo(c) });
 
-export interface Store { id: string; list: IndexEntry[]; c: Character }
+// c: null when no character is open (no character of your own and no example open): the app shows the welcome screen.
+export interface Store { id: string; list: IndexEntry[]; c: Character | null }
+export const EMPTY_STORE = (list: IndexEntry[]): Store => ({ id: '', list, c: null });
 
 // The index with the active character's entry brought up to date. Use it before the active character changes,
 // or that character keeps the name it had when the list was loaded.
 export const freshList = (s: Store): IndexEntry[] =>
-  s.list.map((x) => (x.id === s.id ? entryOf(x.id, s.c) : x));
+  s.list.map((x) => (x.id === s.id && s.c ? entryOf(x.id, s.c) : x));
 export const switchStore = (s: Store, id: string, c: Character): Store => ({ id, list: freshList(s), c });
 export const addToStore = (s: Store, added: { id: string; c: Character }[]): Store => ({
   id: added[0].id, c: added[0].c,
   list: [...freshList(s), ...added.map((a) => entryOf(a.id, a.c))]
 });
-
-const firstExample = (list: IndexEntry[]): Store => ({ id: EXAMPLES[0].id, list, c: EXAMPLES[0].make() });
 
 export function initialStore(): Store {
   const idx = readJSON(INDEX_KEY) as { active?: string; list?: IndexEntry[] } | null;
@@ -123,8 +123,8 @@ export function initialStore(): Store {
   // An open example reopens fresh, even when your own list is empty.
   const ex = example(String(idx?.active));
   if (ex) return { id: ex.id, list: saved, c: ex.make() };
-  // No characters of your own: open Ilyra as an example. Nothing but the index gets written.
-  if (!saved.length) return firstExample([]);
+  // No characters of your own and no example open: nothing opens (the welcome screen). Only the index gets written.
+  if (!saved.length) return EMPTY_STORE([]);
   const id = saved.some((x) => x.id === idx?.active) ? idx!.active! : saved[0].id;
   return { id, list: saved, c: load(id) };
 }
@@ -146,15 +146,15 @@ function askPersist(): void {
 
 // Saves the open character (not an example) and the index. Returns false when the browser refused.
 export function persistStore(s: Store): boolean {
-  return (isExample(s.id) || writeJSON(sheetKey(s.id), s.c)) && writeJSON(INDEX_KEY, { active: s.id, list: freshList(s) });
+  return (isExample(s.id) || !s.c || writeJSON(sheetKey(s.id), s.c)) && writeJSON(INDEX_KEY, { active: s.c ? s.id : '', list: freshList(s) });
 }
 
-// The store after deleting the open character. Examples can't be deleted. With none of your own left, Ilyra opens.
+// The store after deleting the open character. Examples can't be deleted. With none of your own left, nothing opens.
 // The caller removes the sheet key.
 export function deleteFromStore(s: Store): Store {
   if (isExample(s.id)) return s;
   const rest = s.list.filter((x) => x.id !== s.id);
-  return rest.length ? { id: rest[0].id, list: rest, c: load(rest[0].id) } : firstExample([]);
+  return rest.length ? { id: rest[0].id, list: rest, c: load(rest[0].id) } : EMPTY_STORE([]);
 }
 
 const BACKUP_APP = 'dnd-character-sheet';
@@ -224,27 +224,29 @@ export function useCharacters() {
 
   return {
     c: s.c, charId: s.id, list, saveFailed, isExample: isExample(s.id),
-    update: (patch: Patch) => setS((p) => ({ ...p, c: applyPatch(p.c, patch) })),
+    // Nothing open: nothing to change.
+    update: (patch: Patch) => setS((p) => (p.c ? { ...p, c: applyPatch(p.c, patch) } : p)),
     switchTo: (id: string) => setS((p) => switchStore(p, id, load(id))),
     add,
     newBlank: () => add(blankCharacter()),
     newSample: () => add(sampleCharacter()),
     newDruid: () => add(druidSample()),
     duplicate: () => {
+      if (!s.c) return;
       const copy: Character = JSON.parse(JSON.stringify(s.c));
       add({ ...copy, ch: { ...copy.ch, name: (copy.ch.name || 'Character') + ' (copy)' } });
     },
     // Adds the open character's current state under Your characters, keeping its name. Used for examples.
-    makeCopy: () => add(JSON.parse(JSON.stringify(s.c))),
+    makeCopy: () => { if (s.c) add(JSON.parse(JSON.stringify(s.c))); },
     deleteCurrent: () => setS((p) => {
       if (isExample(p.id)) return p;
       try { localStorage.removeItem(sheetKey(p.id)); } catch { /* ignore */ }
       return deleteFromStore(p);
     }),
-    resetCurrent: () => setS((p) => ({ ...p, c: blankCharacter() })),
+    resetCurrent: () => setS((p) => (p.c ? { ...p, c: blankCharacter() } : p)),
 
     exportAll: () => exportStore(s),
-    exportOne: () => backup([s.c]),
+    exportOne: () => backup(s.c ? [s.c] : []),
     // Adds the backup's characters next to the existing ones; returns how many were added, skipped as newer, and failed.
     importAll: (data: unknown): { added: number; newer: number; failed: number } => {
       const { added, newer, failed } = writeBackup(data);

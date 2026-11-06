@@ -22,10 +22,22 @@ import { undoLevel } from './levelup';
 import { TABS, dawn, longRest, restRolls, shortRest, type RestEvent, type RollAsk } from './logic';
 import { revealPlace, type RevealTarget } from './components/nav';
 import { formAfterTabChange, Sheet, type Focus, type FormState } from './sheet';
-import { useCharacters } from './storage';
+import { useCharacters, type CharacterStore } from './storage';
+import type { Character } from './types';
 
 export default function App() {
   const store = useCharacters();
+  // Nothing open (no character of your own, no example): Task 19's welcome screen goes here.
+  if (!store.c) return (
+    <main className="wizard" aria-label="No character open">
+      <h1 className="char-name">No character open</h1>
+      <button type="button" className="btn" onClick={() => store.newBlank()}>+ New character</button>
+    </main>
+  );
+  return <SheetApp store={store as CharacterStore & { c: Character }} />;
+}
+
+function SheetApp({ store }: { store: CharacterStore & { c: Character } }) {
   const { c, update } = store;
   const [edit, setEdit] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);

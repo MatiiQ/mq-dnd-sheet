@@ -21,6 +21,17 @@ const index = () => JSON.parse(localStorage.getItem('dnd-index-v3') ?? 'null');
 const persist = vi.fn(async () => true);
 Object.defineProperty(navigator, 'storage', { value: { persist }, configurable: true });
 
+describe('useCharacters with nothing open', () => {
+  beforeEach(() => { localStorage.clear(); mount(); });
+  afterEach(() => { act(() => root.unmount()); });
+  it('has no character, and update does nothing', () => {
+    expect(store.c).toBeNull();
+    act(() => store.update({ hp: 3 }));
+    expect(store.c).toBeNull();
+    expect(index()).toEqual({ active: '', list: [] });
+  });
+});
+
 describe('useCharacters', () => {
   beforeEach(() => { localStorage.clear(); mount(); });
   afterEach(() => { act(() => root.unmount()); vi.unstubAllGlobals(); });

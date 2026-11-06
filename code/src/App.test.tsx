@@ -14,6 +14,8 @@ const tab = (name: string) => tap([...document.querySelectorAll('nav a, nav butt
 
 describe('App', () => {
   it('closes a tab form when the tab changes, so reopening cannot save a blank edit', () => {
+    // Open Ilyra as the active example (a fresh install now opens the welcome screen).
+    localStorage.setItem('dnd-index-v3', JSON.stringify({ active: 'example:ilyra', list: [] }));
     const host = document.body.appendChild(document.createElement('div'));
     const root = createRoot(host);
     act(() => root.render(<App />));
