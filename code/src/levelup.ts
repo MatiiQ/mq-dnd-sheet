@@ -1,13 +1,14 @@
 // The level engine (spec §2): what the next level of one class gives (levelPlan), applying it (applyLevel) and taking
 // the last level back (undoLevel). Pure. The wizards are UI over these functions; the creator replays its stored answers
 // through applyLevel, so its preview and its result are the same function.
-import { addFromCatalog, addChoicePicks, classProfInputs, titled } from './catalog/copy';
+import { addFromCatalog, addChoicePicks, choicesOf, classProfInputs, poolOptions, titled } from './catalog/copy';
+import { masterySlots } from './actions';
 import { buildChoices, type FlowAnswers } from './catalog/flow';
 import { entriesOf, type Catalog } from './catalog/merge';
 import type { ChoiceSpec, ClassEntry, Entry, FeatureEntry } from './catalog/schema';
 import { atLevel } from './catalog/copy';
 import { blankCharacter } from './defaults';
-import { ABILITIES, abilityMod, addGrants, effScore, LEVEL_KEYS, LIST_KIND, maxHpOf, maxHpRaw, newId, normalize, removalSummary, removeRef, ROW_FIELDS, totalLevel, withoutKeys, type Ref, type RefKind } from './logic';
+import { ABILITIES, abilityMod, addGrants, effScore, num, SKILLS, LEVEL_KEYS, LIST_KIND, maxHpOf, maxHpRaw, newId, normalize, removalSummary, removeRef, ROW_FIELDS, totalLevel, withoutKeys, type Ref, type RefKind } from './logic';
 import type { Ability, Character, ClassRow, Die, LevelKey, LevelRecord, LevelSet } from './types';
 
 // { row }: that row (the level-up wizard). { cls }: the row whose clsId is cls, or a new row of that catalog class (the
@@ -63,6 +64,41 @@ const subOf = (r: ClassRow) => r.subId.split('/')[2] ?? '';
 function featuresAt(cat: Catalog, r: ClassRow, short: string): FeatureEntry[] {
   return entriesOf(cat, 'feature').filter((e) => e.cls === short && !e.of && !OWN_STEP.test(e.id) && (!e.sub || e.sub === subOf(r))
     && (e.lvl === r.lvl || (e.again ?? '').split(',').map(Number).includes(r.lvl)));
+}
+
+// ---- Choices counted from the sheet (spec §2, steps 6 and 7) ----
+
+// The picks a choice of a feature already holds on the sheet: the catalog ids (or granted values) of what the feature
+// added, among the choice's pool. Counted from the sheet, not from the level history, so a v1 character's or a
+// hand-added pick counts too.
+export function heldPicks(c: Character, cat: Catalog, featureId: string, choice: ChoiceSpec): string[] {
+  if (!choice.pool) return [];
+  const from = 'feature:' + featureId;
+  const mine = <T extends { from?: string }>(xs: T[]) => xs.filter((x) => x.from === from);
+  const vals = [...mine(c.feats).map((f) => f.cid), ...mine(c.spells).map((sp) => sp.cid), ...mine(c.grants).map((g) => g.target)]
+    .filter((v): v is string => !!v);
+  const kind = choice.pool.split(':')[0];
+  const ok = kind === 'skill' ? new Set(SKILLS.map(([k]) => k)) : new Set(poolOptions(cat, c, choice.pool, {}).map((o) => o.value));
+  return [...new Set(vals.filter((v) => ok.has(v)))];
+}
+// What a choice owes now: a pickAt choice (Metamagic, Ritual Caster) its count at the class level minus what the sheet
+// holds; a fixed choice (Expertise, Mystic Arcanum) its own pick per occurrence, whatever is held.
+export function owedPicks(c: Character, cat: Catalog, featureId: string, e: Entry, choice: ChoiceSpec): number {
+  if (!choice.pickAt) return choice.pick;
+  const at = e.kind === 'feature' ? { cid: 'feature/' + e.cls + '/' } : { from: 'feature:' + featureId };
+  return Math.max(0, num(c, choice.pickAt, at) - heldPicks(c, cat, featureId, choice).length);
+}
+// A choice whose pool lists one level per occurrence of the feature (Mystic Arcanum: lvl=6|7|8|9 at 11/13/15/17) is
+// narrowed to this occurrence's level (Mystic Arcanum, PHB p.155).
+function narrowed(e: FeatureEntry, clsLvl: number): FeatureEntry {
+  const occ = [e.lvl, ...(e.again ?? '').split(',').filter(Boolean).map(Number)];
+  const i = occ.indexOf(clsLvl);
+  const grants = e.grants.map((g) => {
+    const m = g.kind === 'choice' && g.pool ? /lvl=([\d|]+)/.exec(g.pool) : null;
+    const lv = m ? m[1].split('|') : [];
+    return m && i >= 0 && lv.length === occ.length ? { ...g, pool: (g as ChoiceSpec).pool!.replace(m[0], 'lvl=' + lv[i]) } : g;
+  });
+  return { ...e, grants };
 }
 
 // Multiclassing prerequisite (PHB p.44): 13 or higher in the primary ability of the new class and of every current
@@ -128,12 +164,32 @@ export function levelPlan(c: Character, pick: ClassPick, cat: Catalog | null, an
   }
   // A subclass picked now brings every subclass feature up to this level (a creator taking it late gets the earlier ones).
   const subFeats = picked ? entriesOf(cat, 'feature').filter((e) => e.cls === short && e.sub === subOf(r) && e.lvl < r.lvl && !e.of) : [];
+  const handled = new Set<string>();
   for (const e0 of [...subFeats, ...featuresAt(cat, r, short)]) {
-    const e = atLevel(x, e0), on = x.feats.find((f) => f.cid === e.id);
+    const e = narrowed(atLevel(x, e0), r.lvl), on = x.feats.find((f) => f.cid === e.id);
     const key = 'feature:' + e.id + '@' + r.lvl;
-    if (on) steps.push({ key, kind: 'feature', title: e.name + (e.lvl === r.lvl ? ': Already on your sheet' : ': gained again'), entry: e, onSheet: on.id });
-    else steps.push({ key, kind: 'feature', title: e.name, entry: e });
+    handled.add(e.id);
+    if (!on) { steps.push({ key, kind: 'feature', title: e.name, entry: e }); continue; }
+    const choices = e.lvl === r.lvl ? [] : choicesOf(e);
+    // On the sheet already: at its own level it is not added again; at an `again` level each choice is a step on it.
+    if (!choices.length) steps.push({ key, kind: 'feature', title: e.name + (e.lvl === r.lvl ? ': Already on your sheet' : ': gained again'), entry: e, onSheet: on.id });
+    for (const ch of choices) {
+      const owed = owedPicks(x, cat, on.id, e, ch);
+      if (owed > 0) steps.push({ key: 'choice:' + e.id + '@' + r.lvl + '/' + ch.id, kind: 'choice', title: e.name + ': ' + ch.name, entry: e, choice: ch, owed, held: heldPicks(x, cat, on.id, ch), onSheet: on.id });
+    }
   }
+  // Growing choices (step 7): entries on the sheet whose count follows the level or PB, not handled above.
+  for (const f of x.feats) {
+    const e = f.cid ? cat.byId.get(f.cid) : undefined;
+    if (!e || handled.has(e.id) || !('grants' in e) || OWN_STEP.test(e.id)) continue;
+    for (const ch of choicesOf(e).filter((y) => y.pickAt)) {
+      const owed = owedPicks(x, cat, f.id, e, ch);
+      if (owed > 0) steps.push({ key: 'grow:' + e.id + '/' + ch.id + '@' + n, kind: 'grow', title: e.name + ': ' + owed + ' more', entry: e, choice: ch, owed, held: heldPicks(x, cat, f.id, ch), onSheet: f.id });
+    }
+  }
+  // Weapon Mastery: a slot gained at this level (the Weapon Mastery rules, PHB p.91).
+  const slots = masterySlots(x);
+  if (slots > c.mastery.length) steps.push({ key: 'mastery@' + n, kind: 'mastery', title: 'Weapon Mastery', owed: slots - c.mastery.length, held: [...c.mastery] });
   return { pick, cls, n, clsLvl: r.lvl, steps };
 }
 
@@ -197,7 +253,19 @@ export function applyLevel(c: Character, plan: Plan, ans: LevelAnswers, cat: Cat
     const added = x.feats.find((f) => !ids.has(f.id) && f.cid === e.id);
     if (added) for (const [k, v] of Object.entries(ch.picks)) picks['feature:' + added.id + '/' + k] = v;
   }
-  void addChoicePicks;
+  // More picks on entries already on the sheet (an `again` level, or a count that grew).
+  if (cat) for (const s of plan.steps) {
+    if ((s.kind !== 'choice' && s.kind !== 'grow') || !s.entry || !s.choice || !s.onSheet) continue;
+    const v = ans.flows[s.key]?.['']?.picks[s.choice.id] ?? [];
+    if (!v.length) continue;
+    x = addChoicePicks(x, cat, s.onSheet, s.entry, s.choice.id, { picks: { [s.choice.id]: v }, counted: {}, links: {} });
+    picks['feature:' + s.onSheet + '/' + s.choice.id] = v;
+  }
+  if (ans.mastery?.length && plan.steps.some((s) => s.kind === 'mastery')) {
+    const add = ans.mastery.filter((k) => !x.mastery.includes(k));
+    x = { ...x, mastery: [...x.mastery, ...add] };
+    picks['mastery'] = add;
+  }
   // HP last, with the final CON (PHB p.42). Level 1 of the first class is the die's maximum; a new character starts at
   // full HP. Otherwise current HP rises by the change in the unfloored maximum, and only when above 0: a level never
   // revives (the book only raises the maximum; the sheet raises both so a level isn't gained at a deficit).

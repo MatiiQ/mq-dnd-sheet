@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { mergeCatalog } from './catalog/merge';
 import type { ChoiceSpec, ClassEntry, Entry, FeatureEntry, SubclassEntry } from './catalog/schema';
-import { applyLevel, emptyCharacter, fixedHp, hpGain, levelPlan, levelSet, prereqCheck, undoLevel, undoPreview, withLevel, type ClassPick, type LevelAnswers } from './levelup';
+import { applyLevel, emptyCharacter, fixedHp, heldPicks, hpGain, levelPlan, levelSet, owedPicks, prereqCheck, undoLevel, undoPreview, withLevel, type ClassPick, type LevelAnswers } from './levelup';
 import { abilityMod, hdSpent, longRest, maxHpOf, removeRef } from './logic';
 import { migrate } from './migrate';
 import { blankCharacter } from './defaults';
@@ -31,8 +31,18 @@ const entries: Entry[] = [
   sub('ranger', 'hunter'), sub('ranger', 'gloom'),
   feat('ranger', 'prey', 3, { sub: 'hunter' }), feat('ranger', 'defense', 7, { sub: 'hunter' }), feat('ranger', 'dread', 3, { sub: 'gloom' }),
   feat('rogue', 'reliable', 1, { again: '3' }),
+  feat('rogue', 'expertise', 1, { again: '6', grants: [{ kind: 'choice', id: 'exp', name: 'Expertise', pick: 2, pool: 'skill:proficient' },
+    { id: 'g1', kind: 'prof', name: 'Expertise', cat: 'expertise', target: '$exp' }] }),
+  feat('fighter', 'weapon-mastery', 1, { grants: [{ id: 'g1', kind: 'prof', name: 'Weapon Mastery', cat: 'mastery', val: '1:3,4:4' }] }),
+  feat('warlock', 'mystic-arcanum', 11, { again: '13,15,17', grants: [{ kind: 'choice', id: 'arc', name: 'Arcanum', pick: 1, pool: 'spell:list=warlock;lvl=6|7|8|9' },
+    { id: 'g1', kind: 'spell', name: 'Arcanum', spell: '$arc', always: true }] }),
+  ...['careful', 'distant', 'empowered', 'extended', 'heightened', 'quickened'].map((m) => feat('sorcerer', m + '-spell', 2, { of: 'metamagic' })),
+  ...([['alarm', 1, 'ranger', true], ['comprehend', 1, 'wizard', true], ['detect', 1, 'wizard', true], ['six', 6, 'warlock', false], ['seven', 7, 'warlock', false]] as const)
+    .map(([n, lvl, classes, ritual]) => ({ id: 'spell/' + n, kind: 'spell', name: n, src: 'srd', desc: '', lvl, school: 'x', time: 'Action', range: 'Self', classes, ...(ritual ? { ritual: true } : {}) }) as Entry),
+  { id: 'feat/ritual-caster', kind: 'feat', name: 'Ritual Caster', src: 'srd', desc: '', cat: 'general', grants: [{ kind: 'choice', id: 'rit', name: 'Rituals', pick: 2, pickAt: 'pb', pool: 'spell:lvl=1;ritual=true' },
+    { id: 'g1', kind: 'spell', name: 'Rituals', spell: '$rit', always: true }] } as Entry,
   feat('warlock', 'eldritch-invocations', 1, { grants: [{ kind: 'choice', id: 'inv', name: 'Invocations', pick: 1, pickAt: '1:1,2:3,5:5', pool: 'other:any' }] }),
-  feat('sorcerer', 'metamagic', 2, { again: '10', grants: [{ kind: 'choice', id: 'meta', name: 'Metamagic', pick: 2, pickAt: '2:2,10:4', pool: 'other:any' }] })
+  feat('sorcerer', 'metamagic', 2, { again: '10,17', grants: [{ kind: 'choice', id: 'meta', name: 'Metamagic', pick: 2, pickAt: '2:2,10:4,17:6', pool: 'feature:of=metamagic' }] })
 ];
 const cat = mergeCatalog(entries, null);
 
@@ -43,6 +53,7 @@ const fresh = (abil: Partial<Character['abil']> = {}) => ({ ...emptyCharacter(),
 const ranger1 = (abil: Partial<Character['abil']> = {}) => up(fresh(abil), { cls: 'class/ranger' }, A({ flows: { 'profs/skills': flow({ skills: ['stealth'] }) } }));
 const fixed = (p: Partial<LevelAnswers> = {}) => A({ hp: { mode: 'fixed', val: 6 }, ...p });
 const row = (c: Character, clsId: string) => c.classes.find((r) => r.clsId === clsId)!;
+const rogue1 = () => up(fresh(), { cls: 'class/rogue' }, A({ flows: { 'profs/skills': flow({ skills: ['stealth', 'insight'] }), 'feature:feature/rogue/expertise@1': flow({ exp: ['stealth', 'insight'] }) } }));
 const levelTo = (c: Character, clsId: string, n: number) => { while (row(c, clsId).lvl < n) c = up(c, { row: row(c, clsId).id }, fixed()); return c; };
 
 describe('level engine core [11a]', () => {
@@ -137,7 +148,7 @@ describe('level engine core [11a]', () => {
     expect(up(r, { row: r.classes[0].id }, fixed()).feats.filter((f) => f.cid === 'feature/ranger/fighting')).toHaveLength(1);
   });
   it('an again feature missing from the sheet is added at its again level', () => {
-    let c = up(fresh(), { cls: 'class/rogue' }, A({ flows: { 'profs/skills': flow({ skills: ['stealth', 'insight'] }) } }));
+    let c = rogue1();
     c = { ...c, feats: c.feats.filter((f) => f.cid !== 'feature/rogue/reliable') };
     c = levelTo(c, 'class/rogue', 3);
     expect(c.feats.filter((f) => f.cid === 'feature/rogue/reliable')).toHaveLength(1);
@@ -278,11 +289,12 @@ describe('level undo [11c]', () => {
   });
   it('undo clamps hdUsed so the level’s die comes back unspent', () => {
     const r = ranger1({ dex: 13, wis: 13 });
-    const two = up(r, { cls: 'class/rogue' }, fixed());
+    const rogueAns = fixed({ flows: { 'feature:feature/rogue/expertise@1': flow({ exp: ['stealth'] }) } });
+    const two = up(r, { cls: 'class/rogue' }, rogueAns);
     const spent = { ...two, hdUsed: { ...two.hdUsed, 8: 1 } };
     const back = undoLevel(spent);
     expect(back.hdUsed[8] ?? 0).toBe(0);
-    const again = up(back, { cls: 'class/rogue' }, fixed());
+    const again = up(back, { cls: 'class/rogue' }, rogueAns);
     expect(hdSpent(again, 8)).toBe(0);
   });
   it('undo keeps a changed field and lists it', () => {
@@ -292,5 +304,76 @@ describe('level undo [11c]', () => {
     const c = { ...two, pactMax: 3, levels: [...two.levels.slice(0, -1), { ...rec, set: [{ key: 'pactMax' as const, was: 0, now: 2 }] }] };
     expect(undoPreview(c)!.unrestored).toEqual(['pactMax']);
     expect(undoLevel(c).pactMax).toBe(3);
+  });
+});
+
+const at = (c: Character, clsId: string, lvl: number): Character => {
+  const r = row(c, clsId);
+  return { ...c, classes: c.classes.map((x) => (x === r ? { ...x, lvl } : x)), levels: [{ base: true, n: c.classes.reduce((t, x) => t + (x === r ? lvl : x.lvl), 0), cls: r.id, added: [], picks: {}, set: [] }] };
+};
+const sorc1 = () => up(fresh(), { cls: 'class/sorcerer' }, A({ flows: { 'profs/skills': flow({ skills: ['insight'] }) } }));
+const metaOf = (c: Character) => c.feats.filter((f) => f.cid?.startsWith('feature/sorcerer/') && f.cid.endsWith('-spell')).map((f) => f.cid);
+
+describe('choices owed and growing choices [12]', () => {
+  it('Sorcerer 1 → 10, Metamagic without duplicates; at 10 one step with 2 more picks', () => {
+    let c = sorc1();
+    c = up(c, { row: c.classes[0].id }, fixed({ flows: { 'feature:feature/sorcerer/metamagic@2': flow({ meta: ['feature/sorcerer/careful-spell', 'feature/sorcerer/distant-spell'] }) } }));
+    expect(metaOf(c)).toHaveLength(2);
+    c = levelTo(c, 'class/sorcerer', 9);
+    const plan = levelPlan(c, { row: c.classes[0].id }, cat, A())!;
+    const mm = plan.steps.filter((s) => s.entry?.id === 'feature/sorcerer/metamagic');
+    expect(mm.map((s) => [s.kind, s.owed])).toEqual([['choice', 2]]);
+    expect(mm[0].held).toEqual(['feature/sorcerer/careful-spell', 'feature/sorcerer/distant-spell']);
+    c = applyLevel(c, plan, fixed({ flows: { [mm[0].key]: flow({ meta: ['feature/sorcerer/empowered-spell', 'feature/sorcerer/extended-spell'] }) } }), cat).c;
+    const got = metaOf(c);
+    expect(got).toHaveLength(4);
+    expect(new Set(got).size).toBe(4);
+    expect(c.feats.filter((f) => f.cid === 'feature/sorcerer/metamagic')).toHaveLength(1);
+  });
+  it('a v1 Sorcerer with Metamagic picked by hand is not asked again', () => {
+    const base = at(sorc1(), 'class/sorcerer', 9);
+    const c: Character = { ...base, feats: [...base.feats, { id: 'mm', g: 'class', name: 'Metamagic', desc: '', cid: 'feature/sorcerer/metamagic' },
+      { id: 'o1', g: 'class', name: 'Careful', desc: '', cid: 'feature/sorcerer/careful-spell', from: 'feature:mm' },
+      { id: 'o2', g: 'class', name: 'Distant', desc: '', cid: 'feature/sorcerer/distant-spell', from: 'feature:mm' }] };
+    const step = levelPlan(c, { row: c.classes[0].id }, cat, A())!.steps.find((s) => s.entry?.id === 'feature/sorcerer/metamagic')!;
+    expect(step.owed).toBe(2);
+    const choice = (cat.byId.get('feature/sorcerer/metamagic') as FeatureEntry).grants[0] as ChoiceSpec;
+    expect(heldPicks(c, cat, 'mm', choice)).toHaveLength(2);
+    expect(owedPicks(withLevel(c, { row: c.classes[0].id }, cat).c, cat, 'mm', cat.byId.get('feature/sorcerer/metamagic')!, choice)).toBe(2);
+  });
+  it('Rogue 5 → 6 asks 2 Expertise picks', () => {
+    const c = levelTo(rogue1(), 'class/rogue', 5);
+    const step = levelPlan(c, { row: c.classes[0].id }, cat, A())!.steps.find((s) => s.entry?.id === 'feature/rogue/expertise')!;
+    expect(step).toMatchObject({ kind: 'choice', owed: 2 });
+    expect(step.held!.sort()).toEqual(['insight', 'stealth']);
+  });
+  it('Warlock 11 → 13 asks a level-7 Mystic Arcanum pick', () => {
+    let c = at(up(fresh(), { cls: 'class/warlock' }, A({ flows: { 'profs/skills': flow({ skills: ['insight'] }), 'feature:feature/warlock/eldritch-invocations@1': flow({ inv: ['x'] }) } })), 'class/warlock', 12);
+    c = { ...c, feats: [...c.feats, { id: 'ma', g: 'class', name: 'Mystic Arcanum', desc: '', cid: 'feature/warlock/mystic-arcanum' }],
+      spells: [{ id: 'sx', name: 'six', lvl: 6, time: 'Action', range: 'Self', cid: 'spell/six', from: 'feature:ma', always: true }] };
+    const step = levelPlan(c, { row: c.classes[0].id }, cat, A())!.steps.find((s) => s.entry?.id === 'feature/warlock/mystic-arcanum')!;
+    expect(step).toMatchObject({ kind: 'choice', owed: 1 });
+    expect(step.choice!.pool).toBe('spell:list=warlock;lvl=7');
+  });
+  it('Ritual Caster grows with PB', () => {
+    const base = at(ranger1(), 'class/ranger', 4);
+    const c: Character = { ...base, feats: [...base.feats, { id: 'rc', g: 'feat', name: 'Ritual Caster', desc: '', cid: 'feat/ritual-caster' }],
+      spells: [{ id: 'a', name: 'alarm', lvl: 1, time: 'Action', range: 'Self', cid: 'spell/alarm', from: 'feature:rc', always: true },
+        { id: 'b', name: 'detect', lvl: 1, time: 'Action', range: 'Self', cid: 'spell/detect', from: 'feature:rc', always: true }] };
+    const plan = levelPlan(c, { row: c.classes[0].id }, cat, A())!;
+    const grow = plan.steps.find((s) => s.kind === 'grow')!;
+    expect(grow).toMatchObject({ owed: 1 });
+    expect(grow.title).toContain('Ritual Caster: 1 more');
+    const next = applyLevel(c, plan, fixed({ flows: { [grow.key]: flow({ rit: ['spell/comprehend'] }) } }), cat).c;
+    expect(next.spells.filter((x) => x.from === 'feature:rc').map((x) => x.cid)).toEqual(['spell/alarm', 'spell/detect', 'spell/comprehend']);
+  });
+  it('a Weapon Mastery slot gained at a level becomes a step, and undo removes the kind', () => {
+    let c = at(up(fresh(), { cls: 'class/fighter' }, A({ flows: { 'profs/skills': flow({ skills: ['stealth'] }) } })), 'class/fighter', 3);
+    c = { ...c, mastery: ['longsword', 'dagger', 'spear'] };
+    const plan = levelPlan(c, { row: c.classes[0].id }, cat, A())!;
+    expect(plan.steps.find((s) => s.kind === 'mastery')).toMatchObject({ owed: 1 });
+    const next = applyLevel(c, plan, fixed({ mastery: ['rapier'] }), cat).c;
+    expect(next.mastery).toEqual(['longsword', 'dagger', 'spear', 'rapier']);
+    expect(undoLevel(next).mastery).toEqual(['longsword', 'dagger', 'spear']);
   });
 });
