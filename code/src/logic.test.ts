@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { newId } from './logic';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import {
-  ABILITIES, charLevel, profBonus, regainTo, saveDc, acCanTargetOther, acOnOther, toggleAcTarget, regainLabel, damageHitDie, setTempHitDie, castAbOf, removeChip, speedOf, armorSlowBy, stealthDisBy, acSpellIdle, untrainedArmor, grantChips, addGrants, findUnlinked, removalChain, removalSummary, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, dawn, refillFor, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, parseWeight, passiveScore, passiveParts, passiveNotes, activeAuras, pillView, resPill, setPill, preparedCount, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft, num, setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, undoHp
+  ABILITIES, charLevel, conHpPart, maxHpRaw, profBonus, regainTo, saveDc, acCanTargetOther, acOnOther, toggleAcTarget, regainLabel, damageHitDie, setTempHitDie, castAbOf, removeChip, speedOf, armorSlowBy, stealthDisBy, acSpellIdle, untrainedArmor, grantChips, addGrants, findUnlinked, removalChain, removalSummary, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, dawn, refillFor, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, applyDamage, applyHeal, applySetTemp, acAfterEdit, armorClass, carriedWeight, carryCapacity, castSpell, detectAcSpell, detectArmor, clearHpUndo, concAfterEdit, fmt, hdSpent, healHitDie, hitDieRoll, hpColor, hpRingStops, initiative, isDead, longRest, parseWeight, passiveScore, passiveParts, passiveNotes, activeAuras, pillView, resPill, setPill, preparedCount, saveMod, setHp, setMaxHp, shortRest, skillMod, slotsLeft, num, setExhaustion, sortSpells, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, spendHitDie, toggleAcSpell, toggleCondition, undoHp
 } from './logic';
 import { migrate } from './migrate';
 import { AOP, haAura, holyAvenger, paladin, withClass } from './test-fixtures';
@@ -549,7 +549,8 @@ describe('rests', () => {
   });
   it('long rest restores a reduced HP maximum and reduced ability scores, not raised ones', () => {
     const c = longRest(make({ hp: 30, maxHp: 38, origHp: 44, origOn: true, abilAdj: { str: -2, con: 2 } }));
-    expect(c).toMatchObject({ maxHp: 44, hp: 44, abilAdj: { str: 0, con: 2 } });
+    // The kept CON +2 raises the modifier by 1, so the maximum is 44 + 5 levels (PHB p.42).
+    expect(c).toMatchObject({ maxHp: 44, hp: 49, abilAdj: { str: 0, con: 2 } });
     expect(c.restMsg?.body).toContain('HP maximum back to 44');
     expect(c.restMsg?.body).toContain('reduced ability scores restored');
     expect(longRest(make({ maxHp: 49, origHp: 44, origOn: true })).maxHp).toBe(49);
@@ -1649,5 +1650,46 @@ describe('an empty class list (the creator before level 1)', () => {
     expect(profBonus(charLevel(c))).toBe(2);
     expect(() => maxHpOf(c)).not.toThrow();
     expect(() => normalize(c)).not.toThrow();
+  });
+});
+
+describe('HP and Constitution', () => {
+  const lv5 = (con: number, p: Partial<Character> = {}) =>
+    withClass({ ...blankCharacter(), maxHp: 40, origHp: 40, hp: 40, conBase: 0, abil: { ...blankCharacter().abil, con }, ...p }, { lvl: 5 });
+  it('HP follows a CON change (PHB p.42)', () => {
+    expect(maxHpOf(lv5(14))).toBe(50);
+    expect(maxHpOf(lv5(16))).toBe(55);
+    expect(maxHpOf(lv5(12))).toBe(45);
+    expect(conHpPart(lv5(14))).toBe(10);
+  });
+  it('a migrated character keeps its maximum', () => expect(maxHpOf(lv5(14, { conBase: 2 }))).toBe(40));
+  it('typing a max HP stores it without the CON part', () => {
+    const p = setMaxHp(lv5(14), 60);
+    expect(p.maxHp).toBe(50);
+    expect(maxHpOf({ ...lv5(14), ...p })).toBe(60);
+  });
+  it('a CON drop clamps current HP through normalize', () => {
+    const c = lv5(14, { hp: 50 });
+    expect(normalize({ ...c, abil: { ...c.abil, con: 12 } }).hp).toBe(45);
+  });
+  it('an equipped item with a CON abil grant changes max HP', () => {
+    const item = { id: 'belt', name: 'Belt', qty: 1, eq: true };
+    const g: Grant = { id: 'gb', kind: 'abil', name: 'CON +2', ab: 'con', val: '2', cap: 20, needEq: true, from: 'item:belt' };
+    const on = lv5(14, { inv: [item], grants: [g] });
+    expect(maxHpOf(on)).toBe(55);
+    expect(maxHpOf({ ...on, inv: [{ ...item, eq: false }] })).toBe(50);
+  });
+  it('maxHpRaw is not floored', () => {
+    const c = withClass({ ...blankCharacter(), maxHp: -5, conBase: 0 }, { lvl: 1 });
+    expect(maxHpRaw(c)).toBe(-5);
+    expect(maxHpOf(c)).toBe(1);
+  });
+  it('maxHpOf is never below 1', () => {
+    const c = withClass({ ...blankCharacter(), maxHp: 0, hp: 1, conBase: 0, abil: { ...blankCharacter().abil, con: 8 } }, { lvl: 1 });
+    expect(maxHpOf(c)).toBe(1);
+    expect(normalize(c).hp).toBe(1);
+    const m = migrate({ ...blankCharacter(), maxHp: -5 });
+    expect(m.maxHp).toBe(-5);
+    expect(maxHpOf(m)).toBe(1);
   });
 });

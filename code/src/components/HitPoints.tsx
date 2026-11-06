@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { activeGrants, sourceLabel } from '../links';
-import { abilityMod, applyDamage, capital, damageHitDie, maxHpOf, num, applyHeal, applySetTemp, clearHpUndo, charLevel, fmt, hdLeft as hdLeftOf, hdPools, healHitDie, hitDieRoll, hpColor, hpRingStops, isDead, setHp, setMaxHp, setTempHitDie, spendHitDie, undoHp } from '../logic';
+import { abilityMod, applyDamage, capital, conHpPart, damageHitDie, maxHpOf, num, applyHeal, applySetTemp, clearHpUndo, charLevel, fmt, hdLeft as hdLeftOf, hdPools, healHitDie, hitDieRoll, hpColor, hpRingStops, isDead, setHp, setMaxHp, setTempHitDie, spendHitDie, undoHp } from '../logic';
 import { useWide } from '../layout';
 import { useSheet } from '../sheet';
 import type { Character } from '../types';
@@ -17,6 +17,8 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
   const ring = hpRingStops(c);
   // The delta is in typed values; the max and the original show with HP-per-level grants added (Tough), so a typed
   // 40 with original 44 and Tough at level 5 reads "/ 50 … max −4 (original 54)".
+  // The panel works with the CON part included (setMaxHp takes that value); the stored maxHp leaves it out.
+  const conPart = conHpPart(c), typed = c.maxHp + conPart;
   const delta = c.maxHp - c.origHp;
   const max = maxHpOf(c), origShown = maxHpOf({ ...c, maxHp: c.origHp });
   const perLevel = [...activeGrants(c, 'hpLvl'), ...activeGrants(c, 'hpFlat')];
@@ -34,7 +36,7 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
   const [closedNotice, setClosedNotice] = useState<string | null>(null);
   useEffect(() => { if (closedNotice !== stateNotice) setClosedNotice(null); }, [stateNotice]);
   // These edit the typed value; with an HP-per-level grant it differs from the max shown, so say so.
-  const maxName = max !== c.maxHp ? 'base max HP' : 'max HP';
+  const maxName = max !== typed ? 'base max HP' : 'max HP';
   const deltaColor = delta < 0 ? 'var(--danger)' : delta > 0 ? 'var(--blue)' : 'var(--muted)';
 
   // The undo row hides itself after a few seconds; a newer HP action restarts the wait.
@@ -79,11 +81,11 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
         </div>
         <div className="col grow" style={{ gap: 2 }}>
           <div className="block-title area-title hp-title">Hit points</div>
-          {perLevel.length > 0
+          {perLevel.length > 0 || conPart !== 0
             ? <button type="button" className="hp-max link-btn" aria-expanded={maxOpen} aria-label={'Max HP ' + max + '. Show breakdown.'} onClick={() => setMaxOpen(!maxOpen)}>/ {max}</button>
             : <span className="hp-max">/ {max}</span>}
-          {maxOpen && perLevel.length > 0 && (
-            <span className="small">Base {c.maxHp}{perLevel.map((g) => ' · ' + g.name + ' ' + fmt(num(c, g.val, g) * level) + ' (' + fmt(num(c, g.val, g)) + ' × level ' + level + (sourceLabel(c, g) ? ', ' + sourceLabel(c, g) : '') + ')')}</span>
+          {maxOpen && (perLevel.length > 0 || conPart !== 0) && (
+            <span className="small">Base {c.maxHp}{conPart !== 0 ? ' · CON ×level ' + fmt(conPart) : ''}{perLevel.map((g) => ' · ' + g.name + ' ' + fmt(num(c, g.val, g) * level) + ' (' + fmt(num(c, g.val, g)) + ' × level ' + level + (sourceLabel(c, g) ? ', ' + sourceLabel(c, g) : '') + ')')}</span>
           )}
           {!edit && c.origOn && delta !== 0 && <span className="hp-delta" style={{ color: deltaColor }}>max {fmt(delta)} (original {origShown})</span>}
         </div>
@@ -116,9 +118,9 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
         <div className="dashed-box">
           <div className="row gap-6">
             <span className="muted">{capital(maxName)}</span>
-            <Step label={'Decrease ' + maxName} onClick={() => update((p) => setMaxHp(p, p.maxHp - 1))}>−</Step>
-            <TypeInNumber className="input input-num" aria-label={capital(maxName)} value={c.maxHp} onCommit={(n) => update((p) => setMaxHp(p, n))} />
-            <Step label={'Increase ' + maxName} onClick={() => update((p) => setMaxHp(p, p.maxHp + 1))}>+</Step>
+            <Step label={'Decrease ' + maxName} onClick={() => update((p) => setMaxHp(p, p.maxHp + conHpPart(p) - 1))}>−</Step>
+            <TypeInNumber className="input input-num" aria-label={capital(maxName)} value={typed} onCommit={(n) => update((p) => setMaxHp(p, n))} />
+            <Step label={'Increase ' + maxName} onClick={() => update((p) => setMaxHp(p, p.maxHp + conHpPart(p) + 1))}>+</Step>
           </div>
           {!c.origOn && (
             <button type="button" className="btn btn-add" style={{ fontSize: 14, padding: '0 12px' }} onClick={() => update((p) => ({ origOn: true, origHp: p.maxHp }))}>+ Original max HP</button>
@@ -131,7 +133,7 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
               <span style={{ fontSize: 13, fontWeight: 600, color: deltaColor }}>{delta === 0 ? 'Matches original' : fmt(delta) + ' from original'}</span>
               {delta !== 0 && (
                 <button type="button" className="btn" style={{ fontSize: 14, padding: '0 12px' }}
-                  onClick={() => update((p) => setMaxHp(p, p.origHp))}>Reset to original</button>
+                  onClick={() => update((p) => setMaxHp(p, p.origHp + conHpPart(p)))}>Reset to original</button>
               )}
               <button type="button" className="icon-btn faint" aria-label="Hide original max HP field" onClick={() => update({ origOn: false })}><XIcon /></button>
             </div>

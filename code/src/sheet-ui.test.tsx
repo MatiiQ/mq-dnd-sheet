@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import App from './App';
 import { blankCharacter } from './defaults';
 import { modeSpeed, speedNow } from './logic';
-import { haAura, holyAvenger, paladin } from './test-fixtures';
+import { haAura, holyAvenger, paladin, withClass } from './test-fixtures';
 import type { Character, Feature, Item } from './types';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -25,6 +25,16 @@ const tap = (el: Element | null | undefined) => {
 const label = (s: string) => document.querySelector(`[aria-label="${s}"]`);
 const editMode = () => tap(label('Edit character'));
 const tab = (name: string) => tap([...document.querySelectorAll('nav a, nav button')].find((e) => e.textContent?.trim().startsWith(name)));
+// Types into a text input the way a player does: focus, a new value, then blur (TypeInNumber commits on blur).
+const typeInto = (el: Element | null, v: string) => {
+  const input = el as HTMLInputElement;
+  act(() => { input.focus(); });
+  act(() => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, v);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  act(() => { input.blur(); });
+};
 const feat: Feature = { id: 'f', g: 'class', name: 'Rage', desc: 'first\nsecond' };
 
 beforeEach(() => { localStorage.clear(); });
@@ -305,5 +315,26 @@ describe('Resources', () => {
     expect(label('Spend Inspiration')).toBeNull();
     editMode();
     expect(label('Show Inspiration')?.getAttribute('aria-pressed')).toBe('false');
+  });
+});
+
+describe('max HP with the CON part derived', () => {
+  // Level 5, CON 14 (+2), conBase 0: the derived part is 10.
+  const sheet = (p: Partial<Character> = {}) => withClass({ ...blankCharacter(), maxHp: 50, hp: 50, conBase: 0, abil: { ...blankCharacter().abil, con: 14 }, ...p }, { lvl: 5 });
+  it('shows and edits the maximum with CON included', () => {
+    renderSheet(sheet());
+    editMode();
+    expect((label('Max HP') as HTMLInputElement).value).toBe('60');
+    tap(label('Increase max HP'));
+    expect(saved().maxHp).toBe(51);
+    typeInto(label('Max HP'), '70');
+    expect((label('Max HP') as HTMLInputElement).value).toBe('70');
+    expect(saved().maxHp).toBe(60);
+  });
+  it('resets to the original maximum with CON added', () => {
+    renderSheet(sheet({ maxHp: 40, hp: 40, origOn: true, origHp: 50 }));
+    editMode();
+    tap([...document.querySelectorAll('button')].find((b) => b.textContent === 'Reset to original'));
+    expect(saved().maxHp).toBe(50);
   });
 });

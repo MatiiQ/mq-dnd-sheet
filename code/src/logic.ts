@@ -508,7 +508,14 @@ export const speedNow = (c: Character) => speedOf(c, walkSpeed(c));
 // The HP maximum every reader uses: the typed maxHp plus HP-per-level grants × level (Tough, PHB p.202). maxHp and
 // origHp stay typed (base) values, so a Long Rest restoring origHp never counts a grant twice.
 // A flat increase counts once (Boon of Fortitude, +40, PHB p.210).
-export const maxHpOf = (c: Character) => c.maxHp + activeGrants(c, 'hpLvl').reduce((t, g) => t + num(c, g.val, g) * charLevel(c), 0) + activeGrants(c, 'hpFlat').reduce((t, g) => t + num(c, g.val, g), 0);
+// The CON part of the HP maximum: when the CON modifier changes, the maximum changes by 1 per level for each point
+// (PHB p.42). maxHp and origHp hold the maximum without it beyond conBase, the modifier already counted inside them.
+// Simplifications: the book states the rule for an increase only, the sheet applies a decrease too; any change of the
+// modifier counts, a temporary one from an equipped item's abil grant included.
+export const conHpPart = (c: Character) => charLevel(c) * (abilityMod(c, 'con') - c.conBase);
+// The maximum unfloored: what a change in the maximum is measured on (a level's current-HP rise).
+export const maxHpRaw = (c: Character) => c.maxHp + conHpPart(c) + activeGrants(c, 'hpLvl').reduce((t, g) => t + num(c, g.val, g) * charLevel(c), 0) + activeGrants(c, 'hpFlat').reduce((t, g) => t + num(c, g.val, g), 0);
+export const maxHpOf = (c: Character) => Math.max(1, maxHpRaw(c));
 // Current HP against max, temp HP ignored: green from 65%, yellow from 30%, red below.
 export const hpColor = (c: Character) =>
   (c.hp * 100 >= maxHpOf(c) * 65 ? 'var(--hp-high)' : c.hp * 100 >= maxHpOf(c) * 30 ? 'var(--hp-mid)' : 'var(--hp-low)');
@@ -635,9 +642,10 @@ export function clearHpUndo(c: Character, shown: Character['hpUndo']): Character
   return c.hpUndo === shown ? { ...c, hpUndo: null } : c;
 }
 
-// A patch for a new typed HP maximum: at least 1, and current HP never above the effective maximum it gives.
+// A patch for a new typed HP maximum (typed with its CON part, at least 1): stored without the CON part, so the typed
+// value is what shows; current HP never above the effective maximum it gives.
 export function setMaxHp(c: Character, maxHp: number): Pick<Character, 'maxHp' | 'hp'> {
-  const m = Math.max(1, maxHp);
+  const m = Math.max(1, maxHp) - conHpPart(c);
   return { maxHp: m, hp: Math.min(c.hp, maxHpOf({ ...c, maxHp: m })) };
 }
 
