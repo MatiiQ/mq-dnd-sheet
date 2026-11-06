@@ -959,7 +959,7 @@ export interface Ref { kind: RefKind; id: string }
 export interface GrantInput { spec: Omit<GrantSpec, 'opt'>; link?: string; counted?: boolean; spell?: Omit<Spell, 'id'> }
 
 type Entry = Linked & { id: string; name: string };
-const LIST_KIND: [(typeof LINKED_LISTS)[number], RefKind][] = [
+export const LIST_KIND: [(typeof LINKED_LISTS)[number], RefKind][] = [
   ['senses', 'sense'], ['spells', 'spell'], ['feats', 'feature'], ['attacks', 'attack'], ['grants', 'grant'], ['defenses', 'defense'], ['res', 'res']
 ];
 const SOURCE_OF_REF: Partial<Record<RefKind, SourceKind>> = { feature: 'feature', item: 'item', spell: 'spell' };
