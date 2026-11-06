@@ -1,14 +1,16 @@
 // The level engine (spec §2): what the next level of one class gives (levelPlan), applying it (applyLevel) and taking
 // the last level back (undoLevel). Pure. The wizards are UI over these functions; the creator replays its stored answers
 // through applyLevel, so its preview and its result are the same function.
-import { addFromCatalog, addChoicePicks, choicesOf, classProfInputs, poolOptions, titled } from './catalog/copy';
+import { addFromCatalog, addChoicePicks, choicesOf, classProfInputs, poolOptions, prereqMet, resolveChoices, titled, type AddChoices } from './catalog/copy';
+import { valueAt } from './catalog/value';
 import { masterySlots } from './actions';
+import { activeGrants } from './links';
 import { buildChoices, type FlowAnswers } from './catalog/flow';
 import { entriesOf, type Catalog } from './catalog/merge';
 import type { ChoiceSpec, ClassEntry, Entry, FeatureEntry } from './catalog/schema';
 import { atLevel } from './catalog/copy';
 import { blankCharacter } from './defaults';
-import { ABILITIES, abilityMod, addGrants, effScore, num, SKILLS, LEVEL_KEYS, LIST_KIND, maxHpOf, maxHpRaw, newId, normalize, removalSummary, removeRef, ROW_FIELDS, totalLevel, withoutKeys, type Ref, type RefKind } from './logic';
+import { ABILITIES, abilityMod, addGrants, effScore, num, pactFor, SKILLS, slotsFor, spellForRow, valueCtx, LEVEL_KEYS, LIST_KIND, maxHpOf, maxHpRaw, newId, normalize, removalSummary, removeRef, ROW_FIELDS, totalLevel, withoutKeys, type Ref, type RefKind } from './logic';
 import type { Ability, Character, ClassRow, Die, LevelKey, LevelRecord, LevelSet } from './types';
 
 // { row }: that row (the level-up wizard). { cls }: the row whose clsId is cls, or a new row of that catalog class (the
@@ -101,6 +103,39 @@ function narrowed(e: FeatureEntry, clsLvl: number): FeatureEntry {
   return { ...e, grants };
 }
 
+// ---- Spellcasting of one class row (spec §2, step 9) ----
+
+// A row's casting tables: its class's own (cantrips, prepared, slots), or for a class without them the active casting
+// grant from its features (Eldritch Knight, Arcane Trickster). maxLvl: the highest slot level the class prepares on its
+// own (PHB p.45): its slots row, the pact slot level for a pact class, the grant's highest sN with a value.
+interface CastTables { ab?: Ability; cantrips?: string; prepared?: string; maxLvl: number }
+function castTables(x: Character, cls: ClassEntry, r: ClassRow): CastTables | null {
+  const top = (row: number[] | undefined) => (row ? row.reduce((m, n, i) => (n > 0 ? i + 1 : m), 0) : 0);
+  if (cls.castAb && (cls.slots?.length || cls.cantrips || cls.prepared)) return { ab: cls.castAb, cantrips: cls.cantrips, prepared: cls.prepared, maxLvl: top(cls.slots?.[r.lvl - 1]) };
+  const short = cls.id.split('/')[1];
+  const g = activeGrants(x, 'casting').find((y) => x.feats.find((f) => 'feature:' + f.id === y.from)?.cid?.startsWith('feature/' + short + '/'));
+  if (!g) return null;
+  const s = [g.s1, g.s2, g.s3, g.s4, g.s5].map((v) => (v ? num(x, v, g) : 0));
+  return { ab: g.ab as Ability, cantrips: g.cantrips, prepared: g.prepared, maxLvl: top(s) };
+}
+// A level table's value at a class level (the table belongs to the class, so its level is the class level).
+const tableAt = (x: Character, t: string | undefined, lvl: number) => { if (!t || lvl < 1) return 0; const v = valueAt(t, { ...valueCtx(x), level: lvl }); return typeof v === 'number' ? v : 0; };
+
+const isAsi = (id: string) => /\/(ability-score-improvement|epic-boon)$/.test(id);
+// Warnings for the feat an Ability Score Improvement or Epic Boon takes: unmet prerequisites, and an increase past its
+// cap (20, or 30 for an Epic Boon, PHB p.38 and p.92) that would be wasted.
+function asiWarn(x: Character, cat: Catalog, a: NonNullable<LevelAnswers['asi']>): string | undefined {
+  const e = cat.byId.get(a.feat);
+  if (!e) return undefined;
+  const out: string[] = [];
+  if (e.kind === 'feat') out.push(...prereqMet(x, e.prereq).missing.map((m) => 'Needs ' + m));
+  const specs = resolveChoices(cat, e, buildChoices(cat, x, e, a.flow).picks, x).specs.filter((g) => g.kind === 'abil' && g.ab);
+  const sum = new Map<string, { add: number; cap: number }>();
+  for (const g of specs) { const k = g.ab!; const cur = sum.get(k) ?? { add: 0, cap: g.cap ?? 20 }; sum.set(k, { add: cur.add + Number(g.val ?? 0), cap: cur.cap }); }
+  for (const [k, v] of sum) if (effScore(x, k as Ability) + v.add > v.cap) out.push(k.toUpperCase() + ': an increase past ' + v.cap + ' is wasted');
+  return out.length ? out.join('; ') : undefined;
+}
+
 // Multiclassing prerequisite (PHB p.44): 13 or higher in the primary ability of the new class and of every current
 // class (',' all of them, '|' any one), read from the final scores. A class without a known primary is listed in
 // unknown and skipped. Advisory: the wizard warns and offers "Do it anyway".
@@ -177,6 +212,23 @@ export function levelPlan(c: Character, pick: ClassPick, cat: Catalog | null, an
       const owed = owedPicks(x, cat, on.id, e, ch);
       if (owed > 0) steps.push({ key: 'choice:' + e.id + '@' + r.lvl + '/' + ch.id, kind: 'choice', title: e.name + ': ' + ch.name, entry: e, choice: ch, owed, held: heldPicks(x, cat, on.id, ch), onSheet: on.id });
     }
+  }
+  // Ability Score Improvement / Epic Boon (step 8): a feat at this class level, on the entry once it is on the sheet.
+  for (const e of entriesOf(cat, 'feature').filter((y) => y.cls === short && !y.sub && isAsi(y.id) && (y.lvl === r.lvl || (y.again ?? '').split(',').map(Number).includes(r.lvl)))) {
+    const on = x.feats.find((f) => f.cid === e.id);
+    const warn = ans?.asi ? asiWarn(x, cat, ans.asi) : undefined;
+    steps.push({ key: 'asi@' + r.lvl, kind: 'asi', title: e.name, entry: e, ...(on ? { onSheet: on.id } : {}), ...(warn ? { warn } : {}) });
+  }
+  // Casting (step 9): new cantrips and the rise in prepared spells, from the class's tables at its new level.
+  const ct = castTables(x, cls, r);
+  if (ct) {
+    const cantrips = tableAt(x, ct.cantrips, r.lvl) - tableAt(x, ct.cantrips, r.lvl - 1);
+    const prepared = tableAt(x, ct.prepared, r.lvl) - tableAt(x, ct.prepared, r.lvl - 1);
+    const list = cls.castAb ? short : (activeGrants(x, 'casting').find((g) => g.ab === ct.ab)?.list ?? short);
+    const maxLvl = cls.pact ? pactFor(x, cat).lvl : ct.maxLvl;
+    if (cantrips > 0) steps.push({ key: 'cantrips:' + cls.id + '@' + r.lvl, kind: 'cantrips', title: 'Pick ' + cantrips + (cantrips === 1 ? ' cantrip' : ' cantrips'), owed: cantrips, list, maxLvl: 0 });
+    if (prepared > 0) steps.push({ key: 'prepare:' + cls.id + '@' + r.lvl, kind: 'prepare', title: 'Prepare ' + prepared + ' more', owed: prepared, list, maxLvl,
+      ...(short === 'wizard' ? { warn: 'The whole Wizard list is offered: check your spellbook.' } : {}) });
   }
   // Growing choices (step 7): entries on the sheet whose count follows the level or PB, not handled above.
   for (const f of x.feats) {
@@ -261,10 +313,64 @@ export function applyLevel(c: Character, plan: Plan, ans: LevelAnswers, cat: Cat
     x = addChoicePicks(x, cat, s.onSheet, s.entry, s.choice.id, { picks: { [s.choice.id]: v }, counted: {}, links: {} });
     picks['feature:' + s.onSheet + '/' + s.choice.id] = v;
   }
+  // Ability Score Improvement / Epic Boon: the feat goes in through the feature's own choice, so its increases are abil
+  // grants with the catalog's cap; at a later level the feature is already there and only gains the pick.
+  const asiStep = plan.steps.find((s) => s.kind === 'asi');
+  if (cat && asiStep?.entry && ans.asi) {
+    const feat = cat.byId.get(ans.asi.feat);
+    const ch = choicesOf(asiStep.entry)[0];
+    if (feat && ch) {
+      const a: AddChoices = { picks: { [ch.id]: [feat.id] }, counted: {}, links: {}, nested: { [feat.id]: buildChoices(cat, x, feat, ans.asi.flow) } };
+      x = asiStep.onSheet ? addChoicePicks(x, cat, asiStep.onSheet, asiStep.entry, ch.id, a) : addFromCatalog(x, cat, asiStep.entry, a);
+      picks['asi'] = [feat.id];
+    }
+  }
   if (ans.mastery?.length && plan.steps.some((s) => s.kind === 'mastery')) {
     const add = ans.mastery.filter((k) => !x.mastery.includes(k));
     x = { ...x, mastery: [...x.mastery, ...add] };
     picks['mastery'] = add;
+  }
+  // Spellcasting: the row's ability, the character's when it has none, the slots, the pact pool and the prepared count.
+  // A stored value is replaced only while it still equals the table for the level before (or the player asked for the
+  // table): a hand edit stays, and goes in kept.
+  const kept: { key: LevelKey; table: unknown }[] = [];
+  const use = (k: LevelKey) => ans.useTable?.includes(k);
+  if (cat && cls) {
+    const r0 = x.classes.find((y) => y.id === row)!;
+    const ct = castTables(x, cls, r0);
+    if (ct?.ab && !r0.castAb && (ct.maxLvl > 0 || tableAt(x, ct.cantrips, r0.lvl) > 0 || cls.pact)) {
+      x = { ...x, classes: x.classes.map((y) => (y.id === row ? { ...y, castAb: ct.ab } : y)) };
+      if (x.castAb === 'none' && ct.ab !== 'str' && ct.ab !== 'dex' && ct.ab !== 'con') x = { ...x, castAb: ct.ab };
+    }
+    if (ct?.prepared) {
+      const was = c.classes.find((y) => y.id === row)?.prep ?? 0, t0 = tableAt(x, ct.prepared, r0.lvl - 1), t1 = tableAt(x, ct.prepared, r0.lvl);
+      const key: LevelKey = `row.${row}.prep`;
+      if (was === t0 || use(key)) x = { ...x, classes: x.classes.map((y) => (y.id === row ? { ...y, prep: t1 } : y)) };
+      else if (was !== t1) kept.push({ key, table: t1 });
+    }
+  }
+  if (cat) {
+    const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+    const s0 = slotsFor(c, cat), s1 = slotsFor(x, cat);
+    if (same(c.slotMax, s0) || use('slotMax')) x = { ...x, slotMax: s1, slotUsed: x.slotUsed.map((n, i) => Math.min(n, s1[i])) };
+    else if (!same(c.slotMax, s1)) kept.push({ key: 'slotMax', table: s1 });
+    const p0 = pactFor(c, cat), p1 = pactFor(x, cat);
+    if (c.pactMax === p0.max || use('pactMax')) x = { ...x, pactMax: p1.max };
+    else if (c.pactMax !== p1.max) kept.push({ key: 'pactMax', table: p1.max });
+    if (c.pactLvl === p0.lvl || use('pactLvl')) x = { ...x, pactLvl: p1.lvl };
+    else if (c.pactLvl !== p1.lvl) kept.push({ key: 'pactLvl', table: p1.lvl });
+    // Spells picked for the cantrip and prepare steps: tied to this class, with its ability; prepared ones prepared.
+    const rr = x.classes.find((y) => y.id === row)!;
+    for (const s of plan.steps.filter((y) => y.kind === 'cantrips' || y.kind === 'prepare')) {
+      for (const id of ans.spells[s.key] ?? []) {
+        const e = cat.byId.get(id);
+        if (e?.kind !== 'spell') continue;
+        const ids = new Set(x.spells.map((sp) => sp.id));
+        x = addFromCatalog(x, cat, e, { picks: {}, counted: {}, links: {} });
+        x = { ...x, spells: x.spells.map((sp) => (ids.has(sp.id) ? sp : { ...spellForRow(sp, rr), ...(sp.lvl > 0 ? { prep: true } : {}) })) };
+      }
+      if (ans.spells[s.key]?.length) picks[s.key] = ans.spells[s.key];
+    }
   }
   // HP last, with the final CON (PHB p.42). Level 1 of the first class is the die's maximum; a new character starts at
   // full HP. Otherwise current HP rises by the change in the unfloored maximum, and only when above 0: a level never
@@ -278,7 +384,7 @@ export function applyLevel(c: Character, plan: Plan, ans: LevelAnswers, cat: Cat
   const before = refsOf(c);
   const added = [...refsOf(x)].filter((ref) => !before.has(ref));
   const rec: LevelRecord = { n: totalLevel(x), cls: row, hp, added, picks, set: levelSet(c, x) };
-  return { c: normalize({ ...x, levels: [...x.levels, rec] }), kept: [] };
+  return { c: normalize({ ...x, levels: [...x.levels, rec] }), kept };
 }
 
 // ---- Undo ----

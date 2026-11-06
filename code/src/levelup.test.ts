@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { mergeCatalog } from './catalog/merge';
+import srdEntries from './data/srd/index';
 import type { ChoiceSpec, ClassEntry, Entry, FeatureEntry, SubclassEntry } from './catalog/schema';
 import { applyLevel, emptyCharacter, fixedHp, heldPicks, hpGain, levelPlan, levelSet, owedPicks, prereqCheck, undoLevel, undoPreview, withLevel, type ClassPick, type LevelAnswers } from './levelup';
 import { abilityMod, hdSpent, longRest, maxHpOf, removeRef } from './logic';
@@ -14,12 +15,16 @@ const cls = (name: string, hd: 6 | 8 | 10 | 12, p: Partial<ClassEntry> = {}): Cl
 const feat = (c: string, slugName: string, lvl: number, p: Partial<FeatureEntry> = {}): FeatureEntry =>
   ({ id: `feature/${c}/${slugName}`, kind: 'feature', name: slugName.replace(/-/g, ' '), src: 'srd', desc: '', cls: c, lvl, grants: [], ...p });
 const sub = (c: string, s: string): SubclassEntry => ({ id: `subclass/${c}/${s}`, kind: 'subclass', name: s, src: 'srd', desc: '', cls: c });
+// The casting tables of the SRD classes (real numbers), copied onto the synthetic classes.
+const srd = (id: string) => srdEntries.find((e) => e.id === id)!;
+const tables = (id: string): Partial<ClassEntry> => { const e = srd(id) as ClassEntry; return { castAb: e.castAb, slots: e.slots, cantrips: e.cantrips, prepared: e.prepared, ...(e.pact ? { pact: true } : {}) }; };
 const entries: Entry[] = [
-  cls('Ranger', 10, { primary: 'dex,wis', weapons: 'Simple weapons,Martial weapons', multi: { weapons: 'Martial weapons', skills: { ...skills(1), id: 'mskills' } } }),
-  cls('Sorcerer', 6, { primary: 'cha' }),
+  cls('Ranger', 10, { primary: 'dex,wis', weapons: 'Simple weapons,Martial weapons', multi: { weapons: 'Martial weapons', skills: { ...skills(1), id: 'mskills' } }, ...tables('class/ranger') }),
+  cls('Sorcerer', 6, { primary: 'cha', ...tables('class/sorcerer') }),
+  cls('Wizard', 6, { primary: 'int', ...tables('class/wizard') }),
   cls('Rogue', 8, { primary: 'dex', skills: skills(2) }),
   cls('Bard', 8, { primary: 'cha', multi: { armor: 'Light armor', tools: { kind: 'choice', id: 'mtools', name: 'Tool', pick: 1, pool: 'tool:musical-instrument' } } }),
-  cls('Warlock', 8, { primary: 'cha' }),
+  cls('Warlock', 8, { primary: 'cha', ...tables('class/warlock') }),
   cls('Fighter', 10, { primary: 'str|dex' }),
   feat('ranger', 'favored', 1),
   feat('ranger', 'fighting', 2, { grants: [{ id: 'g1', kind: 'sense', name: 'Blindsight', range: '10' }, { id: 'g2', kind: 'defense', name: 'Poison', def: 'res', target: 'Poison' },
@@ -33,11 +38,16 @@ const entries: Entry[] = [
   feat('rogue', 'reliable', 1, { again: '3' }),
   feat('rogue', 'expertise', 1, { again: '6', grants: [{ kind: 'choice', id: 'exp', name: 'Expertise', pick: 2, pool: 'skill:proficient' },
     { id: 'g1', kind: 'prof', name: 'Expertise', cat: 'expertise', target: '$exp' }] }),
+  srd('feature/fighter/ability-score-improvement'), srd('feature/fighter/epic-boon'), srd('feat/ability-score-improvement'), srd('feat/boon-of-combat-prowess'),
+  feat('fighter', 'fighter-subclass', 3, { grants: [{ kind: 'choice', id: 'sub', name: 'Subclass', pick: 1, pool: 'subclass:cls=fighter' }] }),
+  sub('fighter', 'eldritch-knight'),
+  feat('fighter', 'spellcasting', 3, { sub: 'eldritch-knight', grants: [{ id: 'g1', kind: 'casting', name: 'Spellcasting', ab: 'int', list: 'wizard', cantrips: '3:2,10:3', prepared: '3:3,4:4,7:5', s1: '3:2,4:3,7:4', s2: '7:2' }] }),
   feat('fighter', 'weapon-mastery', 1, { grants: [{ id: 'g1', kind: 'prof', name: 'Weapon Mastery', cat: 'mastery', val: '1:3,4:4' }] }),
   feat('warlock', 'mystic-arcanum', 11, { again: '13,15,17', grants: [{ kind: 'choice', id: 'arc', name: 'Arcanum', pick: 1, pool: 'spell:list=warlock;lvl=6|7|8|9' },
     { id: 'g1', kind: 'spell', name: 'Arcanum', spell: '$arc', always: true }] }),
   ...['careful', 'distant', 'empowered', 'extended', 'heightened', 'quickened'].map((m) => feat('sorcerer', m + '-spell', 2, { of: 'metamagic' })),
-  ...([['alarm', 1, 'ranger', true], ['comprehend', 1, 'wizard', true], ['detect', 1, 'wizard', true], ['six', 6, 'warlock', false], ['seven', 7, 'warlock', false]] as const)
+  ...([['cure', 1, 'ranger', false], ['aid', 2, 'ranger', false], ['fire-bolt', 0, 'sorcerer,wizard', false], ['shield', 1, 'sorcerer,wizard', false], ['hex', 1, 'warlock', false], ['mist', 2, 'warlock', false],
+    ['alarm', 1, 'ranger', true], ['comprehend', 1, 'wizard', true], ['detect', 1, 'wizard', true], ['six', 6, 'warlock', false], ['seven', 7, 'warlock', false]] as const)
     .map(([n, lvl, classes, ritual]) => ({ id: 'spell/' + n, kind: 'spell', name: n, src: 'srd', desc: '', lvl, school: 'x', time: 'Action', range: 'Self', classes, ...(ritual ? { ritual: true } : {}) }) as Entry),
   { id: 'feat/ritual-caster', kind: 'feat', name: 'Ritual Caster', src: 'srd', desc: '', cat: 'general', grants: [{ kind: 'choice', id: 'rit', name: 'Rituals', pick: 2, pickAt: 'pb', pool: 'spell:lvl=1;ritual=true' },
     { id: 'g1', kind: 'spell', name: 'Rituals', spell: '$rit', always: true }] } as Entry,
@@ -51,6 +61,7 @@ const flow = (picks: Record<string, string[]>) => ({ '': { picks, counted: {}, l
 const up = (c: Character, pick: ClassPick, ans: LevelAnswers = A()) => applyLevel(c, levelPlan(c, pick, cat, ans)!, ans, cat).c;
 const fresh = (abil: Partial<Character['abil']> = {}) => ({ ...emptyCharacter(), abil: { ...emptyCharacter().abil, ...abil } });
 const ranger1 = (abil: Partial<Character['abil']> = {}) => up(fresh(abil), { cls: 'class/ranger' }, A({ flows: { 'profs/skills': flow({ skills: ['stealth'] }) } }));
+const fighter1 = (abil: Partial<Character['abil']> = {}) => up(fresh(abil), { cls: 'class/fighter' }, A({ flows: { 'profs/skills': flow({ skills: ['stealth'] }) } }));
 const fixed = (p: Partial<LevelAnswers> = {}) => A({ hp: { mode: 'fixed', val: 6 }, ...p });
 const row = (c: Character, clsId: string) => c.classes.find((r) => r.clsId === clsId)!;
 const rogue1 = () => up(fresh(), { cls: 'class/rogue' }, A({ flows: { 'profs/skills': flow({ skills: ['stealth', 'insight'] }), 'feature:feature/rogue/expertise@1': flow({ exp: ['stealth', 'insight'] }) } }));
@@ -181,7 +192,8 @@ describe('level engine core [11a]', () => {
     for (const k of keys(a)) for (const id of ids) expect(k).not.toContain(id);
   });
   it('a first caster row records castAb with a string was, and none for a new row', () => {
-    const r = ranger1();
+    const r = fighter1();
+    expect(r.classes[0].castAb).toBeUndefined();
     const after = { ...r, classes: [{ ...r.classes[0], castAb: 'wis' as const }] };
     const set = levelSet(r, after);
     expect(set).toEqual([{ key: `row.${r.classes[0].id}.castAb`, was: '', now: 'wis' }]);
@@ -377,3 +389,97 @@ describe('choices owed and growing choices [12]', () => {
     expect(undoLevel(next).mastery).toEqual(['longsword', 'dagger', 'spear']);
   });
 });
+
+const asi = (feat: string, picks: Record<string, string[]>) => ({ feat, flow: flow(picks) });
+
+describe('Ability Score Improvement and spellcasting [13]', () => {
+  it('Fighter 5 → 6 is an asi step on the entry from level 4, not a second feature', () => {
+    let c = levelTo(fighter1(), 'class/fighter', 3);
+    const p4 = levelPlan(c, { row: c.classes[0].id }, cat, A())!;
+    expect(p4.steps.filter((s) => s.kind === 'asi').map((s) => s.key)).toEqual(['asi@4']);
+    c = applyLevel(c, p4, fixed({ asi: asi('feat/ability-score-improvement', { asi: ['o1', 'o1'] }) }), cat).c;
+    expect(c.abil.str).toBe(10);
+    c = levelTo(c, 'class/fighter', 5);
+    const p6 = levelPlan(c, { row: c.classes[0].id }, cat, A())!;
+    expect(p6.steps.filter((s) => s.entry?.id === 'feature/fighter/ability-score-improvement').map((s) => s.kind)).toEqual(['asi']);
+    const c6 = applyLevel(c, p6, fixed({ asi: asi('feat/ability-score-improvement', { asi: ['o2', 'o2'] }) }), cat).c;
+    expect(c6.feats.filter((f) => f.cid === 'feature/fighter/ability-score-improvement')).toHaveLength(1);
+    expect(c6.feats.filter((f) => f.cid === 'feat/ability-score-improvement')).toHaveLength(2);
+  });
+  it('an Epic Boon increase is capped at 30, not 20; an ASI past 20 warns', () => {
+    const c = at(fighter1({ str: 20 }), 'class/fighter', 18);
+    const plan = levelPlan(c, { row: c.classes[0].id }, cat, A())!;
+    const step = plan.steps.find((s) => s.kind === 'asi')!;
+    expect(step.entry!.id).toBe('feature/fighter/epic-boon');
+    const next = applyLevel(c, plan, fixed({ asi: asi('feat/boon-of-combat-prowess', { c1: ['o1'] }) }), cat).c;
+    expect(effScoreOf(next, 'str')).toBe(21);
+    const four = at(fighter1({ str: 20 }), 'class/fighter', 3);
+    const ans = fixed({ asi: asi('feat/ability-score-improvement', { asi: ['o1', 'o1'] }) });
+    expect(levelPlan(four, { row: four.classes[0].id }, cat, ans)!.steps.find((s) => s.kind === 'asi')!.warn).toContain('wasted');
+  });
+  it('a casting class sets castAb, slots and prepared count, and its spells carry its castAb', () => {
+    const r = ranger1({ dex: 13, wis: 13, cha: 13 });
+    expect(r.classes[0]).toMatchObject({ castAb: 'wis', prep: 2 });
+    expect(r.castAb).toBe('wis');
+    expect(r.slotMax.slice(0, 3)).toEqual([0, 2, 0]);
+    const plan = levelPlan(r, { cls: 'class/sorcerer' }, cat, A())!;
+    const cantrips = plan.steps.find((s) => s.kind === 'cantrips')!, prepare = plan.steps.find((s) => s.kind === 'prepare')!;
+    expect([cantrips.owed, cantrips.list, prepare.owed, prepare.maxLvl]).toEqual([4, 'sorcerer', 2, 1]);
+    const c = applyLevel(r, plan, fixed({ spells: { [cantrips.key]: ['spell/fire-bolt'], [prepare.key]: ['spell/shield'] } }), cat).c;
+    const sorc = row(c, 'class/sorcerer');
+    expect(sorc.castAb).toBe('cha');
+    expect(c.castAb).toBe('wis');
+    expect(c.spells.find((x) => x.cid === 'spell/shield')).toMatchObject({ cls: sorc.id, castAb: 'cha', prep: true });
+    expect(c.spells.find((x) => x.cid === 'spell/fire-bolt')).toMatchObject({ cls: sorc.id, castAb: 'cha' });
+  });
+  it('Eldritch Knight level and its undo restore castAb through the set difference', () => {
+    const c2 = levelTo(fighter1(), 'class/fighter', 2);
+    const ans = fixed({ sub: 'subclass/fighter/eldritch-knight' });
+    const c3 = applyLevel(c2, levelPlan(c2, { row: c2.classes[0].id }, cat, ans)!, ans, cat).c;
+    expect(c3.castAb).toBe('int');
+    const set = c3.levels.at(-1)!.set;
+    expect(set).toEqual(expect.arrayContaining([{ key: 'castAb', was: 'none', now: 'int' }, { key: `row.${c2.classes[0].id}.castAb`, was: '', now: 'int' }]));
+    expect(c3.slotMax.slice(0, 3)).toEqual([0, 2, 0]);
+    const reloaded = migrate(JSON.parse(JSON.stringify(c3)));
+    expect(reloaded.levels.at(-1)!.set).toEqual(set);
+    const back = undoLevel(reloaded);
+    expect(back.castAb).toBe('none');
+    expect(back.classes[0].castAb).toBeUndefined();
+  });
+  it('slots from classes: Ranger 5 / Rogue 2, Warlock + Sorcerer pact pool', () => {
+    let c = levelTo(ranger1({ dex: 13, wis: 13 }), 'class/ranger', 5);
+    expect(c.slotMax.slice(0, 3)).toEqual([0, 4, 2]);
+    c = up(c, { cls: 'class/rogue' }, fixed({ flows: { 'feature:feature/rogue/expertise@1': flow({ exp: ['stealth'] }) } }));
+    expect(c.slotMax.slice(0, 3)).toEqual([0, 4, 2]);
+    let w = up(fresh({ cha: 13 }), { cls: 'class/warlock' }, A({ flows: { 'profs/skills': flow({ skills: ['insight'] }), 'feature:feature/warlock/eldritch-invocations@1': flow({ inv: ['x'] }) } }));
+    expect([w.pactMax, w.pactLvl]).toEqual([1, 1]);
+    w = up(w, { cls: 'class/sorcerer' }, fixed());
+    expect([w.pactMax, w.pactLvl]).toEqual([1, 1]);
+    expect(w.slotMax.slice(0, 2)).toEqual([0, 2]);
+  });
+  it('a hand-edited slotMax is kept and listed; useTable writes the table', () => {
+    const r = { ...ranger1(), slotMax: [0, 9, 0, 0, 0, 0, 0, 0, 0, 0] };
+    const plan = levelPlan(r, { row: r.classes[0].id }, cat, A())!;
+    const kept = applyLevel(r, plan, fixed(), cat);
+    expect(kept.c.slotMax[1]).toBe(9);
+    expect(kept.kept.map((k) => k.key)).toContain('slotMax');
+    expect(applyLevel(r, plan, fixed({ useTable: ['slotMax'] }), cat).c.slotMax[1]).toBe(2);
+  });
+  it('undo keeps a hand-edited slot row', () => {
+    const r = ranger1();
+    const four = levelTo(r, 'class/ranger', 5);
+    const edited = { ...four, slotMax: [0, 4, 3, 0, 0, 0, 0, 0, 0, 0] };
+    expect(undoPreview(edited)!.unrestored).toContain('slotMax');
+    expect(undoLevel(edited).slotMax.slice(0, 3)).toEqual([0, 4, 3]);
+  });
+  it('prepare step limits: a Warlock’s equals pactLvl, a Ranger 4 / Sorcerer 3 prepares no level-2 Ranger spells', () => {
+    const w = at(up(fresh({ cha: 13 }), { cls: 'class/warlock' }, A({ flows: { 'profs/skills': flow({ skills: ['insight'] }), 'feature:feature/warlock/eldritch-invocations@1': flow({ inv: ['x'] }) } })), 'class/warlock', 2);
+    const wp = levelPlan(w, { row: w.classes[0].id }, cat, A())!.steps.find((s) => s.kind === 'prepare')!;
+    expect(wp.maxLvl).toBe(2);
+    const rs = at(at(levelTo(ranger1({ dex: 13, wis: 13, cha: 13 }), 'class/ranger', 3), 'class/ranger', 3), 'class/ranger', 3);
+    const both = up(rs, { cls: 'class/sorcerer' }, fixed({ anyway: true }));
+    const r4 = levelPlan(at(both, 'class/sorcerer', 3), { row: row(both, 'class/ranger').id }, cat, A())!.steps.find((s) => s.kind === 'prepare')!;
+    expect(r4.maxLvl).toBe(1);
+  });
+});
+const effScoreOf = (c: Character, a: 'str') => c.abil[a] + c.grants.filter((g) => g.kind === 'abil' && g.ab === a).reduce((t, g) => t + Number(g.val), 0);

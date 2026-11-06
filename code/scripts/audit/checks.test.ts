@@ -171,9 +171,11 @@ describe('catalog against the sheet', () => {
     expect(keys(effectChecks([spell('Fly', { desc: fly }), spell('Has Grant', { desc: fly, grants: [{ id: 'g', kind: 'speed', name: 'Fly', mode: 'fly', val: '60' }] }), item('Gear', { desc: fly, cat: 'gear' })]))).toEqual(['effect-no-grant|spell/fly:speed']);
   });
   it('traces entry fields nothing reads, and doesn’t flag ones the add flow reads', () => {
-    const cls = { id: 'class/wizard', kind: 'class', name: 'Wizard', src: 'srd', desc: 'x', hd: 6, saves: 'int,wis', skills: { kind: 'choice', id: 's', name: 'Skills', pick: 2, pool: 'skill:any' }, armor: '', weapons: '' } as unknown as Entry;
+    const cls = { id: 'class/wizard', kind: 'class', name: 'Wizard', src: 'srd', desc: 'x', hd: 6, saves: 'int,wis', skills: { kind: 'choice', id: 's', name: 'Skills', pick: 2, pool: 'skill:any' }, armor: '', weapons: '', junk: 1 } as unknown as Entry;
     const found = keys(unreadFieldChecks(mergeCatalog([cls, spell('Burning Tune')], null)));
-    expect(found).toEqual(expect.arrayContaining(['field-unread|class.hd', 'field-unread|class.saves']));
+    // The level engine reads a class's hd and saves (the audit levels each class), so only the unknown field is flagged.
+    expect(found).toContain('field-unread|class.junk');
+    expect(found).not.toContain('field-unread|class.hd');
     expect(found).not.toContain('field-unread|spell.lvl');
   });
   it('counts a read of an item field only when it is not the base-copy spread', () => {

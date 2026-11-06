@@ -1,11 +1,13 @@
 // Whether catalog data reaches the app. Imports the app's add flow, so it runs under Vitest, not plain node.
 // shortcut: these checks only catch names nothing mentions (field-unread stops at the copy to the character; the others
 // search the code for a word), so a green result doesn't prove a field works. logic.test.ts covers behaviour.
-import { atLevel, addFromCatalog, choicesOf, featureCandidates, freeText, itemQuestions, itemStats, matchId, nestedEntries, optionGroups, poolOptions, type AddChoices, type FeatureType, type ItemAnswers } from '../../src/catalog/copy.ts';
+import { atLevel, addClassEquipment, addFromCatalog, choicesOf, classProfInputs, featureCandidates, freeText, itemQuestions, itemStats, matchId, nestedEntries, optionGroups, poolOptions, type AddChoices, type FeatureType, type ItemAnswers } from '../../src/catalog/copy.ts';
 import type { Catalog } from '../../src/catalog/merge.ts';
-import type { Entry } from '../../src/catalog/schema.ts';
+import type { ClassEntry, Entry } from '../../src/catalog/schema.ts';
+import type { FlowAnswers } from '../../src/catalog/flow.ts';
+import { applyLevel, emptyCharacter, levelPlan, withLevel, type ClassPick, type LevelAnswers, type Plan } from '../../src/levelup.ts';
 import { blankCharacter } from '../../src/defaults.ts';
-import { spellUsable } from '../../src/logic.ts';
+import { addGrants, spellUsable } from '../../src/logic.ts';
 import type { Character } from '../../src/types.ts';
 import { flatGrants, type Finding } from './checks.ts';
 
@@ -30,6 +32,62 @@ function autoAnswers(cat: Catalog, c: Character, entry: Entry, preset: Record<st
     else item.charges = q.min;
   }
   return { picks, counted: {}, links: {}, nested, item, ...(e.kind === 'background' && e.equipA !== undefined ? { equip: 'A' as const } : {}) };
+}
+
+// AddChoices as ChoiceFlow's stored answers (the key of each nested entry is its path).
+function toFlow(a: AddChoices, key = '', out: FlowAnswers = {}): FlowAnswers {
+  out[key] = { picks: a.picks, counted: {}, links: {}, ...(a.equip ? { equip: a.equip } : {}) };
+  for (const [id, n] of Object.entries(a.nested ?? {})) toFlow(n, key + '>' + id, out);
+  return out;
+}
+// Answers a level plan with the first options: fixed HP, the first subclass, the Ability Score Improvement feat.
+function autoLevel(cat: Catalog, c: Character, pick: ClassPick): { plan: Plan; ans: LevelAnswers } | null {
+  const first = levelPlan(c, pick, cat);
+  if (!first) return null;
+  const w = withLevel(c, pick, cat);
+  let raised = w.c;
+  const subStep = first.steps.find((s) => s.kind === 'subclass');
+  const sub = subStep?.choice?.pool ? poolOptions(cat, raised, subStep.choice.pool, {})[0]?.value : undefined;
+  const ans: LevelAnswers = { hp: { mode: 'fixed', val: 1 }, anyway: true, flows: {}, spells: {}, ...(sub ? { sub } : {}) };
+  const plan = levelPlan(c, pick, cat, ans)!;
+  // The class proficiencies first, as applyLevel adds them before the features (Expertise picks proficient skills).
+  for (const s of plan.steps) {
+    if (s.kind === 'profs' && s.choice?.pool) ans.flows[s.key] = { '': { picks: { [s.choice.id]: poolOptions(cat, raised, s.choice.pool, {}).slice(0, s.choice.pick).map((o) => o.value) }, counted: {}, links: {} } };
+  }
+  if (plan.cls && plan.clsLvl === 1) {
+    const picks = Object.fromEntries(plan.steps.filter((s) => s.kind === 'profs' && s.choice).map((s) => [s.choice!.id, ans.flows[s.key][''].picks[s.choice!.id]]));
+    const isFirst = raised.classes[0].id === w.row;
+    if (isFirst || plan.cls.multi) raised = addGrants(raised, 'class:' + w.row, classProfInputs(cat, plan.cls, !isFirst, picks));
+  }
+  for (const s of plan.steps) {
+    if (s.kind === 'feature' && s.entry && !s.onSheet) ans.flows[s.key] = toFlow(autoAnswers(cat, raised, s.entry));
+    if ((s.kind === 'choice' || s.kind === 'grow') && s.choice) {
+      const n = s.owed ?? s.choice.pick;
+      const vals = s.choice.options ? optionGroups(s.choice).map((g) => g.value) : s.choice.pool ? poolOptions(cat, raised, s.choice.pool, {}).map((o) => o.value) : [];
+      ans.flows[s.key] = { '': { picks: { [s.choice.id]: vals.filter((v) => !s.held?.includes(v)).slice(0, n) }, counted: {}, links: {} } };
+    }
+  }
+  const asi = cat.byId.get('feat/ability-score-improvement');
+  if (asi && plan.steps.some((s) => s.kind === 'asi')) ans.asi = { feat: asi.id, flow: toFlow(autoAnswers(cat, raised, asi)) };
+  return { plan, ans };
+}
+// Takes one class from nothing to level 20 through the level engine, adds its starting equipment, and takes level 1 of
+// another class after its first (the multiclass prerequisite and proficiencies).
+function levelClass(cat: Catalog, e: ClassEntry, other: ClassEntry): void {
+  let two = emptyCharacter();
+  for (const pick of [{ cls: e.id }, { cls: other.id }] as ClassPick[]) {
+    const step = autoLevel(cat, two, pick);
+    if (step) two = applyLevel(two, step.plan, step.ans, cat).c;
+  }
+  let c = emptyCharacter(), pick: ClassPick = { cls: e.id };
+  for (let i = 0; i < 20; i++) {
+    const step = autoLevel(cat, c, pick);
+    if (!step) break;
+    c = applyLevel(c, step.plan, step.ans, cat).c;
+    pick = { row: c.classes[0].id };
+  }
+  addClassEquipment(emptyCharacter(), cat, e, 'A');
+  addClassEquipment(emptyCharacter(), cat, e, 'B');
 }
 
 // Kinds the add flow refuses, by design.
@@ -62,6 +120,9 @@ export function unreadFieldChecks(cat: Catalog): Finding[] {
     if (e.kind === 'class') {
       const c = { ...base, classes: [{ ...base.classes[0], name: e.name, clsId: matchId(traced, 'class', e.name) }] };
       for (const t of ['class', 'sub', 'feat', 'species', 'background'] as FeatureType[]) featureCandidates(traced, c, t);
+      const classes = cat.list.filter((x) => x.kind === 'class'), next = classes[(classes.indexOf(e) + 1) % classes.length];
+      try { levelClass(traced, traced.byId.get(e.id) as ClassEntry, traced.byId.get(next.id) as ClassEntry); }
+      catch (err) { out.set(`level:${e.id}`, { check: 'level-throws', id: e.id, note: err instanceof Error ? err.message : String(err) }); }
     }
   }
   const unread = new Map<string, string[]>();
