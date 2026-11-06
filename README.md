@@ -43,6 +43,17 @@ on a narrow one everything scrolls in one column. Menu › Layout forces 1 or 2 
 - HP per level from feats like Tough is added to the maximum; tap the max to see why.
 - When your Constitution modifier changes, the maximum follows it: 1 HP per level for each point.
 
+### Levels and classes
+- **Menu › Level up** (or tap the class line in the header) opens a full-screen wizard: pick which class gets the level
+  (or add a class: the multiclass prerequisite is checked, with "Do it anyway"), then HP (the fixed value or your roll),
+  the new features and their choices, a subclass, an Ability Score Improvement or feat, new cantrips and spells to
+  prepare, and Weapon Mastery picks. A summary shows every change before Finish. Spell slots, the Pact Magic pool and
+  your prepared count follow the class tables, unless you edited them by hand (the summary offers the table).
+- **Undo level** takes the last level back, listing what goes first. Levels set by hand (before the first level-up) are
+  the baseline and can't be undone.
+- Without the rules data (offline before it ever loaded), level-up still adds the HP and the class level; features are
+  then added by hand.
+
 ### Armor Class, Initiative, Speed, Proficiency
 - AC comes from armor and shield in Inventory, an unarmored formula (Edit), AC spells and your own
   custom bonuses. Armor you aren't trained in is flagged.

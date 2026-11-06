@@ -1,7 +1,9 @@
 // @vitest-environment happy-dom
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { mergeCatalog } from './catalog/merge';
+import type { ClassEntry } from './catalog/schema';
 import App from './App';
 import { blankCharacter } from './defaults';
 import { modeSpeed, speedNow } from './logic';
@@ -9,6 +11,11 @@ import { haAura, holyAvenger, paladin, withClass, withClasses } from './test-fix
 import type { Character, Feature, Item } from './types';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
+// The catalog, in this file only: a synthetic Ranger with no features, so the level-up wizard has a class to read.
+const ranger: ClassEntry = { id: 'class/ranger', kind: 'class', name: 'Ranger', src: 'srd', desc: '', hd: 10, saves: 'str,dex',
+  skills: { kind: 'choice', id: 'skills', name: 'Skills', pick: 1, pool: 'skill:any' }, armor: '', weapons: '', slots: [] };
+vi.mock('./catalog/useCatalog', () => ({ useCatalog: () => ({ status: 'ready', cat: mergeCatalog([ranger], null) }) }));
 
 let root: Root;
 const renderSheet = (p: Partial<Character>) => {
@@ -430,5 +437,37 @@ describe('class rows in Edit details', () => {
     expect([...document.querySelectorAll('button')].some((b) => b.textContent === '+ Add class')).toBe(false);
     expect(label('Class name, Rogue')).not.toBeNull();
     expect(label('Hit die, Rogue')).not.toBeNull();
+  });
+});
+
+describe('level-up and undo from the menu', () => {
+  const button = (t: string) => [...document.querySelectorAll('button')].find((b) => b.textContent?.startsWith(t));
+  const menu = () => tap(label('Menu: rests and characters'));
+  it('level-up then undo', () => {
+    renderSheet(withClass({ ...blankCharacter(), maxHp: 10, hp: 10 }, { name: 'Ranger', clsId: 'class/ranger', hd: 10, lvl: 1 }));
+    const before = saved().levels.length;
+    menu();
+    tap(button('Level up'));
+    tap(button('Next'));
+    tap(button('Fixed (6)'));
+    for (let i = 0; i < 5 && !button('Finish'); i++) tap(button('Next'));
+    tap(button('Finish'));
+    expect(saved().classes[0].lvl).toBe(2);
+    expect(saved().levels).toHaveLength(before + 1);
+    menu();
+    tap(button('Undo level 2'));
+    tap(button('Undo the level'));
+    expect(saved().classes[0].lvl).toBe(1);
+    expect(saved().levels).toHaveLength(before);
+  });
+  it('undo is greyed on a base-only character, and level-up at level 20', () => {
+    renderSheet(withClass(blankCharacter(), { lvl: 20 }));
+    menu();
+    const undo = button('Undo level')!;
+    expect(undo.getAttribute('aria-disabled')).toBe('true');
+    expect(undo.textContent).toContain('baseline, can’t be undone');
+    const up = button('Level up')!;
+    expect(up.getAttribute('aria-disabled')).toBe('true');
+    expect(up.textContent).toContain('Level 20: nothing more to gain');
   });
 });

@@ -8,7 +8,7 @@ import type { FlowAnswers } from '../catalog/flow';
 import { entriesOf, type Catalog } from '../catalog/merge';
 import type { ChoiceSpec, ClassEntry, Entry } from '../catalog/schema';
 import { useCatalog } from '../catalog/useCatalog';
-import { applyLevel, fixedHp, levelPlan, prereqCheck, withLevel, type ClassPick, type LevelAnswers, type Step } from '../levelup';
+import { applyLevel, fixedHp, levelPlan, prereqCheck, undoPreview, withLevel, type ClassPick, type LevelAnswers, type Step } from '../levelup';
 import { abilityMod, maxHpOf, totalLevel } from '../logic';
 import { Sheet } from '../sheet';
 import type { Character, Die, LevelKey } from '../types';
@@ -336,5 +336,25 @@ function Summary({ c, dry, plan, cat, useTable, setUseTable }: {
       ))}
       {(!cat || plan.some((s) => s.kind === 'nocat')) && <span role="status" className="picker-warn">Features are added by hand.</span>}
     </div>
+  );
+}
+
+// Undoing the last level: what goes, what stays, and fields edited since that stay as they are; then confirm.
+export function UndoLevelPrompt({ c, onConfirm, onCancel }: { c: Character; onConfirm: () => void; onCancel: () => void }) {
+  const p = undoPreview(c), rec = c.levels.at(-1);
+  if (!p || !rec) return null;
+  const row = c.classes.find((r) => r.id === rec.cls);
+  return (
+    <section aria-label="Undo level" className="block notice notice-blue col gap-8">
+      <strong>Undo level {rec.n}{row ? ' (' + (row.name || 'Level') + ' ' + row.lvl + ')' : ''}?</strong>
+      <span>HP maximum −{rec.hp?.gain ?? 0}.</span>
+      {p.summary.goes.length > 0 && <span>Removes: {p.summary.goes.join(', ')}.</span>}
+      {p.summary.keep.map((k) => <span key={k} className="small">{k}</span>)}
+      {p.unrestored.length > 0 && <span className="small">Edited since, left as they are: {p.unrestored.map((k) => (k === 'slotMax' ? 'spell slots' : k)).join(', ')}.</span>}
+      <div className="row wrap gap-8">
+        <button type="button" className="btn btn-danger" onClick={onConfirm}>Undo the level</button>
+        <button type="button" className="btn" onClick={onCancel}>Cancel</button>
+      </div>
+    </section>
   );
 }

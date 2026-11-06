@@ -15,7 +15,8 @@ import { NotesTab } from './components/tabs/NotesTab';
 import { SpellsTab } from './components/tabs/SpellsTab';
 import { useWide } from './layout';
 import { RestPrompt } from './components/RestPrompt';
-import { LevelUpWizard } from './components/LevelUpWizard';
+import { LevelUpWizard, UndoLevelPrompt } from './components/LevelUpWizard';
+import { undoLevel } from './levelup';
 import { TABS, dawn, longRest, restRolls, shortRest, type RestEvent, type RollAsk } from './logic';
 import { revealPlace, type RevealTarget } from './components/nav';
 import { formAfterTabChange, Sheet, type Focus, type FormState } from './sheet';
@@ -31,6 +32,7 @@ export default function App() {
   const [hdPrompt, setHdPrompt] = useState(false);
   // A full-screen wizard over the sheet (UI only, never saved).
   const [wizard, setWizard] = useState<'levelup' | null>(null);
+  const [undoAsk, setUndoAsk] = useState(false);
   // A rest or Dawn waiting for die rolls (restRolls). UI state only, never saved.
   const [restAsk, setRestAsk] = useState<{ event: RestEvent; asks: RollAsk[] } | null>(null);
   // The row a shortcut opens (reveal). UI state only, never saved.
@@ -58,6 +60,8 @@ export default function App() {
     setEdit(editOn);
     setForm(null);
     setHdPrompt(false);
+    setWizard(null);
+    setUndoAsk(false);
     setRestAsk(null);
     setFocus(null);
     if (!keepMenu) { setMenuOpen(false); setActiveSec('sec-hp'); }
@@ -97,7 +101,8 @@ export default function App() {
       {wizard === 'levelup' && <LevelUpWizard c={c} onApply={(next) => { update(() => next); setWizard(null); }} onClose={() => setWizard(null)} />}
       <div className={'sheet' + (wide ? ' wide' : '')}>
         <TopBar store={store} activeSec={activeSec} setActiveSec={setActiveSec} menuOpen={menuOpen} setMenuOpen={setMenuOpen}
-          onToggleEdit={() => { setEdit(!edit); setForm(null); }} onSwitched={onSwitched} onRest={onRest} />
+          onToggleEdit={() => { setEdit(!edit); setForm(null); }} onSwitched={onSwitched} onRest={onRest}
+          onLevelUp={() => setWizard('levelup')} onUndoLevel={() => setUndoAsk(true)} />
         <div className="sheet-body">
           <div className="sheet-left">
             {store.isExample && (
@@ -106,6 +111,7 @@ export default function App() {
                 <button type="button" className="btn" onClick={() => { store.makeCopy(); onSwitched(); }}>Make my copy</button>
               </div>
             )}
+            {undoAsk && <UndoLevelPrompt c={c} onConfirm={() => { update(undoLevel); setUndoAsk(false); }} onCancel={() => setUndoAsk(false)} />}
             {restAsk && <RestPrompt event={restAsk.event} asks={restAsk.asks} onDone={(r) => runRest(restAsk.event, r)} onCancel={() => setRestAsk(null)} />}
             {edit && <EditDetails onReset={() => { store.resetCurrent(); onSwitched(true); }} />}
             <Vitals />

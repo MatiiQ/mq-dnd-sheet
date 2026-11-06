@@ -4,9 +4,10 @@ import { packSummary, parsePackFile } from '../catalog/pack';
 import { deletePack, getPack, putPack } from '../catalog/pack-db';
 import { SRD_VERSION } from '../catalog/schema';
 import { setLayoutMode, useLayoutMode, useWide, type LayoutMode } from '../layout';
-import { classLine, acOnOther, acSpellIdle, activeAuras, CONDITIONS, PILL_STATS, TABS, fmt, hpColor, maxHpOf, pillView, resPill, setConc, setPill, toggleAcSpell, type PillView, type RestEvent } from '../logic';
+import { classLine, totalLevel, acOnOther, acSpellIdle, activeAuras, CONDITIONS, PILL_STATS, TABS, fmt, hpColor, maxHpOf, pillView, resPill, setConc, setPill, toggleAcSpell, type PillView, type RestEvent } from '../logic';
 import { useSheet } from '../sheet';
 import { EXAMPLES, charInfo, charName, saveBackupFile, type CharacterStore } from '../storage';
+import { undoPreview } from '../levelup';
 import type { Character, Spell, Tab } from '../types';
 import { CheckIcon, ChevronDown, ChevronRight, MenuIcon, PencilIcon, StarIcon, XIcon, useArmed } from './ui';
 
@@ -24,14 +25,15 @@ interface Props {
   onToggleEdit: () => void;
   onSwitched: (editOn?: boolean, keepMenu?: boolean) => void;
   onRest: (kind: RestEvent) => void;
+  onLevelUp: () => void;
+  onUndoLevel: () => void;
 }
 
-export function TopBar({ store, activeSec, setActiveSec, menuOpen, setMenuOpen, onToggleEdit, onSwitched, onRest }: Props) {
+export function TopBar({ store, activeSec, setActiveSec, menuOpen, setMenuOpen, onToggleEdit, onSwitched, onRest, onLevelUp, onUndoLevel }: Props) {
   const { c, update, edit } = useSheet();
   const ch = c.ch;
   const initials = (ch.name || '?').split(/\s+/).filter((x) => x).slice(0, 2).map((x) => x.charAt(0).toUpperCase()).join('') || '?';
-  const subtitle = [ch.species, classLine(c), ch.align]
-    .filter((x) => x && String(x).trim()).join(' · ');
+  const [classOpen, setClassOpen] = useState(false);
   const condParts = CONDITIONS.filter((n) => c.conds[n]);
   const auras = activeAuras(c).filter((a) => a.why === null);
   const inTabs = activeSec === 'sec-tabs';
@@ -87,7 +89,11 @@ export function TopBar({ store, activeSec, setActiveSec, menuOpen, setMenuOpen, 
         <div aria-hidden="true" className="avatar">{initials}</div>
         <div className="col grow">
           <h1 className="char-name">{charName(c)}</h1>
-          <span className="small ellipsis">{subtitle}</span>
+          <span className="small ellipsis">
+            {ch.species && ch.species.trim() ? ch.species + ' · ' : ''}
+            <button type="button" className="link-btn" aria-expanded={classOpen} aria-label={'Classes: ' + classLine(c)} onClick={() => setClassOpen(!classOpen)}>{classLine(c)} ▾</button>
+            {ch.align && ch.align.trim() ? ' · ' + ch.align : ''}
+          </span>
         </div>
         {c.pills.map((key, slot) => {
           const v = pillView(c, key);
@@ -200,7 +206,17 @@ export function TopBar({ store, activeSec, setActiveSec, menuOpen, setMenuOpen, 
         {fade.r && <span aria-hidden="true" className="fade-r"><ChevronRight size={14} /></span>}
       </div>
 
-      {menuOpen && <Menu store={store} onClose={() => setMenuOpen(false)} onSwitched={onSwitched} onRest={onRest} />}
+      {classOpen && (
+        <>
+          <button type="button" className="scrim" aria-label="Close classes" onClick={() => setClassOpen(false)} />
+          <div className="menu" role="region" aria-label="Classes">
+            {c.classes.map((r) => <span key={r.id}>{(r.name || 'Level') + ' ' + r.lvl}{r.sub ? ' · ' + r.sub : ''} <span className="muted">d{r.hd}</span></span>)}
+            <LevelButtons c={c} onLevelUp={() => { setClassOpen(false); onLevelUp(); }} onUndoLevel={() => { setClassOpen(false); onUndoLevel(); }} />
+          </div>
+        </>
+      )}
+      {menuOpen && <Menu store={store} onClose={() => setMenuOpen(false)} onSwitched={onSwitched} onRest={onRest}
+        onLevelUp={() => { setMenuOpen(false); onLevelUp(); }} onUndoLevel={() => { setMenuOpen(false); onUndoLevel(); }} />}
     </header>
   );
 }
@@ -224,7 +240,24 @@ function PillBody({ v }: { v: PillView }) {
   return <><span className="pill-label">{v.label}</span> <strong>{v.value}</strong>{v.max && <span style={{ color: 'var(--muted)' }}>/{v.max}</span>}</>;
 }
 
-function Menu({ store, onClose, onSwitched, onRest }: { store: CharacterStore; onClose: () => void; onSwitched: (editOn?: boolean, keepMenu?: boolean) => void; onRest: (kind: RestEvent) => void }) {
+// Level up and Undo level, in the menu and the header's class popover. Undo is greyed when only the baseline (or the
+// level-1 record) is left; Level up at total level 20.
+function LevelButtons({ c, onLevelUp, onUndoLevel }: { c: Character; onLevelUp: () => void; onUndoLevel: () => void }) {
+  const at20 = totalLevel(c) >= 20, rec = c.levels.at(-1), canUndo = !!undoPreview(c);
+  const row = rec && c.classes.find((r) => r.id === rec.cls);
+  return (
+    <div className="row wrap gap-8">
+      <button type="button" className="btn" aria-disabled={at20} onClick={() => !at20 && onLevelUp()}>
+        {at20 ? 'Level up · Level 20: nothing more to gain' : 'Level up (' + (totalLevel(c) + 1) + ')'}
+      </button>
+      <button type="button" className="btn" aria-disabled={!canUndo} onClick={() => canUndo && onUndoLevel()}>
+        {canUndo ? 'Undo level ' + rec!.n + (row ? ' (' + (row.name || 'Level') + ' ' + row.lvl + ')' : '') : 'Undo level · baseline, can’t be undone'}
+      </button>
+    </div>
+  );
+}
+
+function Menu({ store, onClose, onSwitched, onRest, onLevelUp, onUndoLevel }: { store: CharacterStore; onClose: () => void; onSwitched: (editOn?: boolean, keepMenu?: boolean) => void; onRest: (kind: RestEvent) => void; onLevelUp: () => void; onUndoLevel: () => void }) {
   const { c } = useSheet();
   const [delArmed, tapDelete] = useArmed();
   const [longArmed, tapLong] = useArmed();
@@ -269,6 +302,9 @@ function Menu({ store, onClose, onSwitched, onRest }: { store: CharacterStore; o
           {/* Dawn: magic items and features that recharge at dawn. */}
           <a href="#sec-hp" className="rest-btn" onClick={() => onRest('dawn')}>Dawn</a>
         </div>
+
+        <span className="label">Levels</span>
+        <LevelButtons c={c} onLevelUp={onLevelUp} onUndoLevel={onUndoLevel} />
 
         <span className="label">Your characters</span>
         {!store.list.length && <span className="small">No characters yet.</span>}
