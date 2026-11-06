@@ -96,6 +96,23 @@ export interface Spell extends Linked {
   // parts: more damage or healing rows of the spell, catalog-only (plan 7); a list, cleaned on load by cleanParts.
   parts?: SpellPart[];
 }
+// Hit die sizes (PHB p.45: different dice are tracked separately).
+export type Die = 6 | 8 | 10 | 12;
+// One class of the character (save v2). The first row is the starting class. id never contains '.' (LevelKey).
+// prep: this class's prepared-spell maximum; castAb: its spellcasting ability, once it has Spellcasting or Pact Magic.
+export interface ClassRow { id: string; name: string; clsId: string; sub: string; subId: string; lvl: number; hd: Die; prep: number; castAb?: Ability }
+// A scalar field a level changed. 'row.<id>.<field>' names a field of a class row. An absent optional value is ''.
+export type LevelKey = 'castAb' | 'slotMax' | 'pactMax' | 'pactLvl'
+  | `row.${string}.sub` | `row.${string}.subId` | `row.${string}.prep` | `row.${string}.castAb`;
+export interface LevelSet { key: LevelKey; was: unknown; now: unknown }
+// One level of the history, oldest first. n: the total level reached; cls: the ClassRow id; base: the baseline block
+// (no history, cannot be undone). hp.val: the die part only; hp.gain: what the level added to maxHp. added: refs
+// ('<RefKind>:<id>') the level added; picks: '<entry ref>/<choice id>' → values; set: scalar fields as was → now.
+export interface LevelRecord {
+  n: number; cls: string; base?: true;
+  hp?: { mode: 'max' | 'fixed' | 'roll'; val: number; gain: number };
+  added: string[]; picks: Record<string, string[]>; set: LevelSet[];
+}
 export interface Feature extends Linked { id: string; g: FeatureGroup; name: string; desc: string; cid?: string }
 export interface Concentration { id: string; name: string }
 // hdUsed is set only by a Hit Die heal, so undoing it refunds the die.

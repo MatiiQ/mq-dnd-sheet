@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { blankCharacter, druidSample, SAVE_VERSION, sampleCharacter } from './defaults';
-import { isNewerSave, migrate, saveVersion, STEPS, upgrade } from './migrate';
+import { cleanClasses, cleanLevel, isNewerSave, migrate, saveVersion, STEPS, upgrade } from './migrate';
 import { armorClass, carriedWeight } from './logic';
 import { spellActions } from './actions';
 import { inventoryGroups } from './inventory';
@@ -339,5 +339,46 @@ describe('catalog fields', () => {
     expect(s1).toMatchObject({ name: 'Bolt', save: 'dex', fx: 'damage' });
     expect(s1.atk).toBeUndefined();
     expect(s1.ritual).toBeUndefined();
+  });
+});
+
+describe('class rows and level records', () => {
+  const A = { id: 'a', name: 'Ranger', clsId: 'class/ranger', sub: '', subId: '', lvl: 5, hd: 10 as const, prep: 6, castAb: 'wis' as const };
+  const rec = (p: Raw = {}) => ({ n: 6, cls: 'a', added: [], picks: {}, set: [], ...p });
+
+  it('cleans a row field by field, and drops a row that is not an entry', () => {
+    expect(cleanClasses([A])).toEqual([A]);
+    const [r] = cleanClasses([{ id: 'x.y', name: 'Fighter', clsId: 3, lvl: 25, hd: 7, prep: -1, castAb: 'none' }]);
+    expect(r).toMatchObject({ name: 'Fighter', clsId: '', sub: '', subId: '', lvl: 1, hd: 8, prep: 0 });
+    expect(r.id).not.toContain('.');
+    expect(r.castAb).toBeUndefined();
+    expect(cleanClasses([{ lvl: 3 }, 'x', null])).toEqual([]);
+  });
+  it('keeps a good record and checks its fields', () => {
+    expect(cleanLevel(rec(), [A])).toEqual(rec());
+    expect(cleanLevel(rec({ base: true, hp: { mode: 'fixed', val: 6, gain: 6 } }), [A])).toEqual(rec({ base: true, hp: { mode: 'fixed', val: 6, gain: 6 } }));
+    expect(cleanLevel(rec({ base: false, hp: { mode: 'x', val: 6, gain: 6 } }), [A])).toEqual(rec());
+    expect(cleanLevel(rec({ added: ['feature:f1', 'bogus', 3, 'grant:g'] }), [A])!.added).toEqual(['feature:f1', 'grant:g']);
+    expect(cleanLevel(rec({ picks: { 'feature:f/c': ['a', 3], bad: 'x' } }), [A])!.picks).toEqual({ 'feature:f/c': ['a'] });
+  });
+  it('drops a record that names no row, or has no whole level', () => {
+    expect(cleanLevel(rec({ cls: 'gone' }), [A])).toBeNull();
+    expect(cleanLevel(rec({ n: 1.5 }), [A])).toBeNull();
+    expect(cleanLevel('x', [A])).toBeNull();
+  });
+  it('keeps only set entries whose key and values fit', () => {
+    const set = [
+      { key: 'castAb', was: '', now: 'wis' },
+      { key: 'slotMax', was: [0, 2, 0, 0, 0, 0, 0, 0, 0, 0], now: [0, 3, 0, 0, 0, 0, 0, 0, 0, 0] },
+      { key: 'slotMax', was: [0, 2], now: [0, 3] },
+      { key: 'pactMax', was: 1, now: 2 },
+      { key: 'row.a.prep', was: 'x', now: 3 },
+      { key: 'row.a.lvl', was: 1, now: 2 },
+      { key: 'row.gone.sub', was: '', now: 'Hunter' },
+      { key: 'row.a.castAb', was: '', now: 'int' },
+      { key: 'row.a.castAb', now: 'int' },
+      { key: 'row.a.sub', was: '', now: 'Hunter' }
+    ];
+    expect(cleanLevel(rec({ set }), [A])!.set.map((x) => x.key)).toEqual(['castAb', 'slotMax', 'pactMax', 'row.a.castAb', 'row.a.sub']);
   });
 });

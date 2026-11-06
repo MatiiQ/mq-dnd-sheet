@@ -148,7 +148,7 @@ export function Resources() {
                   }
                   body={<>
                     {/* The head shows the note unless the row is inactive; without a note, the source feature's text. */}
-                    {why && r.note ? <span className="small">{r.note}</span> : !r.note && <ClampText text={sourceOf(c, r.from)?.desc} />}
+                    {why && r.note ? <span className="small">{r.note}</span> : !r.note && <ClampText text={(sourceOf(c, r.from) as { desc?: string } | null)?.desc} />}
                     <span className="small">{RECHARGE_TEXT[rc]}{regainLabel(c, r) ? ' · regain ' + regainLabel(c, r) + (r.regainOn === 'dawn' ? ' at dawn' : ' on a Short Rest') : ''}</span>
                     {src && (revealOf(c, r.from)
                       ? <button type="button" className="link-btn go-link" onClick={() => reveal(revealOf(c, r.from)!)}>Source: {src}</button>

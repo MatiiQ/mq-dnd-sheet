@@ -1216,4 +1216,9 @@ export function sanitizePills(v: unknown): string[] {
 
 // Time, a counter (so ids made in one millisecond differ) and random characters (so two devices' ids differ).
 let idSeq = 0;
+// The scalar fields a level may change (LevelRecord.set): fixed keys, and the class-row fields named 'row.<id>.<field>'.
+// A later save change that renames one of these fields must also rewrite every levels[].set in its STEPS entry.
+export const LEVEL_KEYS = ['castAb', 'slotMax', 'pactMax', 'pactLvl'] as const;
+export const ROW_FIELDS = ['sub', 'subId', 'prep', 'castAb'] as const;
+
 export const newId = () => 'n' + Date.now().toString(36) + (idSeq++).toString(36) + Math.random().toString(36).slice(2, 6);

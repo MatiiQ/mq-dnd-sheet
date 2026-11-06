@@ -1,7 +1,7 @@
 // Links between entries (plan 3): what an entry came from, how its source reads, and keeping links free of loops.
 // Imports types only, so logic.ts can use it without a cycle.
 import type { GrantKind } from './catalog/schema';
-import type { Character, Feature, FeatureGroup, Grant, Item, Linked, Spell, SrcKind } from './types';
+import type { Character, ClassRow, Feature, FeatureGroup, Grant, Item, Linked, Spell, SrcKind } from './types';
 
 // Kinds of source an entry can name (roadmap, "Source kinds"), with their labels.
 export const SRC_KINDS: [SrcKind, string][] = [
@@ -10,10 +10,16 @@ export const SRC_KINDS: [SrcKind, string][] = [
 ];
 const srcLabel = (k: SrcKind | undefined) => SRC_KINDS.find(([x]) => x === k)?.[1];
 
-export type SourceKind = 'feature' | 'item' | 'spell';
-const SOURCE_KINDS: SourceKind[] = ['feature', 'item', 'spell'];
+// 'class' names a row of c.classes: a class's own grants (its proficiencies) come from it.
+export type SourceKind = 'feature' | 'item' | 'spell' | 'class';
+const SOURCE_KINDS: SourceKind[] = ['feature', 'item', 'spell', 'class'];
 
-// 'feature:<id>', 'item:<id>' or 'spell:<id>'; anything else is not a link.
+// The character level: the sum of the class rows' levels (0 only for the creator's character before its first level).
+// charLevel is what every total-level reader uses (the Proficiency Bonus, cantrips): never below 1.
+export const totalLevel = (c: { classes: { lvl: number }[] }): number => c.classes.reduce((t, r) => t + r.lvl, 0);
+export const charLevel = (c: { classes: { lvl: number }[] }): number => Math.max(1, totalLevel(c));
+
+// 'feature:<id>', 'item:<id>', 'spell:<id>' or 'class:<row id>'; anything else is not a link.
 export function parseLink(s: unknown): { kind: SourceKind; id: string } | null {
   if (typeof s !== 'string') return null;
   const i = s.indexOf(':');
@@ -22,11 +28,11 @@ export function parseLink(s: unknown): { kind: SourceKind; id: string } | null {
 }
 export const linkOf = (kind: SourceKind, id: string) => kind + ':' + id;
 
-export function sourceOf(c: Character, link: string | undefined): Feature | Item | Spell | null {
+export function sourceOf(c: Character, link: string | undefined): ClassRow | Feature | Item | Spell | null {
   const p = parseLink(link);
   if (!p) return null;
-  const list: { id: string }[] = p.kind === 'feature' ? c.feats : p.kind === 'item' ? c.inv : c.spells;
-  return (list.find((x) => x.id === p.id) as Feature | Item | Spell | undefined) ?? null;
+  const list: { id: string }[] = p.kind === 'class' ? (c as { classes?: ClassRow[] }).classes ?? [] : p.kind === 'feature' ? c.feats : p.kind === 'item' ? c.inv : c.spells;
+  return (list.find((x) => x.id === p.id) as ClassRow | Feature | Item | Spell | undefined) ?? null;
 }
 
 export const GROUP_SRC: Record<FeatureGroup, SrcKind> = {
@@ -48,7 +54,8 @@ export function sourceLabel(c: Character, x: Linked): string | undefined {
   return hand || (x.from ? 'Other' : undefined);
 }
 
-const fromOf = (c: Character, link: string) => (sourceOf(c, link) as Linked | null)?.from;
+// A class row has no `from`, so a chain stops there.
+const fromOf = (c: Character, link: string) => (parseLink(link)?.kind === 'class' ? undefined : (sourceOf(c, link) as Linked | null)?.from);
 // True when linking `self` to `candidate` would close a loop: the candidate is self, or its chain leads back to self.
 // The visited set stops on loops already in the data.
 export function wouldLoop(c: Character, self: string, candidate: string): boolean {
@@ -160,7 +167,8 @@ function baseReason(c: Character, x: Linked, seen: Set<string>): string | null {
     }[x.when];
     if (why) return why;
   }
-  if (!x.from || p?.kind === 'item' || seen.has(x.from)) return null;
+  // A class's grants are always on (a row has no conditions of its own).
+  if (!x.from || p?.kind === 'item' || p?.kind === 'class' || seen.has(x.from)) return null;
   seen.add(x.from);
   const src = sourceOf(c, x.from) as Linked | null;
   return src ? inactiveReason(c, src, seen) : null;

@@ -4,8 +4,8 @@ import { blankCharacter, SAVE_VERSION } from './defaults';
 import { AC_EFFECTS, grantErrors, isDtypes, isObj, ITEM_CATS, partErrors } from './catalog/schema';
 import { isValue } from './catalog/value';
 import { dropLinkOnly, fixLinks, GROUP_SRC, parseLink, sourceOf, SRC_KINDS } from './links';
-import { ABILITIES, CAST_NAMES, clamp, isMaxFormula, newId, normalize, PROF_CATS, regainEvent, sanitizePills, SIZES, slots, SPELL_SORTS, strings, TABS, UNARMORED, uniqueStrings, withoutKeys } from './logic';
-import type { Ability, AcEffect, Attack, Character, Counter, DefenseKind, Feature, Item, Linked, Recharge, Resource, Section, Sense, Spell, When } from './types';
+import { ABILITIES, CAST_NAMES, clamp, isMaxFormula, LEVEL_KEYS, newId, ROW_FIELDS, normalize, PROF_CATS, regainEvent, sanitizePills, SIZES, slots, SPELL_SORTS, strings, TABS, UNARMORED, uniqueStrings, withoutKeys } from './logic';
+import type { Ability, AcEffect, Attack, Character, ClassRow, Counter, DefenseKind, Die, Feature, Item, LevelRecord, LevelSet, Linked, Recharge, Resource, Section, Sense, Spell, When } from './types';
 
 const sameType = (def: unknown, v: unknown) => (Array.isArray(def) ? Array.isArray(v) : isObj(def) ? isObj(v) : typeof v === typeof def);
 const DEFENSE_KINDS: DefenseKind[] = ['res', 'vul', 'imm', 'adv'];
@@ -134,6 +134,51 @@ const cleanSense = ({ desc, plus, ...se }: Sense): Sense =>
 const cleanSections = (list: Section[]): Section[] =>
   list.filter((x, i, all) => typeof x.name === 'string' && x.name.trim() !== '' && all.findIndex((y) => y.id === x.id) === i)
     .map((x) => (x.in === undefined || typeof x.in === 'string' ? x : withoutKeys(x, ['in'])));
+
+// Class rows (save v2): a row is an entry (a name, flat values), cleaned field by field; a bad row goes, never the character.
+const DICE_OK: Die[] = [6, 8, 10, 12];
+const wholeIn = (v: unknown, min: number, max: number): v is number => Number.isInteger(v) && (v as number) >= min && (v as number) <= max;
+export function cleanClasses(list: unknown): ClassRow[] {
+  const rows = (Array.isArray(list) ? list : []).filter(isEntry);
+  const out: ClassRow[] = [];
+  for (const x of rows) {
+    const str = (v: unknown) => (typeof v === 'string' ? v : '');
+    let id = typeof x.id === 'string' && x.id && !x.id.includes('.') ? x.id : newId();
+    if (out.some((r) => r.id === id)) id = newId();
+    out.push({
+      id, name: x.name as string, clsId: str(x.clsId), sub: str(x.sub), subId: str(x.subId),
+      lvl: wholeIn(x.lvl, 1, 20) ? x.lvl : 1, hd: DICE_OK.includes(x.hd as Die) ? (x.hd as Die) : 8,
+      prep: wholeIn(x.prep, 0, 40) ? x.prep : 0, ...(isAbility(x.castAb) ? { castAb: x.castAb } : {})
+    });
+  }
+  return out;
+}
+// A LevelSet's key: a fixed name, or 'row.<id>.<field>' for an existing row; its was/now must fit the key. An absent
+// optional value is stored as '' (JSON drops undefined), so a missing was or now is not valid.
+const REF_KINDS = ['feature', 'item', 'spell', 'sense', 'defense', 'res', 'grant', 'attack'];
+function setFits(e: unknown, rows: ClassRow[]): e is LevelSet {
+  if (!isObj(e) || typeof e.key !== 'string') return false;
+  const m = /^row\.([^.]+)\.([a-zA-Z]+)$/.exec(e.key);
+  const field = m ? m[2] : e.key;
+  if (m ? !(ROW_FIELDS as readonly string[]).includes(field) || !rows.some((r) => r.id === m[1]) : !(LEVEL_KEYS as readonly string[]).includes(field)) return false;
+  const fits = (v: unknown) => (field === 'slotMax' ? Array.isArray(v) && v.length === 10 && v.every((n) => Number.isInteger(n))
+    : field === 'castAb' || field === 'sub' || field === 'subId' ? typeof v === 'string' : Number.isInteger(v));
+  return fits(e.was) && fits(e.now);
+}
+const HP_MODES = ['max', 'fixed', 'roll'];
+// One level record on load: a bad field goes, and the record goes only without a whole level or a row to name.
+export function cleanLevel(x: unknown, rows: ClassRow[]): LevelRecord | null {
+  if (!isObj(x) || !wholeIn(x.n, 1, 20) || typeof x.cls !== 'string' || !rows.some((r) => r.id === x.cls)) return null;
+  const hp = x.hp;
+  const okHp = isObj(hp) && HP_MODES.includes(hp.mode as string) && finite(hp.val) && finite(hp.gain);
+  const picks = isObj(x.picks) ? Object.entries(x.picks).filter(([, v]) => Array.isArray(v)).map(([k, v]) => [k, strings(v as unknown[])]) : [];
+  return {
+    n: x.n, cls: x.cls, ...(x.base === true ? { base: true as const } : {}),
+    ...(okHp ? { hp: { mode: hp.mode as 'max' | 'fixed' | 'roll', val: hp.val as number, gain: hp.gain as number } } : {}),
+    added: strings(Array.isArray(x.added) ? x.added : []).filter((r) => { const i = r.indexOf(':'); return i > 0 && i < r.length - 1 && REF_KINDS.includes(r.slice(0, i)); }),
+    picks: Object.fromEntries(picks), set: (Array.isArray(x.set) ? x.set : []).filter((e) => setFits(e, rows))
+  };
+}
 
 type Raw = Record<string, unknown>;
 // Version steps: STEPS[n] turns a version-n save into version n+1, before the repair below. None yet: every save so

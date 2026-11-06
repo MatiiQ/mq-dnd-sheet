@@ -18,7 +18,8 @@ export type RevealTarget = { kind: 'feature' | 'item' | 'spell' | 'res'; id: str
 // The target of a `from` link whose source is still on the sheet; null for a dangling link or a named-only source.
 export function revealOf(c: Character, from: string | undefined): RevealTarget | null {
   const p = parseLink(from);
-  return p && sourceOf(c, from) ? { kind: p.kind, id: p.id } : null;
+  // A class row has no row of its own to open (PLACES has no 'class').
+  return p && p.kind !== 'class' && sourceOf(c, from) ? { kind: p.kind, id: p.id } : null;
 }
 
 const PLACES: Record<RevealTarget['kind'], { tab?: Tab; sec?: string; pre: string }> = {

@@ -1,12 +1,38 @@
 import { describe, expect, it } from 'vitest';
 import { sampleCharacter } from './defaults';
-import { activeGrants, fixLinks, hasActiveEffect, inactiveReason, isActive, parseLink, sourceLabel, wouldLoop } from './links';
+import { activeGrants, charLevel, fixLinks, hasActiveEffect, inactiveReason, isActive, parseLink, sourceLabel, sourceOf, srcKindOfLink, totalLevel, wouldLoop } from './links';
+import { grantErrors } from './catalog/schema';
 import { castSpell, effectsAfterEdit, longRest, toggleEffect } from './logic';
 import { migrate } from './migrate';
 import type { Character, Feature, Grant, Item } from './types';
 
 const make = (p: Partial<Character> = {}): Character => ({ ...sampleCharacter(), ...p });
 const feat = (id: string, from?: string): Feature => ({ id, g: 'other', name: id.toUpperCase(), desc: '', ...(from ? { from } : {}) });
+
+const row = { id: 'c1', name: 'Ranger', clsId: 'class/ranger', sub: '', subId: '', lvl: 5, hd: 10 as const, prep: 0 };
+
+describe('class links', () => {
+  it('parses a class link', () => expect(parseLink('class:c1')).toEqual({ kind: 'class', id: 'c1' }));
+  it('labels a class grant by its row', () => {
+    const c = { ...make(), classes: [row] } as Character;
+    expect(sourceLabel(c, { from: 'class:c1' })).toBe('Class · Ranger');
+    expect(sourceOf(c, 'class:c1')).toBe(row);
+    expect(srcKindOfLink(c, 'class:c1')).toBe('class');
+  });
+  it('treats a class grant as always on, and a row ends a loop chain', () => {
+    const c = { ...make(), classes: [row] } as Character;
+    expect(inactiveReason(c, { from: 'class:c1' })).toBeNull();
+    expect(wouldLoop(c, 'feature:A', 'class:c1')).toBe(false);
+  });
+  it('accepts a proficiency grant from a class', () => {
+    expect(grantErrors({ id: 'g', kind: 'prof', name: 'Stealth', cat: 'skill', target: 'stealth', from: 'class:c1' } as never, 'class')).toEqual([]);
+  });
+  it('counts levels over the rows, never below 1 for charLevel', () => {
+    expect(totalLevel({ classes: [] })).toBe(0);
+    expect(charLevel({ classes: [] })).toBe(1);
+    expect(totalLevel({ classes: [row, { ...row, id: 'c2', lvl: 2 }] })).toBe(7);
+  });
+});
 
 describe('links', () => {
   it('parses a link to a feature, item or spell, and nothing else', () => {
