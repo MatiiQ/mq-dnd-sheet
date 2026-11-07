@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { withClass } from './test-fixtures';
 import { sampleCharacter } from './defaults';
-import { activeGrants, charLevel, fixLinks, hasActiveEffect, inactiveReason, isActive, parseLink, sourceLabel, sourceOf, srcKindOfLink, totalLevel, wouldLoop } from './links';
+import { activeGrants, charLevel, effectCanTargetOther, fixLinks, hasActiveEffect, isOn, inactiveReason, isActive, parseLink, sourceLabel, sourceOf, srcKindOfLink, totalLevel, wouldLoop } from './links';
 import { grantErrors } from './catalog/schema';
 import { castSpell, effectsAfterEdit, longRest, toggleEffect } from './logic';
 import { migrate } from './migrate';
-import type { Character, Feature, Grant, Item } from './types';
+import srdEntries from './data/srd/index';
+import { blankCharacter } from './defaults';
+import { entriesOf, mergeCatalog } from './catalog/merge';
+import { addFromCatalog } from './catalog/copy';
+import type { Character, Feature, Grant, Item, Spell } from './types';
 
 const make = (p: Partial<Character> = {}): Character => ({ ...sampleCharacter(), ...p });
 const feat = (id: string, from?: string): Feature => ({ id, g: 'other', name: id.toUpperCase(), desc: '', ...(from ? { from } : {}) });
@@ -225,5 +229,41 @@ describe('when: empty (hands free)', () => {
   it('survives a reload', () => {
     const c = make({ feats: [feat('a')], grants: [{ id: 'g', kind: 'unarmed', name: 'U', die: '1d8', abs: 'str', when: 'empty', from: 'feature:a' }] });
     expect(migrate(c).grants.find((g) => g.id === 'g')!.when).toBe('empty');
+  });
+});
+
+describe('a buff cast on someone else', () => {
+  const haste = (p: Partial<Spell> = {}): Spell => ({ id: 's', name: 'Haste', lvl: 3, time: 'Action', range: '30 feet', c: true, ...p });
+  const on = (sp: Spell, p: Partial<Character> = {}): Character => ({ ...blankCharacter(), spells: [sp], conc: { id: 's', name: sp.name },
+    grants: [{ id: 'g', kind: 'speed', name: 'Speed doubled', mode: 'walk', val: 'walk2', when: 'active', from: 'spell:s' }], ...p });
+  it('counts a ranged Concentration spell with any active grant (Haste, PHB p.284)', () => {
+    expect(effectCanTargetOther(on(haste()), haste())).toBe(true);
+    expect(isOn(on(haste({ acOther: true })), 'spell:s')).toBe(false);
+    expect(isOn(on(haste()), 'spell:s')).toBe(true);
+  });
+  it('counts a checkAdv grant and a sense entry', () => {
+    const adv = on(haste(), { grants: [{ id: 'g', kind: 'checkAdv', name: 'Adv', target: 'str', adv: 'adv', when: 'active', from: 'spell:s' }] });
+    expect(effectCanTargetOther(adv, haste())).toBe(true);
+    const sense = on(haste(), { grants: [], senses: [{ id: 'x', name: 'Darkvision', range: '60', when: 'active', from: 'spell:s' }] });
+    expect(effectCanTargetOther(sense, haste())).toBe(true);
+  });
+  it('leaves effects that ride on the caster, Self spells and non-Concentration spells alone', () => {
+    const mark = on(haste({ range: '90 feet' }), { grants: [{ id: 'g', kind: 'xdmg', name: 'Hunter’s Mark', dice: '1d6', on: 'hits', when: 'active', from: 'spell:s' }] });
+    expect(effectCanTargetOther(mark, mark.spells[0])).toBe(false);
+    const aura = on(haste(), { grants: [{ id: 'g', kind: 'aura', name: 'Aura', range: '10', when: 'active', from: 'spell:s' }] });
+    expect(effectCanTargetOther(aura, haste())).toBe(false);
+    expect(effectCanTargetOther(on(haste({ range: 'Self' })), haste({ range: 'Self' }))).toBe(false);
+    expect(effectCanTargetOther(on(haste({ range: 'Self (30-foot radius)' })), haste({ range: 'Self (30-foot radius)' }))).toBe(false);
+    expect(effectCanTargetOther(on(haste({ c: false })), haste({ c: false }))).toBe(false);
+  });
+  it('offers the switch on these catalog spells', () => {
+    const cat = mergeCatalog(srdEntries, null);
+    const ids = entriesOf(cat, 'spell').filter((e) => {
+      const c = addFromCatalog(blankCharacter(), cat, e, { picks: {}, counted: {}, links: {} });
+      return c.spells.some((s) => s.cid === e.id && effectCanTargetOther(c, s));
+    }).map((e) => e.id);
+    // Before the widening: Fly, Gaseous Form, Spider Climb, Stoneskin (all Touch). New: Beacon of Hope, Haste. Summon
+    // Dragon's resistance is the caster's, so it stays out.
+    expect(ids).toEqual(['spell/beacon-of-hope', 'spell/fly', 'spell/gaseous-form', 'spell/haste', 'spell/spider-climb', 'spell/stoneskin']);
   });
 });

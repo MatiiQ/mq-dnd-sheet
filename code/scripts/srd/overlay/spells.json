@@ -51,7 +51,7 @@
   "spell/power-word-heal": { "dice": "all HP" },
   "spell/wish": { "fx": "other" },
   "spell/find-steed": { "fx": "other" },
-  "spell/beacon-of-hope": { "fx": "other" },
+  "spell/beacon-of-hope": {"fx":"other","grants":[{"kind":"defense","name":"Advantage on Wisdom saves","def":"adv","target":"Wisdom saves","when":"active","id":"g1"},{"kind":"defense","name":"Advantage on Death saves","def":"adv","target":"Death saves","when":"active","id":"g2"}]},
   "spell/stoneskin": {"grants":[{"kind":"defense","name":"Bludgeoning Resistance","def":"res","target":"Bludgeoning","when":"active","id":"g1"},{"kind":"defense","name":"Piercing Resistance","def":"res","target":"Piercing","when":"active","id":"g2"},{"kind":"defense","name":"Slashing Resistance","def":"res","target":"Slashing","when":"active","id":"g3"}]},
   "spell/darkvision": {"grants":[{"kind":"sense","name":"Darkvision 150 ft","range":"150","when":"active","id":"g1"}]},
   "spell/true-seeing": {"grants":[{"kind":"sense","name":"Truesight 120 ft","range":"120","when":"active","id":"g1"}]}

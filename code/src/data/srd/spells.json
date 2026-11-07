@@ -530,7 +530,25 @@
     "dur": "Concentration, up to 1 minute",
     "conc": true,
     "ritual": false,
-    "fx": "other"
+    "fx": "other",
+    "grants": [
+      {
+        "kind": "defense",
+        "name": "Advantage on Wisdom saves",
+        "def": "adv",
+        "target": "Wisdom saves",
+        "when": "active",
+        "id": "g1"
+      },
+      {
+        "kind": "defense",
+        "name": "Advantage on Death saves",
+        "def": "adv",
+        "target": "Death saves",
+        "when": "active",
+        "id": "g2"
+      }
+    ]
   },
   {
     "id": "spell/befuddlement",

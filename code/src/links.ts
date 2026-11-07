@@ -114,12 +114,15 @@ export function fixLinks(c: Character): Character {
   return out;
 }
 
-// A Touch Concentration spell whose speed or defense can go on someone else (Fly PHB p.276, Gaseous Form p.277, Spider
-// Climb p.319). Speed and defense only: extra damage goes on your own hits, whoever the spell touches.
+// A Concentration spell cast at range or by touch whose effect can go on someone else (Fly PHB p.276, Gaseous Form
+// p.277, Spider Climb p.319, Haste p.284, Beacon of Hope p.245): any of its `when: 'active'` grants or entries, except
+// extra damage and auras, which ride on the caster whoever the spell targets. A Self range never targets another, nor
+// a ranged spell whose effect is the caster's own (Summon Dragon: "You have Resistance", the range is the spirit's).
+const CASTER_ONLY = ['spell/summon-dragon'];
 export function effectCanTargetOther(c: Character, sp: Spell): boolean {
-  if (!sp.c || !/^touch/i.test((sp.range || '').trim())) return false;
+  if (!sp.c || /^self/i.test((sp.range || '').trim()) || CASTER_ONLY.includes(sp.cid ?? '')) return false;
   const link = linkOf('spell', sp.id), mine = (x: Linked) => x.from === link && x.when === 'active';
-  return c.grants.some((g) => g.kind === 'speed' && mine(g)) || c.defenses.some(mine);
+  return c.grants.some((g) => g.kind !== 'xdmg' && g.kind !== 'aura' && mine(g)) || c.defenses.some(mine) || c.senses.some(mine);
 }
 
 // Whether a source's effect is switched on. A Concentration spell's is on exactly while concentrating on it, unless it

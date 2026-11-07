@@ -248,9 +248,10 @@ Source text cut short and other notes stay under "Items checked" above. The audi
   unknown fields. Each background's grants are checked against the PHB table through `parseBackgroundFields`.
 - Rule categories `property` and `mastery` (`parseWeaponRules`, 17 entries), shown under an open weapon row by
   `RuleNotes`; senses show theirs the same way.
-- `Spell.acOther` also marks a Touch Concentration spell with a speed or defense grant (Fly, Gaseous Form, Spider
-  Climb) as cast on someone else: its `when: 'active'` grants, an `xdmg` included, don't count on you. No catalog spell
-  mixes them.
+- `Spell.acOther` also marks a Concentration spell that isn't Self range and has a `when: 'active'` grant or entry
+  other than `xdmg` or `aura` (Fly, Gaseous Form, Spider Climb, Stoneskin, Haste, Beacon of Hope) as cast on someone
+  else: its `when: 'active'` grants, an `xdmg` included, don't count on you. No catalog spell mixes them. Summon Dragon
+  is left out by id: its resistance is the caster's.
 - A grant with `when: 'active'` and no `needEq` keeps counting at quantity 0 while switched on, so a drunk potion lasts
   until it is switched off or a Long Rest. The rule can't tell a potion from another item; in the catalog only potions
   have such a grant.

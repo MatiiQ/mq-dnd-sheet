@@ -218,12 +218,13 @@ describe('spells', () => {
     });
     it('ignores acOther on a spell that no longer offers the switch', () => {
       expect(modeSpeed(flying(fly({ acOther: true, range: 'Self' })), 'fly').base).toBe(60);
-      expect(modeSpeed(flying(fly({ acOther: true, range: '60 feet', acFx: 'bonus' })), 'fly').base).toBe(60);
+      expect(modeSpeed({ ...flying(fly({ acOther: true, c: false })), effectsOn: ['spell:s'] }, 'fly').base).toBe(60);
     });
-    it('offers the target switch only on a Touch Concentration spell with a speed or defense', () => {
+    it('offers the target switch only on a non-Self Concentration spell with an active effect', () => {
       const c = flying(fly());
       expect(effectCanTargetOther(c, c.spells[0])).toBe(true);
-      expect(effectCanTargetOther(c, { ...c.spells[0], range: '90 feet' })).toBe(false);
+      expect(effectCanTargetOther(c, { ...c.spells[0], range: '90 feet' })).toBe(true);
+      expect(effectCanTargetOther(c, { ...c.spells[0], range: 'Self' })).toBe(false);
       expect(effectCanTargetOther(c, { ...c.spells[0], c: false })).toBe(false);
       const xdmg = { ...c, grants: [{ ...c.grants[0], kind: 'xdmg', dice: '1d6', on: 'hits' }] } as unknown as Character;
       expect(effectCanTargetOther(xdmg, c.spells[0])).toBe(false);
