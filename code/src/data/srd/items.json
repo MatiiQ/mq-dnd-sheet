@@ -5652,7 +5652,39 @@
     "charges": "10",
     "recharge": "dawn",
     "regain": "1d8+2",
-    "regainOn": "dawn"
+    "regainOn": "dawn",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Charm Person",
+        "spell": "spell/charm-person",
+        "always": true,
+        "chg": 1,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Command",
+        "spell": "spell/command",
+        "always": true,
+        "chg": 1,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g3",
+        "kind": "spell",
+        "name": "Comprehend Languages",
+        "spell": "spell/comprehend-languages",
+        "always": true,
+        "chg": 1,
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   {
     "id": "item/staff-of-fire",
@@ -5674,6 +5706,36 @@
         "name": "Fire Resistance",
         "def": "res",
         "target": "Fire",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Burning Hands",
+        "spell": "spell/burning-hands",
+        "always": true,
+        "chg": 1,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g3",
+        "kind": "spell",
+        "name": "Fireball",
+        "spell": "spell/fireball",
+        "always": true,
+        "chg": 3,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g4",
+        "kind": "spell",
+        "name": "Wall of Fire",
+        "spell": "spell/wall-of-fire",
+        "always": true,
+        "chg": 4,
         "needEq": true,
         "needAtt": true
       }
@@ -5701,6 +5763,46 @@
         "target": "Cold",
         "needEq": true,
         "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Cone of Cold",
+        "spell": "spell/cone-of-cold",
+        "always": true,
+        "chg": 5,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g3",
+        "kind": "spell",
+        "name": "Ice Storm",
+        "spell": "spell/ice-storm",
+        "always": true,
+        "chg": 4,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g4",
+        "kind": "spell",
+        "name": "Fog Cloud",
+        "spell": "spell/fog-cloud",
+        "always": true,
+        "chg": 1,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g5",
+        "kind": "spell",
+        "name": "Wall of Ice",
+        "spell": "spell/wall-of-ice",
+        "always": true,
+        "chg": 4,
+        "needEq": true,
+        "needAtt": true
       }
     ]
   },
@@ -5716,7 +5818,40 @@
     "charges": "10",
     "recharge": "dawn",
     "regain": "1d6+4",
-    "regainOn": "dawn"
+    "regainOn": "dawn",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Cure Wounds",
+        "spell": "spell/cure-wounds",
+        "always": true,
+        "chg": 1,
+        "chgMax": 4,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Lesser Restoration",
+        "spell": "spell/lesser-restoration",
+        "always": true,
+        "chg": 2,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g3",
+        "kind": "spell",
+        "name": "Mass Cure Wounds",
+        "spell": "spell/mass-cure-wounds",
+        "always": true,
+        "chg": 5,
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   {
     "wcat": "simple",
@@ -5765,6 +5900,98 @@
         "kind": "spellAtk",
         "name": "+2 spell attack",
         "val": "2",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g4",
+        "kind": "spell",
+        "name": "Cone of Cold",
+        "spell": "spell/cone-of-cold",
+        "always": true,
+        "chg": 5,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g5",
+        "kind": "spell",
+        "name": "Fireball",
+        "spell": "spell/fireball",
+        "always": true,
+        "chg": 5,
+        "castLvl": 5,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g6",
+        "kind": "spell",
+        "name": "Globe of Invulnerability",
+        "spell": "spell/globe-of-invulnerability",
+        "always": true,
+        "chg": 6,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g7",
+        "kind": "spell",
+        "name": "Hold Monster",
+        "spell": "spell/hold-monster",
+        "always": true,
+        "chg": 5,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g8",
+        "kind": "spell",
+        "name": "Levitate",
+        "spell": "spell/levitate",
+        "always": true,
+        "chg": 2,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g9",
+        "kind": "spell",
+        "name": "Lightning Bolt",
+        "spell": "spell/lightning-bolt",
+        "always": true,
+        "chg": 5,
+        "castLvl": 5,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g10",
+        "kind": "spell",
+        "name": "Magic Missile",
+        "spell": "spell/magic-missile",
+        "always": true,
+        "chg": 1,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g11",
+        "kind": "spell",
+        "name": "Ray of Enfeeblement",
+        "spell": "spell/ray-of-enfeeblement",
+        "always": true,
+        "chg": 1,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g12",
+        "kind": "spell",
+        "name": "Wall of Force",
+        "spell": "spell/wall-of-force",
+        "always": true,
+        "chg": 5,
         "needEq": true,
         "needAtt": true
       }
@@ -5818,7 +6045,29 @@
     "charges": "10",
     "recharge": "dawn",
     "regain": "1d6+4",
-    "regainOn": "dawn"
+    "regainOn": "dawn",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Giant Insect",
+        "spell": "spell/giant-insect",
+        "always": true,
+        "chg": 4,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Insect Plague",
+        "spell": "spell/insect-plague",
+        "always": true,
+        "chg": 5,
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   {
     "wcat": "simple",
@@ -5849,6 +6098,192 @@
         "kind": "spellAtk",
         "name": "+2 spell attack",
         "val": "2",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Arcane Lock",
+        "spell": "spell/arcane-lock",
+        "always": true,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g3",
+        "kind": "spell",
+        "name": "Conjure Elemental",
+        "spell": "spell/conjure-elemental",
+        "always": true,
+        "chg": 7,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g4",
+        "kind": "spell",
+        "name": "Detect Magic",
+        "spell": "spell/detect-magic",
+        "always": true,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g5",
+        "kind": "spell",
+        "name": "Dispel Magic",
+        "spell": "spell/dispel-magic",
+        "always": true,
+        "chg": 3,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g6",
+        "kind": "spell",
+        "name": "Enlarge/Reduce",
+        "spell": "spell/enlarge-reduce",
+        "always": true,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g7",
+        "kind": "spell",
+        "name": "Fireball",
+        "spell": "spell/fireball",
+        "always": true,
+        "chg": 7,
+        "castLvl": 7,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g8",
+        "kind": "spell",
+        "name": "Flaming Sphere",
+        "spell": "spell/flaming-sphere",
+        "always": true,
+        "chg": 2,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g9",
+        "kind": "spell",
+        "name": "Ice Storm",
+        "spell": "spell/ice-storm",
+        "always": true,
+        "chg": 4,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g10",
+        "kind": "spell",
+        "name": "Invisibility",
+        "spell": "spell/invisibility",
+        "always": true,
+        "chg": 2,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g11",
+        "kind": "spell",
+        "name": "Knock",
+        "spell": "spell/knock",
+        "always": true,
+        "chg": 2,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g12",
+        "kind": "spell",
+        "name": "Light",
+        "spell": "spell/light",
+        "always": true,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g13",
+        "kind": "spell",
+        "name": "Lightning Bolt",
+        "spell": "spell/lightning-bolt",
+        "always": true,
+        "chg": 7,
+        "castLvl": 7,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g14",
+        "kind": "spell",
+        "name": "Mage Hand",
+        "spell": "spell/mage-hand",
+        "always": true,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g15",
+        "kind": "spell",
+        "name": "Passwall",
+        "spell": "spell/passwall",
+        "always": true,
+        "chg": 5,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g16",
+        "kind": "spell",
+        "name": "Plane Shift",
+        "spell": "spell/plane-shift",
+        "always": true,
+        "chg": 7,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g17",
+        "kind": "spell",
+        "name": "Protection from Evil and Good",
+        "spell": "spell/protection-from-evil-and-good",
+        "always": true,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g18",
+        "kind": "spell",
+        "name": "Telekinesis",
+        "spell": "spell/telekinesis",
+        "always": true,
+        "chg": 5,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g19",
+        "kind": "spell",
+        "name": "Wall of Fire",
+        "spell": "spell/wall-of-fire",
+        "always": true,
+        "chg": 4,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g20",
+        "kind": "spell",
+        "name": "Web",
+        "spell": "spell/web",
+        "always": true,
+        "chg": 2,
         "needEq": true,
         "needAtt": true
       }
@@ -5893,6 +6328,86 @@
         "kind": "spellAtk",
         "name": "+2 spell attack",
         "val": "2",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Animal Friendship",
+        "spell": "spell/animal-friendship",
+        "always": true,
+        "chg": 1,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g3",
+        "kind": "spell",
+        "name": "Awaken",
+        "spell": "spell/awaken",
+        "always": true,
+        "chg": 5,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g4",
+        "kind": "spell",
+        "name": "Barkskin",
+        "spell": "spell/barkskin",
+        "always": true,
+        "chg": 2,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g5",
+        "kind": "spell",
+        "name": "Locate Animals or Plants",
+        "spell": "spell/locate-animals-or-plants",
+        "always": true,
+        "chg": 2,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g6",
+        "kind": "spell",
+        "name": "Pass without Trace",
+        "spell": "spell/pass-without-trace",
+        "always": true,
+        "chg": 2,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g7",
+        "kind": "spell",
+        "name": "Speak with Animals",
+        "spell": "spell/speak-with-animals",
+        "always": true,
+        "chg": 1,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g8",
+        "kind": "spell",
+        "name": "Speak with Plants",
+        "spell": "spell/speak-with-plants",
+        "always": true,
+        "chg": 3,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g9",
+        "kind": "spell",
+        "name": "Wall of Thorns",
+        "spell": "spell/wall-of-thorns",
+        "always": true,
+        "chg": 6,
         "needEq": true,
         "needAtt": true
       }
@@ -6390,7 +6905,31 @@
     "charges": "7",
     "recharge": "dawn",
     "regain": "1d6+1",
-    "regainOn": "dawn"
+    "regainOn": "dawn",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Hold Monster",
+        "spell": "spell/hold-monster",
+        "always": true,
+        "dc": "17",
+        "chg": 5,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Hold Person",
+        "spell": "spell/hold-person",
+        "always": true,
+        "dc": "17",
+        "chg": 2,
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   {
     "id": "item/wand-of-enemy-detection",
@@ -6418,7 +6957,31 @@
     "charges": "7",
     "recharge": "dawn",
     "regain": "1d6+1",
-    "regainOn": "dawn"
+    "regainOn": "dawn",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Command",
+        "spell": "spell/command",
+        "always": true,
+        "dc": "15",
+        "chg": 1,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Fear",
+        "spell": "spell/fear",
+        "always": true,
+        "dc": "15",
+        "chg": 3,
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   {
     "id": "item/wand-of-fireballs",
@@ -6432,7 +6995,21 @@
     "charges": "7",
     "recharge": "dawn",
     "regain": "1d6+1",
-    "regainOn": "dawn"
+    "regainOn": "dawn",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Fireball",
+        "spell": "spell/fireball",
+        "always": true,
+        "dc": "15",
+        "chg": 1,
+        "chgMax": 3,
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   {
     "id": "item/wand-of-lightning-bolts",
@@ -6446,7 +7023,21 @@
     "charges": "7",
     "recharge": "dawn",
     "regain": "1d6+1",
-    "regainOn": "dawn"
+    "regainOn": "dawn",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Lightning Bolt",
+        "spell": "spell/lightning-bolt",
+        "always": true,
+        "dc": "15",
+        "chg": 1,
+        "chgMax": 3,
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   {
     "id": "item/wand-of-magic-detection",
@@ -6459,7 +7050,18 @@
     "charges": "3",
     "recharge": "dawn",
     "regain": "1d3",
-    "regainOn": "dawn"
+    "regainOn": "dawn",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Detect Magic",
+        "spell": "spell/detect-magic",
+        "always": true,
+        "chg": 1,
+        "needEq": true
+      }
+    ]
   },
   {
     "id": "item/wand-of-magic-missiles",
@@ -6472,7 +7074,19 @@
     "charges": "7",
     "recharge": "dawn",
     "regain": "1d6+1",
-    "regainOn": "dawn"
+    "regainOn": "dawn",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Magic Missile",
+        "spell": "spell/magic-missile",
+        "always": true,
+        "chg": 1,
+        "chgMax": 3,
+        "needEq": true
+      }
+    ]
   },
   {
     "id": "item/wand-of-paralysis",
@@ -6500,7 +7114,20 @@
     "charges": "7",
     "recharge": "dawn",
     "regain": "1d6+1",
-    "regainOn": "dawn"
+    "regainOn": "dawn",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Polymorph",
+        "spell": "spell/polymorph",
+        "always": true,
+        "dc": "15",
+        "chg": 1,
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   {
     "id": "item/wand-of-secrets",
@@ -6548,7 +7175,20 @@
     "charges": "7",
     "recharge": "dawn",
     "regain": "1d6+1",
-    "regainOn": "dawn"
+    "regainOn": "dawn",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Web",
+        "spell": "spell/web",
+        "always": true,
+        "dc": "13",
+        "chg": 1,
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   {
     "id": "item/wand-of-wonder",
