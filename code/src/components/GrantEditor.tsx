@@ -39,7 +39,7 @@ export const GRANT_FIELDS: Record<GrantKind, FieldDef[]> = {
     ['language', 'Language'], ['mastery', 'Weapon Mastery'], ['half', 'Half proficiency (Jack of All Trades)']]), t('target', 'Which (e.g. Thieves’ Tools, Elvish)'), v('val', 'Count')],
   saveBonus: [sel('ab', 'Saves', [['all', 'All'], ...ABIL]), v('val', 'Bonus')],
   checkBonus: [t('target', 'Skill key or ability (e.g. arcana, int)'), v('val', 'Bonus')],
-  speed: [sel('mode', 'Speed', [['walk', 'Walk'], ['climb', 'Climb'], ['swim', 'Swim'], ['fly', 'Fly'], ['burrow', 'Burrow']]), t('val', 'Feet, a formula, or walk'), b('hover', 'Can hover')],
+  speed: [sel('mode', 'Speed', [['walk', 'Walk'], ['climb', 'Climb'], ['swim', 'Swim'], ['fly', 'Fly'], ['burrow', 'Burrow']]), t('val', 'Feet, a formula, or walk'), b('hover', 'Can hover'), b('floor', 'At least (floor)')],
   ac: [sel('acMode', 'Kind', [['bonus', 'Bonus'], ['unarmored', 'Unarmored base (10 + DEX + ability)'], ['dexCap', 'Medium armor Dex maximum']]), v('val', 'Bonus'), sel('ab', 'Ability (unarmored)', [['', '—'], ...ABIL]), b('shieldOk', 'Works with a Shield')],
   init: [v('val', 'Bonus')],
   hpLvl: [v('val', 'HP per level')],

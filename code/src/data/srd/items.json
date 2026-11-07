@@ -847,7 +847,19 @@
     "desc": "While you wear these boots, your Speed becomes 30 feet unless your Speed is higher, and your Speed isn’t reduced by you carrying weight in excess of your carrying capacity or wearing Heavy Armor. Once on each of your turns, you can jump up to 30 feet by spending only 10 feet of movement.",
     "cat": "magic",
     "rarity": "Uncommon",
-    "attune": true
+    "attune": true,
+    "grants": [
+      {
+        "kind": "speed",
+        "name": "Speed at least 30 ft",
+        "mode": "walk",
+        "val": "30",
+        "floor": true,
+        "needEq": true,
+        "needAtt": true,
+        "id": "g1"
+      }
+    ]
   },
   {
     "id": "item/boots-of-the-winterlands",

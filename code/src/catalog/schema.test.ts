@@ -87,6 +87,8 @@ describe('validateEntry', () => {
       ['bad slot table', { ...feature, grants: [{ ...ek, s2: 'two' }] }],
       ['bad action dice', { ...feature, grants: [{ id: 'g1', kind: 'action', name: 'Woe', econ: 'reaction', dice: 'd6-' }] }],
       ['walking speed from itself', { ...trait, grants: [{ id: 'g1', kind: 'speed', name: 'x', mode: 'walk', val: 'walk' }] }],
+      ['floor on a fly speed', { ...trait, grants: [{ id: 'g1', kind: 'speed', name: 'x', mode: 'fly', val: '30', floor: true }] }],
+      ['floor equal to the Speed', { ...trait, grants: [{ id: 'g1', kind: 'speed', name: 'x', mode: 'walk', val: 'walk2', floor: true }] }],
       ['healMod not true', { ...spell, healMod: 'yes' }],
       ['dmgMod not true', { ...orb, dmgMod: false }],
       ['one damage type', { ...orb, dtypes: 'Acid' }],

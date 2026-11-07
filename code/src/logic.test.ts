@@ -569,3 +569,18 @@ describe('Advantage on Initiative', () => {
     expect(grantChips(make({ grants: [adv()] }), 'feature:f10').map((x) => x.label)).toContain('Advantage on Initiative');
   });
 });
+
+describe('Speed floor', () => {
+  const fl = gr({ id: 'fl', kind: 'speed', mode: 'walk', val: '30', floor: true });
+  it('raises a lower walking Speed to the floor (Boots of Striding and Springing, SRD 5.2.1)', () => {
+    expect(walkSpeed(make({ speedBase: 25, grants: [fl] }))).toBe(30);
+    expect(walkSpeed(make({ speedBase: 35, grants: [fl] }))).toBe(35);
+  });
+  it('applies before the doubling, and the Exhaustion cut still applies', () => {
+    expect(walkSpeed(make({ speedBase: 25, grants: [fl, gr({ id: 'w', kind: 'speed', mode: 'walk', val: 'walk2' })] }))).toBe(60);
+    expect(speedNow(make({ speedBase: 25, exh: 1, grants: [fl] }))).toBe(25);
+  });
+  it('reads as a floor in its chip', () => {
+    expect(grantChips(make({ grants: [fl] }), 'feature:f10').map((x) => x.label)).toContain('Speed at least 30 ft');
+  });
+});

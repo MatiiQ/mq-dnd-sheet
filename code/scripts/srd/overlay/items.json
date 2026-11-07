@@ -1882,5 +1882,19 @@
         "id": "g2"
       }
     ]
+  },
+  "item/boots-of-striding-and-springing": {
+    "grants": [
+      {
+        "kind": "speed",
+        "name": "Speed at least 30 ft",
+        "mode": "walk",
+        "val": "30",
+        "floor": true,
+        "needEq": true,
+        "needAtt": true,
+        "id": "g1"
+      }
+    ]
   }
 }

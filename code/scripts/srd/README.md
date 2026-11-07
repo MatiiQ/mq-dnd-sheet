@@ -266,6 +266,8 @@ Source text cut short and other notes stay under "Items checked" above. The audi
 - Haste, Boots of Speed and Potion of Speed double the walking Speed (`walk2` on a walk grant), before Exhaustion and
   armor cuts; other speeds read the undoubled walk. Haste's end (Incapacitated and Speed 0 until the end of the
   target's next turn) stays text.
+- Boots of Striding and Springing: a walk `speed` grant with `floor` (the Speed is at least 30 ft, before any
+  doubling). "Not reduced by weight or Heavy Armor" and the jump stay text: armor's Strength cut still applies.
 
 ## Data changes from the catalog feature gaps (2026-11-05)
 

@@ -94,6 +94,7 @@ export interface GrantSpec {
   cat?: 'armor' | 'weapon' | 'tool' | 'language' | 'skill' | 'save' | 'expertise' | 'mastery' | 'half'; orExpert?: boolean;   // prof; orExpert: Expertise if already proficient
   spell?: string; always?: boolean; castAb?: string;                                // spell
   mode?: 'walk' | 'climb' | 'swim' | 'fly' | 'burrow'; hover?: boolean;             // speed
+  floor?: boolean;                                                                  // speed: walk Speed at least val
   acMode?: 'bonus' | 'unarmored' | 'dexCap'; shieldOk?: boolean;                    // ac; dexCap: Medium armor's Dexterity cap
   size?: Size;                                                                      // size
   econ?: 'action' | 'bonus' | 'reaction' | 'free' | 'other'; res?: string; note?: string;   // action (also dice)
@@ -175,7 +176,7 @@ const GRANTS: Record<GrantKind, Record<string, [Check, boolean]>> = {
   // An Emanation from you while the grant counts (range: a Value, may be a level table); incap: ends while Incapacitated.
   aura: { range: [value, true], note: [str, false], incap: [bool, false] },
   spell: { spell: [str, true], always: [bool, false], castAb: [or(ability, ref), false] },
-  speed: { mode: [oneOf('walk', 'climb', 'swim', 'fly', 'burrow'), true], val: [or(value, oneOf('walk', 'walk2')), true], hover: [bool, false] },
+  speed: { mode: [oneOf('walk', 'climb', 'swim', 'fly', 'burrow'), true], val: [or(value, oneOf('walk', 'walk2')), true], hover: [bool, false], floor: [bool, false] },
   ac: { acMode: [oneOf('bonus', 'unarmored', 'dexCap'), true], val: [value, false], ab: [or(ability, ref), false], shieldOk: [bool, false] },
   init: { val: [value, true] },
   hpLvl: { val: [value, true] },
@@ -298,6 +299,7 @@ function checkGrant(g: unknown, e: Record<string, unknown>, where: string, errs:
   if (g.kind === 'resource') checkRegain(g, where, errs);
   if (g.res !== undefined && g.uses !== undefined) errs.push(`${where}: res and uses together`);
   if (g.kind === 'speed' && g.mode === 'walk' && g.val === 'walk') errs.push(`${where}: a walk speed can't equal the walking Speed`);
+  if (g.kind === 'speed' && g.floor && (g.mode !== 'walk' || g.val === 'walk' || g.val === 'walk2')) errs.push(`${where}: a floor is a number of feet on the walking Speed`);
 }
 
 function checkChoice(c: Record<string, unknown>, e: Record<string, unknown>, where: string, errs: string[]) {
