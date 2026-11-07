@@ -382,14 +382,19 @@ const castEffects = (c: Character, sp: Spell, lvl: number = sp.lvl): Partial<Cha
   ({ ...(sp.c ? setConc({ id: sp.id, name: sp.name }) : {}), ...acOnCast(c, sp), ...effectOnCast(c, sp), ...castFxOn(c, sp, lvl) });
 // Reading a manual or tome (SRD 5.2.1, Manual of Bodily Health and the others): its score rises by 2, to a maximum of
 // 30, for good. The bonus becomes a Feature with a cap-30 abil grant, so it outlives the book and stacks after cap-20
-// increases; the book loses `reads`. Nothing happens for an item with no `reads`.
+// increases; the book loses `reads`. A stack of copies reads one: that copy splits off, the rest stay unread. Nothing
+// happens for an item with no `reads`.
 export function readManual(c: Character, itemId: string): Character {
   const item = c.inv.find((i) => i.id === itemId);
   const ab = item?.reads;
   if (!item || !ab) return c;
   const name = ABILITIES.find(([k]) => k === ab)![1], id = newId();
+  const spent = withoutKeys(item, ['reads']);
+  const inv = item.qty > 1
+    ? c.inv.flatMap((i) => (i.id === itemId ? [{ ...i, qty: i.qty - 1 }, { ...spent, id: newId(), qty: 1, eq: false }] : [i]))
+    : c.inv.map((i) => (i.id === itemId ? spent : i));
   const read: Character = {
-    ...c, inv: c.inv.map((i) => (i.id === itemId ? withoutKeys(i, ['reads']) : i)),
+    ...c, inv,
     feats: [...c.feats, { id, g: 'other', name: item.name, desc: 'Read: +2 ' + name + ', to a maximum of 30.' }]
   };
   return addGrants(read, linkOf('feature', id), [{ spec: { id: 'g1', kind: 'abil', name: name + ' +2', ab, val: '2', cap: 30 } }]);
@@ -664,10 +669,13 @@ export const maxHpRaw = (c: Character) => c.maxHp + conHpPart(c) + activeGrants(
 // same way): the rise of the active hpFlat sum from c to c + patch, when positive. Not the whole maximum: a raised
 // Constitution raises no current HP. Deliberate limit: only a cast or the effect's switch does this; an hpFlat grant
 // that starts counting another way (equipping an item, a level-up) raises the maximum only. Switching off lowers only
-// the maximum (normalize() clamps).
+// the maximum (normalize() clamps), so switching an effect off and on again at less than full HP pays the rise twice
+// (the sheet keeps no record of what a cast already paid). Leaving 0 HP clears the death saves, as healing does (PHB p.29).
 export function withHpRise(c: Character, patch: Partial<Character>): Partial<Character> {
   const rise = hpFlatSum({ ...c, ...patch }) - hpFlatSum(c);
-  return rise > 0 ? { ...patch, hp: (patch.hp ?? c.hp) + rise } : patch;
+  if (rise <= 0) return patch;
+  const hp = patch.hp ?? c.hp;
+  return { ...patch, hp: hp + rise, ...(hp === 0 ? { ds: 0, df: 0 } : {}) };
 }
 export const maxHpOf = (c: Character) => Math.max(1, maxHpRaw(c));
 // Current HP against max, temp HP ignored: green from 65%, yellow from 30%, red below.

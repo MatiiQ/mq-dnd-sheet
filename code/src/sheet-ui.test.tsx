@@ -116,6 +116,8 @@ describe('entry forms and rows', () => {
     renderSheet({ inv: [{ id: 'bk', name: 'Manual of Gainful Exercise', qty: 1, eq: false, reads: 'str' }] });
     tab('Inventory');
     tap(label('Read Manual of Gainful Exercise'));
+    expect(saved().inv[0].reads).toBe('str');
+    tap(label('Tap again to read Manual of Gainful Exercise'));
     expect(saved().inv[0].reads).toBeUndefined();
     expect(saved().feats.some((f) => f.name === 'Manual of Gainful Exercise')).toBe(true);
     expect(label('Read Manual of Gainful Exercise')).toBeFalsy();

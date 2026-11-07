@@ -392,6 +392,12 @@ describe('reading a manual (SRD 5.2.1, Manual of Gainful Exercise)', () => {
     expect(feat.desc).toBe('Read: +2 Strength, to a maximum of 30.');
     expect(effScore(removeRef(noBook, { kind: 'feature', id: feat.id }), 'str')).toBe(20);
   });
+  it('reads one copy of a stack and leaves the rest unread', () => {
+    const c = { ...base(18), inv: [{ ...book, qty: 2 }] };
+    const read = readManual(c, 'bk');
+    expect(read.inv.map((i) => [i.qty, i.reads])).toEqual([[1, 'str'], [1, undefined]]);
+    expect(effScore(read, 'str')).toBe(22);
+  });
   it('reads a book once', () => {
     const read = readManual(base(18), 'bk');
     expect(read.inv[0].reads).toBeUndefined();

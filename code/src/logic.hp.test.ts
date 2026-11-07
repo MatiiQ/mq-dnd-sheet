@@ -422,6 +422,11 @@ describe('an effect that raises the HP maximum', () => {
     expect([cast(20).hp, maxHpOf(cast(20))]).toEqual([25, 25]);
     expect([cast(10).hp, maxHpOf(cast(10))]).toEqual([15, 25]);
   });
+  it('clears the death saves when it lifts a character off 0 HP', () => {
+    const c = applyPatch({ ...base(0), ds: 1, df: 2 }, (p) => castSpell(p, aid, 2));
+    expect([c.hp, c.ds, c.df]).toEqual([5, 0, 0]);
+    expect(applyPatch({ ...base(10), ds: 1, df: 2 }, (p) => castSpell(p, aid, 2)).df).toBe(2);
+  });
   it('lowers only the maximum when switched off', () => {
     const off = applyPatch(cast(20), (p) => toggleEffect(p, 'spell:a'));
     expect([off.hp, maxHpOf(off)]).toEqual([20, 20]);

@@ -227,7 +227,7 @@ export function InventoryTab() {
               border: '1px solid ' + (it.eq ? 'var(--accent)' : 'var(--line-2)'), background: 'transparent', color: it.eq ? 'var(--accent)' : 'var(--muted)'
             }}>{it.eq ? 'Equipped' : 'Carried'}</button>}
             {hasActiveEffect(c, linkOf('item', it.id)) && <EffectSwitch link={linkOf('item', it.id)} name={it.name} />}
-            {it.reads && <button type="button" className="btn btn-sm toggle-btn" aria-label={'Read ' + it.name} onClick={() => update((p) => readManual(p, it.id))}>Read</button>}
+            {it.reads && <ReadButton name={it.name} onRead={() => update((p) => readManual(p, it.id))} />}
             {/* An item with charges counts its charges here instead of its quantity (charged items come one at a time). */}
             {it.count !== undefined ? (
               <div className="row gap-4">
@@ -478,6 +478,12 @@ export function InventoryTab() {
       {containers.map(bagBlock)}
     </div>
   );
+}
+
+// Reading is for good (+2 to a score): the first tap arms, the second reads.
+function ReadButton({ name, onRead }: { name: string; onRead: () => void }) {
+  const [armed, tap] = useArmed();
+  return <button type="button" className="btn btn-sm toggle-btn" aria-label={(armed ? 'Tap again to read ' : 'Read ') + name} onClick={() => tap(onRead)}>{armed ? 'Read?' : 'Read'}</button>;
 }
 
 // A section's options, without Edit mode: rename, move, remove (tap twice; its items go to the default list).
