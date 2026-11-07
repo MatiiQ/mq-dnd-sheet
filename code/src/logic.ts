@@ -404,14 +404,14 @@ export const pactLeft = (c: Character) => Math.max(0, c.pactMax - c.pactUsed);
 export function castSpell(c: Character, sp: Spell, level: number, pool: 'slot' | 'pact' = 'slot'): Partial<Character> {
   // An item's spell never spends a slot or the pact pool: it is cast from the item (castFromItem).
   if (itemOfSpell(c, sp)) return {};
-  if (pool === 'pact') return level === c.pactLvl && level >= (sp.lvl || 0) && pactLeft(c) > 0 ? { pactUsed: c.pactUsed + 1, ...castEffects(c, sp, level) } : {};
+  if (pool === 'pact') return level === c.pactLvl && level >= (sp.lvl || 0) && pactLeft(c) > 0 ? withHpRise(c, { pactUsed: c.pactUsed + 1, ...castEffects(c, sp, level) }) : {};
   if (!slotsLeft(c, level)) return {};
-  return { ...setSlotUsed(c, level, c.slotUsed[level] + 1), ...castEffects(c, sp, level) };
+  return withHpRise(c, { ...setSlotUsed(c, level, c.slotUsed[level] + 1), ...castEffects(c, sp, level) });
 }
 
 // Switches a source's effect on or off (Rage, Starry Form, Shillelagh), without casting or using anything.
 export const toggleEffect = (c: Character, link: string): Partial<Character> =>
-  ({ effectsOn: toggled(c.effectsOn, link) });
+  withHpRise(c, { effectsOn: toggled(c.effectsOn, link) });
 
 // After editing a spell: one that is now Concentration leaves effectsOn (its effect follows c.conc from now on).
 export function effectsAfterEdit(c: Character, sp: Pick<Spell, 'id' | 'c'>): Partial<Character> {
@@ -427,7 +427,7 @@ export function castFree(c: Character, sp: Spell, resId: string): Partial<Charac
   if (!r || (itemOfSpell(c, sp) && !isActive(c, sp))) return {};
   const res = c.res.map((x) => (x.id === resId ? { ...x, count: x.count > 0 ? x.count - 1 : 1 } : x));
   if (r.count <= 0) return { res };
-  return { res, ...castEffects(c, sp) };
+  return withHpRise(c, { res, ...castEffects(c, sp) });
 }
 // The item a spell row comes from (a wand's Fireball), never a row only linked to it: an item's spell is cast from the
 // item, with its charges, and never with a slot.
@@ -443,9 +443,9 @@ export const castLevelOf = (sp: Spell, charges: number): number => (sp.castLvl ?
 export function castFromItem(c: Character, sp: Spell, charges = 0): Partial<Character> {
   const item = itemOfSpell(c, sp);
   if (!item || scrollOf(c, sp) || !isActive(c, sp)) return {};
-  if (sp.chg === undefined) return charges === 0 ? castEffects(c, sp, castLevelOf(sp, 0)) : {};
+  if (sp.chg === undefined) return charges === 0 ? withHpRise(c, castEffects(c, sp, castLevelOf(sp, 0))) : {};
   if (charges < sp.chg || charges > (sp.chgMax ?? sp.chg) || (item.count ?? 0) < charges) return {};
-  return { inv: c.inv.map((i) => (i.id === item.id ? { ...i, count: (i.count ?? 0) - charges } : i)), ...castEffects(c, sp, castLevelOf(sp, charges)) };
+  return withHpRise(c, { inv: c.inv.map((i) => (i.id === item.id ? { ...i, count: (i.count ?? 0) - charges } : i)), ...castEffects(c, sp, castLevelOf(sp, charges)) });
 }
 // The Spell Scroll a spell row comes from.
 export const SCROLL_ID = 'item/spell-scroll';
@@ -461,7 +461,7 @@ export function castFromScroll(c: Character, sp: Spell): Character {
   const scroll = scrollOf(c, sp);
   if (!scroll || scroll.qty < 1 || !isActive(c, sp)) return c;
   const inv = c.inv.map((i) => (i.id === scroll.id ? { ...i, qty: i.qty - 1 } : i));
-  return dropSpentScrolls({ ...c, ...castEffects(c, sp), inv });
+  return dropSpentScrolls({ ...c, ...withHpRise(c, { ...castEffects(c, sp), inv }) });
 }
 // Every Spell Scroll at quantity 0 whose spell isn't on goes, with its spell row (removeRef). Run by normalize().
 export function dropSpentScrolls(c: Character): Character {
@@ -639,7 +639,17 @@ export const speedNow = (c: Character) => speedOf(c, walkSpeed(c));
 // modifier counts, a temporary one from an equipped item's abil grant included.
 export const conHpPart = (c: Character) => charLevel(c) * (abilityMod(c, 'con') - c.conBase);
 // The maximum unfloored: what a change in the maximum is measured on (a level's current-HP rise).
-export const maxHpRaw = (c: Character) => c.maxHp + conHpPart(c) + activeGrants(c, 'hpLvl').reduce((t, g) => t + num(c, g.val, g) * classLevel(c, g), 0) + activeGrants(c, 'hpFlat').reduce((t, g) => t + num(c, g.val, g), 0);
+export const hpFlatSum = (c: Character) => activeGrants(c, 'hpFlat').reduce((t, g) => t + num(c, g.val, g), 0);
+export const maxHpRaw = (c: Character) => c.maxHp + conHpPart(c) + activeGrants(c, 'hpLvl').reduce((t, g) => t + num(c, g.val, g) * classLevel(c, g), 0) + hpFlatSum(c);
+// An effect that raises the HP maximum raises current HP by the same amount (Aid, PHB p.239; Heroes' Feast reads the
+// same way): the rise of the active hpFlat sum from c to c + patch, when positive. Not the whole maximum: a raised
+// Constitution raises no current HP. Deliberate limit: only a cast or the effect's switch does this; an hpFlat grant
+// that starts counting another way (equipping an item, a level-up) raises the maximum only. Switching off lowers only
+// the maximum (normalize() clamps).
+export function withHpRise(c: Character, patch: Partial<Character>): Partial<Character> {
+  const rise = hpFlatSum({ ...c, ...patch }) - hpFlatSum(c);
+  return rise > 0 ? { ...patch, hp: (patch.hp ?? c.hp) + rise } : patch;
+}
 export const maxHpOf = (c: Character) => Math.max(1, maxHpRaw(c));
 // Current HP against max, temp HP ignored: green from 65%, yellow from 30%, red below.
 export const hpColor = (c: Character) =>

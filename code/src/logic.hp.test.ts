@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { blankCharacter } from './defaults';
-import { conHpPart, maxHpRaw, regainTo, regainLabel, damageHitDie, setTempHitDie, addGrants, dawn, refillFor, restRolls, normalize, maxHpOf, applyDamage, applyHeal, applySetTemp, clearHpUndo, hdSpent, healHitDie, hitDieRoll, isDead, longRest, pillView, setHp, setMaxHp, shortRest, spendHitDie, undoHp } from './logic';
+import { castSpell, toggleEffect, conHpPart, maxHpRaw, regainTo, regainLabel, damageHitDie, setTempHitDie, addGrants, dawn, refillFor, restRolls, normalize, maxHpOf, applyDamage, applyHeal, applySetTemp, clearHpUndo, hdSpent, healHitDie, hitDieRoll, isDead, longRest, pillView, setHp, setMaxHp, shortRest, spendHitDie, undoHp } from './logic';
 import { migrate } from './migrate';
 import { mergeCatalog } from './catalog/merge';
 import srdEntries from './data/srd/index';
@@ -409,5 +409,34 @@ describe('Hit Dice pools (PHB p.45)', () => {
   });
   it('the pill shows the total left over the total level', () => {
     expect(pillView(spendHitDie(two(), 8), 'hd')).toMatchObject({ value: '6', max: '7' });
+  });
+});
+
+describe('an effect that raises the HP maximum', () => {
+  const aid: Spell = { id: 'a', name: 'Aid', lvl: 2, time: 'Action', range: '30 feet' };
+  const aidG: Grant = { id: 'g', kind: 'hpFlat', name: 'Aid', val: '@2:5,3:10,4:15,5:20,6:25,7:30,8:35,9:40', when: 'active', from: 'spell:a' };
+  const base = (hp: number): Character => ({ ...blankCharacter(), maxHp: 20, origHp: 20, hp, conBase: 0, spells: [aid], grants: [aidG],
+    slotMax: [0, 4, 3, 0, 0, 0, 0, 0, 0, 0], slotUsed: Array(10).fill(0) });
+  const cast = (hp: number) => applyPatch(base(hp), (p) => castSpell(p, aid, 2));
+  it('raises current HP by the same amount when cast (Aid, PHB p.239)', () => {
+    expect([cast(20).hp, maxHpOf(cast(20))]).toEqual([25, 25]);
+    expect([cast(10).hp, maxHpOf(cast(10))]).toEqual([15, 25]);
+  });
+  it('lowers only the maximum when switched off', () => {
+    const off = applyPatch(cast(20), (p) => toggleEffect(p, 'spell:a'));
+    expect([off.hp, maxHpOf(off)]).toEqual([20, 20]);
+  });
+  it('raises current HP when switched on by hand', () => {
+    expect(applyPatch(base(20), (p) => toggleEffect(p, 'spell:a')).hp).toBe(25);
+  });
+  it('leaves current HP alone for an effect that raises Constitution', () => {
+    const c: Character = { ...base(20), grants: [{ id: 'k', kind: 'abil', name: 'CON +2', ab: 'con', val: '2', when: 'active', from: 'spell:a' }] };
+    expect(applyPatch(c, (p) => toggleEffect(p, 'spell:a')).hp).toBe(20);
+  });
+  it('ends with a Long Rest: cast state gone, maximum and HP back', () => {
+    const rested = normalize(longRest(cast(20)));
+    expect('castFx' in rested).toBe(false);
+    expect(rested.effectsOn).toEqual([]);
+    expect([rested.hp, maxHpOf(rested)]).toEqual([20, 20]);
   });
 });
