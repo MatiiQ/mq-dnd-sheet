@@ -48,7 +48,8 @@ Magic item grants cover lasting effects of worn or held items (AC, saving throws
 proficiencies, score settings, spell attack and spell save DC), weapon riders as `xdmg` with the condition in `on`
 (the staffs and the Rod of Lordly Might's flame blade included; the cost is named there and nothing is spent
 automatically; the Rod's 4d6 Necrotic stays text), and potions' effects while switched on. Advantage on ability checks
-or Initiative and spells cast from an item stay as text. Text
+is a `checkAdv` grant (Boots and Cloak of Elvenkind, Eyes of the Eagle and of Minute Seeing; the Cloak's Disadvantage on
+Perception against you stays text). Advantage on Initiative and spells cast from an item stay as text. Text
 by design: Defender (moving part of its bonus to AC until your next turn), Rod of Alertness (+1 AC and saves inside its
 light), Arrow-Catching Shield (+2 only against ranged attacks), Ioun Stone (a choice option must be a grant and only
 Protection has one: add its +1 AC as a custom AC bonus), and Rod of Lordly Might's other forms and buttons (it is a Mace
@@ -253,6 +254,8 @@ Source text cut short and other notes stay under "Items checked" above. The audi
 - A grant with `when: 'active'` and no `needEq` keeps counting at quantity 0 while switched on, so a drunk potion lasts
   until it is switched off or a Long Rest. The rule can't tell a potion from another item; in the catalog only potions
   have such a grant.
+- A Long Rest switches off every switched-on effect, items' included (Cloak of Elvenkind's hood, Winged Boots, Wings of
+  Flying): the player switches it on again. Winged Boots' charges are spent by hand.
 - The smites have no `xdmg`: the damage is a one-time rider on the hit that triggers the casting. Their row says so.
 - Simplifications: Alter Self's swim counts while you concentrate, whichever option you chose. Gaseous Form's other
   speeds aren't turned off. A rider counts while the weapon is equipped, not only while it is in hand. Casting

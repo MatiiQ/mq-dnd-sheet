@@ -794,7 +794,18 @@
     "src": "srd",
     "desc": "While you wear these boots, your steps make no sound, regardless of the surface you are moving across. You also have Advantage on Dexterity (Stealth) checks.",
     "cat": "magic",
-    "rarity": "Uncommon"
+    "rarity": "Uncommon",
+    "grants": [
+      {
+        "kind": "checkAdv",
+        "name": "Advantage on Stealth",
+        "target": "stealth",
+        "adv": "adv",
+        "always": true,
+        "needEq": true,
+        "id": "g1"
+      }
+    ]
   },
   {
     "id": "item/boots-of-levitation",
@@ -1258,7 +1269,20 @@
     "desc": "While you wear this cloak, Wisdom (Perception) checks made to perceive you have Disadvantage, and you have Advantage on Dexterity (Stealth) checks.",
     "cat": "magic",
     "rarity": "Uncommon",
-    "attune": true
+    "attune": true,
+    "grants": [
+      {
+        "kind": "checkAdv",
+        "name": "Advantage on Stealth (hood up)",
+        "target": "stealth",
+        "adv": "adv",
+        "always": true,
+        "when": "active",
+        "needEq": true,
+        "needAtt": true,
+        "id": "g1"
+      }
+    ]
   },
   {
     "id": "item/cloak-of-invisibility",
@@ -2016,7 +2040,18 @@
     "src": "srd",
     "desc": "These crystal lenses fit over the eyes. While wearing them, your vision improves significantly out to a range of 1 foot, granting you Darkvision within that range and Advantage on Intelligence (Investigation) checks made to examine something within that range.",
     "cat": "magic",
-    "rarity": "Uncommon"
+    "rarity": "Uncommon",
+    "grants": [
+      {
+        "kind": "checkAdv",
+        "name": "Advantage on Investigation within 1 ft",
+        "target": "investigation",
+        "adv": "adv",
+        "note": "within 1 ft",
+        "needEq": true,
+        "id": "g1"
+      }
+    ]
   },
   {
     "id": "item/eyes-of-the-eagle",
@@ -2025,7 +2060,18 @@
     "src": "srd",
     "desc": "These crystal lenses fit over the eyes. While wearing them, you have Advantage on Wisdom (Perception) checks that rely on sight. In conditions of clear visibility, you can make out details of even extremely distant creatures and objects as small as 2 feet across.",
     "cat": "magic",
-    "rarity": "Uncommon"
+    "rarity": "Uncommon",
+    "grants": [
+      {
+        "kind": "checkAdv",
+        "name": "Advantage on Perception relying on sight",
+        "target": "perception",
+        "adv": "adv",
+        "note": "it relies on sight",
+        "needEq": true,
+        "id": "g1"
+      }
+    ]
   },
   {
     "id": "item/feather-token",
@@ -6553,7 +6599,19 @@
     "charges": "4",
     "recharge": "dawn",
     "regain": "1d4",
-    "regainOn": "dawn"
+    "regainOn": "dawn",
+    "grants": [
+      {
+        "kind": "speed",
+        "name": "Fly Speed 30 ft",
+        "mode": "fly",
+        "val": "30",
+        "when": "active",
+        "needEq": true,
+        "needAtt": true,
+        "id": "g1"
+      }
+    ]
   },
   {
     "id": "item/wings-of-flying",
@@ -6563,7 +6621,19 @@
     "desc": "While wearing this cloak, you can take a Magic action to turn the cloak into a pair of wings on your back. The wings lasts for 1 hour or until you end the effect early as a Magic action. The wings give you a Fly Speed of 60 feet. If you are aloft when the wings disappear, you fall. When the wings disappear, you can’t use them again for 1d12 hours.",
     "cat": "magic",
     "rarity": "Rare",
-    "attune": true
+    "attune": true,
+    "grants": [
+      {
+        "kind": "speed",
+        "name": "Fly Speed 60 ft",
+        "mode": "fly",
+        "val": "60",
+        "when": "active",
+        "needEq": true,
+        "needAtt": true,
+        "id": "g1"
+      }
+    ]
   },
   {
     "id": "item/woodcarvers-tools",

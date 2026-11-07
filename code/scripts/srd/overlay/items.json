@@ -1716,5 +1716,87 @@
         "needAtt": true
       }
     ]
+  },
+  "item/boots-of-elvenkind": {
+    "grants": [
+      {
+        "kind": "checkAdv",
+        "name": "Advantage on Stealth",
+        "target": "stealth",
+        "adv": "adv",
+        "always": true,
+        "needEq": true,
+        "id": "g1"
+      }
+    ]
+  },
+  "item/cloak-of-elvenkind": {
+    "grants": [
+      {
+        "kind": "checkAdv",
+        "name": "Advantage on Stealth (hood up)",
+        "target": "stealth",
+        "adv": "adv",
+        "always": true,
+        "when": "active",
+        "needEq": true,
+        "needAtt": true,
+        "id": "g1"
+      }
+    ]
+  },
+  "item/eyes-of-the-eagle": {
+    "grants": [
+      {
+        "kind": "checkAdv",
+        "name": "Advantage on Perception relying on sight",
+        "target": "perception",
+        "adv": "adv",
+        "note": "it relies on sight",
+        "needEq": true,
+        "id": "g1"
+      }
+    ]
+  },
+  "item/eyes-of-minute-seeing": {
+    "grants": [
+      {
+        "kind": "checkAdv",
+        "name": "Advantage on Investigation within 1 ft",
+        "target": "investigation",
+        "adv": "adv",
+        "note": "within 1 ft",
+        "needEq": true,
+        "id": "g1"
+      }
+    ]
+  },
+  "item/winged-boots": {
+    "grants": [
+      {
+        "kind": "speed",
+        "name": "Fly Speed 30 ft",
+        "mode": "fly",
+        "val": "30",
+        "when": "active",
+        "needEq": true,
+        "needAtt": true,
+        "id": "g1"
+      }
+    ]
+  },
+  "item/wings-of-flying": {
+    "grants": [
+      {
+        "kind": "speed",
+        "name": "Fly Speed 60 ft",
+        "mode": "fly",
+        "val": "60",
+        "when": "active",
+        "needEq": true,
+        "needAtt": true,
+        "id": "g1"
+      }
+    ]
   }
 }

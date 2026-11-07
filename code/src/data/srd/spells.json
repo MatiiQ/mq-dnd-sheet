@@ -1533,7 +1533,16 @@
     "dur": "8 hours",
     "conc": false,
     "ritual": false,
-    "fx": "other"
+    "fx": "other",
+    "grants": [
+      {
+        "kind": "sense",
+        "name": "Darkvision 150 ft",
+        "range": "150",
+        "when": "active",
+        "id": "g1"
+      }
+    ]
   },
   {
     "id": "spell/daylight",
@@ -5857,7 +5866,33 @@
     "dur": "Concentration, up to 1 hour",
     "conc": true,
     "ritual": false,
-    "fx": "other"
+    "fx": "other",
+    "grants": [
+      {
+        "kind": "defense",
+        "name": "Bludgeoning Resistance",
+        "def": "res",
+        "target": "Bludgeoning",
+        "when": "active",
+        "id": "g1"
+      },
+      {
+        "kind": "defense",
+        "name": "Piercing Resistance",
+        "def": "res",
+        "target": "Piercing",
+        "when": "active",
+        "id": "g2"
+      },
+      {
+        "kind": "defense",
+        "name": "Slashing Resistance",
+        "def": "res",
+        "target": "Slashing",
+        "when": "active",
+        "id": "g3"
+      }
+    ]
   },
   {
     "id": "spell/storm-of-vengeance",
@@ -6225,7 +6260,16 @@
     "dur": "1 hour",
     "conc": false,
     "ritual": false,
-    "fx": "other"
+    "fx": "other",
+    "grants": [
+      {
+        "kind": "sense",
+        "name": "Truesight 120 ft",
+        "range": "120",
+        "when": "active",
+        "id": "g1"
+      }
+    ]
   },
   {
     "id": "spell/true-strike",
