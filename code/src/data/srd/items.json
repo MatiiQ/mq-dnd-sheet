@@ -815,7 +815,18 @@
     "desc": "While you wear these boots, you can cast Levitate on yourself.",
     "cat": "magic",
     "rarity": "Rare",
-    "attune": true
+    "attune": true,
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Levitate",
+        "spell": "spell/levitate",
+        "always": true,
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   {
     "id": "item/boots-of-speed",
@@ -1100,7 +1111,26 @@
     "src": "srd",
     "desc": "This cape smells faintly of brimstone. While wearing it, you can use it to cast Dimension Door as a Magic action. This property can’t be used again until the next dawn. When you teleport with that spell, you leave behind a cloud of smoke. The space you left is Lightly Obscured by that smoke until the end of your next turn.",
     "cat": "magic",
-    "rarity": "Rare"
+    "rarity": "Rare",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Dimension Door",
+        "spell": "spell/dimension-door",
+        "always": true,
+        "needEq": true
+      },
+      {
+        "id": "g2",
+        "kind": "resource",
+        "name": "Dimension Door (once per dawn)",
+        "max": "1",
+        "recharge": "dawn",
+        "casts": "spell/dimension-door",
+        "needEq": true
+      }
+    ]
   },
   {
     "id": "item/carpenters-tools",
@@ -1233,7 +1263,27 @@
     "src": "srd",
     "desc": "While wearing this circlet, you can cast Scorching Ray with it (+5 to hit). The circlet can’t cast this spell again until the next dawn.",
     "cat": "magic",
-    "rarity": "Uncommon"
+    "rarity": "Uncommon",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Scorching Ray",
+        "spell": "spell/scorching-ray",
+        "always": true,
+        "atkB": "5",
+        "needEq": true
+      },
+      {
+        "id": "g2",
+        "kind": "resource",
+        "name": "Scorching Ray (once per dawn)",
+        "max": "1",
+        "recharge": "dawn",
+        "casts": "spell/scorching-ray",
+        "needEq": true
+      }
+    ]
   },
   {
     "id": "item/climbers-kit",
@@ -1270,6 +1320,26 @@
         "name": "Climb Speed equal to Speed",
         "mode": "climb",
         "val": "walk",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g3",
+        "kind": "spell",
+        "name": "Web",
+        "spell": "spell/web",
+        "always": true,
+        "dc": "13",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g4",
+        "kind": "resource",
+        "name": "Web (once per dawn)",
+        "max": "1",
+        "recharge": "dawn",
+        "casts": "spell/web",
         "needEq": true,
         "needAtt": true
       }
@@ -1369,6 +1439,25 @@
         "mode": "fly",
         "val": "40",
         "when": "active",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Polymorph",
+        "spell": "spell/polymorph",
+        "always": true,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g3",
+        "kind": "resource",
+        "name": "Polymorph (once per dawn)",
+        "max": "1",
+        "recharge": "dawn",
+        "casts": "spell/polymorph",
         "needEq": true,
         "needAtt": true
       }
@@ -1479,7 +1568,19 @@
     "desc": "While touching this crystal orb, you can cast Scrying (save DC 17) with it.",
     "cat": "magic",
     "rarity": "Very Rare",
-    "attune": true
+    "attune": true,
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Scrying",
+        "spell": "spell/scrying",
+        "always": true,
+        "dc": "17",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   {
     "id": "item/crystal-ball-of-mind-reading",
@@ -1489,7 +1590,29 @@
     "desc": "While touching this crystal orb, you can cast Scrying (save DC 17) with it. In addition, you can cast Detect Thoughts (save DC 17) targeting creatures you can see within 30 feet of the spell’s sensor. You don’t need to concentrate on this Detect Thoughts spell to maintain it during its duration, but it ends if the Scrying spell ends.",
     "cat": "magic",
     "rarity": "Legendary",
-    "attune": true
+    "attune": true,
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Scrying",
+        "spell": "spell/scrying",
+        "always": true,
+        "dc": "17",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Detect Thoughts",
+        "spell": "spell/detect-thoughts",
+        "always": true,
+        "dc": "17",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   {
     "id": "item/crystal-ball-of-telepathy",
@@ -1499,7 +1622,39 @@
     "desc": "While touching this crystal orb, you can cast Scrying (save DC 17) with it. In addition, you can communicate telepathically with creatures you can see within 30 feet of the spell’s sensor. You can also cast Suggestion (save DC 17) through the sensor on one of those creatures. You don’t need to concentrate on this Suggestion to maintain it during its duration, but it ends if Scrying ends. You can’t cast Suggestion in this way again until the next dawn.",
     "cat": "magic",
     "rarity": "Legendary",
-    "attune": true
+    "attune": true,
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Scrying",
+        "spell": "spell/scrying",
+        "always": true,
+        "dc": "17",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Suggestion",
+        "spell": "spell/suggestion",
+        "always": true,
+        "dc": "17",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g3",
+        "kind": "resource",
+        "name": "Suggestion (once per dawn)",
+        "max": "1",
+        "recharge": "dawn",
+        "casts": "spell/suggestion",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   {
     "id": "item/crystal-ball-of-true-seeing",
@@ -1509,7 +1664,19 @@
     "desc": "While touching this crystal orb, you can cast Scrying (save DC 17) with it. In addition, you have Truesight with a range of 120 feet centered on the spell’s sensor.",
     "cat": "magic",
     "rarity": "Legendary",
-    "attune": true
+    "attune": true,
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Scrying",
+        "spell": "spell/scrying",
+        "always": true,
+        "dc": "17",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   {
     "id": "item/cube-of-force",
@@ -1523,7 +1690,75 @@
     "charges": "10",
     "recharge": "dawn",
     "regain": "1d6",
-    "regainOn": "dawn"
+    "regainOn": "dawn",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Mage Armor",
+        "spell": "spell/mage-armor",
+        "always": true,
+        "dc": "17",
+        "chg": 1,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Shield",
+        "spell": "spell/shield",
+        "always": true,
+        "dc": "17",
+        "chg": 1,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g3",
+        "kind": "spell",
+        "name": "Tiny Hut",
+        "spell": "spell/tiny-hut",
+        "always": true,
+        "dc": "17",
+        "chg": 3,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g4",
+        "kind": "spell",
+        "name": "Private Sanctum",
+        "spell": "spell/private-sanctum",
+        "always": true,
+        "dc": "17",
+        "chg": 4,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g5",
+        "kind": "spell",
+        "name": "Resilient Sphere",
+        "spell": "spell/resilient-sphere",
+        "always": true,
+        "dc": "17",
+        "chg": 4,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g6",
+        "kind": "spell",
+        "name": "Wall of Force",
+        "spell": "spell/wall-of-force",
+        "always": true,
+        "dc": "17",
+        "chg": 5,
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   {
     "id": "item/cubic-gate",
@@ -1536,7 +1771,27 @@
     "charges": "3",
     "recharge": "dawn",
     "regain": "1d3",
-    "regainOn": "dawn"
+    "regainOn": "dawn",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Gate",
+        "spell": "spell/gate",
+        "always": true,
+        "chg": 1,
+        "needEq": true
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Plane Shift",
+        "spell": "spell/plane-shift",
+        "always": true,
+        "chg": 1,
+        "needEq": true
+      }
+    ]
   },
   {
     "id": "item/dagger",
@@ -1728,7 +1983,55 @@
     "charges": "7",
     "recharge": "dawn",
     "regain": "1d4+3",
-    "regainOn": "dawn"
+    "regainOn": "dawn",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Cure Wounds",
+        "spell": "spell/cure-wounds",
+        "always": true,
+        "chg": 4,
+        "castLvl": 9,
+        "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Daylight",
+        "spell": "spell/daylight",
+        "always": true,
+        "chg": 1,
+        "needAtt": true
+      },
+      {
+        "id": "g3",
+        "kind": "spell",
+        "name": "Death Ward",
+        "spell": "spell/death-ward",
+        "always": true,
+        "chg": 2,
+        "needAtt": true
+      },
+      {
+        "id": "g4",
+        "kind": "spell",
+        "name": "Detect Magic",
+        "spell": "spell/detect-magic",
+        "always": true,
+        "needAtt": true
+      },
+      {
+        "id": "g5",
+        "kind": "spell",
+        "name": "Scrying",
+        "spell": "spell/scrying",
+        "always": true,
+        "dc": "18",
+        "chg": 3,
+        "needAtt": true
+      }
+    ]
   },
   {
     "id": "item/dragon-scale-mail",
@@ -2055,7 +2358,21 @@
     "rarity": "Uncommon",
     "attune": true,
     "charges": "3",
-    "recharge": "dawn"
+    "recharge": "dawn",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Charm Person",
+        "spell": "spell/charm-person",
+        "always": true,
+        "dc": "13",
+        "chg": 1,
+        "chgMax": 3,
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   {
     "id": "item/eyes-of-minute-seeing",
@@ -2610,7 +2927,18 @@
     "desc": "While wearing this hat, you can cast the Disguise Self spell. The spell ends if the hat is removed.",
     "cat": "magic",
     "rarity": "Uncommon",
-    "attune": true
+    "attune": true,
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Disguise Self",
+        "spell": "spell/disguise-self",
+        "always": true,
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   {
     "id": "item/hat-of-many-spells",
@@ -2699,7 +3027,17 @@
     "src": "srd",
     "desc": "While wearing this helm, you can cast Comprehend Languages from it.",
     "cat": "magic",
-    "rarity": "Uncommon"
+    "rarity": "Uncommon",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Comprehend Languages",
+        "spell": "spell/comprehend-languages",
+        "always": true,
+        "needEq": true
+      }
+    ]
   },
   {
     "id": "item/helm-of-telepathy",
@@ -2709,7 +3047,49 @@
     "desc": "While wearing this helm, you have telepathy with a range of 30 feet, and you can cast Detect Thoughts or Suggestion (save DC 13) from the helm. Once either spell is cast from the helm, that spell can’t be cast from it again until the next dawn.",
     "cat": "magic",
     "rarity": "Uncommon",
-    "attune": true
+    "attune": true,
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Detect Thoughts",
+        "spell": "spell/detect-thoughts",
+        "always": true,
+        "dc": "13",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "resource",
+        "name": "Detect Thoughts (once per dawn)",
+        "max": "1",
+        "recharge": "dawn",
+        "casts": "spell/detect-thoughts",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g3",
+        "kind": "spell",
+        "name": "Suggestion",
+        "spell": "spell/suggestion",
+        "always": true,
+        "dc": "13",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g4",
+        "kind": "resource",
+        "name": "Suggestion (once per dawn)",
+        "max": "1",
+        "recharge": "dawn",
+        "casts": "spell/suggestion",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   {
     "id": "item/helm-of-teleportation",
@@ -2723,7 +3103,19 @@
     "charges": "3",
     "recharge": "dawn",
     "regain": "1d3",
-    "regainOn": "dawn"
+    "regainOn": "dawn",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Teleport",
+        "spell": "spell/teleport",
+        "always": true,
+        "chg": 1,
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   {
     "id": "item/herbalism-kit",
@@ -3237,6 +3629,16 @@
         "ab": "all",
         "val": "1",
         "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Wish",
+        "spell": "spell/wish",
+        "always": true,
+        "chg": 1,
+        "needEq": true,
+        "needAtt": true
       }
     ],
     "base": "weapon",
@@ -3476,7 +3878,20 @@
     "charges": "5",
     "recharge": "dawn",
     "regain": "1d4",
-    "regainOn": "dawn"
+    "regainOn": "dawn",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Detect Thoughts",
+        "spell": "spell/detect-thoughts",
+        "always": true,
+        "dc": "13",
+        "chg": 1,
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   {
     "id": "item/mirror",
@@ -4460,7 +4875,39 @@
     "charges": "3",
     "recharge": "dawn",
     "regain": "1d3",
-    "regainOn": "dawn"
+    "regainOn": "dawn",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Animal Friendship",
+        "spell": "spell/animal-friendship",
+        "always": true,
+        "dc": "13",
+        "chg": 1,
+        "needEq": true
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Fear",
+        "spell": "spell/fear",
+        "always": true,
+        "dc": "13",
+        "chg": 1,
+        "needEq": true
+      },
+      {
+        "id": "g3",
+        "kind": "spell",
+        "name": "Speak with Animals",
+        "spell": "spell/speak-with-animals",
+        "always": true,
+        "dc": "13",
+        "chg": 1,
+        "needEq": true
+      }
+    ]
   },
   {
     "id": "item/ring-of-djinni-summoning",
@@ -4599,7 +5046,18 @@
     "desc": "While wearing this ring, you can cast Jump from it, but can target only yourself when you do so.",
     "cat": "magic",
     "rarity": "Uncommon",
-    "attune": true
+    "attune": true,
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Jump",
+        "spell": "spell/jump",
+        "always": true,
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   {
     "id": "item/ring-of-mind-shielding",
@@ -4762,7 +5220,37 @@
     "charges": "6",
     "recharge": "dawn",
     "regain": "1d6",
-    "regainOn": "dawn"
+    "regainOn": "dawn",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Dancing Lights",
+        "spell": "spell/dancing-lights",
+        "always": true,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Light",
+        "spell": "spell/light",
+        "always": true,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g3",
+        "kind": "spell",
+        "name": "Faerie Fire",
+        "spell": "spell/faerie-fire",
+        "always": true,
+        "chg": 1,
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   {
     "id": "item/ring-of-spell-storing",
@@ -4822,7 +5310,18 @@
     "desc": "While wearing this ring, you can cast Telekinesis from it.",
     "cat": "magic",
     "rarity": "Very Rare",
-    "attune": true
+    "attune": true,
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Telekinesis",
+        "spell": "spell/telekinesis",
+        "always": true,
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   {
     "id": "item/ring-of-the-ram",
@@ -4847,7 +5346,18 @@
     "cat": "magic",
     "rarity": "Legendary",
     "charges": "3",
-    "recharge": "none"
+    "recharge": "none",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Wish",
+        "spell": "spell/wish",
+        "always": true,
+        "chg": 1,
+        "needEq": true
+      }
+    ]
   },
   {
     "id": "item/ring-of-warmth",
@@ -4866,7 +5376,17 @@
     "src": "srd",
     "desc": "While wearing this ring, you cast Water Walk from it, targeting only yourself.",
     "cat": "magic",
-    "rarity": "Uncommon"
+    "rarity": "Uncommon",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Water Walk",
+        "spell": "spell/water-walk",
+        "always": true,
+        "needEq": true
+      }
+    ]
   },
   {
     "id": "item/ring-of-x-ray-vision",
@@ -5045,6 +5565,42 @@
         "needEq": true,
         "needAtt": true,
         "id": "g2"
+      },
+      {
+        "id": "g3",
+        "kind": "spell",
+        "name": "Detect Evil and Good",
+        "spell": "spell/detect-evil-and-good",
+        "always": true,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g4",
+        "kind": "spell",
+        "name": "Detect Magic",
+        "spell": "spell/detect-magic",
+        "always": true,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g5",
+        "kind": "spell",
+        "name": "Detect Poison and Disease",
+        "spell": "spell/detect-poison-and-disease",
+        "always": true,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g6",
+        "kind": "spell",
+        "name": "See Invisibility",
+        "spell": "spell/see-invisibility",
+        "always": true,
+        "needEq": true,
+        "needAtt": true
       }
     ]
   },
@@ -5091,7 +5647,29 @@
     "charges": "5",
     "recharge": "dawn",
     "regain": "1",
-    "regainOn": "dawn"
+    "regainOn": "dawn",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Heal",
+        "spell": "spell/heal",
+        "always": true,
+        "chg": 1,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Resurrection",
+        "spell": "spell/resurrection",
+        "always": true,
+        "chg": 5,
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   {
     "id": "item/rod-of-rulership",
@@ -5287,7 +5865,26 @@
     "src": "srd",
     "desc": "Sending Stones come in pairs, with each stone carved to match the other so the pairing is easily recognized. While you touch one stone, you can cast Sending from it. The target is the bearer of the other stone. If no creature bears the other stone, you know that fact as soon as you use the stone, and you don’t cast the spell. Once Sending is cast using either stone, the stones can’t be used again until the next dawn. If one of the stones in a pair is destroyed, the other one becomes nonmagical.",
     "cat": "magic",
-    "rarity": "Uncommon"
+    "rarity": "Uncommon",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Sending",
+        "spell": "spell/sending",
+        "always": true,
+        "needEq": true
+      },
+      {
+        "id": "g2",
+        "kind": "resource",
+        "name": "Sending (once per dawn)",
+        "max": "1",
+        "recharge": "dawn",
+        "casts": "spell/sending",
+        "needEq": true
+      }
+    ]
   },
   {
     "id": "item/sentinel-shield",
@@ -6829,7 +7426,19 @@
     "recharge": "dawn",
     "regain": "1d3",
     "regainOn": "dawn",
-    "base": "item/trident"
+    "base": "item/trident",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Dominate Beast",
+        "spell": "spell/dominate-beast",
+        "always": true,
+        "dc": "15",
+        "chg": 1,
+        "needAtt": true
+      }
+    ]
   },
   {
     "id": "item/universal-solvent",
@@ -7331,7 +7940,18 @@
     "src": "srd",
     "desc": "While holding this fan, you can cast Gust of Wind (save DC 13) from it. Each subsequent time the fan is used before the next dawn, it has a cumulative 20 percent chance of not working; if the fan fails to work, it tears into useless, nonmagical tatters.",
     "cat": "magic",
-    "rarity": "Uncommon"
+    "rarity": "Uncommon",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Gust of Wind",
+        "spell": "spell/gust-of-wind",
+        "always": true,
+        "dc": "13",
+        "needEq": true
+      }
+    ]
   },
   {
     "id": "item/winged-boots",

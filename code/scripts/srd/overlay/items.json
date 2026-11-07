@@ -417,6 +417,26 @@
         "val": "walk",
         "needEq": true,
         "needAtt": true
+      },
+      {
+        "id": "g3",
+        "kind": "spell",
+        "name": "Web",
+        "spell": "spell/web",
+        "always": true,
+        "dc": "13",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g4",
+        "kind": "resource",
+        "name": "Web (once per dawn)",
+        "max": "1",
+        "recharge": "dawn",
+        "casts": "spell/web",
+        "needEq": true,
+        "needAtt": true
       }
     ]
   },
@@ -794,6 +814,16 @@
         "name": "+1 to saving throws",
         "ab": "all",
         "val": "1",
+        "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Wish",
+        "spell": "spell/wish",
+        "always": true,
+        "chg": 1,
+        "needEq": true,
         "needAtt": true
       }
     ],
@@ -1860,7 +1890,19 @@
     ]
   },
   "item/trident-of-fish-command": {
-    "base": "item/trident"
+    "base": "item/trident",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Dominate Beast",
+        "spell": "spell/dominate-beast",
+        "always": true,
+        "dc": "15",
+        "chg": 1,
+        "needAtt": true
+      }
+    ]
   },
   "item/vicious-weapon": {
     "base": "weapon",
@@ -1911,6 +1953,25 @@
         "mode": "fly",
         "val": "40",
         "when": "active",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Polymorph",
+        "spell": "spell/polymorph",
+        "always": true,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g3",
+        "kind": "resource",
+        "name": "Polymorph (once per dawn)",
+        "max": "1",
+        "recharge": "dawn",
+        "casts": "spell/polymorph",
         "needEq": true,
         "needAtt": true
       }
@@ -2308,6 +2369,42 @@
         "needEq": true,
         "needAtt": true,
         "id": "g2"
+      },
+      {
+        "id": "g3",
+        "kind": "spell",
+        "name": "Detect Evil and Good",
+        "spell": "spell/detect-evil-and-good",
+        "always": true,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g4",
+        "kind": "spell",
+        "name": "Detect Magic",
+        "spell": "spell/detect-magic",
+        "always": true,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g5",
+        "kind": "spell",
+        "name": "Detect Poison and Disease",
+        "spell": "spell/detect-poison-and-disease",
+        "always": true,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g6",
+        "kind": "spell",
+        "name": "See Invisibility",
+        "spell": "spell/see-invisibility",
+        "always": true,
+        "needEq": true,
+        "needAtt": true
       }
     ]
   },
@@ -2573,6 +2670,579 @@
         "spell": "spell/detect-magic",
         "always": true,
         "chg": 1,
+        "needEq": true
+      }
+    ]
+  },
+  "item/boots-of-levitation": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Levitate",
+        "spell": "spell/levitate",
+        "always": true,
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/cape-of-the-mountebank": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Dimension Door",
+        "spell": "spell/dimension-door",
+        "always": true,
+        "needEq": true
+      },
+      {
+        "id": "g2",
+        "kind": "resource",
+        "name": "Dimension Door (once per dawn)",
+        "max": "1",
+        "recharge": "dawn",
+        "casts": "spell/dimension-door",
+        "needEq": true
+      }
+    ]
+  },
+  "item/circlet-of-blasting": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Scorching Ray",
+        "spell": "spell/scorching-ray",
+        "always": true,
+        "atkB": "5",
+        "needEq": true
+      },
+      {
+        "id": "g2",
+        "kind": "resource",
+        "name": "Scorching Ray (once per dawn)",
+        "max": "1",
+        "recharge": "dawn",
+        "casts": "spell/scorching-ray",
+        "needEq": true
+      }
+    ]
+  },
+  "item/crystal-ball": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Scrying",
+        "spell": "spell/scrying",
+        "always": true,
+        "dc": "17",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/crystal-ball-of-mind-reading": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Scrying",
+        "spell": "spell/scrying",
+        "always": true,
+        "dc": "17",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Detect Thoughts",
+        "spell": "spell/detect-thoughts",
+        "always": true,
+        "dc": "17",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/crystal-ball-of-telepathy": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Scrying",
+        "spell": "spell/scrying",
+        "always": true,
+        "dc": "17",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Suggestion",
+        "spell": "spell/suggestion",
+        "always": true,
+        "dc": "17",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g3",
+        "kind": "resource",
+        "name": "Suggestion (once per dawn)",
+        "max": "1",
+        "recharge": "dawn",
+        "casts": "spell/suggestion",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/crystal-ball-of-true-seeing": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Scrying",
+        "spell": "spell/scrying",
+        "always": true,
+        "dc": "17",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/cube-of-force": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Mage Armor",
+        "spell": "spell/mage-armor",
+        "always": true,
+        "dc": "17",
+        "chg": 1,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Shield",
+        "spell": "spell/shield",
+        "always": true,
+        "dc": "17",
+        "chg": 1,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g3",
+        "kind": "spell",
+        "name": "Tiny Hut",
+        "spell": "spell/tiny-hut",
+        "always": true,
+        "dc": "17",
+        "chg": 3,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g4",
+        "kind": "spell",
+        "name": "Private Sanctum",
+        "spell": "spell/private-sanctum",
+        "always": true,
+        "dc": "17",
+        "chg": 4,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g5",
+        "kind": "spell",
+        "name": "Resilient Sphere",
+        "spell": "spell/resilient-sphere",
+        "always": true,
+        "dc": "17",
+        "chg": 4,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g6",
+        "kind": "spell",
+        "name": "Wall of Force",
+        "spell": "spell/wall-of-force",
+        "always": true,
+        "dc": "17",
+        "chg": 5,
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/cubic-gate": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Gate",
+        "spell": "spell/gate",
+        "always": true,
+        "chg": 1,
+        "needEq": true
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Plane Shift",
+        "spell": "spell/plane-shift",
+        "always": true,
+        "chg": 1,
+        "needEq": true
+      }
+    ]
+  },
+  "item/dragon-orb": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Cure Wounds",
+        "spell": "spell/cure-wounds",
+        "always": true,
+        "chg": 4,
+        "castLvl": 9,
+        "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Daylight",
+        "spell": "spell/daylight",
+        "always": true,
+        "chg": 1,
+        "needAtt": true
+      },
+      {
+        "id": "g3",
+        "kind": "spell",
+        "name": "Death Ward",
+        "spell": "spell/death-ward",
+        "always": true,
+        "chg": 2,
+        "needAtt": true
+      },
+      {
+        "id": "g4",
+        "kind": "spell",
+        "name": "Detect Magic",
+        "spell": "spell/detect-magic",
+        "always": true,
+        "needAtt": true
+      },
+      {
+        "id": "g5",
+        "kind": "spell",
+        "name": "Scrying",
+        "spell": "spell/scrying",
+        "always": true,
+        "dc": "18",
+        "chg": 3,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/eyes-of-charming": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Charm Person",
+        "spell": "spell/charm-person",
+        "always": true,
+        "dc": "13",
+        "chg": 1,
+        "chgMax": 3,
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/hat-of-disguise": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Disguise Self",
+        "spell": "spell/disguise-self",
+        "always": true,
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/helm-of-comprehending-languages": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Comprehend Languages",
+        "spell": "spell/comprehend-languages",
+        "always": true,
+        "needEq": true
+      }
+    ]
+  },
+  "item/helm-of-telepathy": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Detect Thoughts",
+        "spell": "spell/detect-thoughts",
+        "always": true,
+        "dc": "13",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "resource",
+        "name": "Detect Thoughts (once per dawn)",
+        "max": "1",
+        "recharge": "dawn",
+        "casts": "spell/detect-thoughts",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g3",
+        "kind": "spell",
+        "name": "Suggestion",
+        "spell": "spell/suggestion",
+        "always": true,
+        "dc": "13",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g4",
+        "kind": "resource",
+        "name": "Suggestion (once per dawn)",
+        "max": "1",
+        "recharge": "dawn",
+        "casts": "spell/suggestion",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/helm-of-teleportation": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Teleport",
+        "spell": "spell/teleport",
+        "always": true,
+        "chg": 1,
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/medallion-of-thoughts": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Detect Thoughts",
+        "spell": "spell/detect-thoughts",
+        "always": true,
+        "dc": "13",
+        "chg": 1,
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/ring-of-animal-influence": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Animal Friendship",
+        "spell": "spell/animal-friendship",
+        "always": true,
+        "dc": "13",
+        "chg": 1,
+        "needEq": true
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Fear",
+        "spell": "spell/fear",
+        "always": true,
+        "dc": "13",
+        "chg": 1,
+        "needEq": true
+      },
+      {
+        "id": "g3",
+        "kind": "spell",
+        "name": "Speak with Animals",
+        "spell": "spell/speak-with-animals",
+        "always": true,
+        "dc": "13",
+        "chg": 1,
+        "needEq": true
+      }
+    ]
+  },
+  "item/ring-of-jumping": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Jump",
+        "spell": "spell/jump",
+        "always": true,
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/ring-of-shooting-stars": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Dancing Lights",
+        "spell": "spell/dancing-lights",
+        "always": true,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Light",
+        "spell": "spell/light",
+        "always": true,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g3",
+        "kind": "spell",
+        "name": "Faerie Fire",
+        "spell": "spell/faerie-fire",
+        "always": true,
+        "chg": 1,
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/ring-of-telekinesis": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Telekinesis",
+        "spell": "spell/telekinesis",
+        "always": true,
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/ring-of-three-wishes": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Wish",
+        "spell": "spell/wish",
+        "always": true,
+        "chg": 1,
+        "needEq": true
+      }
+    ]
+  },
+  "item/ring-of-water-walking": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Water Walk",
+        "spell": "spell/water-walk",
+        "always": true,
+        "needEq": true
+      }
+    ]
+  },
+  "item/rod-of-resurrection": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Heal",
+        "spell": "spell/heal",
+        "always": true,
+        "chg": 1,
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Resurrection",
+        "spell": "spell/resurrection",
+        "always": true,
+        "chg": 5,
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/sending-stones": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Sending",
+        "spell": "spell/sending",
+        "always": true,
+        "needEq": true
+      },
+      {
+        "id": "g2",
+        "kind": "resource",
+        "name": "Sending (once per dawn)",
+        "max": "1",
+        "recharge": "dawn",
+        "casts": "spell/sending",
+        "needEq": true
+      }
+    ]
+  },
+  "item/wind-fan": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Gust of Wind",
+        "spell": "spell/gust-of-wind",
+        "always": true,
+        "dc": "13",
         "needEq": true
       }
     ]

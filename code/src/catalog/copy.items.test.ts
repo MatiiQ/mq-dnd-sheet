@@ -399,3 +399,15 @@ describe('Spell Scroll', () => {
     expect(c.spells.find((s) => s.cid === 'spell/fireball')).toMatchObject({ always: true, from: 'item:' + scroll.id });
   });
 });
+
+describe('items that cast spells (catalog data)', () => {
+  it('gives the Wand of Fireballs its spell with charges and DC', () => {
+    const c = addFromCatalog(blankCharacter(), cat, item('item/wand-of-fireballs'), A());
+    expect(c.spells.find((s) => s.cid === 'spell/fireball')).toMatchObject({ dc: 15, chg: 1, chgMax: 3, always: true, needEq: true, needAtt: true });
+  });
+  it('gives a once-per-dawn item spell a free cast of its row', () => {
+    const c = addFromCatalog(blankCharacter(), cat, item('item/cape-of-the-mountebank'), A());
+    const row = c.spells.find((s) => s.cid === 'spell/dimension-door')!;
+    expect(c.res.find((r) => r.casts === row.id)).toMatchObject({ max: 1, recharge: 'dawn' });
+  });
+});

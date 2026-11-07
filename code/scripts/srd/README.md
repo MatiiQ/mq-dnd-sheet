@@ -50,7 +50,13 @@ proficiencies, score settings, spell attack and spell save DC), weapon riders as
 automatically; the Rod's 4d6 Necrotic stays text), and potions' effects while switched on. Advantage on ability checks
 is a `checkAdv` grant (Boots and Cloak of Elvenkind, Eyes of the Eagle and of Minute Seeing; the Cloak's Disadvantage on
 Perception against you stays text). Advantage on Initiative is a `checkAdv` grant with target `init` (Sentinel Shield,
-Rod of Alertness, Barbarian's Feral Instinct). Spells cast from an item stay as text. Text
+Rod of Alertness, Barbarian's Feral Instinct). Spells cast from an item are `spell` grants (always prepared, with the
+item's `needEq`/`needAtt`): `dc`/`atkB` for a fixed number ("save DC 15"), none for "your spell save DC"; `chg`/`chgMax`
+for a charge cost (each charge above `chg` one slot level higher); `castLvl` for "(level N version)"; a cost of 0 or no
+cost casts at will; "until the next dawn" is a `resource` that `casts` the spell. Text: spells chosen per use (Ring of
+Spell Storing, Hat of Many Spells, Wand of Wonder, Ring of Elemental Command, Necklace of Prayer Beads), Helm of
+Brilliance (its gems), Chime of Opening and Robe of Stars (no charge counter), the gear chapter's Spell Scroll items,
+Candle of Invocation's Gate, Amulet of the Planes, the potions, and Luck Blade's once-per-dawn limit. Text
 by design: Defender (moving part of its bonus to AC until your next turn), Rod of Alertness (+1 AC and saves inside its
 light), Arrow-Catching Shield (+2 only against ranged attacks), Ioun Stone (a choice option must be a grant and only
 Protection has one: add its +1 AC as a custom AC bonus), and Rod of Lordly Might's other forms and buttons (it is a Mace
