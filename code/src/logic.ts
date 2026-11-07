@@ -4,8 +4,9 @@ import type { Catalog } from './catalog/merge';
 import { hasDice, isValue, valueAt, type ValueCtx } from './catalog/value';
 import type { ProfCat } from './catalog/names';
 import { canLoad, setHands } from './hands';
+import { fixCreatures } from './creatures';
 import { activeGrants, charLevel, classLevel, dropLinkOnly, hasActiveEffect, INCAPACITATING, inactiveReason, isActive, isEquipped, isOn, LINKED_LISTS, srcKindOfLink, type SourceKind, linkOf, parseLink, sourceLabel, sourceOf, SRC_KINDS } from './links';
-import type { AcEffect, Ability, ArmorKind, CastAbility, Character, ClassRow, Coin, Die, Concentration, Counter, DefenseKind, FxState, Grant, HpSnapshot, Item, Linked, Recharge, Resource, Size, Spell, SpeedKind, SpellSort, Tab, Unarmored } from './types';
+import type { AcEffect, Ability, ArmorKind, CastAbility, Character, ClassRow, Coin, Creature, Die, Concentration, Counter, DefenseKind, FxState, Grant, HpSnapshot, Item, Linked, Recharge, Resource, Size, Spell, SpeedKind, SpellSort, Tab, Unarmored } from './types';
 
 export const ABILITIES: [Ability, string][] = [
   ['str', 'Strength'], ['dex', 'Dexterity'], ['con', 'Constitution'],
@@ -943,8 +944,9 @@ export function normalize(c0: Character): Character {
   const inv = c.inv.map(capped);
   const top = maxHpOf(c);
   if (c.hp > top || c.pactUsed > c.pactMax) changed = true;
-  // Last, cast state of effects no longer on, then a spent Spell Scroll whose effect has ended (castFromScroll).
-  return dropSpentScrolls(fixCastFx(changed ? { ...c, res, inv, hp: Math.min(c.hp, top), pactUsed: Math.min(c.pactUsed, c.pactMax) } : c));
+  // Last, the companions and forms (a Concentration they end clears its castFx here too), cast state of effects no
+  // longer on, then a spent Spell Scroll whose effect has ended (castFromScroll).
+  return dropSpentScrolls(fixCastFx(fixCreatures(changed ? { ...c, res, inv, hp: Math.min(c.hp, top), pactUsed: Math.min(c.pactUsed, c.pactMax) } : c)));
 }
 
 // Resource groups: a custom type name, else the source kind, else Other. Source kinds in SRC_KINDS order, then custom
@@ -1026,7 +1028,12 @@ export function longRest(c: Character): Character {
   // Shield lasts a round, Mage Armor 8 hours, Barkskin 1 hour (PHB p.316, p.293, p.245): none outlasts a Long Rest.
   // Sleep gives the Unconscious condition (PHB p.370) and being Incapacitated ends Concentration (PHB p.363), so it ends here.
   // Simplified: a character in Trance stays conscious (PHB p.189-190) but loses it too; a rare spell that outlasts the rest is turned on again by hand.
-  const ended = [...c.acOn.map((id) => c.spells.find((x) => x.id === id)?.name), c.conc?.name].filter((n): n is string => !!n);
+  // Companions: a pet that goes on a Long Rest (Wild Companion's familiar, PHB p.81) and every form (Wild Shape ends while
+  // Incapacitated, PHB p.80; Polymorph with Concentration). Pets that end with the Concentration the rest ends are named
+  // too; normalize() switches them off.
+  const endsNow = (k: Creature) => k.on && (k.kind === 'form' || k.ends === 'long');
+  const petsEnded = (c.creatures ?? []).filter((k) => endsNow(k) || (k.on && k.ends === 'conc' && c.conc && k.from === 'spell:' + c.conc.id)).map((k) => k.name);
+  const ended = [...c.acOn.map((id) => c.spells.find((x) => x.id === id)?.name), c.conc?.name, ...petsEnded].filter((n): n is string => !!n);
   const restored = [
     maxHp > c.maxHp ? ', HP maximum back to ' + maxHp : '',
     Object.values(c.abilAdj).some((v) => (v || 0) < 0) ? ', reduced ability scores restored' : ''
@@ -1034,6 +1041,7 @@ export function longRest(c: Character): Character {
   return {
     ...withoutKeys(c, ['hdLast']), maxHp, abilAdj, hp: maxHpOf({ ...c, maxHp, abilAdj }), temp: 0, slotUsed: slots([]), pactUsed: 0, hdUsed: {}, ds: 0, df: 0, acOn: [], effectsOn: [],
     hpUndo: null, ...setConc(null), res, inv, exh: Math.max(0, c.exh - 1),
+    ...(c.creatures ? { creatures: c.creatures.map((k) => (endsNow(k) ? { ...k, on: false } : k)) } : {}),
     restMsg: {
       title: 'Long Rest complete',
       body: 'HP set to max, temp HP cleared, all spell slots and Hit Dice restored' + restored +
@@ -1267,6 +1275,12 @@ export function removeRef(c0: Character, ref: Ref): Character {
   out.res = out.res.map((r) => (r.casts !== undefined && spells.includes(r.casts) ? withoutKeys(r, ['casts']) : r));
   out.grants = out.grants.map((g) => (g.kind === 'action' && g.res !== undefined && res.includes(g.res) ? withoutKeys(g, ['res']) : g));
   out.pills = c.pills.map((k) => (res.some((id) => k === resPill(id)) ? '' : k));
+  // Companions are not an entry list: a card linked to anything in the chain switches off and loses its link, keeping
+  // srcName and srcKind (never deleted). A Spell Scroll's spell removed by dropSpentScrolls takes this path too, so a
+  // card summoned from a scroll ends up unlinked and offers "Summon again".
+  if (c.creatures?.some((k) => k.from && links.includes(k.from))) {
+    out.creatures = c.creatures.map((k) => { if (!k.from || !links.includes(k.from)) return k; const { from: _, ...rest } = k; return { ...rest, on: false }; });
+  }
   return { ...out, ...(c.conc && spells.includes(c.conc.id) ? setConc(null) : {}) };
 }
 
@@ -1303,6 +1317,7 @@ export function removalSummary(c: Character, ref: Ref): { goes: string[]; keep: 
   for (const [list] of LIST_KIND) {
     for (const x of c[list] as Entry[]) if (x.linked && links.includes(x.from!)) keep.push(`${x.name} stays (it was on the sheet before ${sourceOf(c, x.from)?.name})`);
   }
+  for (const k of c.creatures ?? []) if (k.from && links.includes(k.from)) keep.push(`${k.name} (companion, unlinked)`);
   return { goes, keep };
 }
 
