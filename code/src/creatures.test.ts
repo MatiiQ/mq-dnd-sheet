@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { blankCharacter } from './defaults';
 import {
   addCreature, assumeForm, copyName, damageCreature, dismiss, druidLevel, duplicateCreature, endForm, fixCreatures, formAc,
-  healCreature, isMoon, linkedCreatures, recall, sendAway, summon, summonCopies
+  healCreature, isMoon, linkedCreatures, recall, sendAway, showCompanions, summon, summonCopies
 } from './creatures';
+import { SEC_NAMES, sectionLinks } from './components/TopBar';
 import { longRest, normalize, removalSummary, removeRef, setConc, toggleCondition } from './logic';
 import { withClasses } from './test-fixtures';
 import type { Character, Creature, Spell } from './types';
@@ -237,5 +238,24 @@ describe('removal', () => {
   it('removalSummary lists linked cards in keep (R32)', () => {
     const c = ch({ spells: [spell()], creatures: [pet({ from: 'spell:ss', srcName: 'Summon Beast' })] });
     expect(removalSummary(c, { kind: 'spell', id: 'ss' }).keep).toContain('Wolf (companion, unlinked)');
+  });
+});
+
+describe('visibility (showCompanions, sectionLinks)', () => {
+  it('is hidden with no creature and no source; shown by a creature, a makes source, edit mode, or the open editor (R45)', () => {
+    expect(showCompanions(ch(), false, null)).toBe(false);
+    expect(showCompanions(ch({ creatures: [pet()] }), false, null)).toBe(true);
+    expect(showCompanions(ch({ spells: [spell()] }), false, null)).toBe(true);
+    expect(showCompanions(ch({ feats: [{ id: 'w', g: 'class', name: 'Wild Shape', desc: '', makes: 'form' }] }), false, null)).toBe(true);
+    expect(showCompanions(ch(), true, null)).toBe(true);
+    expect(showCompanions(ch(), false, { kind: 'creature', id: null })).toBe(true);
+    expect(showCompanions(ch(), false, { kind: 'spell', id: null })).toBe(false);
+  });
+  it('sectionLinks drops Companions unless shown; the menu name stays (R40, R46)', () => {
+    const ids = (c: Character, edit = false) => sectionLinks(c, edit, null).map(([id]) => id);
+    expect(ids(ch())).not.toContain('sec-companions');
+    expect(ids(ch({ creatures: [pet()] }))).toEqual(['sec-hp', 'sec-abilities', 'sec-senses', 'sec-defenses', 'sec-conditions', 'sec-resources', 'sec-companions']);
+    expect(ids(ch(), true)).toContain('sec-companions');
+    expect(SEC_NAMES['sec-companions']).toBe('Companions');
   });
 });

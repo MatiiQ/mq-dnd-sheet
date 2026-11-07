@@ -146,3 +146,8 @@ export function fixCreatures(c: Character): Character {
   return { ...c, creatures: fixed, ...(conc !== c.conc ? { ...setConc(null), concCheck } : {}) };
 }
 
+
+// The Companions section shows when there is a creature, a spell or feature that makes one, edit mode (with
+// "+ Add companion"), or the creature editor open (the scroll case has no source row left and no creature yet).
+export const showCompanions = (c: Character, edit: boolean, form: { kind: string; id: string | null } | null): boolean =>
+  !!list(c).length || edit || form?.kind === 'creature' || c.spells.some((s) => s.makes) || c.feats.some((f) => f.makes);

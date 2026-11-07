@@ -5,14 +5,17 @@ import { deletePack, getPack, putPack } from '../catalog/pack-db';
 import { SRD_VERSION } from '../catalog/schema';
 import { setLayoutMode, useLayoutMode, useWide, type LayoutMode } from '../layout';
 import { classLine, totalLevel, acOnOther, acSpellIdle, activeAuras, CONDITIONS, PILL_STATS, TABS, fmt, hpColor, maxHpOf, pillView, resPill, setConc, setPill, toggleAcSpell, type PillView, type RestEvent } from '../logic';
-import { useSheet } from '../sheet';
+import { showCompanions } from '../creatures';
+import { useSheet, type FormState } from '../sheet';
 import { EXAMPLES, charInfo, charName, importNote, saveBackupFile, type CharacterStore } from '../storage';
 import { undoPreview } from '../levelup';
 import type { Character, Spell, Tab } from '../types';
 import { CheckIcon, ChevronDown, ChevronRight, MenuIcon, PencilIcon, StarIcon, XIcon, useArmed } from './ui';
 
-const SECTION_LINKS = [['sec-hp', 'Hit Points'], ['sec-abilities', 'Abilities'], ['sec-senses', 'Senses'], ['sec-defenses', 'Defenses'], ['sec-conditions', 'Conditions'], ['sec-resources', 'Resources']];
-export const SECTION_IDS = [...SECTION_LINKS.map(([id]) => id), 'sec-tabs'];
+const SECTION_LINKS = [['sec-hp', 'Hit Points'], ['sec-abilities', 'Abilities'], ['sec-senses', 'Senses'], ['sec-defenses', 'Defenses'], ['sec-conditions', 'Conditions'], ['sec-resources', 'Resources'], ['sec-companions', 'Companions']];
+// The section links shown: Companions only while its section is (showCompanions).
+export const sectionLinks = (c: Character, edit: boolean, form: FormState): string[][] =>
+  showCompanions(c, edit, form) ? SECTION_LINKS : SECTION_LINKS.filter(([id]) => id !== 'sec-companions');
 const acEffect = (c: Character, sp: Spell) => (acOnOther(sp) ? 'on another creature' : acSpellIdle(c, sp) ? 'no effect in armor' : sp.acFx === 'bonus' ? fmt(sp.acVal || 0) + ' AC' : sp.acFx === 'base' ? 'AC ' + sp.acVal + ' + DEX' : 'AC ' + sp.acVal);
 const LAYOUTS: [LayoutMode, string][] = [['auto', 'Auto'], ['one', '1 column'], ['two', '2 columns']];
 
@@ -32,7 +35,7 @@ interface Props {
 }
 
 export function TopBar({ store, activeSec, setActiveSec, menuOpen, setMenuOpen, onToggleEdit, onSwitched, onRest, onLevelUp, onUndoLevel, onCreate, onCharacters }: Props) {
-  const { c, update, edit } = useSheet();
+  const { c, update, edit, form } = useSheet();
   const ch = c.ch;
   const initials = (ch.name || '?').split(/\s+/).filter((x) => x).slice(0, 2).map((x) => x.charAt(0).toUpperCase()).join('') || '?';
   const [classOpen, setClassOpen] = useState(false);
@@ -188,7 +191,7 @@ export function TopBar({ store, activeSec, setActiveSec, menuOpen, setMenuOpen, 
 
       <div className="nav-wrap">
         <nav ref={navRef} className="nav" aria-label="Sheet sections">
-          {!wide && SECTION_LINKS.map(([id, label]) => {
+          {!wide && sectionLinks(c, edit, form).map(([id, label]) => {
             const on = activeSec === id;
             return (
               <a key={id} href={'#' + id} aria-current={on ? 'location' : undefined} className={on ? 'on-screen' : undefined}
@@ -223,7 +226,8 @@ export function TopBar({ store, activeSec, setActiveSec, menuOpen, setMenuOpen, 
   );
 }
 
-const SEC_NAMES: Record<string, string> = { ...Object.fromEntries(SECTION_LINKS), 'sec-vitals': 'Vitals' };
+// Built from every link, so a pill's section name never goes missing.
+export const SEC_NAMES: Record<string, string> = { ...Object.fromEntries(SECTION_LINKS), 'sec-vitals': 'Vitals' };
 const pillName = (v: PillView) => PILL_STATS.find(([k]) => k === v.key)?.[1] ?? v.label;
 const pillSpoken = (v: PillView) => pillName(v) + ' ' + v.value + (v.max ? ' of ' + v.max : '') + (v.detail ? ' (' + v.detail + ')' : '') + '.';
 

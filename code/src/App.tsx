@@ -6,7 +6,7 @@ import { EditDetails } from './components/EditDetails';
 import { HitPoints } from './components/HitPoints';
 import { Resources } from './components/Resources';
 import { Senses } from './components/Senses';
-import { SECTION_IDS, TopBar } from './components/TopBar';
+import { sectionLinks, TopBar } from './components/TopBar';
 import { Vitals } from './components/Vitals';
 import { ActionsTab } from './components/tabs/ActionsTab';
 import { FeaturesTab } from './components/tabs/FeaturesTab';
@@ -130,9 +130,13 @@ function SheetApp({ store, draftUi, onCreate, onCharacters }: { store: Character
     setActiveSec('sec-hp');
   };
 
-  // Highlight the section currently under the top bar. Not used in the two-column layout.
+  // Highlight the section currently under the top bar. Not used in the two-column layout. The ids follow the links
+  // shown, so the observer re-binds when the Companions section appears or goes.
+  const sectionIds = [...sectionLinks(c, edit, form).map(([id]) => id), 'sec-tabs'];
+  const idsKey = sectionIds.join(',');
   useEffect(() => {
     if (wide) return;
+    const SECTION_IDS = idsKey.split(',');
     const visible: Record<string, boolean> = {};
     const io = new IntersectionObserver((entries) => {
       entries.forEach((e) => { visible[e.target.id] = e.isIntersecting; });
@@ -141,7 +145,7 @@ function SheetApp({ store, draftUi, onCreate, onCharacters }: { store: Character
     }, { rootMargin: '-140px 0px -55% 0px', threshold: 0 });
     SECTION_IDS.forEach((id) => { const el = document.getElementById(id); if (el) io.observe(el); });
     return () => io.disconnect();
-  }, [wide]);
+  }, [wide, idsKey]);
 
   // Two columns: HP sits above the tab in the right column, so it stays in view.
   const hitPoints = <HitPoints hdPrompt={hdPrompt} setHdPrompt={setHdPrompt} />;
