@@ -298,6 +298,34 @@ export function effectChecks(entries: Entry[]): Finding[] {
   return out;
 }
 
+// Item spellcasting and buffs on another creature (2026-11-07 gaps). item-cast-no-spell: a magic item whose text casts a
+// named spell from itself (or at a fixed DC) with no spell grant. buff-other-no-grant: a spell for "a willing creature" or
+// "a creature you touch" whose text states an effect with none of the grant kinds that carry it.
+const ITEM_CAST = /\bcast (?:the )?[A-Z][\w’' -]+? (?:spell )?(?:from (?:it|the \w+)|\(save DC \d+)/;
+const BUFFS: { cue: RegExp; kinds: GrantSpec['kind'][]; label: string }[] = [
+  { cue: /\bResistance to\b/, kinds: ['defense'], label: 'resistance' },
+  { cue: /\bAdvantage on\b/, kinds: ['checkAdv', 'defense'], label: 'advantage' },
+  { cue: /\b(?:Darkvision|Truesight)\b/, kinds: ['sense'], label: 'sense' },
+  { cue: /\bSpeed\b/, kinds: ['speed'], label: 'speed' }
+];
+export function buffChecks(entries: Entry[]): Finding[] {
+  const out: Finding[] = [];
+  for (const e of entries) {
+    const kinds = new Set(flatGrants(e).map((g) => g.kind)), desc = descOf(e);
+    if (e.kind === 'item' && e.cat === 'magic' && !kinds.has('spell')) {
+      const m = ITEM_CAST.exec(desc);
+      if (m) out.push({ check: 'item-cast-no-spell', id: `${e.id}:cast`, note: `"${m[0]}" with no spell grant` });
+    }
+    if (e.kind === 'spell' && /\b(?:willing creature|creature you touch)\b/i.test(desc)) {
+      for (const { cue, kinds: want, label } of BUFFS) {
+        const m = cue.exec(desc);
+        if (m && !want.some((k) => kinds.has(k))) out.push({ check: 'buff-other-no-grant', id: `${e.id}:${label}`, note: `"${m[0]}" on another creature with no ${want.join(' or ')} grant` });
+      }
+    }
+  }
+  return out;
+}
+
 // The rest looks at class features and feats only: what their text says against what the sheet gets from them.
 const isGranter = (e: Entry) => e.kind === 'feature' || e.kind === 'feat';
 const has = (...kinds: GrantSpec['kind'][]) => (e: Entry) => flatGrants(e).some((g) => kinds.includes(g.kind));

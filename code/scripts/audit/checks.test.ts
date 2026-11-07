@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { mergeCatalog } from '../../src/catalog/merge.ts';
 import type { Entry } from '../../src/catalog/schema.ts';
-import { actionCostChecks, compareKnown, coverageChecks, effectChecks, featPoolChecks, featureHeadingChecks, grantChecks, grantHashes, itemNumberChecks, keyOf, lookupTableChecks, mechanicChecks, referenceChecks, repeatedSpellChecks, rowChecks, ruleSourceChecks, ruleTextChecks, spellListChecks, spellNumberChecks, srdHeadingChecks, standaloneHeadings, textChecks, updateKnown, type Finding } from './checks.ts';
+import { actionCostChecks, buffChecks, compareKnown, coverageChecks, effectChecks, featPoolChecks, featureHeadingChecks, grantChecks, grantHashes, itemNumberChecks, keyOf, lookupTableChecks, mechanicChecks, referenceChecks, repeatedSpellChecks, rowChecks, ruleSourceChecks, ruleTextChecks, spellListChecks, spellNumberChecks, srdHeadingChecks, standaloneHeadings, textChecks, updateKnown, type Finding } from './checks.ts';
 import { backgroundEquipChecks, freeCastLinkChecks, grantedSpellChecks, grantSourceChecks, poolChecks, ruleCatChecks, unreadFieldChecks } from './wiring.ts';
 
 const spell = (name: string, extra: object = {}) => ({ id: `spell/${name.toLowerCase().replace(/ /g, '-')}`, kind: 'spell', name, src: 'srd', desc: 'Some text.', lvl: 1, school: 'Evocation', classes: 'wizard', time: 'Action', range: '60 feet', comp: 'V', dur: 'Instantaneous', conc: false, ritual: false, fx: 'other', ...extra }) as unknown as Entry;
@@ -165,6 +165,19 @@ describe('catalog against the sheet', () => {
   });
   it('finds a stated effect at the start of a sentence', () => {
     expect(keys(effectChecks([spell('Capital', { desc: 'You have Resistance to Fire damage.' })]))).toEqual(['effect-no-grant|spell/capital:resistance']);
+  });
+  it('finds an item that casts a spell with no spell grant', () => {
+    const wand = 'This wand has 7 charges. While holding it, you can expend 1 charge to cast Fireball (save DC 15) from it.';
+    expect(keys(buffChecks([item('Wand', { desc: wand })]))).toEqual(['item-cast-no-spell|item/wand:cast']);
+    expect(keys(buffChecks([item('Wand', { desc: wand, grants: [{ id: 'g', kind: 'spell', name: 'Fireball', spell: 'spell/fireball' }] })]))).toEqual([]);
+    expect(keys(buffChecks([item('Ring', { desc: 'While wearing this ring, you can cast the Telekinesis spell from it.' })]))).toEqual(['item-cast-no-spell|item/ring:cast']);
+    expect(keys(buffChecks([item('Lamp', { desc: 'A Lamp burns Oil as fuel to cast Bright Light in a 15-foot radius.', cat: 'gear' })]))).toEqual([]);
+  });
+  it('finds a buff on a willing creature with no grant of its kind', () => {
+    const skin = 'Until the spell ends, one willing creature you touch has Resistance to Bludgeoning damage.';
+    expect(keys(buffChecks([spell('Skin', { desc: skin })]))).toEqual(['buff-other-no-grant|spell/skin:resistance']);
+    expect(keys(buffChecks([spell('Skin', { desc: skin, grants: [{ id: 'g', kind: 'defense', name: 'x', def: 'res', target: 'Bludgeoning' }] })]))).toEqual([]);
+    expect(keys(buffChecks([spell('Bolt', { desc: 'A creature in the area has Resistance to nothing.' })]))).toEqual([]);
   });
   it('finds a stated effect with no grant of its kind', () => {
     const fly = 'The target gains a Fly Speed of 60 feet.';
