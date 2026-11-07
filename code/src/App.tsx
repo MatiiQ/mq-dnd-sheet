@@ -106,7 +106,7 @@ function SheetApp({ store, draftUi, onCreate, onCharacters }: { store: Character
   // summon: the summon step opens under the spell row (a cast from another tab); cast: the row opens its higher slots.
   const reveal = (t: RevealTarget) => {
     const p = revealPlace(t);
-    const step: FormState = t.summon ? { kind: 'summon', id: 'spell:' + t.id, ...(t.summon.lvl ? { lvl: t.summon.lvl } : {}) } : null;
+    const step: FormState = t.summon ? { ...t.summon, kind: 'summon', id: 'spell:' + t.id } : null;
     if (p.tab && p.tab !== c.tab) { pendingForm.current = step; update({ tab: p.tab }); }
     else if (step) setForm(step);
     if (!p.tab && p.sec) document.getElementById(p.sec)?.scrollIntoView({ behavior: 'smooth', block: 'start' });

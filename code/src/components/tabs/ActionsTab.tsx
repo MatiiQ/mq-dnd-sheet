@@ -11,7 +11,8 @@ import { canLoad, hasProp, isWeapon, NO_SHIELD, putAway, putInHand, shieldOn as 
 import { linkOf, sourceLabel } from '../../links';
 import { castSpell, COMBAT_ACTIONS, itemOfSpell, pactLeft, fmt, freeCastsOf, ORDINAL, regainTo, removeRef, slotsLeft, spellUsable, toggled, type AcPart } from '../../logic';
 import { patchEntry, removeEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
-import type { Attack, Econ, Item, Rider, Spell } from '../../types';
+import type { Attack, Character, Econ, Item, Rider, Spell } from '../../types';
+import { afterSummonCast } from '../Companions';
 import { AcTargetSwitch, AddButton, applyCast, Caret, DieBadge, EffectSwitch, EntryForm, EntryRow, FreeCastButton, ItemCastButtons, Step, TextField } from '../ui';
 
 const ECON: Record<Econ, string> = { action: 'Action', bonus: 'Bonus Action', reaction: 'Reaction', free: 'Free', other: 'Other' };
@@ -384,11 +385,17 @@ function riderForm(fr: ReturnType<typeof useEntryForm<typeof RIDER_BLANK>>, onSa
 // A spell's Cast button (its lowest level with a slot left), its free casts, or an effect's On/Off switch, as in the
 // Spells tab.
 function CastButtons({ sp, effect }: { sp: Spell; effect: boolean }) {
-  const { c, update, reveal } = useSheet();
+  const { c, update, reveal, setForm } = useSheet();
   const link = linkOf('spell', sp.id);
-  // A spell that makes a creature or a form: after a cast that happened, the Spells tab opens at its row with the
-  // summon step open (R23). Computed from the render's c, never inside an update function (R36).
-  const onCast = sp.makes ? (l: number) => reveal({ kind: 'spell', id: sp.id, summon: { lvl: l } }) : undefined;
+  // A spell that makes a creature or a form: after a cast that happened, the same step as on the Spells tab (R23):
+  // its summon step opens under the spell row there, the Companions editor opens in place for a spent scroll (R21),
+  // and nothing opens when a dismissed card was summoned. Computed from the render's c (R36).
+  const onCast = sp.makes ? (l: number, r: Partial<Character>) => {
+    const s = afterSummonCast(c, sp, l, r);
+    if (s.patch.creatures) update(s.patch);
+    if (s.form?.kind === 'summon') { const { kind: _, id: __, ...summon } = s.form; reveal({ kind: 'spell', id: sp.id, summon }); }
+    else setForm(s.form);
+  } : undefined;
   if (effect && !sp.c) return <EffectSwitch link={link} name={sp.name} />;
   if (itemOfSpell(c, sp)) return <><AcTargetSwitch sp={sp} /><ItemCastButtons sp={sp} short onCast={onCast} /></>;
   const lvl = sp.lvl || 0;

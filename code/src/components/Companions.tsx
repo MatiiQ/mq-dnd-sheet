@@ -1,9 +1,9 @@
 import { useState, type CSSProperties } from 'react';
 import {
   addCreature, assumeForm, castAgainBlock, damageCreature, dismiss, duplicateCreature, endForm, formAc, healCreature, linkedCreatures, recall, sendAway,
-  showCompanions, summon, summonCopies
+  showCompanions, spellOf, summon, summonCopies
 } from '../creatures';
-import { parseLink, sourceLabel, sourceOf, srcKindOfLink } from '../links';
+import { sourceLabel, sourceOf, srcKindOfLink } from '../links';
 import { castRitual, CONDITIONS, newId } from '../logic';
 import { useSheet, type FormState } from '../sheet';
 import type { Character, Creature, CreatureAttack, Spell } from '../types';
@@ -15,9 +15,9 @@ export type CreatureDraft = Omit<Creature, 'id'> & { id?: string };
 export const BLANK_CREATURE: CreatureDraft = {
   name: '', kind: 'pet', on: true, ac: 10, hp: 0, maxHp: 0, temp: 0, speed: '', init: '', note: '', atk: [], conds: {}
 };
-const spellIdOf = (k: Pick<Creature, 'from'>) => { const p = parseLink(k.from); return p?.kind === 'spell' ? p.id : null; };
-const spellOfCard = (c: Character, k: Pick<Creature, 'from'>): Spell | undefined => { const id = spellIdOf(k); return id ? c.spells.find((s) => s.id === id) : undefined; };
+const spellOfCard = (c: Character, k: Pick<Creature, 'from'>): Spell | undefined => { const id = spellOf(k); return id ? c.spells.find((s) => s.id === id) : undefined; };
 const stats = (k: Creature, ac: number) => ['AC ' + ac, k.speed].filter(Boolean).join(' · ');
+const formStats = (c: Character, k: Creature) => ['AC ' + formAc(c, k), 'HP ' + k.maxHp, k.speed].filter(Boolean).join(' · ');
 const scores = (k: Creature) => (['str', 'dex', 'con'] as const).filter((a) => k[a] !== undefined).map((a) => a.toUpperCase() + ' ' + k[a]).join(' ');
 
 // The pet saved `on` with a Concentration spell source that isn't the current Concentration would be switched off by
@@ -105,11 +105,12 @@ export function CreatureEditor({ initial, title, saveLabel, onSave, onCancel, in
 // Saves an editor's draft: a new card (with n − 1 numbered copies, summoned), or the edit merged into its card.
 export function saveCreature(c: Character, d: CreatureDraft, n = 1, lvl?: number): Character {
   if (d.id && c.creatures?.some((k) => k.id === d.id)) {
-    // A linked card keeps its source's current name (R22).
+    // A linked card keeps its source's current name (R22). A card whose kind changes is saved off: a form turns on
+    // only through assumeForm.
     const srcName = d.from ? sourceOf(c, d.from)?.name ?? d.srcName : d.srcName;
-    return { ...c, creatures: c.creatures.map((k) => (k.id === d.id ? { ...k, ...d, id: k.id, srcName, hp: Math.min(k.hp, d.maxHp) } : k)) };
+    return { ...c, creatures: c.creatures.map((k) => (k.id === d.id ? { ...k, ...d, id: k.id, srcName, hp: Math.min(k.hp, d.maxHp), ...(d.kind !== k.kind ? { on: false } : {}) } : k)) };
   }
-  const id = newId();
+  const id = d.id ?? newId();
   const out = addCreature(c, { ...d, id, hp: d.maxHp, ...(lvl ? { lvl } : {}) });
   return n > 1 ? summonCopies(out, id, n - 1, lvl) : out;
 }
@@ -200,7 +201,7 @@ function FormTile({ k }: { k: Creature }) {
   return (
     <div className="tile form-tile">
       <strong>{k.name}</strong>
-      <span className="muted">{['AC ' + formAc(c, k), 'HP ' + k.maxHp, k.speed].filter(Boolean).join(' · ')}</span>
+      <span className="muted">{formStats(c, k)}</span>
       <div className="row wrap gap-6">
         {canAssume
           ? <button type="button" className="btn btn-sm" aria-label={'Assume ' + k.name} onClick={() => update((p) => assumeForm(p, k.id))}>Assume</button>
@@ -303,6 +304,16 @@ export function summonStart(c: Character, src: SummonSource, link: string, lvl?:
   return { patch: {}, form: step };
 }
 
+// After a successful cast of a spell that makes a creature or a form, from any tab: the patch (a card summoned) and
+// the form to open. The last Spell Scroll of a spell with no lasting effect goes with its row (R21): the editor opens
+// in the Companions section instead, unlinked.
+export function afterSummonCast(c: Character, sp: Spell, l: number, r: Partial<Character>): { patch: Partial<Character>; form: FormState } {
+  if (r.spells && !r.spells.some((x) => x.id === sp.id)) {
+    return { patch: {}, form: { kind: 'creature', id: null, draft: { ...prelinkedDraft(c, sp, null, l), on: true } } };
+  }
+  return summonStart({ ...c, ...r }, sp, 'spell:' + sp.id, l);
+}
+
 // The picker: tick the cards that come back (dismissed ones ticked), "+ New from <card>" copies (not for a single spell).
 function SummonPicker({ link, src, lvl, close }: { link: string; src: SummonSource; lvl?: number; close: () => void }) {
   const { c, update } = useSheet();
@@ -358,7 +369,7 @@ function FormList({ link, src, close }: { link: string; src: SummonSource; close
     <div className="col gap-6 summon-step" role="group" aria-label={'Forms of ' + src.name}>
       {forms.map((k) => (
         <div key={k.id} className="row gap-8">
-          <span className="grow"><strong>{k.name}</strong> <span className="muted">{['AC ' + formAc(c, k), 'HP ' + k.maxHp, k.speed].filter(Boolean).join(' · ')}</span></span>
+          <span className="grow"><strong>{k.name}</strong> <span className="muted">{formStats(c, k)}</span></span>
           <button type="button" className="btn btn-sm" aria-label={'Assume ' + k.name} onClick={() => { update((p) => assumeForm(p, k.id)); close(); }}>Assume</button>
         </div>
       ))}

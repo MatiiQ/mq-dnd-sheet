@@ -78,7 +78,7 @@ export const sendAway = (c: Character, id: string): Character => mapOne(c, id, (
 export const recall = (c: Character, id: string): Character => mapOne(c, id, (k) => (canPocket(k) ? { ...k, away: false } : k));
 
 const incapacitated = (c: Character) => INCAPACITATING.some((n) => c.conds[n]);
-const spellOf = (k: Creature) => { const p = parseLink(k.from); return p?.kind === 'spell' ? p.id : null; };
+export const spellOf = (k: Pick<Creature, 'from'>): string | null => { const p = parseLink(k.from); return p?.kind === 'spell' ? p.id : null; };
 // The Temporary HP a form gives on assume: Wild Shape the Druid level (PHB p.81), three times it for a Moon druid
 // (Circle Forms, PHB p.86); Polymorph and Shapechange the beast's HP (PHB p.306, p.315).
 const formTempOf = (c: Character, k: Creature) =>

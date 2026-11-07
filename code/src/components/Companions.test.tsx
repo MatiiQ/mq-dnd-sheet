@@ -3,6 +3,7 @@ import { act } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { mergeCatalog } from '../catalog/merge';
 import App from '../App';
+import { BLANK_CREATURE, saveCreature } from './Companions';
 import { blankCharacter } from '../defaults';
 import { btn, btnStarting, label, mount, tap } from '../test-dom';
 import { withClasses } from '../test-fixtures';
@@ -116,5 +117,16 @@ describe('Companions section', () => {
     expect(saved().creatures![0]).toMatchObject({ on: true, hp: 1, lvl: 1 });
     expect(saved().slotUsed[1]).toBe(0);
     expect(label('Damage Owl')).not.toBeNull();
+  });
+});
+
+describe('saveCreature', () => {
+  it('keeps a passed id on a new card', () => {
+    const out = saveCreature(blankCharacter(), { ...BLANK_CREATURE, name: 'Wolf', maxHp: 11, id: 'w' });
+    expect(out.creatures!.map((k) => k.id)).toEqual(['w']);
+  });
+  it('saves a card off when its kind changes: a form turns on only through assumeForm', () => {
+    const c = { ...blankCharacter(), creatures: [pet()] };
+    expect(saveCreature(c, { ...pet(), kind: 'form' }).creatures![0]).toMatchObject({ kind: 'form', on: false });
   });
 });

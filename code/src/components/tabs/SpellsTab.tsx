@@ -10,7 +10,7 @@ import type { AcEffect, Ability, CastAbility, Character, ClassRow, Spell } from 
 import { removalNote } from '../Chips';
 import { SpellPicker } from '../pickers/SpellPicker';
 import { SourcePicker } from '../SourcePicker';
-import { prelinkedDraft, SummonStep, summonStart } from '../Companions';
+import { afterSummonCast, SummonStep } from '../Companions';
 import { AcTargetSwitch, AddButton, applyCast, Caret, DamageTypeField, DieBadge, EffectSwitch, EntryForm, EntryRow, FreeCastButton, ItemCastButtons, NumInput, PartTiles, Step, TextField, UsePips } from '../ui';
 
 const AC_EFFECTS: [AcEffect | '', string][] = [['', 'None'], ['bonus', 'Bonus'], ['base', 'Base (+ DEX)'], ['floor', 'Floor']];
@@ -354,13 +354,7 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
   // before the next event, so two quick taps each read a fresh c (R50).
   const afterCast = (l: number, r: Partial<Character>) => {
     if (!sp.makes) return;
-    // The last Spell Scroll of a spell with no lasting effect goes with its row (R21): the editor opens in the
-    // Companions section instead, unlinked.
-    if (r.spells && !r.spells.some((x) => x.id === sp.id)) {
-      setForm({ kind: 'creature', id: null, draft: { ...prelinkedDraft(c, sp, null, l), on: true } });
-      return;
-    }
-    const s = summonStart({ ...c, ...r }, sp, link, l);
+    const s = afterSummonCast(c, sp, l, r);
     if (s.patch.creatures) update(s.patch);
     setForm(s.form);
   };

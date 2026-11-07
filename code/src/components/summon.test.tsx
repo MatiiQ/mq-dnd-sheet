@@ -127,6 +127,21 @@ describe('casts from elsewhere', () => {
     expect(saved().conc).toEqual({ id: 'pm', name: 'Polymorph' });
     expect(inRow('pm', '+ New form')).toBeDefined();
   });
+  it('a cast from the Actions tab with one card out refills it and opens its editor under the spell row (R23, R37)', () => {
+    renderSheet({ spells: [{ ...ff, save: 'wis' }], tab: 'actions', creatures: [card({ id: 'o', name: 'Owl', on: true, hp: 0, maxHp: 1, from: 'spell:ff', srcName: 'Find Familiar' })] });
+    tap(document.querySelector('[aria-label^="Cast Find Familiar with a level"]'));
+    expect(saved().tab).toBe('spells');
+    expect(saved().creatures![0]).toMatchObject({ on: true, hp: 1 });
+    expect(inRow('ff', 'Confirm')).toBeUndefined();
+    expect((fieldIn(row('ff').querySelector('#form-summon-creature')!, 'Name') as HTMLInputElement).value).toBe('Owl');
+  });
+  it('reading the last Find Familiar scroll from the Actions tab opens the Companions editor (R21)', () => {
+    const scroll: Item = { id: 'sc', name: 'Spell Scroll', qty: 1, eq: false, cid: 'item/spell-scroll' };
+    renderSheet({ inv: [scroll], spells: [{ ...ff, save: 'wis', from: 'item:sc', always: true }], tab: 'actions' });
+    tap(label('Read the scroll of Find Familiar, 1 left'));
+    expect(saved().spells).toEqual([]);
+    expect(document.querySelector('#sec-companions #form-creature')).not.toBeNull();
+  });
   it('reading the last Find Familiar scroll opens the Companions editor prefilled, with no from (R21)', () => {
     const scroll: Item = { id: 'sc', name: 'Spell Scroll', qty: 1, eq: false, cid: 'item/spell-scroll' };
     renderSheet({ inv: [scroll], spells: [{ ...ff, from: 'item:sc', always: true }] });
@@ -152,6 +167,17 @@ describe('forms from spells and features', () => {
     castLowest(poly);
     tap(label('Assume Brown Bear'));
     expect(saved().creatures![0].on).toBe(true);
+    expect(saved().temp).toBe(34);
+  });
+  it('+ New form saves the form and assumes it', () => {
+    renderSheet({ spells: [poly] });
+    castLowest(poly);
+    tap(inRow('pm', '+ New form'));
+    const step = row('pm').querySelector('#form-summon-creature')!;
+    setValue(fieldIn(step, 'Name'), 'Brown Bear');
+    setValue(fieldIn(step, 'Max HP'), '34');
+    tap([...step.querySelectorAll('button')].find((b) => b.textContent === 'Add form'));
+    expect(saved().creatures!.map((k) => [k.name, k.kind, k.on])).toEqual([['Brown Bear', 'form', true]]);
     expect(saved().temp).toBe(34);
   });
   it('Not on me closes the step and keeps Concentration (R42)', () => {

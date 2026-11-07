@@ -1,6 +1,6 @@
 import type { PillTarget } from '../logic';
 import { parseLink, sourceOf } from '../links';
-import type { Character, Tab } from '../types';
+import type { Character, Creature, Tab } from '../types';
 
 // Jumps to where a chip's entry lives, the way pills do: a tab opens (and its column scrolls into view), a section scrolls.
 export function jumpTo(t: PillTarget, update: (p: Partial<Character>) => void): void {
@@ -15,7 +15,7 @@ export function jumpTo(t: PillTarget, update: (p: Partial<Character>) => void): 
 // A row that a shortcut goes to and opens (reveal, in the Sheet context).
 // cast: the spell row opens its cast choices too; summon: the summon step opens under the spell row after the tab
 // switch (a cast of a spell that makes a creature, from another tab). Transient, never saved.
-export type RevealTarget = { kind: 'feature' | 'item' | 'spell' | 'res'; id: string; cast?: true; summon?: { lvl?: number } };
+export type RevealTarget = { kind: 'feature' | 'item' | 'spell' | 'res'; id: string; cast?: true; summon?: { lvl?: number; draft?: Partial<Creature> } };
 
 // The target of a `from` link whose source is still on the sheet; null for a dangling link or a named-only source.
 export function revealOf(c: Character, from: string | undefined): RevealTarget | null {
