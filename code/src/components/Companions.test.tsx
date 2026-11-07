@@ -109,4 +109,12 @@ describe('Companions section', () => {
     expect(b.disabled).toBe(true);
     expect(section()!.textContent).toContain('No slot left');
   });
+  it('a dismissed Find Familiar card’s Ritual brings it back at once, spending no slot (R36)', () => {
+    const ff: Spell = { id: 'ff', name: 'Find Familiar', lvl: 1, time: '1 hour', range: '10 feet', ritual: true, makes: 'pet', single: true, prep: true };
+    renderSheet({ spells: [ff], slotMax: [0, 2, 0, 0, 0, 0, 0, 0, 0, 0], creatures: [pet({ name: 'Owl', on: false, hp: 0, maxHp: 1, from: 'spell:ff', srcName: 'Find Familiar' })] });
+    tap(section()!.querySelector('[aria-label="Cast Find Familiar as a Ritual, no slot"]'));
+    expect(saved().creatures![0]).toMatchObject({ on: true, hp: 1, lvl: 1 });
+    expect(saved().slotUsed[1]).toBe(0);
+    expect(label('Damage Owl')).not.toBeNull();
+  });
 });

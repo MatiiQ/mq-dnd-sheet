@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
-  removeRef, ABILITIES, castingRows, itemOfSpell, scrollNote, scrollOf, setFxItem, pactLeft, clamp, CAST_NAMES, newId, ORDINAL, ownFreeCasts, setOwnFreeCast, SPELL_SORTS, acAfterEdit, castSpell, concAfterEdit, detectAcSpell, effectsAfterEdit, fmt, preparedCount, setConc, setSlotUsed,
+  removeRef, ABILITIES, castingRows, itemOfSpell, scrollNote, scrollOf, setFxItem, pactLeft, clamp, CAST_NAMES, newId, ORDINAL, ownFreeCasts, setOwnFreeCast, SPELL_SORTS, acAfterEdit, castRitual, castSpell, concAfterEdit, detectAcSpell, effectsAfterEdit, fmt, preparedCount, setConc, setSlotUsed,
   slotsLeft, sortSpells, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, freeCastsOf, spellAttackFor, spellSaveDcFor
 } from '../../logic';
 import { hasActiveEffect, inactiveReason, isOn, linkOf, sourceLabel } from '../../links';
@@ -10,7 +10,8 @@ import type { AcEffect, Ability, CastAbility, Character, ClassRow, Spell } from 
 import { removalNote } from '../Chips';
 import { SpellPicker } from '../pickers/SpellPicker';
 import { SourcePicker } from '../SourcePicker';
-import { AcTargetSwitch, AddButton, Caret, DamageTypeField, DieBadge, EffectSwitch, EntryForm, EntryRow, FreeCastButton, ItemCastButtons, NumInput, PartTiles, Step, TextField, UsePips } from '../ui';
+import { prelinkedDraft, SummonStep, summonStart } from '../Companions';
+import { AcTargetSwitch, AddButton, applyCast, Caret, DamageTypeField, DieBadge, EffectSwitch, EntryForm, EntryRow, FreeCastButton, ItemCastButtons, NumInput, PartTiles, Step, TextField, UsePips } from '../ui';
 
 const AC_EFFECTS: [AcEffect | '', string][] = [['', 'None'], ['bonus', 'Bonus'], ['base', 'Base (+ DEX)'], ['floor', 'Floor']];
 const TIMES = ['Action', 'Bonus Action', 'Reaction', '1 Minute', '10 Minutes', '1 Hour'];
@@ -109,6 +110,9 @@ export function SpellsTab() {
         <TextField label="Damage or healing dice" value={f.draft.dmg} placeholder="e.g. 8d6" onChange={(v) => f.set({ dmg: v })} />
         <DamageTypeField value={f.draft.dtype} onChange={(dtype) => f.set({ dtype })} />
         <label className="check"><input type="checkbox" checked={f.draft.freeCast} onChange={(e) => f.set({ freeCast: e.target.checked })} />Give it a free cast (once per Long Rest)</label>
+        <label className="check"><input type="checkbox" aria-label="Makes a creature" checked={f.draft.makes === 'pet'} onChange={(e) => f.set({ makes: e.target.checked ? 'pet' : undefined })} />Makes a creature</label>
+        <label className="check"><input type="checkbox" aria-label="Is a form" checked={f.draft.makes === 'form'} onChange={(e) => f.set({ makes: e.target.checked ? 'form' : undefined })} />Is a form</label>
+        {f.draft.makes === 'pet' && <label className="check"><input type="checkbox" aria-label="A new casting replaces it" checked={!!f.draft.single} onChange={(e) => f.set({ single: e.target.checked || undefined })} />A new casting replaces it</label>}
       </div>
       <label className="field">Description
         <textarea className="input textarea" rows={4} value={f.draft.desc} onChange={(e) => f.set({ desc: e.target.value })} />
@@ -318,7 +322,7 @@ function DieStat({ label, value, open, onToggle }: { label: string; value: strin
 }
 
 function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boolean; setPicking: (on: boolean) => void; onEdit: () => void }) {
-  const { c, update } = useSheet();
+  const { c, update, form: openForm, setForm, focus } = useSheet();
   const lvl = sp.lvl || 0;
   const usePrep = c.usePrep;
   const isAlways = usePrep && !!sp.always;
@@ -344,10 +348,31 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
   }
   const first = casts.find((x) => x.left > 0);
   const upcasts = first ? casts.filter((x) => x.l > first.l) : [];
+  // After a cast that happened (applyCast skips a refused one), a spell that makes a creature or a form opens its
+  // summon step. Every cast is computed from the render's c in the click handler and applied as a plain patch, never
+  // inside an update function (R36: that runs lazily and twice in StrictMode). React flushes a discrete event's update
+  // before the next event, so two quick taps each read a fresh c (R50).
+  const afterCast = (l: number, r: Partial<Character>) => {
+    if (!sp.makes) return;
+    // The last Spell Scroll of a spell with no lasting effect goes with its row (R21): the editor opens in the
+    // Companions section instead, unlinked.
+    if (r.spells && !r.spells.some((x) => x.id === sp.id)) {
+      setForm({ kind: 'creature', id: null, draft: { ...prelinkedDraft(c, sp, null, l), on: true } });
+      return;
+    }
+    const s = summonStart({ ...c, ...r }, sp, link, l);
+    if (s.patch.creatures) update(s.patch);
+    setForm(s.form);
+  };
   const castWith = (l: number) => {
-    update((p) => castSpell(p, sp, l) ?? {});
+    applyCast(update, castSpell(c, sp, l), l, afterCast);
     setPicking(false);
   };
+  // "Cast again" on a dismissed companion opened this row: show the higher slots too.
+  useEffect(() => {
+    if (focus?.id === 'spell-' + sp.id && focus.cast && !focus.used) setPicking(true);
+  }, [focus?.n]);
+  const summonOpen = openForm?.kind === 'summon' && openForm.id === link;
   // A pact slot casts any spell up to the pact level (PHB p.45).
   const pact = lvl > 0 && c.pactMax > 0 && c.pactLvl >= lvl ? pactLeft(c) : null;
 
@@ -404,14 +429,23 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
           {c.inv.filter((i) => (i.cat === 'weapon' || i.wrange) && !i.magic).map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
         </select>
       )}
-      {fromItem && <ItemCastButtons sp={sp} />}
-      {!fromItem && (lvl === 0 || usable) && frees.map((r) => <FreeCastButton key={r.id} sp={sp} r={r} />)}
+      {fromItem && <ItemCastButtons sp={sp} onCast={afterCast} />}
+      {!fromItem && (lvl === 0 || usable) && frees.map((r) => <FreeCastButton key={r.id} sp={sp} r={r} onCast={afterCast} />)}
+      {/* A Ritual spends no slot (PHB p.235); shown on every ritual row, prepared or not (simplification). */}
+      {!fromItem && sp.ritual && (
+        <button type="button" className="btn btn-sm toggle-btn" aria-label={'Cast ' + sp.name + ' as a Ritual, no slot'}
+          onClick={() => applyCast(update, castRitual(c, sp), lvl, afterCast)}>Ritual</button>
+      )}
+      {/* While the spell is the Concentration, its forms can change with no new cast (Shapechange, PHB p.315). */}
+      {sp.makes === 'form' && concOn && !summonOpen && (
+        <button type="button" className="btn btn-sm toggle-btn" onClick={() => setForm({ kind: 'summon', id: link })}>Change form</button>
+      )}
       {!fromItem && (!!first || !!pact) && usable && (
         <div role="group" aria-label={'Spell slots for ' + sp.name} className="row wrap gap-6">
           {first && <button type="button" aria-label={'Cast ' + sp.name + ' with a level ' + first.l + ' slot, ' + first.left + ' left'}
             className="btn btn-sm" style={{ border: '1px solid var(--accent)', background: 'transparent', color: 'var(--accent)' }} onClick={() => castWith(first.l)}>Cast {ORDINAL[first.l]}</button>}
           {!!pact && <button type="button" aria-label={'Cast ' + sp.name + ' with a level ' + c.pactLvl + ' pact slot, ' + pact + ' left'}
-            className="btn btn-sm" style={{ border: '1px solid var(--accent)', background: 'transparent', color: 'var(--accent)' }} onClick={() => update((p) => castSpell(p, sp, p.pactLvl, 'pact') ?? {})}>{ORDINAL[c.pactLvl]} (pact)</button>}
+            className="btn btn-sm" style={{ border: '1px solid var(--accent)', background: 'transparent', color: 'var(--accent)' }} onClick={() => applyCast(update, castSpell(c, sp, c.pactLvl, 'pact'), c.pactLvl, afterCast)}>{ORDINAL[c.pactLvl]} (pact)</button>}
           {upcasts.length > 0 && (
             <button type="button" aria-expanded={picking} aria-label={'Upcast ' + sp.name + ' with a higher slot'} className="btn btn-sm row gap-4"
               style={{ border: '1px solid var(--line-2)', background: 'transparent', color: 'var(--text-2)' }} onClick={() => setPicking(!picking)}>
@@ -431,7 +465,8 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
         {sourceLabel(c, sp) && <span className="muted">Source: {sourceLabel(c, sp)}</span>}
       </> : undefined}
       onEdit={onEdit} onRemove={() => update((p) => removeRef(p, { kind: 'spell', id: sp.id }))} removeConfirm={removalNote(c, { kind: 'spell', id: sp.id })}>
-      {(picking && upcasts.length > 0 || noSlots) && <>
+      {(picking && upcasts.length > 0 || noSlots || summonOpen) && <>
+        <SummonStep link={link} src={sp} />
         {picking && upcasts.length > 0 && (
           <div role="group" aria-label={'Higher slot levels for ' + sp.name} className="row wrap gap-6" style={{ padding: 8, borderRadius: 12, background: 'var(--raised)' }}>
             <span className="muted" style={{ flex: '1 1 100%' }}>Cast {sp.name} with a higher slot:</span>

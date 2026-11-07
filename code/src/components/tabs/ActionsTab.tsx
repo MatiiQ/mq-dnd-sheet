@@ -12,7 +12,7 @@ import { linkOf, sourceLabel } from '../../links';
 import { castSpell, COMBAT_ACTIONS, itemOfSpell, pactLeft, fmt, freeCastsOf, ORDINAL, regainTo, removeRef, slotsLeft, spellUsable, toggled, type AcPart } from '../../logic';
 import { patchEntry, removeEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { Attack, Econ, Item, Rider, Spell } from '../../types';
-import { AcTargetSwitch, AddButton, Caret, DieBadge, EffectSwitch, EntryForm, EntryRow, FreeCastButton, ItemCastButtons, Step, TextField } from '../ui';
+import { AcTargetSwitch, AddButton, applyCast, Caret, DieBadge, EffectSwitch, EntryForm, EntryRow, FreeCastButton, ItemCastButtons, Step, TextField } from '../ui';
 
 const ECON: Record<Econ, string> = { action: 'Action', bonus: 'Bonus Action', reaction: 'Reaction', free: 'Free', other: 'Other' };
 type Filter = 'all' | 'action' | 'bonus' | 'reaction';
@@ -384,24 +384,27 @@ function riderForm(fr: ReturnType<typeof useEntryForm<typeof RIDER_BLANK>>, onSa
 // A spell's Cast button (its lowest level with a slot left), its free casts, or an effect's On/Off switch, as in the
 // Spells tab.
 function CastButtons({ sp, effect }: { sp: Spell; effect: boolean }) {
-  const { c, update } = useSheet();
+  const { c, update, reveal } = useSheet();
   const link = linkOf('spell', sp.id);
+  // A spell that makes a creature or a form: after a cast that happened, the Spells tab opens at its row with the
+  // summon step open (R23). Computed from the render's c, never inside an update function (R36).
+  const onCast = sp.makes ? (l: number) => reveal({ kind: 'spell', id: sp.id, summon: { lvl: l } }) : undefined;
   if (effect && !sp.c) return <EffectSwitch link={link} name={sp.name} />;
-  if (itemOfSpell(c, sp)) return <><AcTargetSwitch sp={sp} /><ItemCastButtons sp={sp} short /></>;
+  if (itemOfSpell(c, sp)) return <><AcTargetSwitch sp={sp} /><ItemCastButtons sp={sp} short onCast={onCast} /></>;
   const lvl = sp.lvl || 0;
   const first = lvl > 0 && spellUsable(c, sp) ? [lvl, 2, 3, 4, 5, 6, 7, 8, 9].filter((l) => l >= lvl).find((l) => c.slotMax[l] && slotsLeft(c, l) > 0) : undefined;
   const pact = lvl > 0 && spellUsable(c, sp) && c.pactLvl >= lvl && pactLeft(c) > 0;
   return <>
     <AcTargetSwitch sp={sp} />
-    {freeCastsOf(c, sp.id).map((r) => <FreeCastButton key={r.id} sp={sp} r={r} short />)}
+    {freeCastsOf(c, sp.id).map((r) => <FreeCastButton key={r.id} sp={sp} r={r} short onCast={onCast} />)}
     {first !== undefined && (
       <button type="button" className="btn btn-sm toggle-btn" aria-label={'Cast ' + sp.name + ' with a level ' + first + ' slot, ' + slotsLeft(c, first) + ' left'}
-        onClick={() => update((p) => castSpell(p, sp, first) ?? {})}>Cast {ORDINAL[first]}</button>
+        onClick={() => applyCast(update, castSpell(c, sp, first), first, onCast)}>Cast {ORDINAL[first]}</button>
     )}
     {/* With no regular slot left, a pact slot (PHB p.45). */}
     {first === undefined && pact && (
       <button type="button" className="btn btn-sm toggle-btn" aria-label={'Cast ' + sp.name + ' with a level ' + c.pactLvl + ' pact slot, ' + pactLeft(c) + ' left'}
-        onClick={() => update((p) => castSpell(p, sp, p.pactLvl, 'pact') ?? {})}>Cast {ORDINAL[c.pactLvl]} (pact)</button>
+        onClick={() => applyCast(update, castSpell(c, sp, c.pactLvl, 'pact'), c.pactLvl, onCast)}>Cast {ORDINAL[c.pactLvl]} (pact)</button>
     )}
   </>;
 }

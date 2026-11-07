@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Abilities } from './components/Abilities';
 import { Conditions } from './components/Conditions';
 import { Defenses } from './components/Defenses';
@@ -91,19 +91,26 @@ function SheetApp({ store, draftUi, onCreate, onCharacters }: { store: Character
   const [focus, setFocus] = useState<Focus | null>(null);
   const wide = useWide();
 
+  // A summon step a reveal asked for, set once its tab change has closed the old tab's forms (R23).
+  const pendingForm = useRef<FormState>(null);
   // A tab change the reveal did not make drops its focus.
   useEffect(() => {
-    setForm(formAfterTabChange);
+    const next = pendingForm.current;
+    pendingForm.current = null;
+    setForm((f) => next ?? formAfterTabChange(f));
     setFocus((f) => (f && f.tab !== c.tab ? null : f));
   }, [c.tab]);
 
   // Switches tab (the row scrolls itself: no #sec-tabs scroll, two smooth scrolls in one tick race) or scrolls to the
   // section, then names the row to open.
+  // summon: the summon step opens under the spell row (a cast from another tab); cast: the row opens its higher slots.
   const reveal = (t: RevealTarget) => {
     const p = revealPlace(t);
-    if (p.tab) update({ tab: p.tab });
-    else if (p.sec) document.getElementById(p.sec)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    setFocus((f) => ({ id: p.dom, n: (f?.n ?? 0) + 1, tab: p.tab, used: false }));
+    const step: FormState = t.summon ? { kind: 'summon', id: 'spell:' + t.id, ...(t.summon.lvl ? { lvl: t.summon.lvl } : {}) } : null;
+    if (p.tab && p.tab !== c.tab) { pendingForm.current = step; update({ tab: p.tab }); }
+    else if (step) setForm(step);
+    if (!p.tab && p.sec) document.getElementById(p.sec)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setFocus((f) => ({ id: p.dom, n: (f?.n ?? 0) + 1, tab: p.tab, used: false, ...(t.cast ? { cast: true as const } : {}) }));
   };
   const markFocusUsed = (n: number) => setFocus((f) => (f && f.n === n ? { ...f, used: true } : f));
 

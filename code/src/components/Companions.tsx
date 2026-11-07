@@ -1,11 +1,11 @@
 import { useState, type CSSProperties } from 'react';
 import {
-  addCreature, assumeForm, castAgainBlock, damageCreature, dismiss, duplicateCreature, endForm, formAc, healCreature, recall, sendAway,
+  addCreature, assumeForm, castAgainBlock, damageCreature, dismiss, duplicateCreature, endForm, formAc, healCreature, linkedCreatures, recall, sendAway,
   showCompanions, summon, summonCopies
 } from '../creatures';
-import { parseLink, sourceLabel, sourceOf } from '../links';
+import { parseLink, sourceLabel, sourceOf, srcKindOfLink } from '../links';
 import { castRitual, CONDITIONS, newId } from '../logic';
-import { useSheet } from '../sheet';
+import { useSheet, type FormState } from '../sheet';
 import type { Character, Creature, CreatureAttack, Spell } from '../types';
 import { revealOf } from './nav';
 import { SourcePicker } from './SourcePicker';
@@ -270,4 +270,123 @@ export function Companions() {
       {!editor && <AddButton always onClick={() => setForm({ kind: 'creature', id: null })}>+ Add companion</AddButton>}
     </section>
   );
+}
+
+// ---------- the summon step (under a source row) ----------
+// A source that makes a creature or a form: a spell row, or a feature row (Primal Companion, Wild Shape).
+export type SummonSource = { id: string; name: string; makes?: 'pet' | 'form'; single?: boolean; c?: boolean; cid?: string; range?: string };
+const isSpell = (link: string) => link.startsWith('spell:');
+
+// The pre-linked editor's draft: the source's name, its link (none in the scroll case, whose row is gone), the cast's
+// level, out now, "Ends with Concentration" for a Concentration spell, "Pocket dimension" for Find Familiar (PHB
+// p.272). "Ends on a Long Rest" is never ticked (R38: a cast through Wild Companion can't be told apart).
+export function prelinkedDraft(c: Character, src: SummonSource, link: string | null, lvl?: number, kind: 'pet' | 'form' = 'pet'): CreatureDraft {
+  const spell = link ? isSpell(link) : true;
+  return {
+    ...BLANK_CREATURE, kind, name: kind === 'form' ? '' : src.name,
+    ...(link ? { from: link, srcKind: srcKindOfLink(c, link) ?? undefined } : { srcKind: 'spell' as const }), srcName: src.name,
+    ...(lvl ? { lvl } : {}), ...(src.c ? { ends: 'conc' as const } : {}),
+    ...(kind === 'pet' && src.cid === 'spell/find-familiar' ? { pocket: true } : {}),
+    ...(kind === 'form' ? { formTemp: spell ? 'hp' as const : 'wildshape' as const } : {})
+  };
+}
+
+// What a successful cast (or a feature's Summon) leads to, from the character after the cast: forms → their list;
+// a single spell (a new casting replaces it) with one card → that card refilled and its editor open; one dismissed
+// card → summoned, no panel; none → the pre-linked editor; else the picker.
+export function summonStart(c: Character, src: SummonSource, link: string, lvl?: number): { patch: Partial<Character>; form: FormState } {
+  const step: FormState = { kind: 'summon', id: link, ...(lvl ? { lvl } : {}) };
+  if (src.makes === 'form') return { patch: {}, form: step };
+  const pets = linkedCreatures(c, link);
+  if (src.single && pets.length === 1) return { patch: { creatures: summon(c, [pets[0].id], lvl).creatures }, form: { ...step, draft: { id: pets[0].id } } };
+  if (!src.single && pets.length === 1 && !pets[0].on) return { patch: { creatures: summon(c, [pets[0].id], lvl).creatures }, form: null };
+  return { patch: {}, form: step };
+}
+
+// The picker: tick the cards that come back (dismissed ones ticked), "+ New from <card>" copies (not for a single spell).
+function SummonPicker({ link, src, lvl, close }: { link: string; src: SummonSource; lvl?: number; close: () => void }) {
+  const { c, update } = useSheet();
+  const pets = linkedCreatures(c, link);
+  const [ticked, setTicked] = useState<string[]>(pets.filter((k) => !k.on).map((k) => k.id));
+  const [copyFrom, setCopyFrom] = useState(pets[0]?.id ?? '');
+  const [copies, setCopies] = useState(0);
+  const from = pets.find((k) => k.id === copyFrom);
+  const none = !ticked.length && !(copies > 0 && from);
+  const confirm = () => {
+    update((p) => { const s = summon(p, ticked, lvl); return from && copies > 0 && !src.single ? summonCopies(s, from.id, copies, lvl) : s; });
+    close();
+  };
+  return (
+    <div className="col gap-6 summon-step" role="group" aria-label={'Which creatures come back, ' + src.name}>
+      {pets.map((k) => (
+        <label key={k.id} className="row gap-8 check-row">
+          <input type="checkbox" checked={ticked.includes(k.id)} onChange={() => setTicked((t) => (t.includes(k.id) ? t.filter((x) => x !== k.id) : [...t, k.id]))} />
+          {k.name}{k.on && <span className="muted"> · already out</span>}
+        </label>
+      ))}
+      {!src.single && from && (
+        <div className="row wrap gap-6">
+          <span>+ New from</span>
+          <select className="input" style={{ width: 'auto', minHeight: 44 }} aria-label="Copy which card" value={copyFrom} onChange={(e) => setCopyFrom(e.target.value)}>
+            {pets.map((k) => <option key={k.id} value={k.id}>{k.name}</option>)}
+          </select>
+          <NumInput className="input pet-amt" aria-label={'Copies of ' + from.name} value={copies} min={0} max={20} onCommit={setCopies} />
+        </div>
+      )}
+      <div className="row gap-8">
+        <button type="button" className="btn btn-primary" disabled={none} onClick={confirm}>Confirm</button>
+        <button type="button" className="btn" onClick={close}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+
+// The forms a source makes, with Assume, plus "+ New form"; for a spell cast on someone else, Not on me (R42).
+function FormList({ link, src, close }: { link: string; src: SummonSource; close: () => void }) {
+  const { c, update } = useSheet();
+  const [adding, setAdding] = useState(false);
+  const forms = (c.creatures ?? []).filter((k) => k.kind === 'form' && k.from === link);
+  if (adding) return (
+    <CreatureEditor inline initial={prelinkedDraft(c, src, link, undefined, 'form')} title="New form" saveLabel="Add form" onCancel={() => setAdding(false)}
+      onSave={(d) => {
+        const id = newId();
+        update((p) => assumeForm(saveCreature(p, { ...d, id }), id));
+        close();
+      }} />
+  );
+  return (
+    <div className="col gap-6 summon-step" role="group" aria-label={'Forms of ' + src.name}>
+      {forms.map((k) => (
+        <div key={k.id} className="row gap-8">
+          <span className="grow"><strong>{k.name}</strong> <span className="muted">{['AC ' + formAc(c, k), 'HP ' + k.maxHp, k.speed].filter(Boolean).join(' · ')}</span></span>
+          <button type="button" className="btn btn-sm" aria-label={'Assume ' + k.name} onClick={() => { update((p) => assumeForm(p, k.id)); close(); }}>Assume</button>
+        </div>
+      ))}
+      <div className="row wrap gap-8">
+        <button type="button" className="btn btn-sm" onClick={() => setAdding(true)}>+ New form</button>
+        {isSpell(link) && !/^self/i.test(src.range ?? '') && <button type="button" className="btn btn-sm" onClick={close}>Not on me</button>}
+        <button type="button" className="btn btn-sm" onClick={close}>Close</button>
+      </div>
+    </div>
+  );
+}
+
+// Under a source row while its summon step is open: only the row whose link is form.id (R52; form.id is a link, never
+// an entry id). The picker, the pre-linked editor, a single spell's card editor, or the forms.
+export function SummonStep({ link, src }: { link: string; src: SummonSource }) {
+  const { c, update, form, setForm } = useSheet();
+  if (form?.kind !== 'summon' || form.id !== link) return null;
+  const close = () => setForm(null);
+  const lvl = form.lvl;
+  if (src.makes === 'form') return <FormList link={link} src={src} close={close} />;
+  const card = form.draft?.id ? c.creatures?.find((k) => k.id === form.draft!.id) : undefined;
+  if (card) return (
+    <CreatureEditor inline key={card.id} initial={card} title={'Edit ' + card.name} saveLabel="Save changes" onCancel={close}
+      onSave={(d) => { update((p) => saveCreature(p, d)); close(); }} />
+  );
+  if (!linkedCreatures(c, link).length) return (
+    <CreatureEditor inline howMany initial={prelinkedDraft(c, src, link, lvl)} title={'New companion from ' + src.name} saveLabel="Add companion" onCancel={close}
+      onSave={(d, n) => { update((p) => saveCreature(p, d, n, lvl)); close(); }} />
+  );
+  return <SummonPicker key={link} link={link} src={src} lvl={lvl} close={close} />;
 }

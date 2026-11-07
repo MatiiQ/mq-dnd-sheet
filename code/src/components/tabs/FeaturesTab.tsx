@@ -7,13 +7,14 @@ import { classLine, removeRef, addGrants, grantChips, newId, normName, profList,
 import { removeEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { Character, Feature, FeatureGroup, SrcKind } from '../../types';
 import { GrantList, removalNote, SourceChips } from '../Chips';
+import { SummonStep, summonStart } from '../Companions';
 import { FeaturePicker } from '../pickers/FeaturePicker';
 import { SourcePicker } from '../SourcePicker';
 import { AddButton, EffectSwitch, EntryForm, EntryRow, RemoveButton, TextField } from '../ui';
 
 const PROF_CATS: [ProfCat, string][] = [['armor', 'Armor'], ['weapon', 'Weapons'], ['tool', 'Tools'], ['language', 'Languages']];
 
-const BLANK = { g: 'class' as FeatureGroup, name: '', desc: '', from: undefined as string | undefined, srcKind: undefined as SrcKind | undefined, srcName: undefined as string | undefined, pending: [] as GrantInput[] };
+const BLANK = { g: 'class' as FeatureGroup, name: '', desc: '', makes: undefined as Feature['makes'], from: undefined as string | undefined, srcKind: undefined as SrcKind | undefined, srcName: undefined as string | undefined, pending: [] as GrantInput[] };
 
 export function FeaturesTab() {
   const { c, update, form: openForm, setForm } = useSheet();
@@ -24,12 +25,18 @@ export function FeaturesTab() {
     ['species', 'Species · ' + (c.ch.species || '')], ['training', 'Training & proficiencies'], ['other', 'Other']
   ];
   const d = f.draft;
+  // A feature's Summon: no slot level; the same step as a spell's cast.
+  const summonFrom = (x: Feature) => {
+    const s = summonStart(c, x, linkOf('feature', x.id));
+    if (s.patch.creatures) update(s.patch);
+    setForm(s.form);
+  };
   const save = () => {
     const name = d.name.trim();
     if (!name) return;
     const id = f.editingId ?? newId();
     // All keys present: undefined clears a field when editing.
-    const built = { g: d.g, name, desc: d.desc.trim(), from: d.from, srcKind: d.srcKind, srcName: d.srcName?.trim() || undefined };
+    const built = { g: d.g, name, desc: d.desc.trim(), makes: d.makes, from: d.from, srcKind: d.srcKind, srcName: d.srcName?.trim() || undefined };
     update((p) => {
       const next: Character = { ...p, feats: saveEntry<Feature>(p.feats, built, f.editingId, { id }) };
       return !f.editingId && d.pending.length ? addGrants(next, linkOf('feature', id), d.pending) : next;
@@ -50,6 +57,8 @@ export function FeaturesTab() {
           <textarea className="input textarea" value={d.desc} placeholder="Short summary of what it does" onChange={(e) => f.set({ desc: e.target.value })} />
         </label>
         <SourcePicker self={f.editingId ? linkOf('feature', f.editingId) : undefined} value={d} onChange={(v) => f.set(v)} />
+        <label className="check"><input type="checkbox" aria-label="Makes a creature" checked={d.makes === 'pet'} onChange={(e) => f.set({ makes: e.target.checked ? 'pet' : undefined })} />Makes a creature</label>
+        <label className="check"><input type="checkbox" aria-label="Is a form" checked={d.makes === 'form'} onChange={(e) => f.set({ makes: e.target.checked ? 'form' : undefined })} />Is a form</label>
         <GrantList link={f.editingId ? linkOf('feature', f.editingId) : null} fromKind="feature" pending={d.pending} setPending={(pending) => f.set({ pending })} />
       </div>
     </EntryForm>
@@ -73,15 +82,21 @@ export function FeaturesTab() {
                   <EntryRow key={x.id} id={'feat-' + x.id} name={x.name}
                     // A catalog description runs to paragraphs: the row shows its start, the open row all of it.
                     head={<><strong>{x.name}</strong>{x.desc && <span className="muted entry-clamp">{x.desc}</span>}</>}
-                    side={hasActiveEffect(c, link) ? <EffectSwitch link={link} name={x.name} /> : undefined}
+                    side={hasActiveEffect(c, link) || x.makes ? <>
+                      {hasActiveEffect(c, link) && <EffectSwitch link={link} name={x.name} />}
+                      {/* A feature that makes a creature (Primal Companion) or a form (Wild Shape) opens its summon step. */}
+                      {x.makes === 'pet' && <button type="button" className="btn btn-sm toggle-btn" onClick={() => summonFrom(x)}>Summon</button>}
+                      {x.makes === 'form' && <button type="button" className="btn btn-sm toggle-btn" onClick={() => setForm({ kind: 'summon', id: link })}>Assume form</button>}
+                    </> : undefined}
                     body={x.desc || src ? <>
                       {x.desc && <span className="entry-desc">{x.desc}</span>}
                       {src && <span className="muted">Source: {src}</span>}
                     </> : undefined}
-                    onEdit={() => f.openEdit(x.id, { g: x.g || 'other', name: x.name, desc: x.desc || '', from: x.from, srcKind: x.srcKind, srcName: x.srcName, pending: [] })}
+                    onEdit={() => f.openEdit(x.id, { g: x.g || 'other', name: x.name, desc: x.desc || '', makes: x.makes, from: x.from, srcKind: x.srcKind, srcName: x.srcName, pending: [] })}
                     onRemove={() => update((p) => removeRef(p, { kind: 'feature', id: x.id }))}
                     removeConfirm={removalNote(c, { kind: 'feature', id: x.id })}>
                     {grantChips(c, link).length > 0 && <SourceChips link={link} />}
+                    {x.makes && <SummonStep link={link} src={x} />}
                   </EntryRow>
                 );
               })}
