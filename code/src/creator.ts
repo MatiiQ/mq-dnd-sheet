@@ -2,7 +2,7 @@
 // character: replay builds the character from them with the same applyLevel calls Finish uses, so the preview and the
 // result are the same function. Answers name catalog ids and step keys only, never a generated id, so they replay on a
 // fresh sheet. The draft (the answers and the step) lives in its own key, never in a character or the backup.
-import { addClassEquipment, addFromCatalog } from './catalog/copy';
+import { addFromCatalog, addPackage } from './catalog/copy';
 import { buildChoices, type FlowAnswers } from './catalog/flow';
 import { entriesOf, type Catalog } from './catalog/merge';
 import type { ClassEntry } from './catalog/schema';
@@ -60,7 +60,7 @@ export function replayOrigin(cat: Catalog, a: CreatorAnswers): { c: Character; d
   }
   const cls = cat.byId.get(a.cls);
   if (cls?.kind !== 'class') dropped.push('Class: not in the loaded catalog');
-  else c = addClassEquipment(c, cat, cls as ClassEntry, a.equip);
+  else c = addPackage(c, cat, cls as ClassEntry, a.equip);
   c = { ...c, abil: { ...c.abil, ...a.scores } };
   return { c, dropped };
 }

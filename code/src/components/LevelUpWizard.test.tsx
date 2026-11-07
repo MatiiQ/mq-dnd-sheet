@@ -7,7 +7,8 @@ import type { ClassEntry, Entry, FeatureEntry } from '../catalog/schema';
 import { blankCharacter } from '../defaults';
 import { withClass } from '../test-fixtures';
 import type { Character } from '../types';
-import { LevelUpWizard } from './LevelUpWizard';
+import { applyLevel, levelPlan } from '../levelup';
+import { LevelUpWizard, UndoLevelPrompt } from './LevelUpWizard';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 const cls = (name: string, hd: 6 | 8 | 10 | 12): ClassEntry => ({ id: 'class/' + name.toLowerCase(), kind: 'class', name, src: 'srd', desc: '', hd, saves: 'str,dex',
@@ -75,5 +76,24 @@ describe('LevelUpWizard', () => {
     expect(document.body.textContent).toContain('Features are added by hand');
     tap(button('Finish'));
     expect(onApply.mock.calls[0][0].classes[0].lvl).toBe(2);
+  });
+  it('the undo prompt shows the real HP drop, the CON part included', () => {
+    // conBase 0 with CON +2: the level's stored gain is 6, the maximum falls by 8.
+    const c = withClass({ ...blankCharacter(), maxHp: 10, conBase: 0, hp: 12, abil: { ...blankCharacter().abil, con: 14 } }, { name: 'Ranger', clsId: 'class/ranger', hd: 10, lvl: 1 });
+    const ans = { flows: {}, spells: {}, hp: { mode: 'fixed' as const, val: 6 } };
+    const up = applyLevel(c, levelPlan(c, { row: c.classes[0].id }, cat, ans)!, ans, cat).c;
+    expect(up.levels.at(-1)!.hp!.gain).toBe(6);
+    root = createRoot(document.body.appendChild(document.createElement('div')));
+    act(() => root.render(<UndoLevelPrompt c={up} onConfirm={() => {}} onCancel={() => {}} />));
+    expect(document.body.textContent).toContain('HP maximum −8.');
+  });
+  it('the undo prompt reads the unfloored maximum', () => {
+    // Raw maximum −5 → 1 with a fixed 6: maxHpOf reads 1 on both sides, the real drop is 6.
+    const c = withClass({ ...blankCharacter(), maxHp: -5, conBase: 0, hp: 1 }, { name: 'Ranger', clsId: 'class/ranger', hd: 10, lvl: 1 });
+    const ans = { flows: {}, spells: {}, hp: { mode: 'fixed' as const, val: 6 } };
+    const up = applyLevel(c, levelPlan(c, { row: c.classes[0].id }, cat, ans)!, ans, cat).c;
+    root = createRoot(document.body.appendChild(document.createElement('div')));
+    act(() => root.render(<UndoLevelPrompt c={up} onConfirm={() => {}} onCancel={() => {}} />));
+    expect(document.body.textContent).toContain('HP maximum −6.');
   });
 });

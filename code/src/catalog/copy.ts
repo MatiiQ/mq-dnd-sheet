@@ -590,19 +590,17 @@ export function equipItems(cat: Catalog, e: BackgroundEntry | ClassEntry): { nam
   });
 }
 // Starting equipment (PHB p.36 for a background, p.43 for the first class): package A's items, unequipped, and its
-// coins; package B is coins only; none adds nothing.
+// coins; package B is coins only; none adds nothing. A class isn't a feature, so the creator adds its package here, and
+// only the first class gets one (PHB p.44).
 export function addPackage(c: Character, cat: Catalog, e: BackgroundEntry | ClassEntry, pick: 'A' | 'B' | 'none' | undefined): Character {
   if (e.equipA === undefined || !pick || pick === 'none') return c;
   if (pick === 'B') return { ...c, coins: { ...c.coins, gp: c.coins.gp + (e.gpB ?? 0) } };
   const items = equipItems(cat, e).map((x): Item => (x.entry ? { id: newId(), ...itemFromEntry(x.entry), qty: x.qty } : { id: newId(), name: x.name, qty: x.qty, eq: false }));
   return { ...c, inv: [...c.inv, ...items], coins: { ...c.coins, gp: c.coins.gp + (e.gpA ?? 0) } };
 }
-// A class's starting equipment: a class isn't a feature, so it isn't added through addFromCatalog. Only the first class
-// gets it (PHB p.44).
-export const addClassEquipment = (c: Character, cat: Catalog, e: ClassEntry, pick: 'A' | 'B' | 'none'): Character => addPackage(c, cat, e, pick);
 // A class's proficiencies as prof grants: saves, armor, weapons, tools and the picked skills (and tool picks); with
 // multi, only what a later class gives (PHB p.44). picks: by choice id ('skills', 'tools', 'mskills', 'mtools').
-export function classProfInputs(cat: Catalog, e: ClassEntry, multi: boolean, picks: Record<string, string[]>): GrantInput[] {
+export function classProfInputs(e: ClassEntry, multi: boolean, picks: Record<string, string[]>): GrantInput[] {
   const src = multi ? e.multi ?? {} : e;
   const out: GrantInput[] = [];
   const prof = (pc: string, name: string, target?: string) => out.push({ spec: { id: 'cp' + out.length, kind: 'prof', name, cat: pc as GrantSpec['cat'], ...(target ? { target } : {}) } });
@@ -613,7 +611,6 @@ export function classProfInputs(cat: Catalog, e: ClassEntry, multi: boolean, pic
   if (typeof tools === 'string') for (const t of tools.split(',').map((x) => x.trim()).filter(Boolean)) prof('tool', t);
   else if (tools) for (const t of picks[tools.id] ?? []) prof('tool', t);
   if (src.skills) for (const k of picks[src.skills.id] ?? []) prof('skill', SKILL_NAME[k] ?? k, k);
-  void cat;
   return out;
 }
 // 'Dagger, 2 × Pouch, 15 GP': package A as the add flow shows it.

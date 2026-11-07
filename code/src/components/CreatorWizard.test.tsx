@@ -173,6 +173,19 @@ describe('level 1 choices in the creator', () => {
   });
 });
 
+describe('the summary waits for the levels', () => {
+  it('Summary and Create stay locked until level 1 and every level to the start are chosen', () => {
+    const onCreate = vi.fn();
+    render(onCreate);
+    tap(btn('Rogue'));
+    tap(btn('Next'));
+    throughOriginRest();
+    expect(btn('Summary')?.getAttribute('aria-disabled')).toBe('true');
+    tap(btn('Summary'));
+    expect(btn('Create character')).toBeUndefined();
+  });
+});
+
 describe('class skills after a background change', () => {
   it('a skill the new background gives can be dropped and replaced', () => {
     render(() => {});

@@ -64,7 +64,8 @@ function Creator({ cat, initial, onCreate, notice }: { cat: Catalog; initial?: D
     setStep(to);
     if (!writeDraft({ v: DRAFT_VERSION, step: to, answers: a }) && !warned.current) { warned.current = true; setSaveMsg('Draft couldn’t be saved: storage is full. You can still finish, but closing the app loses this character.'); }
   };
-  const readyAt = [!!cls, !!a.background && !!a.species, true, true, true];
+  // Levels is ready once level 1's choices and every level up to the starting level are chosen.
+  const readyAt = [!!cls, !!a.background && !!a.species, true, true, !!a.firstDone && (a.start <= 1 || a.levels.length >= a.start - 1)];
   let body: ReactNode = null;
   if (step === 0) body = <ClassStep cat={cat} a={a} set={set} />;
   else if (step === 1) body = <OriginStep cat={cat} a={a} set={set} preview={preview} cls={cls} />;
@@ -89,7 +90,7 @@ function Creator({ cat, initial, onCreate, notice }: { cat: Catalog; initial?: D
         {step > 0 && <button type="button" className="btn" onClick={() => go(step - 1)}>Back</button>}
         {step < SUMMARY && step !== 4 && <button type="button" className="btn btn-primary" aria-disabled={!readyAt[step]} onClick={() => readyAt[step] && go(step + 1)}>Next</button>}
         {step === 4 && a.start === 1 && a.firstDone && <button type="button" className="btn btn-primary" onClick={() => go(SUMMARY)}>Next</button>}
-        {step === SUMMARY && <button type="button" className="btn btn-primary" aria-disabled={!preview} onClick={() => preview && onCreate(preview)}>Create character</button>}
+        {step === SUMMARY && <button type="button" className="btn btn-primary" aria-disabled={!preview || !readyAt.every(Boolean)} onClick={() => preview && readyAt.every(Boolean) && onCreate(preview)}>Create character</button>}
       </div>
     </div>
   );

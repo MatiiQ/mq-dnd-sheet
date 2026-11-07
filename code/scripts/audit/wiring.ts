@@ -1,7 +1,7 @@
 // Whether catalog data reaches the app. Imports the app's add flow, so it runs under Vitest, not plain node.
 // shortcut: these checks only catch names nothing mentions (field-unread stops at the copy to the character; the others
 // search the code for a word), so a green result doesn't prove a field works. logic.test.ts covers behaviour.
-import { atLevel, addClassEquipment, addFromCatalog, choicesOf, classProfInputs, featureCandidates, freeText, itemQuestions, itemStats, matchId, nestedEntries, optionGroups, poolOptions, type AddChoices, type FeatureType, type ItemAnswers } from '../../src/catalog/copy.ts';
+import { atLevel, addFromCatalog, addPackage, choicesOf, classProfInputs, featureCandidates, freeText, itemQuestions, itemStats, matchId, nestedEntries, optionGroups, poolOptions, type AddChoices, type FeatureType, type ItemAnswers } from '../../src/catalog/copy.ts';
 import type { Catalog } from '../../src/catalog/merge.ts';
 import type { ClassEntry, Entry } from '../../src/catalog/schema.ts';
 import type { FlowAnswers } from '../../src/catalog/flow.ts';
@@ -57,7 +57,7 @@ function autoLevel(cat: Catalog, c: Character, pick: ClassPick): { plan: Plan; a
   if (plan.cls && plan.clsLvl === 1) {
     const picks = Object.fromEntries(plan.steps.filter((s) => s.kind === 'profs' && s.choice).map((s) => [s.choice!.id, ans.flows[s.key][''].picks[s.choice!.id]]));
     const isFirst = raised.classes[0].id === w.row;
-    if (isFirst || plan.cls.multi) raised = addGrants(raised, 'class:' + w.row, classProfInputs(cat, plan.cls, !isFirst, picks));
+    if (isFirst || plan.cls.multi) raised = addGrants(raised, 'class:' + w.row, classProfInputs(plan.cls, !isFirst, picks));
   }
   for (const s of plan.steps) {
     if (s.kind === 'feature' && s.entry && !s.onSheet) ans.flows[s.key] = toFlow(autoAnswers(cat, raised, s.entry));
@@ -86,8 +86,8 @@ function levelClass(cat: Catalog, e: ClassEntry, other: ClassEntry): void {
     c = applyLevel(c, step.plan, step.ans, cat).c;
     pick = { row: c.classes[0].id };
   }
-  addClassEquipment(emptyCharacter(), cat, e, 'A');
-  addClassEquipment(emptyCharacter(), cat, e, 'B');
+  addPackage(emptyCharacter(), cat, e, 'A');
+  addPackage(emptyCharacter(), cat, e, 'B');
 }
 
 // Kinds the add flow refuses, by design.

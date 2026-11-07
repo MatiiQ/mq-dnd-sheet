@@ -379,6 +379,15 @@ describe('choices owed and growing choices [12]', () => {
     const next = applyLevel(c, plan, fixed({ flows: { [grow.key]: flow({ rit: ['spell/comprehend'] }) } }), cat).c;
     expect(next.spells.filter((x) => x.from === 'feature:rc').map((x) => x.cid)).toEqual(['spell/alarm', 'spell/detect', 'spell/comprehend']);
   });
+  it('the level that adds Weapon Mastery asks its picks: Fighter 1, and a first Fighter level in a multiclass', () => {
+    const p1 = levelPlan(fresh(), { cls: 'class/fighter' }, cat, A())!;
+    expect(p1.steps.find((s) => s.kind === 'mastery')).toMatchObject({ owed: 3 });
+    const c = up(fresh(), { cls: 'class/fighter' }, A({ flows: { 'profs/skills': flow({ skills: ['stealth'] }) } , mastery: ['longsword', 'dagger', 'spear'] }));
+    expect(c.mastery).toEqual(['longsword', 'dagger', 'spear']);
+    expect(levelPlan(c, { row: c.classes[0].id }, cat, fixed())!.steps.some((s) => s.kind === 'mastery')).toBe(false);
+    const r = levelTo(ranger1({ str: 14, dex: 14, wis: 14 }), 'class/ranger', 2);
+    expect(levelPlan(r, { cls: 'class/fighter' }, cat, fixed())!.steps.find((s) => s.kind === 'mastery')).toMatchObject({ owed: 3 });
+  });
   it('a Weapon Mastery slot gained at a level becomes a step, and undo removes the kind', () => {
     let c = at(up(fresh(), { cls: 'class/fighter' }, A({ flows: { 'profs/skills': flow({ skills: ['stealth'] }) } })), 'class/fighter', 3);
     c = { ...c, mastery: ['longsword', 'dagger', 'spear'] };

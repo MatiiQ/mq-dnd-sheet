@@ -10,7 +10,7 @@ import type { Character, ClassRow, Item, Spell } from '../types';
 import { entriesOf, mergeCatalog } from './merge';
 import type { ClassEntry, Entry, FeatureEntry, ItemEntry, SpellEntry } from './schema';
 import {
-  keepPrep, atLevel, choiceActive, featureName, addClassEquipment, classProfInputs,
+  keepPrep, atLevel, choiceActive, featureName, addPackage, classProfInputs,
   addFromCatalog, armorBaseMissing, draftFromItem, featureCandidates, grantSpellName, withDetectedArmor, BLANK_ITEM, BLANK_SPELL, catForKind, countedDefault, draftFromSpell, spellFromForm, type SpellDraft, choicesOf, classIdOf, matchId, nestedEntries, subclassIdOf, type AddChoices, freeText, itemFromEntry, itemFromForm, missingPicks, needed, optionGroups, poolOptions, prereqMet, resolveChoices,
   spellFromEntry, spellSummary, validPicks, itemQuestions, itemStats, answeredName, hasSenseRule, senseRule, weaponRules, type ItemAnswers, type ItemDraft
 } from './copy';
@@ -1061,20 +1061,20 @@ describe('class features and spells per row', () => {
 describe('class proficiencies and starting equipment', () => {
   const barb = () => E('class/barbarian') as ClassEntry;
   it('turns a class’s proficiencies into prof grants, all of them or the multiclass set', () => {
-    const g = classProfInputs(cat, barb(), false, { skills: ['athletics', 'survival'] });
+    const g = classProfInputs(barb(), false, { skills: ['athletics', 'survival'] });
     const key = (x: GrantInput) => x.spec.cat + ':' + x.spec.name;
     expect(g.map(key)).toEqual(['save:Strength', 'save:Constitution', 'armor:Light armor', 'armor:Medium armor', 'armor:Shields',
       'weapon:Simple weapons', 'weapon:Martial weapons', 'skill:Athletics', 'skill:Survival']);
-    expect(classProfInputs(cat, barb(), true, {}).map(key)).toEqual(['armor:Shields', 'weapon:Martial weapons']);
+    expect(classProfInputs(barb(), true, {}).map(key)).toEqual(['armor:Shields', 'weapon:Martial weapons']);
   });
   it('adds starting equipment A or B, or nothing', () => {
     const c = blankCharacter();
-    const a = addClassEquipment(c, cat, barb(), 'A');
+    const a = addPackage(c, cat, barb(), 'A');
     expect(a.inv.map((i) => [i.name, i.qty, i.eq])).toEqual([['Greataxe', 1, false], ['Handaxe', 4, false], ['Explorer’s Pack', 1, false]]);
     expect(a.coins.gp).toBe(15);
-    const b = addClassEquipment(c, cat, barb(), 'B');
+    const b = addPackage(c, cat, barb(), 'B');
     expect([b.inv.length, b.coins.gp]).toEqual([0, 75]);
-    expect(addClassEquipment(c, cat, barb(), 'none')).toBe(c);
+    expect(addPackage(c, cat, barb(), 'none')).toBe(c);
     expect(() => addFromCatalog(c, cat, barb(), A())).toThrow();
   });
 });

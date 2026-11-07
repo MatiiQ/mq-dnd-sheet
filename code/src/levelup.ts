@@ -7,7 +7,7 @@ import { masterySlots } from './actions';
 import { activeGrants } from './links';
 import { buildChoices, type FlowAnswers } from './catalog/flow';
 import { entriesOf, type Catalog } from './catalog/merge';
-import type { ChoiceSpec, ClassEntry, Entry, FeatureEntry } from './catalog/schema';
+import type { ChoiceSpec, ClassEntry, Entry, FeatureEntry, GrantSpec } from './catalog/schema';
 import { atLevel } from './catalog/copy';
 import { blankCharacter } from './defaults';
 import { ABILITIES, abilityMod, addGrants, effScore, num, pactFor, SKILLS, slotsFor, spellForRow, valueCtx, LEVEL_KEYS, LIST_KIND, maxHpOf, maxHpRaw, newId, normalize, removalSummary, removeRef, ROW_FIELDS, totalLevel, withoutKeys, type Ref, type RefKind } from './logic';
@@ -158,7 +158,6 @@ export function prereqCheck(c: Character, cls: ClassEntry | undefined, cat: Cata
 // it, the plan is the HP and the class level only.
 export function levelPlan(c: Character, pick: ClassPick, cat: Catalog | null, ans?: LevelAnswers): Plan | null {
   if (totalLevel(c) >= 20) return null;
-  void ans;
   const { c: x0, row } = withLevel(c, pick, cat);
   const r0 = x0.classes.find((y) => y.id === row)!;
   const cls = classEntry(cat, r0.clsId);
@@ -239,8 +238,12 @@ export function levelPlan(c: Character, pick: ClassPick, cat: Catalog | null, an
       if (owed > 0) steps.push({ key: 'grow:' + e.id + '/' + ch.id + '@' + n, kind: 'grow', title: e.name + ': ' + owed + ' more', entry: e, choice: ch, owed, held: heldPicks(x, cat, f.id, ch), onSheet: f.id });
     }
   }
-  // Weapon Mastery: a slot gained at this level (the Weapon Mastery rules, PHB p.91).
-  const slots = masterySlots(x);
+  // Weapon Mastery: a slot gained at this level (the Weapon Mastery rules, PHB p.91). A feature this level adds isn't on
+  // x yet, so its mastery grants count here too (Weapon Mastery at Fighter 1).
+  const gained = steps.flatMap((s) => (s.kind === 'feature' && !s.onSheet && s.entry && 'grants' in s.entry ? (s.entry.grants ?? []).map((g) => ({ g, cid: s.entry!.id })) : []))
+    .filter(({ g }) => g.kind === 'prof' && g.cat === 'mastery' && !g.target)
+    .reduce((t, { g, cid }) => t + num(x, (g as GrantSpec).val, { cid }), 0);
+  const slots = masterySlots(x) + gained;
   if (slots > c.mastery.length) steps.push({ key: 'mastery@' + n, kind: 'mastery', title: 'Weapon Mastery', owed: slots - c.mastery.length, held: [...c.mastery] });
   return { pick, cls, n, clsLvl: r.lvl, steps };
 }
@@ -282,7 +285,7 @@ export function applyLevel(c: Character, plan: Plan, ans: LevelAnswers, cat: Cat
       picks[s.key] = v;
     }
     if (isFirst || cls.multi) {
-      const inputs = classProfInputs(cat, cls, !isFirst, prof);
+      const inputs = classProfInputs(cls, !isFirst, prof);
       if (inputs.length) x = addGrants(x, 'class:' + row, inputs);
     }
   }
