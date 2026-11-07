@@ -380,6 +380,11 @@ const castFxOn = (c: Character, sp: Spell, lvl: number): Partial<Character> => {
 };
 const castEffects = (c: Character, sp: Spell, lvl: number = sp.lvl): Partial<Character> =>
   ({ ...(sp.c ? setConc({ id: sp.id, name: sp.name }) : {}), ...acOnCast(c, sp), ...effectOnCast(c, sp), ...castFxOn(c, sp, lvl) });
+// Chooses the item an effect is on (Magic Weapon's weapon), or clears it with null.
+export function setFxItem(c: Character, link: string, itemId: string | null): Partial<Character> {
+  const { item: _, ...rest } = c.castFx?.[link] ?? {};
+  return { castFx: { ...c.castFx, [link]: itemId ? { ...rest, item: itemId } : rest } };
+}
 // Keeps a castFx entry only while its effect is on, with a slot level of 1–9 and an item that is still there; a castFx
 // that isn't an object, or is left empty, goes. Run by normalize() (so migrate() too).
 function fixCastFx(c: Character): Character {

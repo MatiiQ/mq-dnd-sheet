@@ -4067,7 +4067,25 @@
     "conc": false,
     "ritual": false,
     "fx": "other",
-    "higher": "The bonus increases to +2 with a level 3–5 spell slot. The bonus increases to +3 with a level 6+ spell slot."
+    "higher": "The bonus increases to +2 with a level 3–5 spell slot. The bonus increases to +3 with a level 6+ spell slot.",
+    "grants": [
+      {
+        "kind": "atkBonus",
+        "name": "Magic Weapon",
+        "val": "@2:1,3:2,6:3",
+        "onItem": true,
+        "when": "active",
+        "id": "g1"
+      },
+      {
+        "kind": "dmgBonus",
+        "name": "Magic Weapon",
+        "val": "@2:1,3:2,6:3",
+        "onItem": true,
+        "when": "active",
+        "id": "g2"
+      }
+    ]
   },
   {
     "id": "spell/magnificent-mansion",

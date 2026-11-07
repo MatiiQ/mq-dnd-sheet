@@ -7,7 +7,7 @@ import { blankCharacter, druidSample, sampleCharacter } from './defaults';
 import { attacksPerAction, cantripDice, econOf, extraDamage, extraText, featureActions, hasMastery, lightExtra, masterySlots, otherWeapons, resOfFeature, spellActions, unarmedStrike, weaponAbility, weaponAttacks, weaponProficient, type Use } from './actions';
 import { weaponKind } from './hands';
 import { takeOut } from './inventory';
-import { addGrants, normalize } from './logic';
+import { addGrants, castSpell, normalize, setFxItem } from './logic';
 import { migrate } from './migrate';
 import { applyPatch } from './storage';
 import { dagger, dart, handaxe, handCrossbow, longbow, longsword, quarterstaff, rapier, shield, shortsword, spear, withClass, withClasses } from './test-fixtures';
@@ -612,5 +612,31 @@ describe('class levels in a multiclass', () => {
     const c: Character = { ...base, feats: [{ id: 'ma', g: 'class', name: 'Martial Arts', desc: '', cid: 'feature/monk/martial-arts' }],
       grants: [{ id: 'u', kind: 'unarmed', name: 'Martial Arts', die: '1:1d6,5:1d8', from: 'feature:ma' }] };
     expect(unarmedStrike(c).dmg).toMatch(/^1d6/);
+  });
+});
+
+describe('Magic Weapon on one weapon', () => {
+  const ls = longsword({ id: 'ls' }), dg = dagger({ id: 'dg' });
+  const mw: Spell = { id: 'mw', name: 'Magic Weapon', lvl: 2, time: 'Bonus Action', range: 'Touch' };
+  const g = (kind: 'atkBonus' | 'dmgBonus'): Grant => ({ id: kind, kind, name: 'Magic Weapon', val: '@2:1,3:2,6:3', onItem: true, when: 'active', from: 'spell:mw' } as Grant);
+  const base = (): Character => ({ ...blankCharacter(), inv: [ls, dg], spells: [mw], grants: [g('atkBonus'), g('dmgBonus')],
+    slotMax: [0, 4, 3, 3, 3, 0, 0, 0, 0, 0], slotUsed: Array(10).fill(0) });
+  const bonus = (c: Character, it: Item) => weaponAttacks(c, it)[0].hitParts.find((p) => p.label === 'Magic Weapon')?.value ?? 0;
+  const dmg = (c: Character, it: Item) => weaponAttacks(c, it)[0].dmgParts.find((p) => p.label === 'Magic Weapon')?.value ?? 0;
+  const cast = (lvl: number, item: string | null) => { const c = applyPatch(base(), (p) => castSpell(p, mw, lvl)); return applyPatch(c, (p) => setFxItem(p, 'spell:mw', item)); };
+  it('adds +1 to the weapon touched only (PHB p.295)', () => {
+    const c = cast(2, ls.id);
+    expect([bonus(c, ls), dmg(c, ls)]).toEqual([1, 1]);
+    expect(bonus(c, dg)).toBe(0);
+    expect(unarmedStrike(c).hitParts.some((p) => p.label === 'Magic Weapon')).toBe(false);
+  });
+  it('scales with the slot level', () => {
+    expect(bonus(cast(4, ls.id), ls)).toBe(2);
+  });
+  it('adds nothing with no weapon chosen, or after the weapon goes', () => {
+    expect(bonus(cast(2, null), ls)).toBe(0);
+    const c = cast(2, ls.id);
+    const gone = applyPatch(c, (p) => ({ inv: p.inv.filter((i) => i.id !== ls.id) }));
+    expect(gone.castFx?.['spell:mw']?.item).toBeUndefined();
   });
 });

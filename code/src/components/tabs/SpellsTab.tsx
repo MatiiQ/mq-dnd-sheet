@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import {
-  removeRef, ABILITIES, castingRows, itemOfSpell, scrollNote, scrollOf, pactLeft, clamp, CAST_NAMES, newId, ORDINAL, ownFreeCasts, setOwnFreeCast, SPELL_SORTS, acAfterEdit, castSpell, concAfterEdit, detectAcSpell, effectsAfterEdit, fmt, preparedCount, setConc, setSlotUsed,
+  removeRef, ABILITIES, castingRows, itemOfSpell, scrollNote, scrollOf, setFxItem, pactLeft, clamp, CAST_NAMES, newId, ORDINAL, ownFreeCasts, setOwnFreeCast, SPELL_SORTS, acAfterEdit, castSpell, concAfterEdit, detectAcSpell, effectsAfterEdit, fmt, preparedCount, setConc, setSlotUsed,
   slotsLeft, sortSpells, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, freeCastsOf, spellAttackFor, spellSaveDcFor
 } from '../../logic';
-import { hasActiveEffect, inactiveReason, linkOf, sourceLabel } from '../../links';
+import { hasActiveEffect, inactiveReason, isOn, linkOf, sourceLabel } from '../../links';
 import { BLANK_SPELL, draftFromSpell, keepPrep, spellFromForm, type SpellDraft } from '../../catalog/copy';
 import { patchEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { AcEffect, Ability, CastAbility, Character, ClassRow, Spell } from '../../types';
@@ -330,6 +330,8 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
   // while concentrating.
   const link = linkOf('spell', sp.id);
   const effect = !sp.c && hasActiveEffect(c, link);
+  // An effect on one weapon, while it is on: pick the weapon.
+  const onItem = isOn(c, link) && c.grants.some((g) => g.from === link && g.onItem);
   // An item's spell is cast from the item (its charges), never with a slot.
   const fromItem = !!itemOfSpell(c, sp);
   const concOf = { id: sp.id, name: sp.name };
@@ -394,6 +396,14 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
       )}
       <AcTargetSwitch sp={sp} />
       {effect && <EffectSwitch link={link} name={sp.name} />}
+      {onItem && (
+        // Magic Weapon: "a nonmagical weapon you touch" (PHB p.295).
+        <select className="input" style={{ minHeight: 44, width: 'auto' }} aria-label={'Weapon for ' + sp.name} value={c.castFx?.[link]?.item ?? ''}
+          onChange={(e) => update((p) => setFxItem(p, link, e.target.value || null))}>
+          <option value="">Choose a weapon</option>
+          {c.inv.filter((i) => (i.cat === 'weapon' || i.wrange) && !i.magic).map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+        </select>
+      )}
       {fromItem && <ItemCastButtons sp={sp} />}
       {!fromItem && (lvl === 0 || usable) && frees.map((r) => <FreeCastButton key={r.id} sp={sp} r={r} />)}
       {!fromItem && (!!first || !!pact) && usable && (

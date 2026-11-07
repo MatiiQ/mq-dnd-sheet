@@ -100,6 +100,18 @@ describe('entry forms and rows', () => {
     tab('Actions');
     expect(label('Read the scroll of Fireball, 1 left')).toBeTruthy();
   });
+  it('chooses the weapon Magic Weapon is on, from nonmagical weapons', () => {
+    const mw = { id: 'mw', name: 'Magic Weapon', lvl: 2, time: 'Bonus Action', range: 'Touch' };
+    const sword: Item = { id: 'ls', name: 'Longsword', qty: 1, eq: true, cat: 'weapon', wrange: 'melee', dmg: '1d8' };
+    const plus: Item = { id: 'p1', name: 'Mace +1', qty: 1, eq: true, cat: 'weapon', wrange: 'melee', dmg: '1d6', magic: 1 };
+    renderSheet({ inv: [sword, plus], spells: [mw], effectsOn: ['spell:mw'],
+      grants: [{ id: 'g', kind: 'atkBonus', name: 'Magic Weapon', val: '@2:1,3:2,6:3', onItem: true, when: 'active', from: 'spell:mw' }] });
+    tab('Spells');
+    const sel = label('Weapon for Magic Weapon') as HTMLSelectElement;
+    expect([...sel.options].map((o) => o.textContent)).toEqual(['Choose a weapon', 'Longsword']);
+    act(() => { sel.value = 'ls'; sel.dispatchEvent(new Event('change', { bubbles: true })); });
+    expect(saved().castFx).toEqual({ 'spell:mw': { item: 'ls' } });
+  });
   it('takes Haste out of AC when it is cast on another creature', () => {
     const haste = { id: 'h', name: 'Haste', lvl: 3, time: 'Action', range: '30 feet', c: true, acFx: 'bonus' as const, acVal: 2 };
     renderSheet({ spells: [haste], conc: { id: 'h', name: 'Haste' }, slotMax: [0, 0, 0, 1, 0, 0, 0, 0, 0, 0] });

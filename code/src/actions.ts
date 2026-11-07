@@ -96,6 +96,8 @@ function grantFits(c: Character, g: Grant, it: Item, use: Use, ab: Ability): boo
   if (g.prop && !hasProp(it, slug(g.prop))) return false;
   if (g.weapon && !weaponMatches(it, g.weapon)) return false;
   if (g.oneHand && (use === 'two-handed' || !aloneInOneHand(c, it))) return false;
+  // onItem: only the weapon the effect was cast on (Magic Weapon, "a nonmagical weapon you touch", PHB p.295).
+  if (g.onItem && c.castFx?.[g.from]?.item !== it.id) return false;
   return true;
 }
 const grantParts = (c: Character, kind: 'atkBonus' | 'dmgBonus', it: Item, use: Use, ab: Ability): AcPart[] =>
