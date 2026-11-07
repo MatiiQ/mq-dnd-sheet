@@ -267,3 +267,15 @@ describe('a buff cast on someone else', () => {
     expect(ids).toEqual(['spell/beacon-of-hope', 'spell/fly', 'spell/gaseous-form', 'spell/haste', 'spell/spider-climb', 'spell/stoneskin']);
   });
 });
+
+describe('a spent Spell Scroll', () => {
+  const sc: Item = { id: 'sc', name: 'Spell Scroll', qty: 0, eq: false, cid: 'item/spell-scroll' };
+  const sp: Spell = { id: 's', name: 'Haste', lvl: 3, time: 'Action', range: '30 feet', c: true, always: true, from: 'item:sc' };
+  it('keeps its spell row counting while its effect is on, and only then', () => {
+    const c: Character = { ...blankCharacter(), inv: [sc], spells: [sp], conc: { id: 's', name: 'Haste' } };
+    expect(inactiveReason(c, c.spells[0])).toBeNull();
+    expect(inactiveReason({ ...c, conc: null }, c.spells[0])).toBe('none left');
+    const potion = { ...sc, cid: 'item/potion-of-speed' };
+    expect(inactiveReason({ ...c, inv: [potion] }, c.spells[0])).toBe('none left');
+  });
+});

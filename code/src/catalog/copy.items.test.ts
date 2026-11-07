@@ -391,3 +391,11 @@ describe('an item’s spell', () => {
     expect(c.spells.find((s) => s.id === 'mine')!.from).toBeUndefined();
   });
 });
+
+describe('Spell Scroll', () => {
+  it('asks for the spell and adds it as an always-prepared row from the scroll', () => {
+    const c = addFromCatalog(blankCharacter(), cat, item('item/spell-scroll'), A({ c1: ['spell/fireball'] }));
+    const scroll = c.inv.find((i) => i.cid === 'item/spell-scroll')!;
+    expect(c.spells.find((s) => s.cid === 'spell/fireball')).toMatchObject({ always: true, from: 'item:' + scroll.id });
+  });
+});

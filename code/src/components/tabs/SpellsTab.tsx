@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  removeRef, ABILITIES, castingRows, itemOfSpell, pactLeft, clamp, CAST_NAMES, newId, ORDINAL, ownFreeCasts, setOwnFreeCast, SPELL_SORTS, acAfterEdit, castSpell, concAfterEdit, detectAcSpell, effectsAfterEdit, fmt, preparedCount, setConc, setSlotUsed,
+  removeRef, ABILITIES, castingRows, itemOfSpell, scrollNote, scrollOf, pactLeft, clamp, CAST_NAMES, newId, ORDINAL, ownFreeCasts, setOwnFreeCast, SPELL_SORTS, acAfterEdit, castSpell, concAfterEdit, detectAcSpell, effectsAfterEdit, fmt, preparedCount, setConc, setSlotUsed,
   slotsLeft, sortSpells, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, freeCastsOf, spellAttackFor, spellSaveDcFor
 } from '../../logic';
 import { hasActiveEffect, inactiveReason, linkOf, sourceLabel } from '../../links';
@@ -367,6 +367,7 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
 
   // A spell from an item that is off, or granted from a higher level, doesn't count yet.
   const why = inactiveReason(c, sp);
+  const note = scrollOf(c, sp) ? scrollNote(c, sp) : null;
   const head = (
     <span className="col" style={{ opacity: (lvl > 0 && !usable) || why ? 0.45 : 1 }}>
       <span className="row gap-6" style={{ fontWeight: 600 }}>
@@ -379,6 +380,7 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
       {(sp.dur || sp.comp) && <span className="muted">{[sp.dur, sp.comp].filter((x) => x).join(' · ')}</span>}
       {sp.dice && <span style={{ fontSize: 14, fontWeight: 700, marginTop: 2 }}>{sp.dice}</span>}
       {sp.castAb && sp.dc === undefined && sp.atkB === undefined && <span className="muted">Casts with {sp.castAb.toUpperCase()}: save DC {spellSaveDcFor(c, sp)} · attack {fmt(spellAttackFor(c, sp)!)}</span>}
+      {note && <span className="muted">{note}</span>}
       {(sp.dc !== undefined || sp.atkB !== undefined) && <span className="muted">{[sp.dc !== undefined && 'save DC ' + sp.dc, sp.atkB !== undefined && 'attack ' + fmt(sp.atkB)].filter(Boolean).join(' · ')}</span>}
     </span>
   );

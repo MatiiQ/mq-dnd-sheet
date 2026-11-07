@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type InputHTMLAttributes, type ReactNode } from 'react';
 import { DAMAGE_TYPES } from '../catalog/schema';
 import { effectCanTargetOther, inactiveReason } from '../links';
-import { acCanTargetOther, castFree, castFromItem, castLevelOf, clamp, fmt, freeCastsOf, itemOfSpell, ORDINAL, toggleAcTarget, toggleEffect, type AcPart } from '../logic';
+import { acCanTargetOther, castFree, castFromItem, castFromScroll, castLevelOf, clamp, fmt, freeCastsOf, itemOfSpell, ORDINAL, scrollOf, toggleAcTarget, toggleEffect, type AcPart } from '../logic';
 import { useSheet } from '../sheet';
 import { revealOf } from './nav';
 import type { Resource, Spell } from '../types';
@@ -210,6 +210,12 @@ export function ItemCastButtons({ sp, short }: { sp: Spell; short?: boolean }) {
   const item = itemOfSpell(c, sp);
   if (!item) return null;
   const why = inactiveReason(c, sp), off = why ? ' (' + why + ')' : '', left = item.count ?? 0;
+  // A Spell Scroll is read once (SRD 5.2.1, Spell Scroll).
+  if (scrollOf(c, sp)) return (
+    <button type="button" className="btn btn-sm toggle-btn" disabled={!!why || item.qty < 1}
+      aria-label={'Read the scroll of ' + sp.name + ', ' + item.qty + ' left' + off}
+      onClick={() => update((p) => castFromScroll(p, sp))}>Read scroll</button>
+  );
   const frees = freeCastsOf(c, sp.id);
   const amounts = sp.chg === undefined ? [] : Array.from({ length: (sp.chgMax ?? sp.chg) - sp.chg + 1 }, (_, i) => sp.chg! + i);
   return <>

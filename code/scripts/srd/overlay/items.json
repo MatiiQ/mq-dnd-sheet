@@ -1896,5 +1896,23 @@
         "id": "g1"
       }
     ]
+  },
+  "item/spell-scroll": {
+    "grants": [
+      {
+        "id": "c1",
+        "kind": "choice",
+        "name": "Spell",
+        "pick": 1,
+        "pool": "spell:lvl>=0"
+      },
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Scroll spell",
+        "spell": "$c1",
+        "always": true
+      }
+    ]
   }
 }

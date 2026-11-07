@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { blankCharacter, druidSample } from './defaults';
-import { castFromItem, castLevelOf, itemOfSpell, MULTICLASS_SLOTS, casterLevel, pactFor, slotsFor, pactLeft, spellForRow, saveDc, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, removeRef, modeSpeed, castSpell, concAfterEdit, preparedCount, setExhaustion, sortSpells, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, toggleCondition } from './logic';
+import { castFromItem, castFromScroll, castLevelOf, itemOfSpell, longRest, normalize, scrollNote, setConc, toggleEffect, walkSpeed, MULTICLASS_SLOTS, casterLevel, pactFor, slotsFor, pactLeft, spellForRow, saveDc, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, removeRef, modeSpeed, castSpell, concAfterEdit, preparedCount, setExhaustion, sortSpells, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, toggleCondition } from './logic';
 import { migrate } from './migrate';
 import { addFromCatalog } from './catalog/copy';
 import { mergeCatalog } from './catalog/merge';
@@ -368,5 +368,63 @@ describe('casting from an item’s charges', () => {
     expect(castFree(with_({ res }), fb, 'r').res![0].count).toBe(0);
     const own = { ...fb, from: undefined, needEq: undefined, needAtt: undefined };
     expect(castFree(with_({ res }, own), own, 'r').res![0].count).toBe(0);
+  });
+});
+
+describe('Spell Scroll', () => {
+  const scroll: Item = { id: 'sc', name: 'Spell Scroll', qty: 1, eq: false, cid: 'item/spell-scroll' };
+  const fireball: Spell = { id: 's', name: 'Fireball', lvl: 3, time: 'Action', range: '150 feet', always: true, from: 'item:sc', cid: 'spell/fireball', classes: 'sorcerer,wizard' };
+  const haste: Spell = { ...fireball, name: 'Haste', cid: 'spell/haste', c: true };
+  const dark: Spell = { ...fireball, name: 'Darkvision', lvl: 2, cid: 'spell/darkvision' };
+  const hasteG: Grant = { id: 'g', kind: 'speed', name: 'Speed doubled', mode: 'walk', val: 'walk2', when: 'active', from: 'spell:s' };
+  const of = (sp: Spell, p: Partial<Character> = {}, it: Item = scroll): Character =>
+    ({ ...blankCharacter(), speedBase: 30, inv: [it], spells: [sp], slotMax: [0, 4, 3, 3, 0, 0, 0, 0, 0, 0], slotUsed: Array(10).fill(0), ...p });
+  it('uses the scroll’s save DC and attack bonus by spell level (SRD 5.2.1, Spell Scroll)', () => {
+    expect(spellSaveDcFor(of(fireball), fireball)).toBe(15);
+    expect(spellAttackFor(of(fireball), fireball)).toBe(7);
+    expect(spellSaveDcFor(of(dark), dark)).toBe(13);
+  });
+  it('never spends a slot, nor casts as a plain item spell', () => {
+    expect(castSpell(of(fireball), fireball, 3)).toEqual({});
+    expect(castFromItem(of(haste), haste, 0)).toEqual({});
+  });
+  it('uses one scroll of several', () => {
+    expect(castFromScroll(of(fireball, {}, { ...scroll, qty: 2 }), fireball).inv[0].qty).toBe(1);
+  });
+  it('crumbles the last scroll of a spell with no lasting effect at once', () => {
+    const out = castFromScroll(of(fireball), fireball);
+    expect(out.inv).toEqual([]);
+    expect(out.spells).toEqual([]);
+  });
+  it('keeps the last scroll’s spell while its Concentration lasts, then drops both', () => {
+    const out = castFromScroll(of(haste, { grants: [hasteG] }), haste);
+    expect(out.inv[0].qty).toBe(0);
+    expect(out.spells).toHaveLength(1);
+    expect(out.conc).toEqual({ id: 's', name: 'Haste' });
+    expect(walkSpeed(out)).toBe(60);
+    const ended = normalize({ ...out, ...setConc(null) });
+    expect(ended.inv).toEqual([]);
+    expect(ended.spells).toEqual([]);
+  });
+  it('keeps a switched-on effect until it is switched off or a Long Rest', () => {
+    const senses = [{ id: 'x', name: 'Darkvision', range: '150 ft', when: 'active' as const, from: 'spell:s' }];
+    const out = castFromScroll(of(dark, { senses }), dark);
+    expect(out.inv[0].qty).toBe(0);
+    expect(out.effectsOn).toContain('spell:s');
+    expect(normalize({ ...out, ...toggleEffect(out, 'spell:s') }).inv).toEqual([]);
+    expect(normalize(longRest(out)).inv).toEqual([]);
+  });
+  it('drops a scroll set to quantity 0 by hand while its spell is off', () => {
+    expect(normalize(of(fireball, {}, { ...scroll, qty: 0 })).inv).toEqual([]);
+  });
+  it('notes a spell off the list, and one above the highest slot', () => {
+    const wiz = (c: Character) => withClass({ ...c, slotMax: [0, 4, 2, 0, 0, 0, 0, 0, 0, 0] }, { name: 'Wizard', clsId: 'class/wizard', lvl: 3, castAb: 'int' });
+    const cleric = { ...fireball, classes: 'cleric' };
+    expect(scrollNote(wiz(of(cleric)), cleric)).toBe('Not on your spell list: the scroll is unintelligible');
+    expect(scrollNote(wiz(of(fireball)), fireball)).toBe('Above your highest slot: Intelligence check DC 13 to cast');
+    expect(scrollNote(wiz(of(dark)), dark)).toBeNull();
+    const multi = withClasses({ ...of(fireball), slotMax: [0, 4, 3, 0, 0, 0, 0, 0, 0, 0] },
+      [{ name: 'Cleric', clsId: 'class/cleric', lvl: 1, castAb: 'wis' }, { name: 'Wizard', clsId: 'class/wizard', lvl: 3, castAb: 'int' }]);
+    expect(scrollNote(multi, fireball)).toBe('Above your highest slot: Intelligence check DC 13 to cast');
   });
 });

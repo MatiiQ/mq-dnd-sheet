@@ -167,7 +167,9 @@ function baseReason(c: Character, x: Linked, seen: Set<string>): string | null {
     // Nothing from an item inside a container counts, whatever its item checks (plan 6).
     if (item?.in) return 'in ' + (c.inv.find((i) => i.id === item.in)?.name ?? 'a container');
     // A potion's effect outlives the potion: a switched-on grant still counts at quantity 0, and a Long Rest clears effectsOn.
-    if (item && item.qty < 1 && !(x.when === 'active' && isOn(c, x.from!))) return 'none left';
+    // So does a spent Spell Scroll's spell row while its effect is on (castFromScroll in logic.ts).
+    const scrollRow = item?.cid === 'item/spell-scroll' && c.spells.some((s) => s === x && isOn(c, linkOf('spell', s.id)));
+    if (item && item.qty < 1 && !(x.when === 'active' && isOn(c, x.from!)) && !scrollRow) return 'none left';
     if (x.needEq && !(item && isEquipped(item))) return 'not equipped';
     if (x.needAtt && !c.attuneIds.includes(p.id)) return 'not attuned';
     if (x.needHand && !c.hands.includes(p.id)) return 'not in hand';

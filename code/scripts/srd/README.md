@@ -266,6 +266,9 @@ Source text cut short and other notes stay under "Items checked" above. The audi
 - Haste, Boots of Speed and Potion of Speed double the walking Speed (`walk2` on a walk grant), before Exhaustion and
   armor cuts; other speeds read the undoubled walk. Haste's end (Incapacitated and Speed 0 until the end of the
   target's next turn) stays text.
+- Spell Scroll: a choice of any spell (`spell:lvl>=0`) and a `spell` grant of it, always prepared. Its row reads the
+  scroll (quantity −1) with the scroll table's save DC and attack bonus, never a slot; the last scroll stays at quantity
+  0 while the spell's Concentration or switched-on effect lasts. The spell-list and higher-level checks are a note.
 - Boots of Striding and Springing: a walk `speed` grant with `floor` (the Speed is at least 30 ft, before any
   doubling). "Not reduced by weight or Heavy Armor" and the jump stay text: armor's Strength cut still applies.
 

@@ -4,7 +4,7 @@ import type { Catalog } from './catalog/merge';
 import { hasDice, isValue, valueAt, type ValueCtx } from './catalog/value';
 import type { ProfCat } from './catalog/names';
 import { canLoad, setHands } from './hands';
-import { activeGrants, charLevel, classLevel, dropLinkOnly, hasActiveEffect, INCAPACITATING, inactiveReason, isActive, isEquipped, LINKED_LISTS, srcKindOfLink, type SourceKind, linkOf, parseLink, sourceLabel, sourceOf, SRC_KINDS } from './links';
+import { activeGrants, charLevel, classLevel, dropLinkOnly, hasActiveEffect, INCAPACITATING, inactiveReason, isActive, isEquipped, isOn, LINKED_LISTS, srcKindOfLink, type SourceKind, linkOf, parseLink, sourceLabel, sourceOf, SRC_KINDS } from './links';
 import type { AcEffect, Ability, ArmorKind, CastAbility, Character, ClassRow, Coin, Die, Concentration, Counter, DefenseKind, Grant, HpSnapshot, Item, Linked, Recharge, Resource, Size, Spell, SpeedKind, SpellSort, Tab, Unarmored } from './types';
 
 export const ABILITIES: [Ability, string][] = [
@@ -176,9 +176,14 @@ export const partsTotal = (parts: AcPart[]): number => parts.reduce((t, p) => t 
 export const castAbOf = (c: Character, sp: Spell): Ability | null => sp.castAb ?? (c.castAb === 'none' ? null : c.castAb);
 const atkParts = (c: Character, ab: Ability): AcPart[] => [...castBase(c, ab), ...castGrantParts(c, 'spellAtk')];
 const dcParts = (c: Character, ab: Ability): AcPart[] => [{ label: 'Base', value: 8 }, ...castBase(c, ab), ...castGrantParts(c, 'spellDc')];
-// An item spell's own number ("save DC 15") wins over the caster's, which it doesn't need.
-export const spellSaveDcFor = (c: Character, sp: Spell) => { if (sp.dc !== undefined) return sp.dc; const ab = castAbOf(c, sp); return ab && partsTotal(dcParts(c, ab)); };
-export const spellAttackFor = (c: Character, sp: Spell) => { if (sp.atkB !== undefined) return sp.atkB; const ab = castAbOf(c, sp); return ab && partsTotal(atkParts(c, ab)); };
+// A Spell Scroll's save DC and attack bonus by spell level (SRD 5.2.1, Spell Scroll).
+export function SCROLL_NUMBERS(lvl: number): { dc: number; atkB: number } {
+  return lvl <= 2 ? { dc: 13, atkB: 5 } : lvl <= 4 ? { dc: 15, atkB: 7 } : lvl <= 6 ? { dc: 17, atkB: 9 } : lvl <= 8 ? { dc: 18, atkB: 10 } : { dc: 19, atkB: 11 };
+}
+// An item spell's own number ("save DC 15"), then a scroll's, win over the caster's, which they don't need.
+const itemNumbers = (c: Character, sp: Spell) => (scrollOf(c, sp) ? SCROLL_NUMBERS(sp.lvl) : null);
+export const spellSaveDcFor = (c: Character, sp: Spell) => { const n = sp.dc ?? itemNumbers(c, sp)?.dc; if (n !== undefined) return n; const ab = castAbOf(c, sp); return ab && partsTotal(dcParts(c, ab)); };
+export const spellAttackFor = (c: Character, sp: Spell) => { const n = sp.atkB ?? itemNumbers(c, sp)?.atkB; if (n !== undefined) return n; const ab = castAbOf(c, sp); return ab && partsTotal(atkParts(c, ab)); };
 // The same two numbers as parts, for the breakdown under each badge (PHB p.41): a shared base (modifier, PB), then each
 // number's own grants, one part per grant labelled by its source. Their sums equal the values below.
 export const spellAttackParts = (c: Character): AcPart[] | null => (c.castAb === 'none' ? null : atkParts(c, c.castAb));
@@ -410,10 +415,47 @@ export const castLevelOf = (sp: Spell, charges: number): number => (sp.castLvl ?
 // charges 0). Nothing happens while the spell doesn't count (unequipped, unattuned, in a bag, none left).
 export function castFromItem(c: Character, sp: Spell, charges = 0): Partial<Character> {
   const item = itemOfSpell(c, sp);
-  if (!item || !isActive(c, sp)) return {};
+  if (!item || scrollOf(c, sp) || !isActive(c, sp)) return {};
   if (sp.chg === undefined) return charges === 0 ? castEffects(c, sp) : {};
   if (charges < sp.chg || charges > (sp.chgMax ?? sp.chg) || (item.count ?? 0) < charges) return {};
   return { inv: c.inv.map((i) => (i.id === item.id ? { ...i, count: (i.count ?? 0) - charges } : i)), ...castEffects(c, sp) };
+}
+// The Spell Scroll a spell row comes from.
+export const SCROLL_ID = 'item/spell-scroll';
+export function scrollOf(c: Character, sp: Spell): Item | undefined {
+  const item = itemOfSpell(c, sp);
+  return item?.cid === SCROLL_ID ? item : undefined;
+}
+// Reading a scroll casts its spell and uses the scroll (SRD 5.2.1, Spell Scroll: "the scroll crumbles to dust"). The
+// last one's effect outlives it, as a potion's does: while its Concentration or switched-on effect lasts, the scroll
+// stays at quantity 0 with its spell row (the effect's grants live on that row); dropSpentScrolls removes both once the
+// effect ends, or at once for a spell with no lasting effect.
+export function castFromScroll(c: Character, sp: Spell): Character {
+  const scroll = scrollOf(c, sp);
+  if (!scroll || scroll.qty < 1 || !isActive(c, sp)) return c;
+  const inv = c.inv.map((i) => (i.id === scroll.id ? { ...i, qty: i.qty - 1 } : i));
+  return dropSpentScrolls({ ...c, ...castEffects(c, sp), inv });
+}
+// Every Spell Scroll at quantity 0 whose spell isn't on goes, with its spell row (removeRef). Run by normalize().
+export function dropSpentScrolls(c: Character): Character {
+  const spent = c.inv.filter((i) => i.cid === SCROLL_ID && i.qty < 1
+    && !c.spells.some((s) => s.from === linkOf('item', i.id) && isOn(c, linkOf('spell', s.id))));
+  return spent.reduce((x, i) => removeRef(x, { kind: 'item', id: i.id }), c);
+}
+// Why a scroll may not work for this character: not on any class's spell list, or above every slot level it has (an
+// ability check, DC 10 + the spell's level, SRD 5.2.1). The ability is the first casting row's whose class has the
+// spell; a multiclass character with two such lists gets the first one's (simplification). A spell with no class list
+// (typed by hand) gets no note.
+export function scrollNote(c: Character, sp: Spell): string | null {
+  if (!sp.classes) return null;
+  const list = sp.classes.toLowerCase().split(',').map((x) => x.trim());
+  const onList = c.classes.filter((r) => list.includes((r.clsId.replace(/^class\//, '') || r.name).toLowerCase()));
+  if (!onList.length) return 'Not on your spell list: the scroll is unintelligible';
+  const highest = Math.max(0, ...c.slotMax.map((n, l) => (n > 0 ? l : 0)), c.pactMax > 0 ? c.pactLvl : 0);
+  if (sp.lvl <= highest) return null;
+  const ab = castingRows(c).find((r) => onList.includes(r))?.castAb ?? castAbOf(c, sp);
+  const name = ABILITIES.find(([k]) => k === ab)?.[1];
+  return 'Above your highest slot: ' + (name ? name + ' check' : 'spellcasting ability check') + ' DC ' + (10 + sp.lvl) + ' to cast';
 }
 // The resources that cast this spell: its own free casts and a feature's (Favored Enemy's Hunter's Mark).
 export const freeCastsOf = (c: Character, spellId: string) => c.res.filter((r) => r.casts === spellId);
@@ -825,7 +867,8 @@ export function normalize(c0: Character): Character {
   const inv = c.inv.map(capped);
   const top = maxHpOf(c);
   if (c.hp > top || c.pactUsed > c.pactMax) changed = true;
-  return changed ? { ...c, res, inv, hp: Math.min(c.hp, top), pactUsed: Math.min(c.pactUsed, c.pactMax) } : c;
+  // Last, a spent Spell Scroll whose effect has ended goes (castFromScroll).
+  return dropSpentScrolls(changed ? { ...c, res, inv, hp: Math.min(c.hp, top), pactUsed: Math.min(c.pactUsed, c.pactMax) } : c);
 }
 
 // Resource groups: a custom type name, else the source kind, else Other. Source kinds in SRC_KINDS order, then custom

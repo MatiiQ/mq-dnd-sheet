@@ -86,6 +86,20 @@ describe('entry forms and rows', () => {
       expect(buttons().every((b) => b.disabled)).toBe(true);
     });
   });
+  it('reads a Spell Scroll from its spell row, with no slot button', () => {
+    const scroll: Item = { id: 'sc', name: 'Spell Scroll', qty: 2, eq: false, cid: 'item/spell-scroll' };
+    const fb = { id: 'fb', name: 'Fireball', lvl: 3, time: 'Action', range: '150 feet', always: true, from: 'item:sc', classes: 'wizard',
+      fx: 'damage' as const, dmg: '8d6', dtype: 'Fire', save: 'dex' as const };
+    renderSheet({ inv: [scroll], spells: [fb], slotMax: [0, 0, 0, 1, 0, 0, 0, 0, 0, 0] });
+    tab('Spells');
+    expect(label('Cast Fireball with a level 3 slot, 1 left')).toBeFalsy();
+    expect(document.body.textContent).toContain('Not on your spell list: the scroll is unintelligible');
+    tap(label('Read the scroll of Fireball, 2 left'));
+    expect(saved().inv[0].qty).toBe(1);
+    expect(saved().slotUsed[3]).toBe(0);
+    tab('Actions');
+    expect(label('Read the scroll of Fireball, 1 left')).toBeTruthy();
+  });
   it('takes Haste out of AC when it is cast on another creature', () => {
     const haste = { id: 'h', name: 'Haste', lvl: 3, time: 'Action', range: '30 feet', c: true, acFx: 'bonus' as const, acVal: 2 };
     renderSheet({ spells: [haste], conc: { id: 'h', name: 'Haste' }, slotMax: [0, 0, 0, 1, 0, 0, 0, 0, 0, 0] });
