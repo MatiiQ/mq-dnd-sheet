@@ -300,6 +300,34 @@ describe('speed, initiative and size', () => {
   });
 });
 
+describe('doubled Speed', () => {
+  const w2 = (p: Partial<Grant> = {}) => gr({ kind: 'speed', mode: 'walk', val: 'walk2', ...p });
+  it('doubles the walking Speed after the flat walk grants (Haste, PHB p.284)', () => {
+    expect(walkSpeed(make({ speedBase: 30, grants: [gr({ id: 'a', kind: 'speed', mode: 'walk', val: '10' }), w2()] }))).toBe(80);
+  });
+  it('doubles once for several doubling grants', () => {
+    expect(walkSpeed(make({ speedBase: 30, grants: [w2({ id: 'a' }), w2({ id: 'b' })] }))).toBe(60);
+  });
+  it('doubles before the Exhaustion cut', () => {
+    expect(speedNow(make({ speedBase: 30, exh: 1, grants: [w2()] }))).toBe(55);
+  });
+  it('ignores a doubling grant whose source is off', () => {
+    expect(walkSpeed(make({ speedBase: 30, effectsOn: [], grants: [w2({ when: 'active' })] }))).toBe(30);
+  });
+  it('is 0 while Grappled', () => {
+    expect(speedNow(make({ speedBase: 30, conds: { Grappled: true }, grants: [w2()] }))).toBe(0);
+  });
+  it('leaves other speeds on the undoubled walk', () => {
+    const c = make({ speedBase: 30, grants: [w2(), gr({ id: 'f', kind: 'speed', mode: 'fly', val: 'walk' }), gr({ id: 's', kind: 'speed', mode: 'swim', val: 'walk2' })] });
+    expect(modeSpeed(c, 'fly').base).toBe(30);
+    expect(modeSpeed(c, 'swim').base).toBe(60);
+  });
+  it('reads the doubling in its chip', () => {
+    const c = make({ speedBase: 30, grants: [w2({ from: 'feature:f10' })] });
+    expect(grantChips(c, 'feature:f10').map((x) => x.label)).toContain('Speed × 2');
+  });
+});
+
 describe('senses and defenses', () => {
   it('shows a defense once per name with every source, active ones only', () => {
     const cloak: Item = { id: 'ck', name: 'Cloak', qty: 1, eq: true };

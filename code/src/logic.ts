@@ -499,16 +499,22 @@ export const stealthDisBy = (c: Character): Item | undefined => c.inv.find((i) =
 // Exhaustion and armor's Strength both cut every speed: a deliberate reading of the armor rule's "Speed", matching the
 // Exhaustion note.
 export const speedOf = (c: Character, base: number) => (zeroSpeedBy(c).length ? 0 : Math.max(0, base - 5 * c.exh - (armorSlowBy(c) ? 10 : 0)));
-// Walking Speed before Exhaustion and conditions: the typed base plus walking speed grants (Wood Elf +5 ft).
-export const walkSpeed = (c: Character) => c.speedBase + activeGrants(c, 'speed').filter((g) => g.mode === 'walk').reduce((t, g) => t + num(c, g.val, g), 0);
+// Walking Speed before Exhaustion and conditions, undoubled: the typed base plus flat walking speed grants (Wood Elf
+// +5 ft).
+const walkGrants = (c: Character) => activeGrants(c, 'speed').filter((g) => g.mode === 'walk');
+export const walkSpeedBase = (c: Character) => c.speedBase + walkGrants(c).filter((g) => g.val !== 'walk2').reduce((t, g) => t + num(c, g.val, g), 0);
+// A 'walk2' walk grant doubles the Speed (Haste, PHB p.284; Boots of Speed, SRD 5.2.1), once however many count. The PHB
+// gives no order for doubling and reductions: the sheet doubles first, then speedOf cuts Exhaustion and armor.
+export const walkSpeed = (c: Character) => walkSpeedBase(c) * (walkGrants(c).some((g) => g.val === 'walk2') ? 2 : 1);
 // Another speed: the typed one or the best grant, whichever is higher ('walk' means equal to the walking Speed).
 export function modeSpeed(c: Character, k: SpeedKind): { base: number; hover: boolean; by?: string } {
   const typed = c.speeds[k] || 0;
   let base = typed, by: string | undefined;
   const mine = activeGrants(c, 'speed').filter((g) => g.mode === k);
   for (const g of mine) {
-    // walk2: twice the Speed (Aquatic Adaptation, PHB p.146).
-    const v = g.val === 'walk' ? walkSpeed(c) : g.val === 'walk2' ? 2 * walkSpeed(c) : num(c, g.val, g);
+    // walk2: twice the Speed (Aquatic Adaptation, PHB p.146). Both read the undoubled walk (simplification): a Fly Speed
+    // "equal to your Speed" under Haste stays the walk, and twice the Speed never becomes four times.
+    const v = g.val === 'walk' ? walkSpeedBase(c) : g.val === 'walk2' ? 2 * walkSpeedBase(c) : num(c, g.val, g);
     if (v > base) { base = v; by = sourceLabel(c, g) ?? g.name; }
   }
   const hover = mine.some((g) => g.hover);
@@ -1125,7 +1131,7 @@ export function removalSummary(c: Character, ref: Ref): { goes: string[]; keep: 
     if (!g?.counted) continue;
     const src = sourceOf(c, g.from)?.name ?? g.name, v = num(c, g.val, g);
     if (g.kind === 'abil' && g.ab) keep.push(`${g.ab.toUpperCase()} ${effScore(c, g.ab as Ability)} still includes ${fmt(v)} from ${src}${hand}`);
-    else if (g.kind === 'speed' && g.mode === 'walk') keep.push(`Speed ${walkSpeed(c)} ft still includes ${fmt(v)} ft from ${src}${hand}`);
+    else if (g.kind === 'speed' && g.mode === 'walk') keep.push(`Speed ${walkSpeed(c)} ft still includes ${g.val === 'walk2' ? 'the doubling' : fmt(v) + ' ft'} from ${src}${hand}`);
     else if (g.kind === 'speed' && g.mode) keep.push(`${capital(g.mode)} ${modeSpeed(c, g.mode as SpeedKind).base} ft still includes this grant`);
     else if (g.kind === 'init') keep.push(`Initiative ${fmt(initiative(c))} still includes ${fmt(v)} from ${src}${hand}`);
     else if (g.kind === 'hpLvl') keep.push(`Max HP ${maxHpOf(c)} still includes ${fmt(v * classLevel(c, g))} from ${src}${hand}`);
@@ -1148,7 +1154,7 @@ function grantLabel(c: Character, g: Grant): string {
   switch (g.kind) {
     case 'abil': return fmt(v) + ' ' + (g.ab ?? '').toUpperCase();
     case 'prof': return g.target ? SKILLS.find(([k]) => k === g.target)?.[1] ?? ABILITIES.find(([k]) => k === g.target)?.[1] ?? g.target : g.name;
-    case 'speed': return g.mode === 'walk' ? 'Speed ' + fmt(v) + ' ft' : capital(g.mode ?? '') + (g.val === 'walk' ? ' = Speed' : g.val === 'walk2' ? ' = 2 × Speed' : ' ' + v + ' ft');
+    case 'speed': return g.mode === 'walk' ? (g.val === 'walk2' ? 'Speed × 2' : 'Speed ' + fmt(v) + ' ft') : capital(g.mode ?? '') + (g.val === 'walk' ? ' = Speed' : g.val === 'walk2' ? ' = 2 × Speed' : ' ' + v + ' ft');
     case 'ac': return g.acMode === 'bonus' ? fmt(v) + ' AC' : g.acMode === 'dexCap' ? 'Medium armor Dex max ' + fmt(v) : g.name;
     case 'init': return 'Initiative ' + fmt(v);
     case 'hpLvl': return fmt(v) + ' HP per level';

@@ -261,6 +261,9 @@ Source text cut short and other notes stay under "Items checked" above. The audi
   speeds aren't turned off. A rider counts while the weapon is equipped, not only while it is in hand. Casting
   Longstrider, Freedom of Movement, Protection from Poison or Wind Walk switches the effect on, even on an ally, until
   the player taps Off. Summon Dragon's resistance is one row with the type unnamed.
+- Haste, Boots of Speed and Potion of Speed double the walking Speed (`walk2` on a walk grant), before Exhaustion and
+  armor cuts; other speeds read the undoubled walk. Haste's end (Incapacitated and Speed 0 until the end of the
+  target's next turn) stays text.
 
 ## Data changes from the catalog feature gaps (2026-11-05)
 

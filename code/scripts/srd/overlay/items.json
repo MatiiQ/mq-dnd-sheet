@@ -1798,5 +1798,47 @@
         "id": "g1"
       }
     ]
+  },
+  "item/boots-of-speed": {
+    "grants": [
+      {
+        "kind": "speed",
+        "name": "Speed doubled",
+        "mode": "walk",
+        "val": "walk2",
+        "when": "active",
+        "needEq": true,
+        "needAtt": true,
+        "id": "g1"
+      }
+    ]
+  },
+  "item/potion-of-speed": {
+    "grants": [
+      {
+        "kind": "speed",
+        "name": "Speed doubled",
+        "mode": "walk",
+        "val": "walk2",
+        "when": "active",
+        "id": "g1"
+      },
+      {
+        "kind": "ac",
+        "name": "+2 AC",
+        "acMode": "bonus",
+        "val": "2",
+        "when": "active",
+        "id": "g2"
+      },
+      {
+        "kind": "defense",
+        "name": "Advantage on Dexterity saves",
+        "def": "adv",
+        "target": "Dexterity saves",
+        "when": "active",
+        "id": "g3"
+      }
+    ]
   }
 }

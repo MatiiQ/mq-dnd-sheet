@@ -184,6 +184,7 @@ describe('grants and links', () => {
       expect(keep({ mode: 'walk', val: '5' })).toBe('Speed 35 ft still includes +5 ft from Domain; lower it by hand');
       expect(keep({ mode: 'climb', val: 'walk' })).toBe('Climb 30 ft still includes this grant');
       expect(keep({ mode: 'fly', val: '60' })).toBe('Fly 60 ft still includes this grant');
+      expect(keep({ mode: 'walk', val: 'walk2' })).toBe('Speed 35 ft still includes the doubling from Domain; lower it by hand');
     });
   });
   describe('removal cascade', () => {

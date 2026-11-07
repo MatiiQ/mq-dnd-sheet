@@ -825,7 +825,19 @@
     "desc": "While you wear these boots, you can take a Bonus Action to click the boots’ heels together. If you do, the boots double your Speed, and any creature that makes an Opportunity Attack against you has Disadvantage on the attack roll. If you click your heels together again, you end the effect. When you’ve used the boots’ property for a total of 10 minutes, the magic ceases to function for you until you finish a Long Rest.",
     "cat": "magic",
     "rarity": "Rare",
-    "attune": true
+    "attune": true,
+    "grants": [
+      {
+        "kind": "speed",
+        "name": "Speed doubled",
+        "mode": "walk",
+        "val": "walk2",
+        "when": "active",
+        "needEq": true,
+        "needAtt": true,
+        "id": "g1"
+      }
+    ]
   },
   {
     "id": "item/boots-of-striding-and-springing",
@@ -4251,7 +4263,33 @@
     "src": "srd",
     "desc": "When you drink this potion, you gain the effect of the Haste spell for 1 minute (no Concentration required) without suffering the wave of lethargy that typically occurs when the effect ends. This potion’s yellow fluid is streaked with black and swirls on its own.",
     "cat": "magic",
-    "rarity": "Very Rare"
+    "rarity": "Very Rare",
+    "grants": [
+      {
+        "kind": "speed",
+        "name": "Speed doubled",
+        "mode": "walk",
+        "val": "walk2",
+        "when": "active",
+        "id": "g1"
+      },
+      {
+        "kind": "ac",
+        "name": "+2 AC",
+        "acMode": "bonus",
+        "val": "2",
+        "when": "active",
+        "id": "g2"
+      },
+      {
+        "kind": "defense",
+        "name": "Advantage on Dexterity saves",
+        "def": "adv",
+        "target": "Dexterity saves",
+        "when": "active",
+        "id": "g3"
+      }
+    ]
   },
   {
     "id": "item/potion-of-vitality",

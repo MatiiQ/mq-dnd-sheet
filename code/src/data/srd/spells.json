@@ -3174,7 +3174,25 @@
     "ritual": false,
     "fx": "other",
     "acFx": "bonus",
-    "acVal": 2
+    "acVal": 2,
+    "grants": [
+      {
+        "kind": "speed",
+        "name": "Speed doubled",
+        "mode": "walk",
+        "val": "walk2",
+        "when": "active",
+        "id": "g1"
+      },
+      {
+        "kind": "defense",
+        "name": "Advantage on Dexterity saves",
+        "def": "adv",
+        "target": "Dexterity saves",
+        "when": "active",
+        "id": "g2"
+      }
+    ]
   },
   {
     "id": "spell/heal",
