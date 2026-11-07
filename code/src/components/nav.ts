@@ -13,7 +13,9 @@ export function jumpTo(t: PillTarget, update: (p: Partial<Character>) => void): 
 }
 
 // A row that a shortcut goes to and opens (reveal, in the Sheet context).
-export type RevealTarget = { kind: 'feature' | 'item' | 'spell' | 'res'; id: string };
+// cast: the spell row opens its cast choices too; summon: the summon step opens under the spell row after the tab
+// switch (a cast of a spell that makes a creature, from another tab). Transient, never saved.
+export type RevealTarget = { kind: 'feature' | 'item' | 'spell' | 'res'; id: string; cast?: true; summon?: { lvl?: number } };
 
 // The target of a `from` link whose source is still on the sheet; null for a dangling link or a named-only source.
 export function revealOf(c: Character, from: string | undefined): RevealTarget | null {

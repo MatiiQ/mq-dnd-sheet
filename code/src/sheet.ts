@@ -2,17 +2,21 @@ import { createContext, useContext, useState } from 'react';
 import { newId } from './logic';
 import type { Patch } from './storage';
 import type { RevealTarget } from './components/nav';
-import type { Character, Tab } from './types';
+import type { Character, Creature, Tab } from './types';
 
 // Only one add/edit form is open at a time across the sheet.
 // pick-*: the catalog pickers, which count as a form (opening one closes any other).
-export type FormKind = 'attack' | 'rider' | 'res' | 'spell' | 'item' | 'feat' | 'sense' | 'acmod' | 'pick-spell' | 'pick-item' | 'pick-feat';
-export type FormState = { kind: FormKind; id: string | null } | null;
+// creature: the companion editor in the Companions section. summon: the summon step under a source row (the picker or
+// the pre-linked editor); its id is the source link ('spell:<id>' / 'feature:<id>'), never an entry id.
+export type FormKind = 'attack' | 'rider' | 'res' | 'spell' | 'item' | 'feat' | 'sense' | 'acmod' | 'pick-spell' | 'pick-item' | 'pick-feat' | 'creature' | 'summon';
+// lvl: the cast's slot level (summon; absent for a feature's Summon). draft: prefilled creature fields the editor reads
+// once when it opens (the scroll case, whose source row is gone). Transient, never saved.
+export type FormState = { kind: FormKind; id: string | null; lvl?: number; draft?: Partial<Creature> } | null;
 
 // A tab's draft goes when its tab unmounts, so its form closes too: reopened, it would be blank and saving would overwrite the entry.
 // Left-column forms stay mounted and keep their text.
 export const formAfterTabChange = (form: FormState): FormState =>
-  form && ['res', 'sense', 'acmod'].includes(form.kind) ? form : null;
+  form && ['res', 'sense', 'acmod', 'creature'].includes(form.kind) ? form : null;
 
 export interface SheetCtx {
   c: Character;
@@ -26,7 +30,8 @@ export interface SheetCtx {
   reveal: (t: RevealTarget) => void;
   markFocusUsed: (n: number) => void;
 }
-export type Focus = { id: string; n: number; tab?: Tab; used: boolean };
+// cast: a spell row opens its upcast list too ("Cast again" on a dismissed companion).
+export type Focus = { id: string; n: number; tab?: Tab; used: boolean; cast?: true };
 
 export const Sheet = createContext<SheetCtx | null>(null);
 export function useSheet(): SheetCtx {
