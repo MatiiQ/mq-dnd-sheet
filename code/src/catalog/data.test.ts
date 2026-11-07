@@ -19,6 +19,13 @@ describe('committed SRD data', () => {
     expect(all.filter((e) => e.src !== 'srd').map((e) => e.id)).toEqual([]);
     expect(new Set(all.map((e) => e.id)).size).toBe(all.length);
   });
+  it('cast an item spell at castLvl no lower than the spell’s own level', () => {
+    const byId = new Map(all.map((e) => [e.id, e]));
+    for (const e of all) for (const s of specs(e)) {
+      if (s.kind !== 'spell' || s.castLvl === undefined || s.spell?.startsWith('$')) continue;
+      expect([e.id, s.spell, s.castLvl >= ((byId.get(s.spell!) as SpellEntry | undefined)?.lvl ?? 99)]).toEqual([e.id, s.spell, true]);
+    }
+  });
   it('hold no page, abils, skills on a background, tool or short', () => {
     expect(all.filter((e) => 'page' in e).map((e) => e.id)).toEqual([]);
     expect(all.filter((e) => e.kind === 'background' && ('abils' in e || 'skills' in e || 'tool' in e)).map((e) => e.id)).toEqual([]);

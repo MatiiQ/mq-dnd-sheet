@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type InputHTMLAttributes, type ReactNode } from 'react';
 import { DAMAGE_TYPES } from '../catalog/schema';
-import { effectCanTargetOther } from '../links';
-import { acCanTargetOther, castFree, clamp, fmt, toggleAcTarget, toggleEffect, type AcPart } from '../logic';
+import { effectCanTargetOther, inactiveReason } from '../links';
+import { acCanTargetOther, castFree, castFromItem, castLevelOf, clamp, fmt, freeCastsOf, itemOfSpell, ORDINAL, toggleAcTarget, toggleEffect, type AcPart } from '../logic';
 import { useSheet } from '../sheet';
 import { revealOf } from './nav';
 import type { Resource, Spell } from '../types';
@@ -190,15 +190,40 @@ export function AcTargetSwitch({ sp }: { sp: Spell }) {
   );
 }
 
-// A resource that casts this spell. short: the narrow Actions row leaves out the word "left".
-export function FreeCastButton({ sp, r, short }: { sp: Spell; r: Resource; short?: boolean }) {
+// A resource that casts this spell. short: the narrow Actions row leaves out the word "left". off: why it can't be used
+// now (an item spell whose item is off), shown disabled.
+export function FreeCastButton({ sp, r, short, off }: { sp: Spell; r: Resource; short?: boolean; off?: string | null }) {
   const { update } = useSheet();
   const used = r.count <= 0;
   return (
-    <button type="button" aria-pressed={used} className={'btn btn-sm toggle-btn' + (used ? ' used' : '')}
-      aria-label={used ? 'Free casts of ' + sp.name + ' (' + r.name + ') used up; tap to give one back' : 'Use a free cast of ' + sp.name + ' (' + r.name + '), ' + r.count + ' left'}
+    <button type="button" aria-pressed={used} className={'btn btn-sm toggle-btn' + (used ? ' used' : '')} disabled={!!off}
+      aria-label={(used ? 'Free casts of ' + sp.name + ' (' + r.name + ') used up; tap to give one back' : 'Use a free cast of ' + sp.name + ' (' + r.name + '), ' + r.count + ' left') + (off ? ' (' + off + ')' : '')}
       onClick={() => update((p) => castFree(p, sp, r.id))}>{used ? 'Free used' : 'Free · ' + r.count + (short ? '' : ' left')}</button>
   );
+}
+
+// An item spell's casts, in place of slot buttons: one button per number of charges (each above the cost is one slot
+// level higher), or one Cast for a spell cast at will; and the item's free casts. Disabled while the spell doesn't
+// count (unequipped, unattuned, in a bag), never a tap that does nothing.
+export function ItemCastButtons({ sp, short }: { sp: Spell; short?: boolean }) {
+  const { c, update } = useSheet();
+  const item = itemOfSpell(c, sp);
+  if (!item) return null;
+  const why = inactiveReason(c, sp), off = why ? ' (' + why + ')' : '', left = item.count ?? 0;
+  const frees = freeCastsOf(c, sp.id);
+  const amounts = sp.chg === undefined ? [] : Array.from({ length: (sp.chgMax ?? sp.chg) - sp.chg + 1 }, (_, i) => sp.chg! + i);
+  return <>
+    {frees.map((r) => <FreeCastButton key={r.id} sp={sp} r={r} short={short} off={why} />)}
+    {amounts.map((n) => (
+      <button key={n} type="button" className="btn btn-sm toggle-btn" disabled={!!why || left < n}
+        aria-label={'Cast ' + sp.name + ' with ' + n + (n === 1 ? ' charge' : ' charges') + ' of ' + item.name + ', ' + left + ' left' + off}
+        onClick={() => update((p) => castFromItem(p, sp, n))}>{n + (n === 1 ? ' charge' : ' charges') + ' · ' + ORDINAL[castLevelOf(sp, n)] + ' level'}</button>
+    ))}
+    {sp.chg === undefined && !frees.length && (
+      <button type="button" className="btn btn-sm toggle-btn" disabled={!!why} aria-label={'Cast ' + sp.name + ' from ' + item.name + off}
+        onClick={() => update((p) => castFromItem(p, sp, 0))}>Cast</button>
+    )}
+  </>;
 }
 
 // ---------- number input: keeps the raw text while typing, commits valid numbers ----------

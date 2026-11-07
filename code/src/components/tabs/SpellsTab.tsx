@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  removeRef, ABILITIES, castingRows, pactLeft, clamp, CAST_NAMES, newId, ORDINAL, ownFreeCasts, setOwnFreeCast, SPELL_SORTS, acAfterEdit, castSpell, concAfterEdit, detectAcSpell, effectsAfterEdit, fmt, preparedCount, setConc, setSlotUsed,
+  removeRef, ABILITIES, castingRows, itemOfSpell, pactLeft, clamp, CAST_NAMES, newId, ORDINAL, ownFreeCasts, setOwnFreeCast, SPELL_SORTS, acAfterEdit, castSpell, concAfterEdit, detectAcSpell, effectsAfterEdit, fmt, preparedCount, setConc, setSlotUsed,
   slotsLeft, sortSpells, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, freeCastsOf, spellAttackFor, spellSaveDcFor
 } from '../../logic';
 import { hasActiveEffect, inactiveReason, linkOf, sourceLabel } from '../../links';
@@ -10,7 +10,7 @@ import type { AcEffect, Ability, CastAbility, Character, ClassRow, Spell } from 
 import { removalNote } from '../Chips';
 import { SpellPicker } from '../pickers/SpellPicker';
 import { SourcePicker } from '../SourcePicker';
-import { AcTargetSwitch, AddButton, Caret, DamageTypeField, DieBadge, EffectSwitch, EntryForm, EntryRow, FreeCastButton, NumInput, PartTiles, Step, TextField, UsePips } from '../ui';
+import { AcTargetSwitch, AddButton, Caret, DamageTypeField, DieBadge, EffectSwitch, EntryForm, EntryRow, FreeCastButton, ItemCastButtons, NumInput, PartTiles, Step, TextField, UsePips } from '../ui';
 
 const AC_EFFECTS: [AcEffect | '', string][] = [['', 'None'], ['bonus', 'Bonus'], ['base', 'Base (+ DEX)'], ['floor', 'Floor']];
 const TIMES = ['Action', 'Bonus Action', 'Reaction', '1 Minute', '10 Minutes', '1 Hour'];
@@ -330,6 +330,8 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
   // while concentrating.
   const link = linkOf('spell', sp.id);
   const effect = !sp.c && hasActiveEffect(c, link);
+  // An item's spell is cast from the item (its charges), never with a slot.
+  const fromItem = !!itemOfSpell(c, sp);
   const concOf = { id: sp.id, name: sp.name };
 
   const casts: { l: number; left: number }[] = [];
@@ -390,8 +392,9 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
       )}
       <AcTargetSwitch sp={sp} />
       {effect && <EffectSwitch link={link} name={sp.name} />}
-      {(lvl === 0 || usable) && frees.map((r) => <FreeCastButton key={r.id} sp={sp} r={r} />)}
-      {(!!first || !!pact) && usable && (
+      {fromItem && <ItemCastButtons sp={sp} />}
+      {!fromItem && (lvl === 0 || usable) && frees.map((r) => <FreeCastButton key={r.id} sp={sp} r={r} />)}
+      {!fromItem && (!!first || !!pact) && usable && (
         <div role="group" aria-label={'Spell slots for ' + sp.name} className="row wrap gap-6">
           {first && <button type="button" aria-label={'Cast ' + sp.name + ' with a level ' + first.l + ' slot, ' + first.left + ' left'}
             className="btn btn-sm" style={{ border: '1px solid var(--accent)', background: 'transparent', color: 'var(--accent)' }} onClick={() => castWith(first.l)}>Cast {ORDINAL[first.l]}</button>}
@@ -408,7 +411,7 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
     </div>
   );
 
-  const noSlots = lvl > 0 && !frees.some((r) => r.count > 0) && !first && !pact && usable;
+  const noSlots = !fromItem && lvl > 0 && !frees.some((r) => r.count > 0) && !first && !pact && usable;
   return (
     <EntryRow id={'spell-' + sp.id} name={sp.name} before={before} head={head} side={side}
       body={sp.desc || sourceLabel(c, sp) ? <>

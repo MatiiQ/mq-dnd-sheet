@@ -88,6 +88,9 @@ export interface Spell extends Linked {
   acFx?: AcEffect; acVal?: number; acOther?: true; castAb?: Ability; cid?: string;
   // An item spell's own numbers ("save DC 15"), read before the caster's (spellSaveDcFor, spellAttackFor).
   dc?: number; atkB?: number;
+  // Casting from the item's charges: chg per cast, up to chgMax (each charge above chg is one slot level higher), cast at
+  // castLvl when the item names a higher level than the spell's own ("Fireball (level 5 version)").
+  chg?: number; chgMax?: number; castLvl?: number;
   // Catalog fields: dice stays the free-text summary shown in the row; dmg/dtype are the damage dice and type.
   desc?: string; school?: string; classes?: string; ritual?: boolean; atk?: 'melee' | 'ranged'; save?: Ability;
   fx?: 'damage' | 'healing' | 'other'; dmg?: string; dtype?: string; scale?: string; higher?: string;

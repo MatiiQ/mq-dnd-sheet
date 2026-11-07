@@ -9,10 +9,10 @@ import { useCatalog } from '../../catalog/useCatalog';
 import { RuleNotes } from '../RuleNotes';
 import { canLoad, hasProp, isWeapon, NO_SHIELD, putAway, putInHand, shieldOn as shieldOf, twoHanded, versatile, weaponKind, weaponsHeld } from '../../hands';
 import { linkOf, sourceLabel } from '../../links';
-import { castSpell, COMBAT_ACTIONS, pactLeft, fmt, freeCastsOf, ORDINAL, regainTo, removeRef, slotsLeft, spellUsable, toggled, type AcPart } from '../../logic';
+import { castSpell, COMBAT_ACTIONS, itemOfSpell, pactLeft, fmt, freeCastsOf, ORDINAL, regainTo, removeRef, slotsLeft, spellUsable, toggled, type AcPart } from '../../logic';
 import { patchEntry, removeEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { Attack, Econ, Item, Rider, Spell } from '../../types';
-import { AcTargetSwitch, AddButton, Caret, DieBadge, EffectSwitch, EntryForm, EntryRow, FreeCastButton, Step, TextField } from '../ui';
+import { AcTargetSwitch, AddButton, Caret, DieBadge, EffectSwitch, EntryForm, EntryRow, FreeCastButton, ItemCastButtons, Step, TextField } from '../ui';
 
 const ECON: Record<Econ, string> = { action: 'Action', bonus: 'Bonus Action', reaction: 'Reaction', free: 'Free', other: 'Other' };
 type Filter = 'all' | 'action' | 'bonus' | 'reaction';
@@ -387,6 +387,7 @@ function CastButtons({ sp, effect }: { sp: Spell; effect: boolean }) {
   const { c, update } = useSheet();
   const link = linkOf('spell', sp.id);
   if (effect && !sp.c) return <EffectSwitch link={link} name={sp.name} />;
+  if (itemOfSpell(c, sp)) return <><AcTargetSwitch sp={sp} /><ItemCastButtons sp={sp} short /></>;
   const lvl = sp.lvl || 0;
   const first = lvl > 0 && spellUsable(c, sp) ? [lvl, 2, 3, 4, 5, 6, 7, 8, 9].filter((l) => l >= lvl).find((l) => c.slotMax[l] && slotsLeft(c, l) > 0) : undefined;
   const pact = lvl > 0 && spellUsable(c, sp) && c.pactLvl >= lvl && pactLeft(c) > 0;

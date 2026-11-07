@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { blankCharacter, druidSample } from './defaults';
-import { MULTICLASS_SLOTS, casterLevel, pactFor, slotsFor, pactLeft, spellForRow, saveDc, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, removeRef, modeSpeed, castSpell, concAfterEdit, preparedCount, setExhaustion, sortSpells, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, toggleCondition } from './logic';
+import { castFromItem, castLevelOf, itemOfSpell, MULTICLASS_SLOTS, casterLevel, pactFor, slotsFor, pactLeft, spellForRow, saveDc, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, removeRef, modeSpeed, castSpell, concAfterEdit, preparedCount, setExhaustion, sortSpells, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, toggleCondition } from './logic';
 import { migrate } from './migrate';
 import { addFromCatalog } from './catalog/copy';
 import { mergeCatalog } from './catalog/merge';
@@ -311,5 +311,62 @@ describe('an item spell’s own numbers', () => {
     const s = { id: 's', name: 'Fireball', lvl: 3, time: 'Action', range: '150 feet', dc: 15, atkB: 7 };
     expect(spellSaveDcFor(c, s)).toBe(15);
     expect(spellAttackFor(c, s)).toBe(7);
+  });
+});
+
+describe('casting from an item’s charges', () => {
+  const wand: Item = { id: 'w', name: 'Wand of Fireballs', qty: 1, eq: true, count: 7, max: 7 };
+  const fb: Spell = { id: 'fb', name: 'Fireball', lvl: 3, time: 'Action', range: '150 feet', always: true, from: 'item:w', chg: 1, chgMax: 3, needEq: true, needAtt: true };
+  const slots = [0, 4, 3, 2, 0, 0, 0, 0, 0, 0];
+  const with_ = (p: Partial<Character> = {}, sp: Spell = fb, it: Item = wand): Character =>
+    ({ ...blankCharacter(), inv: [it], spells: [sp], attuneIds: ['w'], slotMax: slots, slotUsed: Array(10).fill(0), ...p });
+  it('spends the charges, never a slot, and casts one level higher per extra charge', () => {
+    const c = with_();
+    const out = castFromItem(c, fb, 3);
+    expect(out.inv![0].count).toBe(4);
+    expect(out.slotUsed).toBeUndefined();
+    expect(castLevelOf(fb, 3)).toBe(5);
+    expect(castLevelOf(fb, 1)).toBe(3);
+  });
+  it('refuses too many charges, too few left, or fewer than the cost', () => {
+    expect(castFromItem(with_({}, fb, { ...wand, count: 2 }), fb, 3)).toEqual({});
+    expect(castFromItem(with_(), fb, 4)).toEqual({});
+    expect(castFromItem(with_(), fb, 0)).toEqual({});
+  });
+  it('reads a fixed cast level (Staff of Power’s level 5 Fireball)', () => {
+    const staff = { ...fb, chg: 5, chgMax: undefined, castLvl: 5 };
+    expect(castLevelOf(staff, 5)).toBe(5);
+    expect(castFromItem(with_({}, staff, { ...wand, count: 20 }), staff, 5).inv![0].count).toBe(15);
+  });
+  it('keeps castSpell from spending a slot on an item spell', () => {
+    expect(castSpell(with_(), fb, 3)).toEqual({});
+    expect(castSpell(with_({ pactMax: 2, pactLvl: 3 }), fb, 3, 'pact')).toEqual({});
+  });
+  it('refuses an item inside a container, unattuned or unequipped', () => {
+    const bag: Item = { id: 'b', name: 'Bag of Holding', qty: 1, eq: false, xdim: true };
+    expect(castFromItem({ ...with_(), inv: [{ ...wand, in: 'b' }, bag] }, fb, 1)).toEqual({});
+    expect(castFromItem(with_({ attuneIds: [] }), fb, 1)).toEqual({});
+    expect(castFromItem(with_({}, fb, { ...wand, eq: false }), fb, 1)).toEqual({});
+  });
+  it('casts an at-will item spell for nothing, with its effects', () => {
+    const lev: Spell = { id: 'lv', name: 'Levitate', lvl: 2, time: 'Action', range: '60 feet', c: true, always: true, from: 'item:w', needEq: true };
+    const c = with_({}, lev);
+    expect(castFromItem(c, lev, 0)).toEqual({ conc: { id: 'lv', name: 'Levitate' }, concCheck: null });
+    expect(castFromItem(c, lev, 1)).toEqual({});
+  });
+  it('starts Concentration on a Concentration item spell', () => {
+    const web = { ...fb, id: 'wb', name: 'Web', lvl: 2, c: true, chgMax: undefined };
+    expect(castFromItem(with_({}, web), web, 1).conc).toEqual({ id: 'wb', name: 'Web' });
+  });
+  it('names the item behind a spell', () => {
+    expect(itemOfSpell(with_(), fb)?.id).toBe('w');
+    expect(itemOfSpell(with_(), { ...fb, from: undefined })).toBeUndefined();
+  });
+  it('refuses a free cast of an item spell while the item is off, and keeps a feature’s free cast', () => {
+    const res = [{ id: 'r', name: 'Once per dawn', count: 1, max: 1, recharge: 'dawn' as const, casts: 'fb' }];
+    expect(castFree(with_({ res }, fb, { ...wand, eq: false }), fb, 'r')).toEqual({});
+    expect(castFree(with_({ res }), fb, 'r').res![0].count).toBe(0);
+    const own = { ...fb, from: undefined, needEq: undefined, needAtt: undefined };
+    expect(castFree(with_({ res }, own), own, 'r').res![0].count).toBe(0);
   });
 });

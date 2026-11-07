@@ -69,7 +69,8 @@ const SPELL_FIELDS: Record<string, FieldCheck> = {
   dur: isStr, comp: isStr, dice: isStr, c: isBool, always: isBool, prep: isBool,
   fx: among('damage', 'healing', 'other'), dmg: isStr, dtype: isStr, scale: isStr, higher: isStr, healMod: (v) => v === true,
   dmgMod: (v) => v === true, dtypes: isDtypes, cls: nonEmpty, acOther: (v) => v === true, linkAlways: (v) => v === true, linkCastAb: among('none', ...ABILITIES.map(([k]) => k)),
-  dc: (v) => Number.isInteger(v), atkB: (v) => Number.isInteger(v)
+  dc: (v) => Number.isInteger(v), atkB: (v) => Number.isInteger(v),
+  chg: (v) => wholeIn(v, 1, 50), chgMax: (v) => wholeIn(v, 1, 50), castLvl: (v) => wholeIn(v, 1, 9)
 };
 const ATTACK_FIELDS: Record<string, FieldCheck> = { econ: among('action', 'bonus', 'reaction', 'free', 'other'), group: among('weapon', 'other') };
 const ITEM_FIELDS: Record<string, FieldCheck> = {
@@ -106,7 +107,12 @@ function cleanSpell(x: Spell): Spell {
   }));
   const f = cleanFields(linked, SPELL_FIELDS);
   // A typed damage type wins over a chosen one's list (spellFromForm), so dtypes never stays next to it.
-  const typed = f.dtype && f.dtypes !== undefined ? withoutKeys(f, ['dtypes']) : f;
+  const dt = f.dtype && f.dtypes !== undefined ? withoutKeys(f, ['dtypes']) : f;
+  // Charge fields as the schema has them: chgMax and castLvl only with chg, chgMax at least chg, castLvl at least the
+  // spell's level.
+  const typed = withoutKeys(dt, [
+    ...(dt.chg === undefined || (dt.chgMax !== undefined && dt.chgMax < dt.chg) ? ['chgMax'] : []),
+    ...(dt.chg === undefined || (dt.castLvl !== undefined && dt.castLvl < dt.lvl) ? ['castLvl'] : [])]);
   // AC fields: a damaged one would show NaN or join strings, so it goes, with its partner field.
   return { ...cleanParts(typed), ...(AC_EFFECTS.includes(acFx as AcEffect) && finite(acVal) ? { acFx, acVal } : {}) };
 }

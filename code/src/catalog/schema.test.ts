@@ -56,6 +56,7 @@ describe('validateEntry', () => {
   it('accepts the bases and the values next to the refused ones', () => {
     const good = [
       trait, feature, wood, order, feat, spell, orb, venom, itemN,
+      { ...venom, grants: [{ id: 'g1', kind: 'spell', name: 'x', spell: 'spell/fireball', dc: '15', atkB: '7', chg: 1, chgMax: 3, castLvl: 5 }] },
       { ...wood, of: 'trait/elf/elven-lineage' }, { ...feature, again: '8,12,16' },
       { ...feat, prereq: 'lvl>=4;feature=spellcasting|pact-magic' }, { ...feat, prereq: 'lvl>=4;armor=heavy;str>=13' },
       ...[20, 25, 30].map((cap) => ({ ...feature, grants: [{ ...abil, cap }] })),
@@ -87,6 +88,13 @@ describe('validateEntry', () => {
       ['bad slot table', { ...feature, grants: [{ ...ek, s2: 'two' }] }],
       ['bad action dice', { ...feature, grants: [{ id: 'g1', kind: 'action', name: 'Woe', econ: 'reaction', dice: 'd6-' }] }],
       ['walking speed from itself', { ...trait, grants: [{ id: 'g1', kind: 'speed', name: 'x', mode: 'walk', val: 'walk' }] }],
+      ['chgMax below chg', { ...venom, grants: [{ id: 'g1', kind: 'spell', name: 'x', spell: 'spell/fireball', chg: 2, chgMax: 1 }] }],
+      ['chgMax without chg', { ...venom, grants: [{ id: 'g1', kind: 'spell', name: 'x', spell: 'spell/fireball', chgMax: 3 }] }],
+      ['castLvl without chg', { ...venom, grants: [{ id: 'g1', kind: 'spell', name: 'x', spell: 'spell/fireball', castLvl: 5 }] }],
+      ['castLvl above 9', { ...venom, grants: [{ id: 'g1', kind: 'spell', name: 'x', spell: 'spell/fireball', chg: 1, castLvl: 10 }] }],
+      ['chg 0', { ...venom, grants: [{ id: 'g1', kind: 'spell', name: 'x', spell: 'spell/fireball', chg: 0 }] }],
+      ['chg 51', { ...venom, grants: [{ id: 'g1', kind: 'spell', name: 'x', spell: 'spell/fireball', chg: 51 }] }],
+      ['chg 1.5', { ...venom, grants: [{ id: 'g1', kind: 'spell', name: 'x', spell: 'spell/fireball', chg: 1.5 }] }],
       ['floor on a fly speed', { ...trait, grants: [{ id: 'g1', kind: 'speed', name: 'x', mode: 'fly', val: '30', floor: true }] }],
       ['floor equal to the Speed', { ...trait, grants: [{ id: 'g1', kind: 'speed', name: 'x', mode: 'walk', val: 'walk2', floor: true }] }],
       ['healMod not true', { ...spell, healMod: 'yes' }],

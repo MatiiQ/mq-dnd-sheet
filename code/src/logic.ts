@@ -370,6 +370,8 @@ const castEffects = (c: Character, sp: Spell): Partial<Character> =>
 // Pact slots and Spellcasting slots can cast each other's spells (PHB p.45); a pact slot is always of the pact level.
 export const pactLeft = (c: Character) => Math.max(0, c.pactMax - c.pactUsed);
 export function castSpell(c: Character, sp: Spell, level: number, pool: 'slot' | 'pact' = 'slot'): Partial<Character> {
+  // An item's spell never spends a slot or the pact pool: it is cast from the item (castFromItem).
+  if (itemOfSpell(c, sp)) return {};
   if (pool === 'pact') return level === c.pactLvl && level >= (sp.lvl || 0) && pactLeft(c) > 0 ? { pactUsed: c.pactUsed + 1, ...castEffects(c, sp) } : {};
   if (!slotsLeft(c, level)) return {};
   return { ...setSlotUsed(c, level, c.slotUsed[level] + 1), ...castEffects(c, sp) };
@@ -390,10 +392,28 @@ export function effectsAfterEdit(c: Character, sp: Pick<Spell, 'id' | 'c'>): Par
 // its counter in Resources).
 export function castFree(c: Character, sp: Spell, resId: string): Partial<Character> {
   const r = c.res.find((x) => x.id === resId);
-  if (!r) return {};
+  if (!r || (itemOfSpell(c, sp) && !isActive(c, sp))) return {};
   const res = c.res.map((x) => (x.id === resId ? { ...x, count: x.count > 0 ? x.count - 1 : 1 } : x));
   if (r.count <= 0) return { res };
   return { res, ...castEffects(c, sp) };
+}
+// The item a spell row comes from (a wand's Fireball), never a row only linked to it: an item's spell is cast from the
+// item, with its charges, and never with a slot.
+export function itemOfSpell(c: Character, sp: Spell): Item | undefined {
+  const p = parseLink(sp.from);
+  return p?.kind === 'item' && !sp.linked ? c.inv.find((i) => i.id === p.id) : undefined;
+}
+// The slot level of a cast at this many charges: castLvl (or the spell's level) at chg charges, one higher per extra
+// charge (Wand of Fireballs, SRD 5.2.1).
+export const castLevelOf = (sp: Spell, charges: number): number => (sp.castLvl ?? sp.lvl) + charges - (sp.chg ?? 0);
+// Casting from the item: spends `charges` of its count (chg up to chgMax), or nothing for a spell cast at will (no chg,
+// charges 0). Nothing happens while the spell doesn't count (unequipped, unattuned, in a bag, none left).
+export function castFromItem(c: Character, sp: Spell, charges = 0): Partial<Character> {
+  const item = itemOfSpell(c, sp);
+  if (!item || !isActive(c, sp)) return {};
+  if (sp.chg === undefined) return charges === 0 ? castEffects(c, sp) : {};
+  if (charges < sp.chg || charges > (sp.chgMax ?? sp.chg) || (item.count ?? 0) < charges) return {};
+  return { inv: c.inv.map((i) => (i.id === item.id ? { ...i, count: (i.count ?? 0) - charges } : i)), ...castEffects(c, sp) };
 }
 // The resources that cast this spell: its own free casts and a feature's (Favored Enemy's Hunter's Mark).
 export const freeCastsOf = (c: Character, spellId: string) => c.res.filter((r) => r.casts === spellId);
@@ -1054,7 +1074,8 @@ export function addGrants(c: Character, from: string, inputs: GrantInput[]): Cha
       // A spell with neither flag would load as prepared (migrate), so a granted one is always prepared or unprepared.
       // The grant's flags win over the catalog spell's prep: an always-prepared spell has no prep to linger after
       // "Always prepared" is unticked.
-      const own = { ...(s.dc !== undefined ? { dc: num(c, s.dc) } : {}), ...(s.atkB !== undefined ? { atkB: num(c, s.atkB) } : {}) };
+      const own = { ...(s.dc !== undefined ? { dc: num(c, s.dc) } : {}), ...(s.atkB !== undefined ? { atkB: num(c, s.atkB) } : {}),
+        ...(s.chg !== undefined ? { chg: s.chg } : {}), ...(s.chgMax !== undefined ? { chgMax: s.chgMax } : {}), ...(s.castLvl !== undefined ? { castLvl: s.castLvl } : {}) };
       out.spells = [...out.spells, { ...sp, id, ...(s.always ? { always: true } : { prep: false }), ...(castAb ? { castAb } : {}), ...own, ...base, ...common(s) }];
     } else if (s.kind === 'action' && input.link) {
       out = linkTo('attacks', id);

@@ -67,6 +67,17 @@ describe('field checks', () => {
     expect(c.saveProf).toEqual({ str: true });
     expect(c.conds).toEqual({ Prone: true });
   });
+  it('drops bad item charge fields, never the spell', () => {
+    const sp = { id: 's', name: 'S', lvl: 3, time: 'Action', range: 'Self', prep: true };
+    const load = (x: object) => migrate({ ...blankCharacter(), spells: [{ ...sp, ...x }] }).spells[0];
+    expect(load({ chg: 1, chgMax: 3, castLvl: 5 })).toEqual({ ...sp, chg: 1, chgMax: 3, castLvl: 5 });
+    expect(load({ chg: 0 })).toEqual(sp);
+    expect(load({ chg: 51 })).toEqual(sp);
+    expect(load({ chg: 1.5, chgMax: 3, castLvl: 5 })).toEqual(sp);
+    expect(load({ chg: 2, chgMax: 1 })).toEqual({ ...sp, chg: 2 });
+    expect(load({ chg: 1, castLvl: 10 })).toEqual({ ...sp, chg: 1 });
+    expect(load({ chg: 1, castLvl: 2 })).toEqual({ ...sp, chg: 1 });
+  });
   it('drops a bad item spell DC or attack bonus, never the spell', () => {
     const sp = { id: 's', name: 'S', lvl: 1, time: 'Action', range: 'Self', prep: true };
     expect(migrate({ ...blankCharacter(), spells: [{ ...sp, dc: 'x', atkB: 1.5 }] }).spells[0]).toEqual(sp);

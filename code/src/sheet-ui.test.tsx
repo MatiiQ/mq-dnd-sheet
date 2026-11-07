@@ -56,6 +56,36 @@ describe('entry forms and rows', () => {
     });
     expect(saved().defenses.filter((d) => d.kind === 'res' && d.name === 'Slashing' && !d.from)).toHaveLength(1);
   });
+  describe('a wand’s spell', () => {
+    const wand: Item = { id: 'w', name: 'Wand of Fireballs', qty: 1, eq: true, count: 7, max: 7 };
+    const fb = { id: 'fb', name: 'Fireball', lvl: 3, time: 'Action', range: '150 feet', always: true, from: 'item:w', needEq: true,
+      chg: 1, chgMax: 3, fx: 'damage' as const, dmg: '8d6', dtype: 'Fire', save: 'dex' as const, dc: 15 };
+    const sheet = (eq = true) => renderSheet({ inv: [{ ...wand, eq }], spells: [fb], slotMax: [0, 0, 0, 1, 0, 0, 0, 0, 0, 0] });
+    const buttons = () => [...document.querySelectorAll('button')].filter((b) => /charges? · /.test(b.textContent ?? ''));
+    it('casts from charges in the Spells tab, with no slot button', () => {
+      sheet();
+      tab('Spells');
+      expect(buttons().map((b) => b.textContent)).toEqual(['1 charge · 3rd level', '2 charges · 4th level', '3 charges · 5th level']);
+      expect(label('Cast Fireball with a level 3 slot, 1 left')).toBeFalsy();
+      tap(buttons()[1]);
+      expect(saved().inv[0].count).toBe(5);
+      expect(saved().slotUsed[3]).toBe(0);
+    });
+    it('casts from charges in the Actions tab, with no slot button', () => {
+      sheet();
+      tab('Actions');
+      expect(buttons().map((b) => b.textContent)).toContain('1 charge · 3rd level');
+      expect(label('Cast Fireball with a level 3 slot, 1 left')).toBeFalsy();
+    });
+    it('disables the buttons while the wand is unequipped', () => {
+      sheet(false);
+      tab('Spells');
+      expect(buttons().length).toBe(3);
+      expect(buttons().every((b) => b.disabled)).toBe(true);
+      tab('Actions');
+      expect(buttons().every((b) => b.disabled)).toBe(true);
+    });
+  });
   it('takes Haste out of AC when it is cast on another creature', () => {
     const haste = { id: 'h', name: 'Haste', lvl: 3, time: 'Action', range: '30 feet', c: true, acFx: 'bonus' as const, acVal: 2 };
     renderSheet({ spells: [haste], conc: { id: 'h', name: 'Haste' }, slotMax: [0, 0, 0, 1, 0, 0, 0, 0, 0, 0] });

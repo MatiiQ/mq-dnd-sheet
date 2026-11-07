@@ -102,6 +102,7 @@ export interface GrantSpec {
   regainTo?: string;                                                                // action: tap to regain the counter up to this Value, or 'all'
   dc?: string; dcAb?: string;                                                       // action: a save DC, a Value ('8+pb') plus the best of these abilities (a comma list, or '$<choiceId>')
   atkB?: string;                                                                    // spell (also dc): an item spell's fixed attack bonus and save DC, Values
+  chg?: number; chgMax?: number; castLvl?: number;                                  // spell: charges per cast, most charges a cast spends, the level a cast at chg is
   dice?: string; dtype?: string; on?: string; perTurn?: boolean; swap?: string;     // xdmg; swap: the name of an xdmg row this one replaces
   die?: string; abs?: string;                                                       // unarmed (also dtype), atkAbil
   wrange?: 'melee' | 'ranged'; amode?: 'melee' | 'ranged'; prop?: string; weapon?: string; oneHand?: boolean;   // atkBonus, dmgBonus
@@ -176,7 +177,7 @@ const GRANTS: Record<GrantKind, Record<string, [Check, boolean]>> = {
   checkAdv: { target: [str, true], adv: [oneOf('adv', 'dis'), true], always: [bool, false], note: [str, false] },
   // An Emanation from you while the grant counts (range: a Value, may be a level table); incap: ends while Incapacitated.
   aura: { range: [value, true], note: [str, false], incap: [bool, false] },
-  spell: { spell: [str, true], always: [bool, false], castAb: [or(ability, ref), false], dc: [value, false], atkB: [value, false] },
+  spell: { spell: [str, true], always: [bool, false], castAb: [or(ability, ref), false], dc: [value, false], atkB: [value, false], chg: [whole(1, 50), false], chgMax: [whole(1, 50), false], castLvl: [whole(1, 9), false] },
   speed: { mode: [oneOf('walk', 'climb', 'swim', 'fly', 'burrow'), true], val: [or(value, oneOf('walk', 'walk2')), true], hover: [bool, false], floor: [bool, false] },
   ac: { acMode: [oneOf('bonus', 'unarmored', 'dexCap'), true], val: [value, false], ab: [or(ability, ref), false], shieldOk: [bool, false] },
   init: { val: [value, true] },
@@ -300,6 +301,8 @@ function checkGrant(g: unknown, e: Record<string, unknown>, where: string, errs:
   if (g.kind === 'resource') checkRegain(g, where, errs);
   if (g.res !== undefined && g.uses !== undefined) errs.push(`${where}: res and uses together`);
   if (g.kind === 'speed' && g.mode === 'walk' && g.val === 'walk') errs.push(`${where}: a walk speed can't equal the walking Speed`);
+  if (g.kind === 'spell' && (g.chgMax !== undefined || g.castLvl !== undefined) && g.chg === undefined) errs.push(`${where}: chgMax and castLvl need chg`);
+  if (g.kind === 'spell' && typeof g.chg === 'number' && typeof g.chgMax === 'number' && g.chgMax < g.chg) errs.push(`${where}: chgMax below chg`);
   if (g.kind === 'speed' && g.floor && (g.mode !== 'walk' || g.val === 'walk' || g.val === 'walk2')) errs.push(`${where}: a floor is a number of feet on the walking Speed`);
 }
 
