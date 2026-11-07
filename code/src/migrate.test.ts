@@ -154,6 +154,8 @@ describe('top-level fields', () => {
     expect(c).toMatchObject({ exh: 6, ds: 0, df: 3, hdUsed: { 10: 5 } });
     expect(c.slotMax[1]).toBe(9);
     expect(c.slotUsed[1]).toBe(9);
+    // Whole numbers too: a fractional Exhaustion would show a Speed of 17.5 ft.
+    expect(migrate({ ...sampleCharacter(), exh: 2.5, ds: 1.5, df: 0.5, slotMax: [0, 2.7], slotUsed: [0, 1.2] })).toMatchObject({ exh: 2, ds: 1, df: 0, slotMax: [0, 2, 0, 0, 0, 0, 0, 0, 0, 0], slotUsed: [0, 1, 0, 0, 0, 0, 0, 0, 0, 0] });
     expect(c.attuneIds).toEqual(['', '', '']);
     expect(migrate({ attuneIds: ['a', 'b', 'c', 'd'] }).attuneIds).toEqual(['', '', '']); // ids of missing items drop
     expect(migrate({ ...sampleCharacter(), hp: -3, maxHp: 20 })).toMatchObject({ hp: 0 });

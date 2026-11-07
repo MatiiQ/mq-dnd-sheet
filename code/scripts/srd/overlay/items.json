@@ -3425,5 +3425,120 @@
         ]
       }
     ]
+  },
+  "item/gloves-of-missile-snaring": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Snare a missile",
+        "econ": "reaction",
+        "dice": "1d10+dex",
+        "note": "When a Ranged or Thrown weapon attack hits you and you have a free hand: reduce the damage by this much. At 0 you can catch the ammunition or weapon if it fits in that hand.",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/gloves-of-thievery": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "checkBonus",
+        "name": "+5 to Sleight of Hand",
+        "target": "sleight",
+        "val": "5",
+        "needEq": true
+      }
+    ]
+  },
+  "item/necklace-of-fireballs": {
+    "charges": "1d6+3",
+    "recharge": "none",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Fireball",
+        "spell": "spell/fireball",
+        "always": true,
+        "dc": "15",
+        "chg": 1,
+        "chgMax": 5,
+        "castLvl": 3,
+        "needEq": true
+      }
+    ]
+  },
+  "item/pearl-of-power": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Pearl of Power",
+        "max": "1",
+        "recharge": "dawn",
+        "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Regain a spell slot",
+        "econ": "action",
+        "res": "g1",
+        "note": "Regain one expended spell slot of level 3 or lower: tap its pip back.",
+        "needAtt": true
+      }
+    ]
+  },
+  "item/potion-of-heroism": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "tempHp",
+        "name": "Potion of Heroism",
+        "val": "10",
+        "note": "Under Bless for 1 hour, no Concentration: add 1d4 to attack rolls and saving throws.",
+        "when": "active"
+      }
+    ]
+  },
+  "item/rod-of-absorption": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Stored spell levels",
+        "max": "50",
+        "recharge": "none",
+        "note": "Set it to the rod's stored levels when found (typically 1d10).",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Absorb a spell",
+        "econ": "reaction",
+        "res": "g1",
+        "note": "A spell targeting only you, with no area: cancel it and tap + by its level. Cast your spells with stored levels as a slot up to level 5 (tap − by the level). 50 levels over the rod's existence.",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
+  },
+  "item/talisman-of-the-sphere": {
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "checkAdv",
+        "name": "Advantage on Arcana",
+        "target": "arcana",
+        "adv": "adv",
+        "note": "to control a Sphere of Annihilation",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   }
 }

@@ -57,7 +57,14 @@ for a charge cost (each charge above `chg` one slot level higher); `castLvl` for
 cost casts at will; "until the next dawn" is a `resource` that `casts` the spell. Text: spells chosen per use (Ring of
 Spell Storing, Hat of Many Spells, Wand of Wonder, Ring of Elemental Command, Necklace of Prayer Beads), Helm of
 Brilliance (its gems), Chime of Opening and Robe of Stars (no charge counter), the gear chapter's Spell Scroll items,
-Candle of Invocation's Gate, Amulet of the Planes, the potions, and Luck Blade's once-per-dawn limit. Text
+Candle of Invocation's Gate, Amulet of the Planes, the healing potions (Potion of Healing, Potions of Healing, Potion of
+Vitality: the roll is made at the table, audit `potion-heal-no-row` accepted), and Luck Blade's once-per-dawn limit.
+Necklace of Fireballs is a Fireball `spell` grant on its beads (`charges` 1d6+3, no recharge; each extra bead one level
+higher, up to 5 beads for 12d6). Pearl of Power and Rod of Absorption have a `resource` and an action row (the rod's
+stored levels start at 50: set them by hand). Gloves of Thievery is a `checkBonus` (+5 Sleight of Hand), Gloves of
+Missile Snaring a Reaction row (1d10 + DEX), Talisman of the Sphere a situational `checkAdv` on Arcana. Potion of
+Heroism is a switched-on `tempHp` grant (10 Temporary HP when switched on, higher-only), whose note shows its Bless in
+Active effects; Bless adds no number. Text
 by design: Defender (moving part of its bonus to AC until your next turn), Rod of Alertness (+1 AC and saves inside its
 light), Arrow-Catching Shield (+2 only against ranged attacks), and Rod of Lordly Might's other forms and buttons (it is
 a Mace with its +3; switch the form in Edit). Ioun Stone is a choice of the stones that have a grant: Protection (+1

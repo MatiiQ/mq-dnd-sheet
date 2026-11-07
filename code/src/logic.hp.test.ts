@@ -445,3 +445,26 @@ describe('an effect that raises the HP maximum', () => {
     expect([rested.hp, maxHpOf(rested)]).toEqual([20, 20]);
   });
 });
+
+describe('an effect that gives Temporary HP when it turns on', () => {
+  const potion: Item = { id: 'p', name: 'Potion of Heroism', qty: 1, eq: false, wt: 0.5, desc: '' };
+  const heroism: Grant = { id: 'g', kind: 'tempHp', name: 'Potion of Heroism', val: '10', when: 'active', from: 'item:p' };
+  const base = (temp: number): Character => ({ ...blankCharacter(), maxHp: 20, origHp: 20, hp: 20, temp, conBase: 0, inv: [potion], grants: [heroism] });
+  const drink = (c: Character) => applyPatch(c, (p) => toggleEffect(p, 'item:p'));
+  it('gives the Temporary HP when switched on (Potion of Heroism, SRD 5.2.1)', () => {
+    expect(drink(base(0)).temp).toBe(10);
+  });
+  it('keeps the higher amount, since Temporary HP don’t stack (PHB p.29)', () => {
+    expect(drink(base(4)).temp).toBe(10);
+    expect(drink(base(15)).temp).toBe(15);
+  });
+  it('lasts when switched off, and still counts after the last potion is drunk', () => {
+    const on = drink(base(0));
+    expect(drink(on).temp).toBe(10);
+    expect(drink({ ...base(0), inv: [{ ...potion, qty: 0 }] }).temp).toBe(10);
+  });
+  it('gives nothing for a grant that was already on', () => {
+    const on = applyPatch(drink(base(0)), () => ({ temp: 3 }));
+    expect(applyPatch(on, (p) => toggleEffect(p, 'item:x')).temp).toBe(3);
+  });
+});

@@ -199,19 +199,22 @@ export async function saveBackupFile(data: unknown, name?: string): Promise<stri
   return 'Backup downloaded.';
 }
 
+// An import refusal whose message is written for the player.
+export class ImportError extends Error {}
+
 // Saves a backup's characters under new ids. Returns the ones that were saved, how many were skipped as saved by a
 // newer app (migrate() would drop what this version doesn't know), and how many failed (not a character, or the
 // browser refused: storage full), so the index never lists a character that has no sheet.
 export function writeBackup(data: unknown): { added: { id: string; c: Character }[]; newer: number; failed: number } {
   const d = data as { app?: string; characters?: unknown[] } | null;
-  if (!d || d.app !== BACKUP_APP || !Array.isArray(d.characters)) throw new Error('Not a character sheet backup file.');
+  if (!d || d.app !== BACKUP_APP || !Array.isArray(d.characters)) throw new ImportError('Not a character sheet backup file.');
   const found = d.characters.filter((x) => x && typeof x === 'object' && (x as Character).ch);
-  if (!found.length) throw new Error('The backup has no characters.');
+  if (!found.length) throw new ImportError('The backup has no characters.');
   // A message still open at export time (a rest's summary) is not shown again; migrate() may still add its own.
   const chars = found.filter((x) => !isNewerSave(x)).map((x) => migrate({ ...(x as object), restMsg: null })), newer = found.length - chars.length;
-  if (!chars.length) throw new Error('This backup was saved by a newer version of the app. Open the app online to update it, then import again.');
+  if (!chars.length) throw new ImportError('This backup was saved by a newer version of the app. Open the app online to update it, then import again.');
   const added = chars.map((c) => ({ id: newId(), c })).filter((a) => writeJSON(sheetKey(a.id), a.c));
-  if (!added.length) throw new Error('The backup could not be saved: storage is full.');
+  if (!added.length) throw new ImportError('The backup could not be saved: storage is full.');
   return { added, newer, failed: d.characters.length - newer - added.length };
 }
 
@@ -220,6 +223,16 @@ export const importNote = ({ added, newer, failed }: { added: number; newer: num
   'Imported ' + added + (added === 1 ? ' character.' : ' characters.') +
   (newer ? ' ' + newer + ' saved by a newer version of the app ' + (newer === 1 ? 'was' : 'were') + ' skipped: update the app, then import again.' : '') +
   (failed ? ' ' + failed + ' could not be imported.' : '');
+
+// Reads a backup file and imports it (Welcome and the menu): the message to show and how many characters were added.
+export async function importFile(store: Pick<CharacterStore, 'importAll'>, file: File): Promise<{ msg: string; added: number }> {
+  try {
+    const r = store.importAll(JSON.parse(await file.text()));
+    return { msg: importNote(r), added: r.added };
+  } catch (e) {
+    return { msg: e instanceof ImportError ? e.message : 'That file could not be read as a backup.', added: 0 };
+  }
+}
 
 // All characters, the active one, and every way to change them. Saves on each change.
 export function useCharacters() {

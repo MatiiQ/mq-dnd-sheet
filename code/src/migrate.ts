@@ -341,11 +341,11 @@ export function migrate(data: unknown): Character {
     c.abil[k] = whole(c.abil[k], 1, 30, 10);
     if (c.abilAdj[k] !== undefined) c.abilAdj[k] = whole(c.abilAdj[k], -30, 30, 0);
   }
-  c.slotMax = slots(c.slotMax).map((n) => clamp(n, 0, 9));
-  c.slotUsed = slots(c.slotUsed).map((n, i) => clamp(n, 0, c.slotMax[i]));
-  c.exh = clamp(c.exh, 0, 6);
-  c.ds = clamp(c.ds, 0, 3);
-  c.df = clamp(c.df, 0, 3);
+  c.slotMax = slots(c.slotMax).map((n) => whole(n, 0, 9, 0));
+  c.slotUsed = slots(c.slotUsed).map((n, i) => whole(n, 0, c.slotMax[i], 0));
+  c.exh = whole(c.exh, 0, 6, 0);
+  c.ds = whole(c.ds, 0, 3, 0);
+  c.df = whole(c.df, 0, 3, 0);
   // Inspiration is a counter, 0 or more. This deliberately departs from the rules, where a character has at most one
   // Heroic Inspiration (PHB p.13, p.368): the book says it doesn't stack, the sheet counts it with no maximum (house rule).
   // inspOn: a non-boolean already fell back to the blank character's true (sameType above).

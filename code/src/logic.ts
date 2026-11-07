@@ -139,7 +139,7 @@ export function skillMod(c: Character, key: string, ab: Ability): number {
 export function passiveParts(c: Character, key: string): AcPart[] {
   const ab = SKILLS.find(([k]) => k === key)![2], pb = profBonus(charLevel(c)), lv = skillLevel(c, key);
   const at = (g: Grant) => ({ from: g.from, src: sourceLabel(c, g) });
-  const parts: AcPart[] = [{ label: 'Base', value: 10 }, { label: ABILITIES.find(([k]) => k === ab)![1] + ' modifier', value: abilityMod(c, ab) }];
+  const parts: AcPart[] = [{ label: 'Base', value: 10 }, { label: abilityName(ab) + ' modifier', value: abilityMod(c, ab) }];
   if (lv.level) parts.push({ label: lv.level === 2 ? 'Expertise' : 'Proficiency', value: pb * lv.level, ...(lv.from ? { from: lv.from, src: lv.by } : {}) });
   const half = lv.level === 0 && activeGrants(c, 'prof', true).find((g) => g.cat === 'half');
   if (half) parts.push({ label: 'Half proficiency', value: Math.floor(pb / 2), ...at(half) });
@@ -389,7 +389,7 @@ export function readManual(c: Character, itemId: string): Character {
   const item = c.inv.find((i) => i.id === itemId);
   const ab = item?.reads;
   if (!item || !ab) return c;
-  const name = ABILITIES.find(([k]) => k === ab)![1], id = newId();
+  const name = abilityName(ab), id = newId();
   const spent = withoutKeys(item, ['reads']);
   const inv = item.qty > 1
     ? c.inv.flatMap((i) => (i.id === itemId ? [{ ...i, qty: i.qty - 1 }, { ...spent, id: newId(), qty: 1, eq: false }] : [i]))
@@ -684,11 +684,17 @@ export const maxHpRaw = (c: Character) => c.maxHp + conHpPart(c) + activeGrants(
 // that starts counting another way (equipping an item, a level-up) raises the maximum only. Switching off lowers only
 // the maximum (normalize() clamps), so switching an effect off and on again at less than full HP pays the rise twice
 // (the sheet keeps no record of what a cast already paid). Leaving 0 HP clears the death saves, as healing does (PHB p.29).
+// The same switch or cast also gives the Temporary HP of a tempHp grant it turns on (Potion of Heroism's 10, SRD 5.2.1).
+// Temporary HP don't stack: the higher amount stays, as the sheet does for a Wild Shape form (PHB p.29). They stay when
+// the effect ends (they last their own duration); switching off and on again gives them again, like the rise above.
 export function withHpRise(c: Character, patch: Partial<Character>): Partial<Character> {
-  const rise = hpFlatSum({ ...c, ...patch }) - hpFlatSum(c);
-  if (rise <= 0) return patch;
+  const next = { ...c, ...patch }, was = new Set(activeGrants(c, 'tempHp').map((g) => g.id));
+  const temp = Math.max(0, ...activeGrants(next, 'tempHp').filter((g) => !was.has(g.id)).map((g) => num(next, g.val, g)));
+  const withTemp = temp > next.temp ? { ...patch, temp } : patch;
+  const rise = hpFlatSum(next) - hpFlatSum(c);
+  if (rise <= 0) return withTemp;
   const hp = patch.hp ?? c.hp;
-  return { ...patch, hp: hp + rise, ...(hp === 0 ? { ds: 0, df: 0 } : {}) };
+  return { ...withTemp, hp: hp + rise, ...(hp === 0 ? { ds: 0, df: 0 } : {}) };
 }
 export const maxHpOf = (c: Character) => Math.max(1, maxHpRaw(c));
 // Current HP against max, temp HP ignored: green from 65%, yellow from 30%, red below.
@@ -1339,6 +1345,7 @@ function grantLabel(c: Character, g: Grant): string {
     case 'spellAtk': return fmt(v) + ' spell attack';
     case 'spellDc': return fmt(v) + ' spell save DC';
     case 'aura': return auraRange(c, g) + '-ft aura';
+    case 'tempHp': return v + ' Temporary HP when switched on';
     case 'checkAdv': {
       if (g.target === 'init') return (g.adv === 'dis' ? 'Disadvantage' : 'Advantage') + ' on Initiative' + (g.note ? ' (' + g.note + ')' : '');
       const t = SKILLS.find(([k]) => k === g.target)?.[1] ?? ABILITIES.find(([k]) => k === g.target)?.[1] ?? g.target;
@@ -1356,7 +1363,7 @@ function grantTarget(g: Grant): PillTarget {
   if (VITAL_GRANTS.includes(g.kind)) return { sec: 'sec-vitals' };
   if (g.kind === 'checkAdv') return { sec: 'sec-senses' };
   if (g.kind === 'aura') return { sec: 'sec-conditions' };
-  if (g.kind === 'hpLvl' || g.kind === 'hpFlat') return { sec: 'sec-hp' };
+  if (g.kind === 'hpLvl' || g.kind === 'hpFlat' || g.kind === 'tempHp') return { sec: 'sec-hp' };
   if (g.kind === 'casting' || g.kind === 'spell' || g.kind === 'spellAtk' || g.kind === 'spellDc') return { tab: 'spells' };
   return { tab: 'actions' };
 }
@@ -1477,7 +1484,8 @@ export function casterLevel(c: Character, cat: Catalog): { level: number; caster
 // its class level); two or more, the multiclass table (PHB p.45).
 export function slotsFor(c: Character, cat: Catalog): number[] {
   const { level, casters } = casterLevel(c, cat);
-  if (casters === 0) return slots([]);
+  // No caster, or casting grants whose thirds round down to 0 (two at level 2): no slots, never row −1 of the table.
+  if (casters === 0 || level === 0) return slots([]);
   if (casters > 1) return [0, ...MULTICLASS_SLOTS[Math.min(20, level) - 1]];
   const r = c.classes.find((x) => castsAt(classOf(cat, x), x.lvl));
   if (r) return [0, ...classOf(cat, r)!.slots![r.lvl - 1]];

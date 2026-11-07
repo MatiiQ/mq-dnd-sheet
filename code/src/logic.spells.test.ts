@@ -282,6 +282,12 @@ describe('spell slots from classes (PHB p.45)', () => {
     expect(casterLevel(of(row('wizard', 3), row('cleric', 2)), srd).level).toBe(5);
     expect(slotsFor(of(row('wizard', 3), row('cleric', 2)), srd)).toEqual(pad(4, 3, 2));
   });
+  it('casting grants whose thirds round down to 0 give no slots, not an error', () => {
+    const g = (id: string) => ({ id, kind: 'casting' as const, name: 'Spellcasting', ab: 'int', from: 'feature:f' });
+    const c: Character = { ...of(row('fighter', 2)), feats: [{ id: 'f', g: 'feat', name: 'Custom', desc: '' }], grants: [g('a'), g('b')] };
+    expect(casterLevel(c, srd)).toEqual({ level: 0, casters: 2 });
+    expect(slotsFor(c, srd)).toEqual(pad());
+  });
   it('a Pact Magic class keeps its own pool and adds nothing to the caster level', () => {
     const c = of(row('warlock', 3), row('sorcerer', 2));
     expect(slotsFor(c, srd)).toEqual(pad(3));

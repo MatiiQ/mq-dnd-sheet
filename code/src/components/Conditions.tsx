@@ -1,4 +1,4 @@
-import { hasActiveEffect, LINKED_LISTS, parseLink, sourceLabel, sourceOf } from '../links';
+import { activeGrants, hasActiveEffect, LINKED_LISTS, parseLink, sourceLabel, sourceOf } from '../links';
 import { activeAuras, CONDITIONS, CONDITION_RULES, setExhaustion, toggleCondition } from '../logic';
 import { useSheet } from '../sheet';
 import type { Character, Feature, Linked, Spell } from '../types';
@@ -80,10 +80,15 @@ function ActiveEffects() {
       })}
       {others.map((l) => {
         const name = sourceOf(c, l)!.name, to = revealOf(c, l);
+        // What else rides on the effect (Potion of Heroism: under Bless), from its tempHp grants' notes.
+        const notes = activeGrants(c, 'tempHp').filter((g) => g.from === l && g.note).map((g) => g.note!);
         return (
-          <li key={l} className="well row wrap gap-8 effect-row" style={{ alignItems: 'center' }}>
-            {to ? <button type="button" className="link-btn go-link grow" onClick={() => reveal(to)}>{name}</button> : <strong className="grow">{name}</strong>}
-            <EffectSwitch link={l} name={name} />
+          <li key={l} className="well col gap-4 effect-row">
+            <span className="row wrap gap-8" style={{ alignItems: 'center' }}>
+              {to ? <button type="button" className="link-btn go-link grow" onClick={() => reveal(to)}>{name}</button> : <strong className="grow">{name}</strong>}
+              <EffectSwitch link={l} name={name} />
+            </span>
+            {notes.map((n) => <span key={n} className="small">{n}</span>)}
           </li>
         );
       })}

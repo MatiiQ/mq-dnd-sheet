@@ -159,7 +159,8 @@ describe('resolveChoices', () => {
     expect(resolveChoices(cat, skillful, { c1: ['stealth'] }).specs).toEqual([expect.objectContaining({ cat: 'skill', target: 'stealth' })]);
     const meta = cat.byId.get('feature/sorcerer/metamagic')!;
     const m = resolveChoices(cat, meta, { meta: ['feature/sorcerer/quickened-spell', 'feature/sorcerer/twinned-spell'] });
-    expect(m.specs).toEqual([]);
+    // The picks land as entries; the only spec is Metamagic's own row, which spends Sorcery Points.
+    expect(m.specs.map((s) => s.name)).toEqual(['Metamagic']);
     expect(m.entries.map((x) => x.entry.id)).toEqual(['feature/sorcerer/quickened-spell', 'feature/sorcerer/twinned-spell']);
     const note: FeatureEntry = { id: 'feature/x/y', kind: 'feature', name: 'Y', src: 'srd', desc: '', cls: 'x', lvl: 1, grants: [{ kind: 'choice', id: 'c', name: 'Things', pick: 1, pool: 'other:any' }] };
     expect(resolveChoices(cat, note, { c: ['Typed'] }).notes).toEqual(['Things: Typed']);

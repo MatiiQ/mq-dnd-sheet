@@ -19,7 +19,7 @@ import { RestPrompt } from './components/RestPrompt';
 import { LevelUpWizard, UndoLevelPrompt } from './components/LevelUpWizard';
 import { CreatorWizard } from './components/CreatorWizard';
 import { Welcome } from './components/Welcome';
-import { clearDraft, readDraft, type Draft } from './creator';
+import { clearDraft, CREATOR_STEPS, readDraft, type Draft } from './creator';
 import { undoLevel } from './levelup';
 import { TABS, dawn, longRest, restRolls, shortRest, type RestEvent, type RollAsk } from './logic';
 import { revealPlace, type RevealTarget } from './components/nav';
@@ -50,7 +50,7 @@ export default function App() {
       )}
       {draftAsk.draft && (
         <div role="status" className="notice notice-blue row wrap gap-8">
-          <span className="grow">Continue creating {draftAsk.draft.answers.details?.name || 'a character'} (step {draftAsk.draft.step + 1} of 6)?</span>
+          <span className="grow">Continue creating {draftAsk.draft.answers.details?.name || 'a character'} (step {draftAsk.draft.step + 1} of {CREATOR_STEPS.length + 1})?</span>
           <button type="button" className="btn" onClick={() => { setCreating({ from: draftAsk.draft! }); setDraftAsk({ draft: null }); }}>Continue</button>
           <button type="button" className="btn" onClick={() => { clearDraft(); setDraftAsk({ draft: null }); }}>Discard</button>
         </div>

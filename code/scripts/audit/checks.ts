@@ -298,10 +298,11 @@ export function effectChecks(entries: Entry[]): Finding[] {
   return out;
 }
 
-// Item spellcasting and buffs on another creature (2026-11-07 gaps). item-cast-no-spell: a magic item whose text casts a
+// Item spellcasting, potion healing and buffs on another creature (2026-11-07 gaps). item-cast-no-spell: a magic item whose text casts a
 // named spell from itself (or at a fixed DC) with no spell grant. buff-other-no-grant: a spell for "a willing creature" or
 // "a creature you touch" whose text states an effect with none of the grant kinds that carry it.
 const ITEM_CAST = /\bcast (?:the )?[A-Z][\w’' -]+? (?:spell )?(?:from (?:it|the \w+)|\(save DC \d+)/;
+const POTION_HEAL = /\bregains? [^.\n]*\bHit Points\b/;
 const BUFFS: { cue: RegExp; kinds: GrantSpec['kind'][]; label: string }[] = [
   { cue: /\bResistance to\b/, kinds: ['defense'], label: 'resistance' },
   { cue: /\bAdvantage on\b/, kinds: ['checkAdv', 'defense'], label: 'advantage' },
@@ -316,6 +317,9 @@ export function buffChecks(entries: Entry[]): Finding[] {
       const m = ITEM_CAST.exec(desc);
       if (m) out.push({ check: 'item-cast-no-spell', id: `${e.id}:cast`, note: `"${m[0]}" with no spell grant` });
     }
+    // potion-heal-no-row: a potion that restores Hit Points with no action or hpFlat grant, so the sheet only shows its text.
+    const heal = e.kind === 'item' && /^Potions? of\b/.test(e.name) ? POTION_HEAL.exec(desc) : null;
+    if (heal && !kinds.has('action') && !kinds.has('hpFlat')) out.push({ check: 'potion-heal-no-row', id: e.id, note: `"${heal[0].slice(0, 60)}" with no action or hpFlat grant` });
     if (e.kind === 'spell' && /\b(?:willing creature|creature you touch)\b/i.test(desc)) {
       for (const { cue, kinds: want, label } of BUFFS) {
         const m = cue.exec(desc);

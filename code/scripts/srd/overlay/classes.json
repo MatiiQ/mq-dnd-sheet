@@ -3341,6 +3341,14 @@
         "pick": 2,
         "pool": "feature:of=metamagic",
         "pickAt": "2:2,10:4,17:6"
+      },
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Metamagic",
+        "econ": "other",
+        "note": "Spend a known option's cost in Sorcery Points as you cast (Heightened and Quickened 2, the others 1). One option per spell.",
+        "uses": "feature/sorcerer/font-of-magic"
       }
     ]
   },

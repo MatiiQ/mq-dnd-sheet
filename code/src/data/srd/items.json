@@ -2709,7 +2709,19 @@
     "desc": "If you’re hit by an attack roll made with a Ranged or Thrown weapon while wearing these gloves, you can take a Reaction to reduce the damage by 1d10 plus your Dexterity modifier if you have a free hand. If you reduce the damage to 0, you can catch the ammunition or weapon if it is small enough for you to hold in that hand.",
     "cat": "magic",
     "rarity": "Uncommon",
-    "attune": true
+    "attune": true,
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "action",
+        "name": "Snare a missile",
+        "econ": "reaction",
+        "dice": "1d10+dex",
+        "note": "When a Ranged or Thrown weapon attack hits you and you have a free hand: reduce the damage by this much. At 0 you can catch the ammunition or weapon if it fits in that hand.",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   {
     "id": "item/gloves-of-swimming-and-climbing",
@@ -2748,7 +2760,17 @@
     "src": "srd",
     "desc": "These gloves are imperceptible while worn. While wearing them, you gain a +5 bonus to Dexterity (Sleight of Hand) checks.",
     "cat": "magic",
-    "rarity": "Uncommon"
+    "rarity": "Uncommon",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "checkBonus",
+        "name": "+5 to Sleight of Hand",
+        "target": "sleight",
+        "val": "5",
+        "needEq": true
+      }
+    ]
   },
   {
     "id": "item/goggles-of-night",
@@ -4132,7 +4154,23 @@
     "src": "srd",
     "desc": "This necklace has 1d6 + 3 beads hanging from it. You can take a Magic action to detach a bead and throw it up to 60 feet away. When it reaches the end of its trajectory, the bead detonates as a level 3 Fireball (save DC 15). You can hurl multiple beads, or even the whole necklace, at one time. When you do so, increase the damage of the Fireball by 1d6 for each bead after the first (maximum 12d6).",
     "cat": "magic",
-    "rarity": "Rare"
+    "rarity": "Rare",
+    "charges": "1d6+3",
+    "recharge": "none",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "spell",
+        "name": "Fireball",
+        "spell": "spell/fireball",
+        "always": true,
+        "dc": "15",
+        "chg": 1,
+        "chgMax": 5,
+        "castLvl": 3,
+        "needEq": true
+      }
+    ]
   },
   {
     "id": "item/necklace-of-prayer-beads",
@@ -4288,7 +4326,26 @@
     "desc": "While this pearl is on your person, you can take a Magic action to regain one expended spell slot of level 3 or lower. Once you use the pearl, it can’t be used again until the next dawn.",
     "cat": "magic",
     "rarity": "Uncommon",
-    "attune": true
+    "attune": true,
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Pearl of Power",
+        "max": "1",
+        "recharge": "dawn",
+        "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Regain a spell slot",
+        "econ": "action",
+        "res": "g1",
+        "note": "Regain one expended spell slot of level 3 or lower: tap its pip back.",
+        "needAtt": true
+      }
+    ]
   },
   {
     "id": "item/perfume",
@@ -4687,7 +4744,17 @@
     "src": "srd",
     "desc": "When you drink this potion, you gain 10 Temporary Hit Points that last for 1 hour. For the same duration, you are under the effect of the Bless spell (no Concentration required). This potion’s blue liquid bubbles and steams as if boiling.",
     "cat": "magic",
-    "rarity": "Rare"
+    "rarity": "Rare",
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "tempHp",
+        "name": "Potion of Heroism",
+        "val": "10",
+        "note": "Under Bless for 1 hour, no Concentration: add 1d4 to attack rolls and saving throws.",
+        "when": "active"
+      }
+    ]
   },
   {
     "id": "item/potion-of-invisibility",
@@ -5695,7 +5762,29 @@
     "desc": "While holding this rod, you can take a Reaction to absorb a spell that is targeting only you and doesn’t create an area of effect. The absorbed spell’s effect is canceled, and the spell’s energy—not the spell itself—is stored in the rod. The energy has the same level as the spell when it was cast. A canceled spell dissipates with no effect, and any resources used to cast it are wasted. The rod can absorb and store up to 50 levels of energy over the course of its existence. Once the rod absorbs 50 levels of energy, it can’t absorb more. If you are targeted by a spell that the rod can’t store, the rod has no effect on that spell. When you become attuned to the rod, you know how many levels of energy the rod has absorbed over the course of its existence and how many levels of spell energy it currently has stored. If you are a spellcaster holding the rod, you can convert energy stored in it into spell slots to cast spells you have prepared or know. You can create spell slots only of a level equal to or lower than your own spell slots, up to a maximum of level 5. You use the stored levels in place of your slots but otherwise cast the spell as normal. For example, you can use 3 levels stored in the rod as a level 3 spell slot. A newly found rod typically has 1d10 levels of spell energy stored in it. A rod that can no longer absorb spell energy and has no energy remaining becomes nonmagical.",
     "cat": "magic",
     "rarity": "Very Rare",
-    "attune": true
+    "attune": true,
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "resource",
+        "name": "Stored spell levels",
+        "max": "50",
+        "recharge": "none",
+        "note": "Set it to the rod's stored levels when found (typically 1d10).",
+        "needEq": true,
+        "needAtt": true
+      },
+      {
+        "id": "g2",
+        "kind": "action",
+        "name": "Absorb a spell",
+        "econ": "reaction",
+        "res": "g1",
+        "note": "A spell targeting only you, with no area: cancel it and tap + by its level. Cast your spells with stored levels as a slot up to level 5 (tap − by the level). 50 levels over the rod's existence.",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   {
     "id": "item/rod-of-alertness",
@@ -7405,7 +7494,19 @@
     "desc": "While holding or wearing this talisman, you have Advantage on any Intelligence (Arcana) check you make to control a Sphere of Annihilation. In addition, when you start your turn in control of a Sphere of Annihilation, you can take a Magic action to move it 10 feet plus a number of additional feet equal to 10 times your Intelligence modifier. This movement doesn’t have to be in a straight line.",
     "cat": "magic",
     "rarity": "Legendary",
-    "attune": true
+    "attune": true,
+    "grants": [
+      {
+        "id": "g1",
+        "kind": "checkAdv",
+        "name": "Advantage on Arcana",
+        "target": "arcana",
+        "adv": "adv",
+        "note": "to control a Sphere of Annihilation",
+        "needEq": true,
+        "needAtt": true
+      }
+    ]
   },
   {
     "id": "item/talisman-of-ultimate-evil",

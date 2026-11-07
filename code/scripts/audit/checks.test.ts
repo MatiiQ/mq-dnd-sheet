@@ -171,6 +171,9 @@ describe('catalog against the sheet', () => {
     expect(keys(buffChecks([item('Wand', { desc: wand })]))).toEqual(['item-cast-no-spell|item/wand:cast']);
     expect(keys(buffChecks([item('Wand', { desc: wand, grants: [{ id: 'g', kind: 'spell', name: 'Fireball', spell: 'spell/fireball' }] })]))).toEqual([]);
     expect(keys(buffChecks([item('Ring', { desc: 'While wearing this ring, you can cast the Telekinesis spell from it.' })]))).toEqual(['item-cast-no-spell|item/ring:cast']);
+    expect(keys(buffChecks([item('Potion of Mending', { desc: 'You regain 2d4 + 2 Hit Points when you drink this potion.' })]))).toEqual(['potion-heal-no-row|item/potion-of-mending']);
+    expect(keys(buffChecks([item('Potion of Mending', { desc: 'You regain 2d4 + 2 Hit Points.', grants: [{ id: 'g', kind: 'action', name: 'Drink', econ: 'bonus' }] })]))).toEqual([]);
+    expect(keys(buffChecks([item('Ring of Mending', { desc: 'You regain 1d6 Hit Points every 10 minutes.' })]))).toEqual([]);
     expect(keys(buffChecks([item('Lamp', { desc: 'A Lamp burns Oil as fuel to cast Bright Light in a 15-foot radius.', cat: 'gear' })]))).toEqual([]);
   });
   it('finds a buff on a willing creature with no grant of its kind', () => {

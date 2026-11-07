@@ -1,7 +1,7 @@
 // The welcome screen (spec 2026-11-06 §5): shown when no character is open, and from Menu › Characters. Character cards
 // read only the index (name, info, an HP bar), never the sheets. Delete and duplicate stay in the menu, for the open sheet.
 import { useRef, useState, type ReactNode } from 'react';
-import { charInfo, charName, EXAMPLES, importNote, type CharacterStore } from '../storage';
+import { charInfo, charName, EXAMPLES, importFile, type CharacterStore } from '../storage';
 
 export function Welcome({ store, draft, onOpen, onNew, onBack, onImported }: {
   store: CharacterStore; draft: ReactNode; onOpen: (id: string) => void; onNew: () => void; onBack?: () => void; onImported: () => void;
@@ -10,13 +10,9 @@ export function Welcome({ store, draft, onOpen, onNew, onBack, onImported }: {
   const [msg, setMsg] = useState<string | null>(null);
   const importBackup = async (file: File | undefined) => {
     if (!file) return;
-    try {
-      const r = store.importAll(JSON.parse(await file.text()));
-      setMsg(importNote(r));
-      if (r.added) onImported();
-    } catch (e) {
-      setMsg(e instanceof Error && e.message.includes('backup') ? e.message : 'That file could not be read as a backup.');
-    }
+    const r = await importFile(store, file);
+    setMsg(r.msg);
+    if (r.added) onImported();
   };
   return (
     <main className="wizard welcome" aria-label="Characters">

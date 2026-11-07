@@ -2730,7 +2730,27 @@
     "dur": "8 hours",
     "conc": false,
     "ritual": false,
-    "fx": "other"
+    "fx": "other",
+    "grants": [
+      {
+        "kind": "checkAdv",
+        "name": "Foresight",
+        "target": "all",
+        "adv": "adv",
+        "always": true,
+        "note": "and your attack rolls; attacks against you have Disadvantage",
+        "when": "active",
+        "id": "g1"
+      },
+      {
+        "kind": "defense",
+        "name": "Advantage on all saves",
+        "def": "adv",
+        "target": "All saves",
+        "when": "active",
+        "id": "g2"
+      }
+    ]
   },
   {
     "id": "spell/freedom-of-movement",

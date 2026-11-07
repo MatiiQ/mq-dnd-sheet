@@ -248,11 +248,13 @@ export function levelPlan(c: Character, pick: ClassPick, cat: Catalog | null, an
   return { pick, cls, n, clsLvl: r.lvl, steps };
 }
 
+// Equal as stored: an absent optional value is written '' (levelSet), so undefined and '' match.
+const same = (a: unknown, b: unknown) => JSON.stringify(a ?? '') === JSON.stringify(b ?? '');
+
 // The scalar fields a level changed, as was → now: LEVEL_KEYS and each row's ROW_FIELDS. An absent optional value is
 // written '' (JSON drops undefined); a row created by the level gets no entries (undo removes it whole).
 export function levelSet(before: Character, after: Character): LevelSet[] {
   const out: LevelSet[] = [];
-  const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
   const top = (k: 'castAb' | 'slotMax' | 'pactMax' | 'pactLvl') => (k === 'slotMax' ? [...before.slotMax] : before[k]);
   for (const k of LEVEL_KEYS) if (!same(top(k), after[k])) out.push({ key: k, was: top(k), now: k === 'slotMax' ? [...after.slotMax] : after[k] });
   for (const b of before.classes) {
@@ -353,7 +355,6 @@ export function applyLevel(c: Character, plan: Plan, ans: LevelAnswers, cat: Cat
     }
   }
   if (cat) {
-    const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
     const s0 = slotsFor(c, cat), s1 = slotsFor(x, cat);
     if (same(c.slotMax, s0) || use('slotMax')) x = { ...x, slotMax: s1, slotUsed: x.slotUsed.map((n, i) => Math.min(n, s1[i])) };
     else if (!same(c.slotMax, s1)) kept.push({ key: 'slotMax', table: s1 });
@@ -398,7 +399,6 @@ const undoable = (c: Character): LevelRecord | null => { const rec = c.levels.at
 const toRef = (s: string): Ref => { const i = s.indexOf(':'); return { kind: s.slice(0, i) as RefKind, id: s.slice(i + 1) }; };
 const listOf = (kind: RefKind) => LISTS.find(([, k]) => k === kind)![0];
 const entryOf = (c: Character, r: Ref) => (c[listOf(r.kind)] as { id: string; name: string }[]).find((x) => x.id === r.id);
-const same = (a: unknown, b: unknown) => JSON.stringify(a ?? '') === JSON.stringify(b ?? '');
 function fieldOf(c: Character, key: LevelKey): unknown {
   const m = /^row\.(.+)\.(\w+)$/.exec(key);
   if (!m) return c[key as 'castAb'];

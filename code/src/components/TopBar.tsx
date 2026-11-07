@@ -7,7 +7,7 @@ import { setLayoutMode, useLayoutMode, useWide, type LayoutMode } from '../layou
 import { classLine, totalLevel, acOnOther, acSpellIdle, activeAuras, CONDITIONS, PILL_STATS, TABS, fmt, hpColor, maxHpOf, pillView, resPill, setConc, setPill, toggleAcSpell, type PillView, type RestEvent } from '../logic';
 import { showCompanions } from '../creatures';
 import { useSheet, type FormState } from '../sheet';
-import { EXAMPLES, charInfo, charName, importNote, saveBackupFile, type CharacterStore } from '../storage';
+import { EXAMPLES, charInfo, charName, importFile, saveBackupFile, type CharacterStore } from '../storage';
 import { undoPreview } from '../levelup';
 import type { Character, Spell, Tab } from '../types';
 import { CheckIcon, ChevronDown, ChevronRight, MenuIcon, PencilIcon, StarIcon, XIcon, useArmed } from './ui';
@@ -282,13 +282,9 @@ function Menu({ store, onClose, onSwitched, onRest, onLevelUp, onUndoLevel, onCr
 
   const importBackup = async (file: File | undefined) => {
     if (!file) return;
-    try {
-      const r = store.importAll(JSON.parse(await file.text()));
-      onSwitched(false, true);
-      setBackupMsg(importNote(r));
-    } catch (e) {
-      setBackupMsg(e instanceof Error && e.message.includes('backup') ? e.message : 'That file could not be read as a backup.');
-    }
+    const r = await importFile(store, file);
+    if (r.added) onSwitched(false, true);
+    setBackupMsg(r.msg);
   };
 
   return (

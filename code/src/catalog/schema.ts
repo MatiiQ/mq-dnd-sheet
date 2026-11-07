@@ -81,7 +81,7 @@ export type Spec = GrantSpec | ChoiceSpec;
 export interface ChoiceSpec { kind: 'choice'; id: string; name: string; pick: number; pickAt?: string; orExpert?: boolean; repeat?: boolean; options?: GrantSpec[]; pool?: string; ifPick?: string }
 export type GrantKind = 'sense' | 'resource' | 'defense' | 'abil' | 'abilSet' | 'prof' | 'saveBonus' | 'checkBonus' | 'spell' | 'speed' | 'ac'
   | 'init' | 'hpLvl' | 'hpFlat' | 'size' | 'carryUp' | 'action' | 'xdmg' | 'attacks' | 'unarmed' | 'atkBonus' | 'dmgBonus' | 'lightExtra' | 'atkAbil'
-  | 'casting' | 'crit' | 'spellAtk' | 'spellDc' | 'checkAdv' | 'aura';
+  | 'casting' | 'crit' | 'spellAtk' | 'spellDc' | 'checkAdv' | 'aura' | 'tempHp';
 // Every grant is flat, so a character can store it as a plain entry. Fields that take a Value also accept '$<choiceId>'.
 export interface GrantSpec {
   id: string; kind: GrantKind; name: string;
@@ -182,6 +182,8 @@ const GRANTS: Record<GrantKind, Record<string, [Check, boolean]>> = {
   checkAdv: { target: [str, true], adv: [oneOf('adv', 'dis'), true], always: [bool, false], note: [str, false] },
   // An Emanation from you while the grant counts (range: a Value, may be a level table); incap: ends while Incapacitated.
   aura: { range: [value, true], note: [str, false], incap: [bool, false] },
+  // Temporary HP gained when the effect switches on (Potion of Heroism); note: what else rides on it, shown in Active effects.
+  tempHp: { val: [value, true], note: [str, false] },
   spell: { spell: [str, true], always: [bool, false], castAb: [or(ability, ref), false], dc: [value, false], atkB: [value, false], chg: [whole(1, 50), false], chgMax: [whole(1, 50), false], castLvl: [whole(1, 9), false] },
   speed: { mode: [oneOf('walk', 'climb', 'swim', 'fly', 'burrow'), true], val: [or(value, oneOf('walk', 'walk2')), true], hover: [bool, false], floor: [bool, false] },
   ac: { acMode: [oneOf('bonus', 'unarmored', 'dexCap'), true], val: [value, false], ab: [or(ability, ref), false], shieldOk: [bool, false] },

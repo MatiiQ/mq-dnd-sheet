@@ -24,7 +24,8 @@ export const GRANT_KINDS: [GrantKind, string][] = [
   ['carryUp', 'Carry as one size larger'], ['action', 'Action'], ['xdmg', 'Extra damage on a hit'], ['attacks', 'Attacks per Attack action'],
   ['unarmed', 'Unarmed Strike'], ['atkBonus', 'Attack bonus'], ['dmgBonus', 'Damage bonus'], ['lightExtra', 'Light weapon extra attack'],
   ['atkAbil', 'Attack ability'], ['crit', 'Critical hit range'],
-  ['spellAtk', 'Spell attack bonus'], ['spellDc', 'Spell save DC bonus'], ['checkAdv', 'Advantage on checks'], ['aura', 'Aura']
+  ['spellAtk', 'Spell attack bonus'], ['spellDc', 'Spell save DC bonus'], ['checkAdv', 'Advantage on checks'], ['aura', 'Aura'],
+  ['tempHp', 'Temporary HP when switched on']
 ];
 const WEAPON_FIELDS = [v('val', 'Bonus'), sel('wrange', 'Weapon', RANGE), sel('amode', 'Attack', RANGE), t('prop', 'Weapon property'), t('weapon', 'Weapon name'), b('oneHand', 'One-handed only')];
 export const GRANT_FIELDS: Record<GrantKind, FieldDef[]> = {
@@ -59,6 +60,7 @@ export const GRANT_FIELDS: Record<GrantKind, FieldDef[]> = {
   spellAtk: [v('val', 'Bonus')],
   spellDc: [v('val', 'Bonus')],
   aura: [v('range', 'Range (ft)'), t('note', 'Affects'), b('incap', 'Ends while Incapacitated')],
+  tempHp: [v('val', 'Temporary HP'), t('note', 'Also (e.g. under Bless)')],
   checkAdv: [t('target', 'Skill or ability'), sel('adv', 'Kind', [['adv', 'Advantage'], ['dis', 'Disadvantage']]), b('always', 'Always applies'), t('note', 'When (e.g. relies on sight)')]
 };
 import { LINKABLE } from '../catalog/flow';

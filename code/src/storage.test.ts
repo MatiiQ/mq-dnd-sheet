@@ -3,7 +3,7 @@ import { withClass } from './test-fixtures';
 import { blankCharacter, druidSample, SAVE_VERSION, sampleCharacter } from './defaults';
 import { isActive } from './links';
 import { longRest } from './logic';
-import { addToStore, applyPatch, deleteFromStore, exportStore, freshList, importNote, initialStore, load, openExampleOnNextLoad, persistStore, rawBackup, switchStore, unreadableSheets, writeBackup, type Store } from './storage';
+import { addToStore, applyPatch, deleteFromStore, exportStore, freshList, importFile, importNote, initialStore, load, openExampleOnNextLoad, persistStore, rawBackup, switchStore, unreadableSheets, writeBackup, type Store } from './storage';
 
 const renamed = (): Store => ({
   id: 'a', list: [{ id: 'a', name: 'Ilyra Moonbrook' }, { id: 'b', name: 'Other' }],
@@ -64,6 +64,15 @@ describe('backup import', () => {
   it('rejects a file that is not a backup', () => {
     stubStorage();
     expect(() => writeBackup({ app: 'other' })).toThrow('Not a character sheet backup file.');
+  });
+  it('importFile shows a refusal written for the player, and a generic message for anything else', async () => {
+    stubStorage();
+    const file = (text: string) => new File([text], 'b.json');
+    const store = { importAll: (d: unknown) => { const r = writeBackup(d); return { added: r.added.length, newer: r.newer, failed: r.failed }; } };
+    expect(await importFile(store, file('{"app":"other"}'))).toEqual({ msg: 'Not a character sheet backup file.', added: 0 });
+    expect(await importFile(store, file('not json'))).toEqual({ msg: 'That file could not be read as a backup.', added: 0 });
+    const ok = await importFile(store, file(JSON.stringify({ app: 'dnd-character-sheet', version: 1, characters: [sampleCharacter()] })));
+    expect(ok).toEqual({ msg: 'Imported 1 character.', added: 1 });
   });
 });
 
