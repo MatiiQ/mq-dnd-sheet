@@ -193,7 +193,8 @@
     "conc": false,
     "ritual": false,
     "fx": "other",
-    "higher": "You animate or reassert control over two additional Undead creatures for each spell slot level above 3. Each of the creatures must come from a different corpse or pile of bones."
+    "higher": "You animate or reassert control over two additional Undead creatures for each spell slot level above 3. Each of the creatures must come from a different corpse or pile of bones.",
+    "makes": "pet"
   },
   {
     "id": "spell/animate-objects",
@@ -211,7 +212,8 @@
     "conc": true,
     "ritual": false,
     "fx": "other",
-    "higher": "The creature’s Slam damage increases by 1d4 (Medium or smaller), 1d6 (Large), or 1d12 (Huge) for each spell slot level above 5."
+    "higher": "The creature’s Slam damage increases by 1d4 (Medium or smaller), 1d6 (Large), or 1d12 (Huge) for each spell slot level above 5.",
+    "makes": "pet"
   },
   {
     "id": "spell/antilife-shell",
@@ -2357,7 +2359,9 @@
     "dur": "Instantaneous",
     "conc": false,
     "ritual": true,
-    "fx": "other"
+    "fx": "other",
+    "makes": "pet",
+    "single": true
   },
   {
     "id": "spell/find-steed",
@@ -2375,7 +2379,9 @@
     "conc": false,
     "ritual": false,
     "fx": "other",
-    "higher": "Use the spell slot’s level for the spell’s level in the stat block."
+    "higher": "Use the spell slot’s level for the spell’s level in the stat block.",
+    "makes": "pet",
+    "single": true
   },
   {
     "id": "spell/find-the-path",
@@ -2900,7 +2906,8 @@
     "conc": true,
     "ritual": false,
     "fx": "other",
-    "higher": "Use the spell slot’s level for the spell’s level in the stat block."
+    "higher": "Use the spell slot’s level for the spell’s level in the stat block.",
+    "makes": "pet"
   },
   {
     "id": "spell/glibness",
@@ -4707,7 +4714,8 @@
     "conc": true,
     "ritual": false,
     "fx": "other",
-    "save": "wis"
+    "save": "wis",
+    "makes": "form"
   },
   {
     "id": "spell/power-word-heal",
@@ -5427,7 +5435,8 @@
     "dur": "Concentration, up to 1 hour",
     "conc": true,
     "ritual": false,
-    "fx": "other"
+    "fx": "other",
+    "makes": "form"
   },
   {
     "id": "spell/shatter",
@@ -6012,6 +6021,7 @@
     "ritual": false,
     "fx": "other",
     "higher": "Use the spell slot’s level for the spell’s level in the stat block.",
+    "makes": "pet",
     "grants": [
       {
         "id": "g1",

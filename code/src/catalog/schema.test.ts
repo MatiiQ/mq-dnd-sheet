@@ -225,3 +225,14 @@ describe('needAura and needHand on a catalog grant', () => {
     expect(feature({ needAura: 'feature/paladin/aura-of-protection' })).toEqual([]);
   });
 });
+
+describe('makes and single (companions)', () => {
+  const spell = { id: 'spell/x', kind: 'spell', name: 'X', src: 'srd', desc: '', lvl: 1, school: 'Conjuration', classes: 'wizard', time: 'Action', range: '10 feet', comp: 'V', dur: 'Instantaneous', conc: false, ritual: false, fx: 'other' };
+  it('accepts makes and single on a spell and makes on a feature, and refuses bad values', () => {
+    expect(validateEntry({ ...spell, makes: 'pet', single: true } as never)).toEqual([]);
+    expect(validateEntry({ ...spell, makes: 'dragon' } as never)).not.toEqual([]);
+    const feature = { id: 'feature/druid/x', kind: 'feature', name: 'X', src: 'srd', desc: '', cls: 'druid', lvl: 2, grants: [] };
+    expect(validateEntry({ ...feature, makes: 'form' } as never)).toEqual([]);
+    expect(validateEntry({ ...feature, makes: 1 } as never)).not.toEqual([]);
+  });
+});

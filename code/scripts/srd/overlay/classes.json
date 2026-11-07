@@ -1336,7 +1336,14 @@
         "kind": "action",
         "name": "Wild Companion",
         "econ": "action",
-        "note": "Expend a spell slot or a Wild Shape use: cast Find Familiar without Material components."
+        "note": "Expend a spell slot or a Wild Shape use: cast Find Familiar without Material components. The familiar is Fey and goes at the end of a Long Rest: tick Ends on a Long Rest on its card."
+      },
+      {
+        "id": "g2",
+        "kind": "spell",
+        "name": "Find Familiar",
+        "spell": "spell/find-familiar",
+        "always": true
       }
     ]
   },
@@ -1360,6 +1367,7 @@
     ]
   },
   "feature/druid/wild-shape": {
+    "makes": "form",
     "grants": [
       {
         "id": "g1",

@@ -31,6 +31,12 @@ describe('spellFromEntry', () => {
     const c = migrate({ ...blankCharacter(), spells: [{ id: 's1', ...sp }] });
     expect(c.spells[0]).toEqual({ id: 's1', ...sp });
   });
+  it('copies makes and single, and keeps them through an edit (companions)', () => {
+    const sp = spellFromEntry(spell('spell/find-familiar'));
+    expect([sp.makes, sp.single]).toEqual(['pet', true]);
+    expect(spellFromForm(draftFromSpell({ id: 's1', ...sp }))).toMatchObject({ makes: 'pet', single: true });
+    expect('makes' in spellFromEntry(spell('spell/fireball'))).toBe(false);
+  });
   it('leaves a spell entry’s grants out', () => {
     const sp = spellFromEntry(spell('spell/shillelagh')) as Record<string, unknown>;
     expect(sp.grants).toBeUndefined();

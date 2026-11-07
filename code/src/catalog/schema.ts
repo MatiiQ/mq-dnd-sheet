@@ -19,6 +19,8 @@ export interface SpellEntry extends EntryBase {
   dtypes?: string;     // a damage type chosen from a list ('Acid,Cold,Fire'); dtype is then left out
   parts?: SpellPart[]; // more damage or healing rows (Ice Knife's burst); the spell's own fields stay the first row
   grants?: Spec[];   // effects while the spell is on (Shillelagh), read when it is added to a character
+  makes?: 'pet' | 'form'; // a cast brings a creature or a form the caster takes (a Companions card)
+  single?: boolean;    // a new casting replaces its creature (Find Familiar, Find Steed)
 }
 // One more damage or healing row of a spell, named '<spell> · <label>'. It inherits nothing from the spell: every field
 // its row needs is written on it. dmgMod/healMod are only ever true.
@@ -64,7 +66,8 @@ export interface ClassEntry extends EntryBase {
 export interface SubclassEntry extends EntryBase { kind: 'subclass'; cls: string }
 // again: later levels at which the same feature is gained again, as a comma list ('8,12,16').
 // of: an option a pool offers (Eldritch Invocations, Maneuvers, Metamagic), added as its own feature; prereq and repeat as on a feat.
-export interface FeatureEntry extends EntryBase { kind: 'feature'; cls: string; sub?: string; lvl: number; again?: string; of?: 'invocation' | 'maneuver' | 'metamagic'; prereq?: string; repeat?: boolean; grants: Spec[] }
+// makes: the feature makes a creature (Primal Companion) or a form (Wild Shape) without a spell.
+export interface FeatureEntry extends EntryBase { kind: 'feature'; cls: string; sub?: string; lvl: number; again?: string; of?: 'invocation' | 'maneuver' | 'metamagic'; prereq?: string; repeat?: boolean; makes?: 'pet' | 'form'; grants: Spec[] }
 export interface ProfEntry extends EntryBase { kind: 'prof'; cat: 'armor' | 'weapon' | 'tool' | 'language' }
 export interface RuleEntry extends EntryBase { kind: 'rule'; cat: 'action' | 'sense' | 'condition' | 'property' | 'mastery' }
 export type Entry = SpellEntry | ItemEntry | FeatEntry | BackgroundEntry | SpeciesEntry | TraitEntry | ClassEntry | SubclassEntry | FeatureEntry | ProfEntry | RuleEntry;
@@ -215,7 +218,8 @@ const SPELL: Record<string, [Check, boolean]> = {
   lvl: [whole(0, 9), true], school: [str, true], classes: [str, true], time: [str, true], range: [str, true], comp: [str, true], dur: [str, true],
   conc: [bool, true], ritual: [bool, true], atk: [RANGE_KIND, false], save: [ability, false], fx: [oneOf('damage', 'healing', 'other'), true],
   dice: [str, false], dtype: [str, false], scale: [str, false], higher: [str, false], acFx: [oneOf(...AC_EFFECTS), false], acVal: [num, false],
-  healMod: [oneOf(true), false], dmgMod: [oneOf(true), false], dtypes: [(v) => isDtypes(v), false], parts: [(v) => Array.isArray(v), false]
+  healMod: [oneOf(true), false], dmgMod: [oneOf(true), false], dtypes: [(v) => isDtypes(v), false], parts: [(v) => Array.isArray(v), false],
+  makes: [oneOf('pet', 'form'), false], single: [oneOf(true), false]
 };
 const PART: Record<string, [Check, boolean]> = {
   label: [(v) => typeof v === 'string' && v.trim() !== '', true], fx: [oneOf('damage', 'healing'), true], dice: [str, true],
@@ -264,7 +268,7 @@ const FIELDS: Record<Kind, Record<string, [Check, boolean]>> = {
     multi: [(v) => typeof v === 'object' && v !== null && !Array.isArray(v), false], equipA: [str, false], gpA: [whole(0, 99999), false], gpB: [whole(0, 99999), false]
   },
   subclass: { cls: [str, true] },
-  feature: { cls: [str, true], sub: [str, false], lvl: [whole(1, 20), true], again: [str, false], of: [oneOf('invocation', 'maneuver', 'metamagic'), false], prereq: [str, false], repeat: [bool, false] },
+  feature: { cls: [str, true], sub: [str, false], lvl: [whole(1, 20), true], again: [str, false], of: [oneOf('invocation', 'maneuver', 'metamagic'), false], prereq: [str, false], repeat: [bool, false], makes: [oneOf('pet', 'form'), false] },
   prof: { cat: [oneOf('armor', 'weapon', 'tool', 'language'), true] },
   rule: { cat: [oneOf('action', 'sense', 'condition', 'property', 'mastery'), true] }
 };

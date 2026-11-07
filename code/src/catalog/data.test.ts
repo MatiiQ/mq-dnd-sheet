@@ -274,3 +274,23 @@ describe('effect grants from the catalog audit', () => {
     expect(flat(all.find((e) => e.id === 'item/frost-brand')!).map((g) => g.kind).sort()).toEqual(['defense', 'xdmg']);
   });
 });
+
+describe('companions in the catalog', () => {
+  const byId = new Map(all.map((e) => [e.id, e]));
+  const spell = (id: string) => byId.get(id) as SpellEntry;
+  const feature = (id: string) => byId.get(id) as FeatureEntry;
+  it('mark the spells that make a creature or a form; single only where a new casting replaces it', () => {
+    for (const id of ['spell/find-familiar', 'spell/find-steed']) expect([id, spell(id).makes, spell(id).single]).toEqual([id, 'pet', true]);
+    for (const id of ['spell/animate-dead', 'spell/animate-objects', 'spell/giant-insect', 'spell/summon-dragon']) expect([id, spell(id).makes, spell(id).single]).toEqual([id, 'pet', undefined]);
+    for (const id of ['spell/polymorph', 'spell/shapechange']) expect([id, spell(id).makes]).toEqual([id, 'form']);
+  });
+  it('give Wild Shape makes form; the spell owns the creature when a feature only casts it (R7)', () => {
+    expect(feature('feature/druid/wild-shape').makes).toBe('form');
+    for (const id of ['feature/warlock/pact-of-the-chain', 'feature/paladin/faithful-steed', 'feature/druid/wild-companion']) expect([id, feature(id).makes]).toEqual([id, undefined]);
+  });
+  it('give Wild Companion its action g1 and Find Familiar always prepared as g2 (R29, R38)', () => {
+    const g = feature('feature/druid/wild-companion').grants as GrantSpec[];
+    expect(g.map((x) => [x.id, x.kind])).toEqual([['g1', 'action'], ['g2', 'spell']]);
+    expect(g[1]).toMatchObject({ spell: 'spell/find-familiar', always: true });
+  });
+});

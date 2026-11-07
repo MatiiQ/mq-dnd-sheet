@@ -72,6 +72,8 @@ describe('addFromCatalog', () => {
     expect(c.feats.find((f) => f.cid === 'subclass/ranger/hunter')).toMatchObject({ g: 'sub', name: 'Hunter', from: 'feature:' + top.id });
     expect(c.feats).toHaveLength(2);
     expect(addFromCatalog(blankCharacter(), cat, E('feature/fighter/champion/improved-critical'), A()).feats[0].g).toBe('sub');
+    expect(addFromCatalog(blankCharacter(), cat, E('feature/druid/wild-shape'), A()).feats[0].makes).toBe('form');
+    expect('makes' in addFromCatalog(blankCharacter(), cat, E('feature/fighter/champion/improved-critical'), A()).feats[0]).toBe(false);
   });
 
   it('points Favored Enemy’s resource at its new Hunter’s Mark', () => {
