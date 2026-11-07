@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState, type CSSProperties, type InputHTMLAttributes, type ReactNode } from 'react';
 import { DAMAGE_TYPES } from '../catalog/schema';
 import { effectCanTargetOther, inactiveReason } from '../links';
-import { acCanTargetOther, castFree, castFromItem, castFromScroll, castLevelOf, clamp, fmt, freeCastsOf, itemOfSpell, ORDINAL, scrollOf, toggleAcTarget, toggleEffect, type AcPart } from '../logic';
+import { acCanTargetOther, castFree, castFromItem, castFromScroll, refundFree, castLevelOf, clamp, fmt, freeCastsOf, itemOfSpell, ORDINAL, scrollOf, toggleAcTarget, toggleEffect, type AcPart } from '../logic';
 import { useSheet } from '../sheet';
 import { revealOf } from './nav';
-import type { Resource, Spell } from '../types';
+import type { Character, Resource, Spell } from '../types';
 
 // ---------- icons (stroke SVG, colored by currentColor) ----------
 interface IconProps { size?: number; style?: CSSProperties }
@@ -190,22 +190,32 @@ export function AcTargetSwitch({ sp }: { sp: Spell }) {
   );
 }
 
+// Called after a cast that happened (never after a refused one), with the cast's slot level and the patch applied.
+export type OnCast = (lvl: number, patch: Partial<Character>) => void;
+// Applies a cast computed from the render's c (R36: never inside an update patch function, which runs lazily and
+// twice in StrictMode); a refused cast (null) does nothing.
+export function applyCast(update: (p: Partial<Character>) => void, r: Partial<Character> | null, lvl: number, onCast?: OnCast) {
+  if (r === null) return;
+  update(r);
+  onCast?.(lvl, r);
+}
+
 // A resource that casts this spell. short: the narrow Actions row leaves out the word "left". off: why it can't be used
-// now (an item spell whose item is off), shown disabled.
-export function FreeCastButton({ sp, r, short, off }: { sp: Spell; r: Resource; short?: boolean; off?: string | null }) {
-  const { update } = useSheet();
+// now (an item spell whose item is off), shown disabled. At 0 uses a tap gives one back (refundFree), no cast.
+export function FreeCastButton({ sp, r, short, off, onCast }: { sp: Spell; r: Resource; short?: boolean; off?: string | null; onCast?: OnCast }) {
+  const { c, update } = useSheet();
   const used = r.count <= 0;
   return (
     <button type="button" aria-pressed={used} className={'btn btn-sm toggle-btn' + (used ? ' used' : '')} disabled={!!off}
       aria-label={(used ? 'Free casts of ' + sp.name + ' (' + r.name + ') used up; tap to give one back' : 'Use a free cast of ' + sp.name + ' (' + r.name + '), ' + r.count + ' left') + (off ? ' (' + off + ')' : '')}
-      onClick={() => update((p) => castFree(p, sp, r.id))}>{used ? 'Free used' : 'Free · ' + r.count + (short ? '' : ' left')}</button>
+      onClick={() => (used ? update((p) => refundFree(p, r.id)) : applyCast(update, castFree(c, sp, r.id), sp.lvl, onCast))}>{used ? 'Free used' : 'Free · ' + r.count + (short ? '' : ' left')}</button>
   );
 }
 
 // An item spell's casts, in place of slot buttons: one button per number of charges (each above the cost is one slot
 // level higher), or one Cast for a spell cast at will; and the item's free casts. Disabled while the spell doesn't
 // count (unequipped, unattuned, in a bag), never a tap that does nothing.
-export function ItemCastButtons({ sp, short }: { sp: Spell; short?: boolean }) {
+export function ItemCastButtons({ sp, short, onCast }: { sp: Spell; short?: boolean; onCast?: OnCast }) {
   const { c, update } = useSheet();
   const item = itemOfSpell(c, sp);
   if (!item) return null;
@@ -214,20 +224,20 @@ export function ItemCastButtons({ sp, short }: { sp: Spell; short?: boolean }) {
   if (scrollOf(c, sp)) return (
     <button type="button" className="btn btn-sm toggle-btn" disabled={!!why || item.qty < 1}
       aria-label={'Read the scroll of ' + sp.name + ', ' + item.qty + ' left' + off}
-      onClick={() => update((p) => castFromScroll(p, sp))}>Read scroll</button>
+      onClick={() => applyCast(update, castFromScroll(c, sp), sp.lvl, onCast)}>Read scroll</button>
   );
   const frees = freeCastsOf(c, sp.id);
   const amounts = sp.chg === undefined ? [] : Array.from({ length: (sp.chgMax ?? sp.chg) - sp.chg + 1 }, (_, i) => sp.chg! + i);
   return <>
-    {frees.map((r) => <FreeCastButton key={r.id} sp={sp} r={r} short={short} off={why} />)}
+    {frees.map((r) => <FreeCastButton key={r.id} sp={sp} r={r} short={short} off={why} onCast={onCast} />)}
     {amounts.map((n) => (
       <button key={n} type="button" className="btn btn-sm toggle-btn" disabled={!!why || left < n}
         aria-label={'Cast ' + sp.name + ' with ' + n + (n === 1 ? ' charge' : ' charges') + ' of ' + item.name + ', ' + left + ' left' + off}
-        onClick={() => update((p) => castFromItem(p, sp, n))}>{n + (n === 1 ? ' charge' : ' charges') + ' · ' + ORDINAL[castLevelOf(sp, n)] + ' level'}</button>
+        onClick={() => applyCast(update, castFromItem(c, sp, n), castLevelOf(sp, n), onCast)}>{n + (n === 1 ? ' charge' : ' charges') + ' · ' + ORDINAL[castLevelOf(sp, n)] + ' level'}</button>
     ))}
     {sp.chg === undefined && !frees.length && (
       <button type="button" className="btn btn-sm toggle-btn" disabled={!!why} aria-label={'Cast ' + sp.name + ' from ' + item.name + off}
-        onClick={() => update((p) => castFromItem(p, sp, 0))}>Cast</button>
+        onClick={() => applyCast(update, castFromItem(c, sp, 0), castLevelOf(sp, 0), onCast)}>Cast</button>
     )}
   </>;
 }

@@ -623,7 +623,7 @@ describe('Magic Weapon on one weapon', () => {
     slotMax: [0, 4, 3, 3, 3, 0, 0, 0, 0, 0], slotUsed: Array(10).fill(0) });
   const bonus = (c: Character, it: Item) => weaponAttacks(c, it)[0].hitParts.find((p) => p.label === 'Magic Weapon')?.value ?? 0;
   const dmg = (c: Character, it: Item) => weaponAttacks(c, it)[0].dmgParts.find((p) => p.label === 'Magic Weapon')?.value ?? 0;
-  const cast = (lvl: number, item: string | null) => { const c = applyPatch(base(), (p) => castSpell(p, mw, lvl)); return applyPatch(c, (p) => setFxItem(p, 'spell:mw', item)); };
+  const cast = (lvl: number, item: string | null) => { const c = applyPatch(base(), (p) => castSpell(p, mw, lvl)!); return applyPatch(c, (p) => setFxItem(p, 'spell:mw', item)); };
   it('adds +1 to the weapon touched only (PHB p.295)', () => {
     const c = cast(2, ls.id);
     expect([bonus(c, ls), dmg(c, ls)]).toEqual([1, 1]);

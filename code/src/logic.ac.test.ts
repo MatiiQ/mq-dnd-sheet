@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { blankCharacter } from './defaults';
-import { acCanTargetOther, acOnOther, toggleAcTarget, speedOf, armorSlowBy, stealthDisBy, acSpellIdle, untrainedArmor, castFree, removeRef, acAfterEdit, armorClass, castSpell, detectAcSpell, detectArmor, longRest, speedNow, toggleAcSpell } from './logic';
+import { acCanTargetOther, acOnOther, toggleAcTarget, speedOf, armorSlowBy, stealthDisBy, acSpellIdle, untrainedArmor, castFree, refundFree, removeRef, acAfterEdit, armorClass, castSpell, detectAcSpell, detectArmor, longRest, speedNow, toggleAcSpell } from './logic';
 import { addFromCatalog, type ItemAnswers } from './catalog/copy';
 import { mergeCatalog } from './catalog/merge';
 import srdEntries from './data/srd/index';
@@ -84,24 +84,25 @@ describe('armor class', () => {
     });
     it('casting a non-concentration AC spell turns it on once; others change nothing', () => {
       const c = make({ ...all, acOn: [], slotMax: [0, 4, 2, 0, 0, 0, 0, 0, 0, 0], slotUsed: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0] });
-      expect(castSpell(c, shieldSp, 1).acOn).toEqual(['sh']);
+      expect(castSpell(c, shieldSp, 1)!.acOn).toEqual(['sh']);
       const again = { ...c, acOn: ['sh'] };
-      expect({ ...again, ...castSpell(again, shieldSp, 1) }.acOn).toEqual(['sh']);
-      expect(castSpell(c, faith, 1)).not.toHaveProperty('acOn');
-      expect(castSpell(c, sp(), 1)).not.toHaveProperty('acOn');
+      expect({ ...again, ...castSpell(again, shieldSp, 1)! }.acOn).toEqual(['sh']);
+      expect(castSpell(c, faith, 1)!).not.toHaveProperty('acOn');
+      expect(castSpell(c, sp(), 1)!).not.toHaveProperty('acOn');
     });
     it('a free cast turns the effect on; restoring it does not turn it off', () => {
       const free = (id: string) => ({ id: 'f' + id, name: 'Free', count: 1, max: 1, recharge: 'long' as const, casts: id });
       const c = make({ ...all, acOn: [], res: [free('sh'), free('sf')] });
-      const used = castFree(c, shieldSp, 'fsh');
+      const used = castFree(c, shieldSp, 'fsh')!;
       expect(used.acOn).toEqual(['sh']);
       expect(used.res!.find((r) => r.id === 'fsh')!.count).toBe(0);
-      const back = castFree({ ...c, ...used }, shieldSp, 'fsh');
+      expect(castFree({ ...c, ...used }, shieldSp, 'fsh')).toBeNull();
+      const back = refundFree({ ...c, ...used }, 'fsh');
       expect(back).not.toHaveProperty('acOn');
       expect(back.res!.find((r) => r.id === 'fsh')!.count).toBe(1);
-      expect(castFree(c, faith, 'fsf').conc).toEqual({ id: 'sf', name: 'Shield of Faith' });
+      expect(castFree(c, faith, 'fsf')!.conc).toEqual({ id: 'sf', name: 'Shield of Faith' });
       const on = { ...c, acOn: ['sh'] }; // already on from a slot cast
-      expect({ ...on, ...castFree(on, shieldSp, 'fsh') }.acOn).toEqual(['sh']);
+      expect({ ...on, ...castFree(on, shieldSp, 'fsh')! }.acOn).toEqual(['sh']);
     });
     it('toggle, edit, removal and Long Rest switch AC spells off', () => {
       const c = make({ ...all, acOn: ['sh', 'bk'] });

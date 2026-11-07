@@ -417,15 +417,15 @@ describe('an effect that raises the HP maximum', () => {
   const aidG: Grant = { id: 'g', kind: 'hpFlat', name: 'Aid', val: '@2:5,3:10,4:15,5:20,6:25,7:30,8:35,9:40', when: 'active', from: 'spell:a' };
   const base = (hp: number): Character => ({ ...blankCharacter(), maxHp: 20, origHp: 20, hp, conBase: 0, spells: [aid], grants: [aidG],
     slotMax: [0, 4, 3, 0, 0, 0, 0, 0, 0, 0], slotUsed: Array(10).fill(0) });
-  const cast = (hp: number) => applyPatch(base(hp), (p) => castSpell(p, aid, 2));
+  const cast = (hp: number) => applyPatch(base(hp), (p) => castSpell(p, aid, 2)!);
   it('raises current HP by the same amount when cast (Aid, PHB p.239)', () => {
     expect([cast(20).hp, maxHpOf(cast(20))]).toEqual([25, 25]);
     expect([cast(10).hp, maxHpOf(cast(10))]).toEqual([15, 25]);
   });
   it('clears the death saves when it lifts a character off 0 HP', () => {
-    const c = applyPatch({ ...base(0), ds: 1, df: 2 }, (p) => castSpell(p, aid, 2));
+    const c = applyPatch({ ...base(0), ds: 1, df: 2 }, (p) => castSpell(p, aid, 2)!);
     expect([c.hp, c.ds, c.df]).toEqual([5, 0, 0]);
-    expect(applyPatch({ ...base(10), ds: 1, df: 2 }, (p) => castSpell(p, aid, 2)).df).toBe(2);
+    expect(applyPatch({ ...base(10), ds: 1, df: 2 }, (p) => castSpell(p, aid, 2)!).df).toBe(2);
   });
   it('lowers only the maximum when switched off', () => {
     const off = applyPatch(cast(20), (p) => toggleEffect(p, 'spell:a'));

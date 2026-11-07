@@ -425,12 +425,21 @@ function fixCastFx(c: Character): Character {
 // Casting with a slot uses one slot of that level. A Concentration spell starts Concentration, which ends any other (PHB p.363).
 // Pact slots and Spellcasting slots can cast each other's spells (PHB p.45); a pact slot is always of the pact level.
 export const pactLeft = (c: Character) => Math.max(0, c.pactMax - c.pactUsed);
-export function castSpell(c: Character, sp: Spell, level: number, pool: 'slot' | 'pact' = 'slot'): Partial<Character> {
+// Every cast function returns null when the rules refuse the cast, and a patch (possibly {}) when it happened, so a
+// caller can tell a refused cast from one with no lasting effect (a Ritual of Find Familiar).
+export function castSpell(c: Character, sp: Spell, level: number, pool: 'slot' | 'pact' = 'slot'): Partial<Character> | null {
   // An item's spell never spends a slot or the pact pool: it is cast from the item (castFromItem).
-  if (itemOfSpell(c, sp)) return {};
-  if (pool === 'pact') return level === c.pactLvl && level >= (sp.lvl || 0) && pactLeft(c) > 0 ? withHpRise(c, { pactUsed: c.pactUsed + 1, ...castEffects(c, sp, level) }) : {};
-  if (!slotsLeft(c, level)) return {};
+  if (itemOfSpell(c, sp)) return null;
+  if (pool === 'pact') return level === c.pactLvl && level >= (sp.lvl || 0) && pactLeft(c) > 0 ? withHpRise(c, { pactUsed: c.pactUsed + 1, ...castEffects(c, sp, level) }) : null;
+  if (!slotsLeft(c, level)) return null;
   return withHpRise(c, { ...setSlotUsed(c, level, c.slotUsed[level] + 1), ...castEffects(c, sp, level) });
+}
+// A spell with the Ritual tag can be cast as a Ritual: 10 minutes longer, no slot spent (PHB p.235). Simplification:
+// the sheet doesn't check that the spell is prepared (a Wizard's Ritual Adept needs it only in the spellbook, PHB
+// p.166); the player knows which they may cast. Never an item's spell, which is cast from the item.
+export function castRitual(c: Character, sp: Spell): Partial<Character> | null {
+  if (!sp.ritual || itemOfSpell(c, sp)) return null;
+  return withHpRise(c, castEffects(c, sp, sp.lvl));
 }
 
 // Switches a source's effect on or off (Rage, Starry Form, Shillelagh), without casting or using anything.
@@ -443,15 +452,18 @@ export function effectsAfterEdit(c: Character, sp: Pick<Spell, 'id' | 'c'>): Par
   return sp.c && c.effectsOn.includes(link) ? { effectsOn: c.effectsOn.filter((x) => x !== link) } : {};
 }
 
-// A free cast (a resource that casts the spell): with uses left it uses one and casts, like a slot; at 0 a tap gives
-// one back and leaves the effects alone. Above 0 a tap never gives a use back (a multi-use resource is undone with
-// its counter in Resources).
-export function castFree(c: Character, sp: Spell, resId: string): Partial<Character> {
+// A free cast (a resource that casts the spell): with uses left it uses one and casts, like a slot; at 0 it is
+// refused (null), and the button's tap gives one back through refundFree instead, leaving the effects alone. Above 0
+// a tap never gives a use back (a multi-use resource is undone with its counter in Resources).
+export function castFree(c: Character, sp: Spell, resId: string): Partial<Character> | null {
   const r = c.res.find((x) => x.id === resId);
-  if (!r || (itemOfSpell(c, sp) && !isActive(c, sp))) return {};
-  const res = c.res.map((x) => (x.id === resId ? { ...x, count: x.count > 0 ? x.count - 1 : 1 } : x));
-  if (r.count <= 0) return { res };
+  if (!r || r.count <= 0 || (itemOfSpell(c, sp) && !isActive(c, sp))) return null;
+  const res = c.res.map((x) => (x.id === resId ? { ...x, count: x.count - 1 } : x));
   return withHpRise(c, { res, ...castEffects(c, sp) });
+}
+// A free cast's give-back: at 0 uses a tap on the button gives one back (an accidental tap undone), no cast.
+export function refundFree(c: Character, resId: string): Partial<Character> {
+  return { res: c.res.map((x) => (x.id === resId && x.count <= 0 ? { ...x, count: 1 } : x)) };
 }
 // The item a spell row comes from (a wand's Fireball), never a row only linked to it: an item's spell is cast from the
 // item, with its charges, and never with a slot.
@@ -464,11 +476,11 @@ export function itemOfSpell(c: Character, sp: Spell): Item | undefined {
 export const castLevelOf = (sp: Spell, charges: number): number => (sp.castLvl ?? sp.lvl) + charges - (sp.chg ?? 0);
 // Casting from the item: spends `charges` of its count (chg up to chgMax), or nothing for a spell cast at will (no chg,
 // charges 0). Nothing happens while the spell doesn't count (unequipped, unattuned, in a bag, none left).
-export function castFromItem(c: Character, sp: Spell, charges = 0): Partial<Character> {
+export function castFromItem(c: Character, sp: Spell, charges = 0): Partial<Character> | null {
   const item = itemOfSpell(c, sp);
-  if (!item || scrollOf(c, sp) || !isActive(c, sp)) return {};
-  if (sp.chg === undefined) return charges === 0 ? withHpRise(c, castEffects(c, sp, castLevelOf(sp, 0))) : {};
-  if (charges < sp.chg || charges > (sp.chgMax ?? sp.chg) || (item.count ?? 0) < charges) return {};
+  if (!item || scrollOf(c, sp) || !isActive(c, sp)) return null;
+  if (sp.chg === undefined) return charges === 0 ? withHpRise(c, castEffects(c, sp, castLevelOf(sp, 0))) : null;
+  if (charges < sp.chg || charges > (sp.chgMax ?? sp.chg) || (item.count ?? 0) < charges) return null;
   return withHpRise(c, { inv: c.inv.map((i) => (i.id === item.id ? { ...i, count: (i.count ?? 0) - charges } : i)), ...castEffects(c, sp, castLevelOf(sp, charges)) });
 }
 // The Spell Scroll a spell row comes from.
@@ -481,9 +493,9 @@ export function scrollOf(c: Character, sp: Spell): Item | undefined {
 // last one's effect outlives it, as a potion's does: while its Concentration or switched-on effect lasts, the scroll
 // stays at quantity 0 with its spell row (the effect's grants live on that row); dropSpentScrolls removes both once the
 // effect ends, or at once for a spell with no lasting effect.
-export function castFromScroll(c: Character, sp: Spell): Character {
+export function castFromScroll(c: Character, sp: Spell): Character | null {
   const scroll = scrollOf(c, sp);
-  if (!scroll || scroll.qty < 1 || !isActive(c, sp)) return c;
+  if (!scroll || scroll.qty < 1 || !isActive(c, sp)) return null;
   const inv = c.inv.map((i) => (i.id === scroll.id ? { ...i, qty: i.qty - 1 } : i));
   return dropSpentScrolls({ ...c, ...withHpRise(c, { ...castEffects(c, sp), inv }) });
 }

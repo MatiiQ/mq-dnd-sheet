@@ -396,12 +396,12 @@ function CastButtons({ sp, effect }: { sp: Spell; effect: boolean }) {
     {freeCastsOf(c, sp.id).map((r) => <FreeCastButton key={r.id} sp={sp} r={r} short />)}
     {first !== undefined && (
       <button type="button" className="btn btn-sm toggle-btn" aria-label={'Cast ' + sp.name + ' with a level ' + first + ' slot, ' + slotsLeft(c, first) + ' left'}
-        onClick={() => update((p) => castSpell(p, sp, first))}>Cast {ORDINAL[first]}</button>
+        onClick={() => update((p) => castSpell(p, sp, first) ?? {})}>Cast {ORDINAL[first]}</button>
     )}
     {/* With no regular slot left, a pact slot (PHB p.45). */}
     {first === undefined && pact && (
       <button type="button" className="btn btn-sm toggle-btn" aria-label={'Cast ' + sp.name + ' with a level ' + c.pactLvl + ' pact slot, ' + pactLeft(c) + ' left'}
-        onClick={() => update((p) => castSpell(p, sp, p.pactLvl, 'pact'))}>Cast {ORDINAL[c.pactLvl]} (pact)</button>
+        onClick={() => update((p) => castSpell(p, sp, p.pactLvl, 'pact') ?? {})}>Cast {ORDINAL[c.pactLvl]} (pact)</button>
     )}
   </>;
 }

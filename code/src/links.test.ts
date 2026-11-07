@@ -171,11 +171,11 @@ describe('switching effects', () => {
     expect(longRest(make({ effectsOn: ['feature:f2'] })).effectsOn).toEqual([]);
   });
   it('casting a non-Concentration spell with an effect switches it on once', () => {
-    const cast = castSpell(c, spell, 1);
+    const cast = castSpell(c, spell, 1)!;
     expect(cast.effectsOn).toEqual(['spell:s1']);
     const on = { ...c, ...cast };
-    expect({ ...on, ...castSpell(on, spell, 1) }.effectsOn).toEqual(['spell:s1']);
-    expect(castSpell(make({ effectsOn: [], slotMax: c.slotMax, slotUsed: c.slotUsed }), spell, 1)).not.toHaveProperty('effectsOn');
+    expect({ ...on, ...castSpell(on, spell, 1)! }.effectsOn).toEqual(['spell:s1']);
+    expect(castSpell(make({ effectsOn: [], slotMax: c.slotMax, slotUsed: c.slotUsed }), spell, 1)!).not.toHaveProperty('effectsOn');
   });
   it('editing a spell to Concentration takes its effect out of the list', () => {
     const on = { ...c, effectsOn: ['spell:s1'] };

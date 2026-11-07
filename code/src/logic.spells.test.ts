@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { blankCharacter, druidSample } from './defaults';
-import { castFromItem, castFromScroll, maxHpOf, castLevelOf, itemOfSpell, longRest, normalize, scrollNote, setConc, toggleEffect, walkSpeed, MULTICLASS_SLOTS, casterLevel, pactFor, slotsFor, pactLeft, spellForRow, saveDc, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, removeRef, modeSpeed, castSpell, concAfterEdit, preparedCount, setExhaustion, sortSpells, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, toggleCondition } from './logic';
+import { castFromItem, castFromScroll, maxHpOf, castLevelOf, itemOfSpell, longRest, normalize, scrollNote, setConc, toggleEffect, walkSpeed, MULTICLASS_SLOTS, casterLevel, pactFor, slotsFor, pactLeft, spellForRow, saveDc, castFree, refundFree, castRitual, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, removeRef, modeSpeed, castSpell, concAfterEdit, preparedCount, setExhaustion, sortSpells, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, toggleCondition } from './logic';
 import { migrate } from './migrate';
 import { addFromCatalog } from './catalog/copy';
 import { mergeCatalog } from './catalog/merge';
@@ -14,14 +14,14 @@ describe('spells', () => {
     const slots = { slotMax: [0, 4, 2, 0, 0, 0, 0, 0, 0, 0], slotUsed: [0, 1, 2, 0, 0, 0, 0, 0, 0, 0], conc: null };
     const check = { concCheck: 'Concentration on Hunter’s Mark: CON save DC 10', conc: { id: 'hm', name: 'Hunter’s Mark' } };
     it('uses one slot of that level, or does nothing with none left', () => {
-      expect(castSpell(make(slots), sp(), 1).slotUsed).toEqual([0, 2, 2, 0, 0, 0, 0, 0, 0, 0]);
-      expect(castSpell(make(slots), sp(), 2)).toEqual({});
+      expect(castSpell(make(slots), sp(), 1)!.slotUsed).toEqual([0, 2, 2, 0, 0, 0, 0, 0, 0, 0]);
+      expect(castSpell(make(slots), sp(), 2)).toBeNull();
     });
     it('a Concentration spell starts Concentration and clears the save notice; others leave both', () => {
-      expect(castSpell(make(slots), sp({ c: true }), 1).conc).toEqual({ id: 's1', name: 'Bless' });
-      expect(castSpell(make(slots), sp(), 1)).not.toHaveProperty('conc');
-      expect(castSpell(make({ ...slots, ...check }), sp({ c: true }), 1).concCheck).toBeNull();
-      expect(castSpell(make({ ...slots, ...check }), sp(), 1).concCheck).toBeUndefined();
+      expect(castSpell(make(slots), sp({ c: true }), 1)!.conc).toEqual({ id: 's1', name: 'Bless' });
+      expect(castSpell(make(slots), sp(), 1)!).not.toHaveProperty('conc');
+      expect(castSpell(make({ ...slots, ...check }), sp({ c: true }), 1)!.concCheck).toBeNull();
+      expect(castSpell(make({ ...slots, ...check }), sp(), 1)!.concCheck).toBeUndefined();
     });
     it('incapacitating conditions end Concentration; other toggles keep it', () => {
       const c = toggleCondition(make({ conc: hm }), 'Stunned');
@@ -110,17 +110,18 @@ describe('spells', () => {
       const c = druidSample();
       const sh = c.spells.find((x) => x.id === 'ds12')!;
       const withFree = { ...c, acOn: [], res: [...c.res, { id: 'fs', name: 'Shield', count: 1, max: 1, recharge: 'long' as const, casts: 'ds12' }] };
-      const used = { ...withFree, ...castFree(withFree, sh, 'fs') };
+      const used = { ...withFree, ...castFree(withFree, sh, 'fs')! };
       expect(used.res.find((r) => r.id === 'fs')!.count).toBe(0);
       expect(used.acOn).toEqual(['ds12']);
-      const back = { ...used, ...castFree(used, sh, 'fs') };
+      expect(castFree(used, sh, 'fs')).toBeNull();
+      const back = { ...used, ...refundFree(used, 'fs') };
       expect(back.res.find((r) => r.id === 'fs')!.count).toBe(1);
       expect(back.acOn).toEqual(['ds12']);
     });
     it('a free cast of a Concentration spell starts Concentration', () => {
       const c = make({ conc: null, res: [{ id: 'favored', name: 'Favored Enemy', count: 2, max: 3, recharge: 'long', casts: 'sp4' }] });
       const hmSp = c.spells.find((x) => x.id === 'sp4')!;
-      const r = castFree(c, hmSp, 'favored');
+      const r = castFree(c, hmSp, 'favored')!;
       expect(r.res![0].count).toBe(1);
       expect(r.conc).toEqual({ id: 'sp4', name: 'Hunter’s Mark' });
     });
@@ -128,11 +129,11 @@ describe('spells', () => {
       const c = druidSample();
       const gb = c.spells.find((x) => x.id === 'ds11')!;
       const star = { ...c, res: c.res.map((r) => (r.id === 'bolt' ? { ...r, count: 5, casts: 'ds11' } : r)) };
-      const one = { ...star, ...castFree(star, gb, 'bolt') };
-      const two = { ...one, ...castFree(one, gb, 'bolt') };
+      const one = { ...star, ...castFree(star, gb, 'bolt')! };
+      const two = { ...one, ...castFree(one, gb, 'bolt')! };
       expect([one, two].map((x) => x.res.find((r) => r.id === 'bolt')!.count)).toEqual([4, 3]);
       const zero = { ...star, res: star.res.map((r) => (r.id === 'bolt' ? { ...r, count: 0 } : r)) };
-      expect(castFree(zero, gb, 'bolt').res!.find((r) => r.id === 'bolt')!.count).toBe(1);
+      expect(refundFree(zero, 'bolt').res!.find((r) => r.id === 'bolt')!.count).toBe(1);
     });
     it('removing a spell removes its own free cast and empties a pill naming it', () => {
       const c = make({ pills: ['hp', 'res:fc', ''], res: [{ id: 'fc', name: 'Goodberry', count: 1, max: 1, recharge: 'long', from: 'spell:sp8', casts: 'sp8' }],
@@ -239,9 +240,9 @@ describe('the Pact Magic pool (PHB p.45, p.154)', () => {
   const sp = { id: 's', name: 'Hex', lvl: 1, time: 'Bonus Action', range: '90 feet' } as Spell;
   const w = (p: Partial<Character> = {}) => ({ ...blankCharacter(), hp: 8, pactMax: 2, pactLvl: 3, pactUsed: 0, spells: [sp], ...p });
   it('casts any spell with a pact slot at the pact level', () => {
-    expect(castSpell(w(), sp, 3, 'pact')).toMatchObject({ pactUsed: 1 });
-    expect(castSpell(w({ pactLvl: 2 }), sp, 3, 'pact')).toEqual({});
-    expect(castSpell(w({ pactUsed: 2 }), sp, 3, 'pact')).toEqual({});
+    expect(castSpell(w(), sp, 3, 'pact')!).toMatchObject({ pactUsed: 1 });
+    expect(castSpell(w({ pactLvl: 2 }), sp, 3, 'pact')).toBeNull();
+    expect(castSpell(w({ pactUsed: 2 }), sp, 3, 'pact')).toBeNull();
     expect(pactLeft(w({ pactUsed: 1 }))).toBe(1);
   });
 });
@@ -322,41 +323,45 @@ describe('casting from an item’s charges', () => {
     ({ ...blankCharacter(), inv: [it], spells: [sp], attuneIds: ['w'], slotMax: slots, slotUsed: Array(10).fill(0), ...p });
   it('spends the charges, never a slot, and casts one level higher per extra charge', () => {
     const c = with_();
-    const out = castFromItem(c, fb, 3);
+    const out = castFromItem(c, fb, 3)!;
     expect(out.inv![0].count).toBe(4);
     expect(out.slotUsed).toBeUndefined();
     expect(castLevelOf(fb, 3)).toBe(5);
     expect(castLevelOf(fb, 1)).toBe(3);
   });
   it('refuses too many charges, too few left, or fewer than the cost', () => {
-    expect(castFromItem(with_({}, fb, { ...wand, count: 2 }), fb, 3)).toEqual({});
-    expect(castFromItem(with_(), fb, 4)).toEqual({});
-    expect(castFromItem(with_(), fb, 0)).toEqual({});
+    expect(castFromItem(with_({}, fb, { ...wand, count: 2 }), fb, 3)).toBeNull();
+    expect(castFromItem(with_(), fb, 4)).toBeNull();
+    expect(castFromItem(with_(), fb, 0)).toBeNull();
   });
   it('reads a fixed cast level (Staff of Power’s level 5 Fireball)', () => {
     const staff = { ...fb, chg: 5, chgMax: undefined, castLvl: 5 };
     expect(castLevelOf(staff, 5)).toBe(5);
-    expect(castFromItem(with_({}, staff, { ...wand, count: 20 }), staff, 5).inv![0].count).toBe(15);
+    expect(castFromItem(with_({}, staff, { ...wand, count: 20 }), staff, 5)!.inv![0].count).toBe(15);
   });
   it('keeps castSpell from spending a slot on an item spell', () => {
-    expect(castSpell(with_(), fb, 3)).toEqual({});
-    expect(castSpell(with_({ pactMax: 2, pactLvl: 3 }), fb, 3, 'pact')).toEqual({});
+    expect(castSpell(with_(), fb, 3)).toBeNull();
+    expect(castSpell(with_({ pactMax: 2, pactLvl: 3 }), fb, 3, 'pact')).toBeNull();
   });
   it('refuses an item inside a container, unattuned or unequipped', () => {
     const bag: Item = { id: 'b', name: 'Bag of Holding', qty: 1, eq: false, xdim: true };
-    expect(castFromItem({ ...with_(), inv: [{ ...wand, in: 'b' }, bag] }, fb, 1)).toEqual({});
-    expect(castFromItem(with_({ attuneIds: [] }), fb, 1)).toEqual({});
-    expect(castFromItem(with_({}, fb, { ...wand, eq: false }), fb, 1)).toEqual({});
+    expect(castFromItem({ ...with_(), inv: [{ ...wand, in: 'b' }, bag] }, fb, 1)).toBeNull();
+    expect(castFromItem(with_({ attuneIds: [] }), fb, 1)).toBeNull();
+    expect(castFromItem(with_({}, fb, { ...wand, eq: false }), fb, 1)).toBeNull();
   });
   it('casts an at-will item spell for nothing, with its effects', () => {
     const lev: Spell = { id: 'lv', name: 'Levitate', lvl: 2, time: 'Action', range: '60 feet', c: true, always: true, from: 'item:w', needEq: true };
     const c = with_({}, lev);
-    expect(castFromItem(c, lev, 0)).toEqual({ conc: { id: 'lv', name: 'Levitate' }, concCheck: null, castFx: { 'spell:lv': { lvl: 2 } } });
-    expect(castFromItem(c, lev, 1)).toEqual({});
+    expect(castFromItem(c, lev, 0)!).toEqual({ conc: { id: 'lv', name: 'Levitate' }, concCheck: null, castFx: { 'spell:lv': { lvl: 2 } } });
+    expect(castFromItem(c, lev, 1)).toBeNull();
   });
   it('starts Concentration on a Concentration item spell', () => {
     const web = { ...fb, id: 'wb', name: 'Web', lvl: 2, c: true, chgMax: undefined };
-    expect(castFromItem(with_({}, web), web, 1).conc).toEqual({ id: 'wb', name: 'Web' });
+    expect(castFromItem(with_({}, web), web, 1)!.conc).toEqual({ id: 'wb', name: 'Web' });
+  });
+  it('an at-will item spell with no lasting effect returns an empty patch, not null (R20)', () => {
+    const ff = { ...fb, name: 'Find Familiar', lvl: 1, chg: undefined, chgMax: undefined };
+    expect(castFromItem(with_({}, ff), ff, 0)).toEqual({});
   });
   it('names the item behind a spell', () => {
     expect(itemOfSpell(with_(), fb)?.id).toBe('w');
@@ -364,10 +369,10 @@ describe('casting from an item’s charges', () => {
   });
   it('refuses a free cast of an item spell while the item is off, and keeps a feature’s free cast', () => {
     const res = [{ id: 'r', name: 'Once per dawn', count: 1, max: 1, recharge: 'dawn' as const, casts: 'fb' }];
-    expect(castFree(with_({ res }, fb, { ...wand, eq: false }), fb, 'r')).toEqual({});
-    expect(castFree(with_({ res }), fb, 'r').res![0].count).toBe(0);
+    expect(castFree(with_({ res }, fb, { ...wand, eq: false }), fb, 'r')).toBeNull();
+    expect(castFree(with_({ res }), fb, 'r')!.res![0].count).toBe(0);
     const own = { ...fb, from: undefined, needEq: undefined, needAtt: undefined };
-    expect(castFree(with_({ res }, own), own, 'r').res![0].count).toBe(0);
+    expect(castFree(with_({ res }, own), own, 'r')!.res![0].count).toBe(0);
   });
 });
 
@@ -385,19 +390,22 @@ describe('Spell Scroll', () => {
     expect(spellSaveDcFor(of(dark), dark)).toBe(13);
   });
   it('never spends a slot, nor casts as a plain item spell', () => {
-    expect(castSpell(of(fireball), fireball, 3)).toEqual({});
-    expect(castFromItem(of(haste), haste, 0)).toEqual({});
+    expect(castSpell(of(fireball), fireball, 3)).toBeNull();
+    expect(castFromItem(of(haste), haste, 0)).toBeNull();
+  });
+  it('returns null when the scroll can’t be read', () => {
+    expect(castFromScroll(of(fireball, {}, { ...scroll, qty: 0 }), fireball)).toBeNull();
   });
   it('uses one scroll of several', () => {
-    expect(castFromScroll(of(fireball, {}, { ...scroll, qty: 2 }), fireball).inv[0].qty).toBe(1);
+    expect(castFromScroll(of(fireball, {}, { ...scroll, qty: 2 }), fireball)!.inv[0].qty).toBe(1);
   });
   it('crumbles the last scroll of a spell with no lasting effect at once', () => {
-    const out = castFromScroll(of(fireball), fireball);
+    const out = castFromScroll(of(fireball), fireball)!;
     expect(out.inv).toEqual([]);
     expect(out.spells).toEqual([]);
   });
   it('keeps the last scroll’s spell while its Concentration lasts, then drops both', () => {
-    const out = castFromScroll(of(haste, { grants: [hasteG] }), haste);
+    const out = castFromScroll(of(haste, { grants: [hasteG] }), haste)!;
     expect(out.inv[0].qty).toBe(0);
     expect(out.spells).toHaveLength(1);
     expect(out.conc).toEqual({ id: 's', name: 'Haste' });
@@ -408,7 +416,7 @@ describe('Spell Scroll', () => {
   });
   it('keeps a switched-on effect until it is switched off or a Long Rest', () => {
     const senses = [{ id: 'x', name: 'Darkvision', range: '150 ft', when: 'active' as const, from: 'spell:s' }];
-    const out = castFromScroll(of(dark, { senses }), dark);
+    const out = castFromScroll(of(dark, { senses }), dark)!;
     expect(out.inv[0].qty).toBe(0);
     expect(out.effectsOn).toContain('spell:s');
     expect(normalize({ ...out, ...toggleEffect(out, 'spell:s') }).inv).toEqual([]);
@@ -435,7 +443,7 @@ describe('the slot level of a cast', () => {
   const base = (p: Partial<Character> = {}): Character =>
     ({ ...blankCharacter(), maxHp: 20, hp: 20, spells: [aid], grants: [aidG], slotMax: [0, 4, 3, 3, 3, 0, 0, 0, 0, 0], slotUsed: Array(10).fill(0), ...p });
   it('scales an effect with the slot it was cast with (Aid, PHB p.239)', () => {
-    const c = base(), cast = { ...c, ...castSpell(c, aid, 4) };
+    const c = base(), cast = { ...c, ...castSpell(c, aid, 4)! };
     expect(cast.castFx).toEqual({ 'spell:a': { lvl: 4 } });
     expect(maxHpOf(cast) - maxHpOf(c)).toBe(15);
   });
@@ -447,12 +455,12 @@ describe('the slot level of a cast', () => {
     const wand: Item = { id: 'w', name: 'Wand', qty: 1, eq: true, count: 7, max: 7 };
     const conc: Spell = { id: 'h', name: 'Hold', lvl: 2, time: 'Action', range: '60 feet', c: true, from: 'item:w', chg: 1, chgMax: 3, always: true };
     const c = { ...blankCharacter(), inv: [wand], spells: [conc] };
-    expect(castFromItem(c, conc, 3).castFx).toEqual({ 'spell:h': { lvl: 4 } });
+    expect(castFromItem(c, conc, 3)!.castFx).toEqual({ 'spell:h': { lvl: 4 } });
     const res = [{ id: 'r', name: 'Free', count: 1, max: 1, recharge: 'long' as const, casts: 'a' }];
-    expect(castFree(base({ res }), aid, 'r').castFx).toEqual({ 'spell:a': { lvl: 2 } });
+    expect(castFree(base({ res }), aid, 'r')!.castFx).toEqual({ 'spell:a': { lvl: 2 } });
   });
   it('drops the entry when the effect ends, and the key when it is empty', () => {
-    const c = { ...base(), ...castSpell(base(), aid, 3) };
+    const c = { ...base(), ...castSpell(base(), aid, 3)! };
     expect(normalize({ ...c, effectsOn: [] }).castFx).toBeUndefined();
     expect('castFx' in normalize({ ...c, effectsOn: [] })).toBe(false);
   });
@@ -460,7 +468,7 @@ describe('the slot level of a cast', () => {
     const wand: Item = { id: 'w', name: 'Wand', qty: 1, eq: true, count: 7, max: 7 };
     const web: Spell = { id: 'h', name: 'Web', lvl: 2, time: 'Action', range: '60 feet', c: true, from: 'item:w', chg: 1, always: true };
     const c0 = { ...blankCharacter(), inv: [wand], spells: [web], grants: [{ id: 'g', kind: 'checkAdv', name: 'x', target: 'str', adv: 'adv', when: 'active', from: 'spell:h' } as Grant] };
-    const c = { ...c0, ...castFromItem(c0, web, 1) };
+    const c = { ...c0, ...castFromItem(c0, web, 1)! };
     expect(c.conc?.id).toBe('h');
     const gone = normalize(removeRef(c, { kind: 'item', id: 'w' }));
     expect(gone.conc).toBeNull();
@@ -470,5 +478,25 @@ describe('the slot level of a cast', () => {
     const c = base({ effectsOn: ['spell:a'], inv: [{ id: 'w', name: 'Sword', qty: 1, eq: true }] });
     expect(normalize({ ...c, castFx: { 'spell:a': { lvl: 12, item: 'w' } } }).castFx).toEqual({ 'spell:a': { item: 'w' } });
     expect(normalize({ ...c, castFx: { 'spell:a': { lvl: 3, item: 'gone' } } }).castFx).toEqual({ 'spell:a': { lvl: 3 } });
+  });
+});
+
+describe('Ritual cast (PHB p.235)', () => {
+  const slots = { slotMax: [0, 2, 0, 0, 0, 0, 0, 0, 0, 0], slotUsed: Array(10).fill(0), conc: null };
+  it('spends no slot', () => {
+    const ff = sp({ id: 's1', name: 'Find Familiar', ritual: true });
+    const r = castRitual(make(slots), ff);
+    expect(r).toEqual({});
+  });
+  it('sets Concentration for a Concentration ritual', () => {
+    const r = castRitual(make(slots), sp({ ritual: true, c: true }));
+    expect(r!.conc).toEqual({ id: 's1', name: 'Bless' });
+    expect(r!.slotUsed).toBeUndefined();
+  });
+  it('is refused for a spell without the Ritual tag and for an item’s spell', () => {
+    expect(castRitual(make(slots), sp())).toBeNull();
+    const wand: Item = { id: 'w', name: 'Wand', qty: 1, eq: true };
+    const isp = sp({ ritual: true, from: 'item:w' });
+    expect(castRitual({ ...make(slots), inv: [wand], spells: [isp] }, isp)).toBeNull();
   });
 });

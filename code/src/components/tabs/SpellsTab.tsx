@@ -345,7 +345,7 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
   const first = casts.find((x) => x.left > 0);
   const upcasts = first ? casts.filter((x) => x.l > first.l) : [];
   const castWith = (l: number) => {
-    update((p) => castSpell(p, sp, l));
+    update((p) => castSpell(p, sp, l) ?? {});
     setPicking(false);
   };
   // A pact slot casts any spell up to the pact level (PHB p.45).
@@ -411,7 +411,7 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
           {first && <button type="button" aria-label={'Cast ' + sp.name + ' with a level ' + first.l + ' slot, ' + first.left + ' left'}
             className="btn btn-sm" style={{ border: '1px solid var(--accent)', background: 'transparent', color: 'var(--accent)' }} onClick={() => castWith(first.l)}>Cast {ORDINAL[first.l]}</button>}
           {!!pact && <button type="button" aria-label={'Cast ' + sp.name + ' with a level ' + c.pactLvl + ' pact slot, ' + pact + ' left'}
-            className="btn btn-sm" style={{ border: '1px solid var(--accent)', background: 'transparent', color: 'var(--accent)' }} onClick={() => update((p) => castSpell(p, sp, p.pactLvl, 'pact'))}>{ORDINAL[c.pactLvl]} (pact)</button>}
+            className="btn btn-sm" style={{ border: '1px solid var(--accent)', background: 'transparent', color: 'var(--accent)' }} onClick={() => update((p) => castSpell(p, sp, p.pactLvl, 'pact') ?? {})}>{ORDINAL[c.pactLvl]} (pact)</button>}
           {upcasts.length > 0 && (
             <button type="button" aria-expanded={picking} aria-label={'Upcast ' + sp.name + ' with a higher slot'} className="btn btn-sm row gap-4"
               style={{ border: '1px solid var(--line-2)', background: 'transparent', color: 'var(--text-2)' }} onClick={() => setPicking(!picking)}>
