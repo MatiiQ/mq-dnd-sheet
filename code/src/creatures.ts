@@ -1,9 +1,9 @@
 // Companions and forms: creatures the character commands (pet) and forms the character takes (form), their numbers
 // typed by hand. Pure functions, Character → Character. logic.ts calls only fixCreatures (in normalize()); the
 // functions here run at call time only, so the import cycle with logic.ts is safe (no top-level use of its exports).
-import { INCAPACITATING, parseLink, sourceOf, srcKindOfLink } from './links';
-import { abilityMod, isDead, newId, setConc } from './logic';
-import type { Character, Creature } from './types';
+import { inactiveReason, INCAPACITATING, parseLink, sourceOf, srcKindOfLink } from './links';
+import { abilityMod, freeCastsOf, isDead, itemOfSpell, newId, pactLeft, setConc, slotsLeft, spellUsable } from './logic';
+import type { Character, Creature, Spell } from './types';
 
 const list = (c: Character): Creature[] => c.creatures ?? [];
 const withList = (c: Character, creatures: Creature[]): Character => ({ ...c, creatures });
@@ -151,3 +151,15 @@ export function fixCreatures(c: Character): Character {
 // "+ Add companion"), or the creature editor open (the scroll case has no source row left and no creature yet).
 export const showCompanions = (c: Character, edit: boolean, form: { kind: string; id: string | null } | null): boolean =>
   !!list(c).length || edit || form?.kind === 'creature' || c.spells.some((s) => s.makes) || c.feats.some((f) => f.makes);
+
+// Why a dismissed card's "Cast again" can't cast its spell now, with the tests the spell row uses: not prepared, or no
+// slot, pact slot or free cast left (an item's spell: the reason it doesn't count). null when the row can cast it.
+export function castAgainBlock(c: Character, sp: Spell): string | null {
+  if (itemOfSpell(c, sp)) return inactiveReason(c, sp);
+  if (sp.lvl > 0 && !spellUsable(c, sp)) return 'Not prepared';
+  if (freeCastsOf(c, sp.id).some((r) => r.count > 0)) return null;
+  if (sp.lvl === 0) return null;
+  for (let l = sp.lvl; l <= 9; l++) if (slotsLeft(c, l) > 0) return null;
+  if (c.pactMax > 0 && c.pactLvl >= sp.lvl && pactLeft(c) > 0) return null;
+  return 'No slot left';
+}

@@ -5,6 +5,7 @@ import { Defenses } from './components/Defenses';
 import { EditDetails } from './components/EditDetails';
 import { HitPoints } from './components/HitPoints';
 import { Resources } from './components/Resources';
+import { Companions } from './components/Companions';
 import { Senses } from './components/Senses';
 import { sectionLinks, TopBar } from './components/TopBar';
 import { Vitals } from './components/Vitals';
@@ -177,6 +178,7 @@ function SheetApp({ store, draftUi, onCreate, onCharacters }: { store: Character
             <Defenses />
             <Conditions />
             <Resources />
+            <Companions />
           </div>
           <div className="sheet-right">
             {wide && hitPoints}

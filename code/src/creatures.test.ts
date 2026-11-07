@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { blankCharacter } from './defaults';
 import {
   addCreature, assumeForm, copyName, damageCreature, dismiss, druidLevel, duplicateCreature, endForm, fixCreatures, formAc,
-  healCreature, isMoon, linkedCreatures, recall, sendAway, showCompanions, summon, summonCopies
+  castAgainBlock, healCreature, isMoon, linkedCreatures, recall, sendAway, showCompanions, summon, summonCopies
 } from './creatures';
 import { SEC_NAMES, sectionLinks } from './components/TopBar';
 import { longRest, normalize, removalSummary, removeRef, setConc, toggleCondition } from './logic';
@@ -257,5 +257,18 @@ describe('visibility (showCompanions, sectionLinks)', () => {
     expect(ids(ch({ creatures: [pet()] }))).toEqual(['sec-hp', 'sec-abilities', 'sec-senses', 'sec-defenses', 'sec-conditions', 'sec-resources', 'sec-companions']);
     expect(ids(ch(), true)).toContain('sec-companions');
     expect(SEC_NAMES['sec-companions']).toBe('Companions');
+  });
+});
+
+describe('castAgainBlock (the dismissed card’s Cast again, R28)', () => {
+  const ss = spell({ prep: true });
+  it('names why nothing can cast the spell', () => {
+    expect(castAgainBlock(ch({ spells: [ss], slotMax: Array(10).fill(0) }), ss)).toBe('No slot left');
+    expect(castAgainBlock(ch({ spells: [ss], usePrep: true, slotMax: [0, 0, 2, 0, 0, 0, 0, 0, 0, 0] }), { ...ss, prep: false })).toBe('Not prepared');
+  });
+  it('is null with a slot, a pact slot or a free cast left', () => {
+    expect(castAgainBlock(ch({ spells: [ss], slotMax: [0, 0, 0, 1, 0, 0, 0, 0, 0, 0] }), ss)).toBeNull();
+    expect(castAgainBlock(ch({ spells: [ss], slotMax: Array(10).fill(0), pactMax: 1, pactLvl: 2, pactUsed: 0 }), ss)).toBeNull();
+    expect(castAgainBlock(ch({ spells: [ss], slotMax: Array(10).fill(0), res: [{ id: 'r', name: 'Free', count: 1, max: 1, recharge: 'long', casts: 'ss' }] }), ss)).toBeNull();
   });
 });

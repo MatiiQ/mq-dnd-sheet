@@ -5,6 +5,7 @@ import { abilityMod, applyDamage, capital, classLevel, conHpPart, damageHitDie, 
 import { useWide } from '../layout';
 import { useSheet } from '../sheet';
 import type { Character, Die } from '../types';
+import { FormBanner } from './Companions';
 import { DieBadge, MarkPips, Notice, NumInput, Step, TypeInNumber, XIcon } from './ui';
 
 const HP_UNDO_MS = 5000;
@@ -92,6 +93,7 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
         </div>
         {c.temp > 0 && <div className="hp-temp"><strong>+{c.temp}</strong>temp HP</div>}
       </div>
+      <FormBanner />
 
       <div className="row wrap gap-8">
         <div className="row amount">

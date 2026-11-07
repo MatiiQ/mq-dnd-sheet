@@ -514,3 +514,15 @@ button.tile-btn { font: inherit; color: inherit; text-align: left; cursor: point
 .welcome-card { min-height: 64px; }
 .hp-bar { display: block; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; margin-top: 4px; }
 .hp-bar > span { display: block; height: 100%; background: var(--accent); }
+
+/* ---------- companions ---------- */
+.pet-card .entry-head { text-align: left; }
+.pet-hp { align-items: center; }
+.pet-bar { display: block; height: 8px; border-radius: 4px; background: var(--raised); overflow: hidden; }
+.pet-bar > span { display: block; height: 100%; background: var(--hp-high); }
+.pet-amt { width: 64px; text-align: center; min-height: 44px; }
+.round-btn { flex: none; width: 44px; height: 44px; border-radius: 50%; border: none; font-size: 22px; font-weight: 700; cursor: pointer; padding: 0; }
+.form-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.form-banner { align-items: center; padding: 4px 4px 4px 12px; border-radius: 10px; background: var(--blue-bg); color: var(--blue-fg); font-weight: 600; }
+.check-row { min-height: 44px; align-items: center; }
+.check-row input { width: 22px; height: 22px; }
