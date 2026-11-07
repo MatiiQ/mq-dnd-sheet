@@ -26,6 +26,16 @@ describe('saved characters', () => {
     expect(migrate(fx)).toEqual(before);
     expect(fx).toEqual(before); // migrate never changes the save it reads
   });
+  it('loads a save with no castFx, or a damaged one, with no castFx key', () => {
+    const fx = fixtures.find(([f]) => f === 'save-v2-multiclass.json')![1];
+    expect('castFx' in migrate(fx)).toBe(false);
+    expect('castFx' in migrate({ ...fx, castFx: 'x' })).toBe(false);
+    expect('castFx' in migrate({ ...fx, castFx: { 'spell:gone': { lvl: 3 } } })).toBe(false);
+  });
+  it('keeps the cast level of an effect that is on', () => {
+    const sp = { id: 's', name: 'Aid', lvl: 2, time: 'Action', range: '30 feet', prep: true };
+    expect(migrate({ ...blankCharacter(), spells: [sp], effectsOn: ['spell:s'], castFx: { 'spell:s': { lvl: 4 } } }).castFx).toEqual({ 'spell:s': { lvl: 4 } });
+  });
   it('leaves both samples unchanged', () => {
     expect(migrate(sampleCharacter())).toEqual(sampleCharacter());
     expect(migrate(druidSample())).toEqual(druidSample());

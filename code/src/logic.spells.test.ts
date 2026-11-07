@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { blankCharacter, druidSample } from './defaults';
-import { castFromItem, castFromScroll, castLevelOf, itemOfSpell, longRest, normalize, scrollNote, setConc, toggleEffect, walkSpeed, MULTICLASS_SLOTS, casterLevel, pactFor, slotsFor, pactLeft, spellForRow, saveDc, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, removeRef, modeSpeed, castSpell, concAfterEdit, preparedCount, setExhaustion, sortSpells, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, toggleCondition } from './logic';
+import { castFromItem, castFromScroll, maxHpOf, castLevelOf, itemOfSpell, longRest, normalize, scrollNote, setConc, toggleEffect, walkSpeed, MULTICLASS_SLOTS, casterLevel, pactFor, slotsFor, pactLeft, spellForRow, saveDc, castFree, freeCastsOf, ownFreeCasts, setOwnFreeCast, spellAttackFor, spellSaveDcFor, removeRef, modeSpeed, castSpell, concAfterEdit, preparedCount, setExhaustion, sortSpells, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, toggleCondition } from './logic';
 import { migrate } from './migrate';
 import { addFromCatalog } from './catalog/copy';
 import { mergeCatalog } from './catalog/merge';
@@ -351,7 +351,7 @@ describe('casting from an item’s charges', () => {
   it('casts an at-will item spell for nothing, with its effects', () => {
     const lev: Spell = { id: 'lv', name: 'Levitate', lvl: 2, time: 'Action', range: '60 feet', c: true, always: true, from: 'item:w', needEq: true };
     const c = with_({}, lev);
-    expect(castFromItem(c, lev, 0)).toEqual({ conc: { id: 'lv', name: 'Levitate' }, concCheck: null });
+    expect(castFromItem(c, lev, 0)).toEqual({ conc: { id: 'lv', name: 'Levitate' }, concCheck: null, castFx: { 'spell:lv': { lvl: 2 } } });
     expect(castFromItem(c, lev, 1)).toEqual({});
   });
   it('starts Concentration on a Concentration item spell', () => {
@@ -426,5 +426,49 @@ describe('Spell Scroll', () => {
     const multi = withClasses({ ...of(fireball), slotMax: [0, 4, 3, 0, 0, 0, 0, 0, 0, 0] },
       [{ name: 'Cleric', clsId: 'class/cleric', lvl: 1, castAb: 'wis' }, { name: 'Wizard', clsId: 'class/wizard', lvl: 3, castAb: 'int' }]);
     expect(scrollNote(multi, fireball)).toBe('Above your highest slot: Intelligence check DC 13 to cast');
+  });
+});
+
+describe('the slot level of a cast', () => {
+  const aid: Spell = { id: 'a', name: 'Aid', lvl: 2, time: 'Action', range: '30 feet' };
+  const aidG: Grant = { id: 'g', kind: 'hpFlat', name: 'Aid', val: '@2:5,3:10,4:15,5:20,6:25,7:30,8:35,9:40', when: 'active', from: 'spell:a' };
+  const base = (p: Partial<Character> = {}): Character =>
+    ({ ...blankCharacter(), maxHp: 20, hp: 20, spells: [aid], grants: [aidG], slotMax: [0, 4, 3, 3, 3, 0, 0, 0, 0, 0], slotUsed: Array(10).fill(0), ...p });
+  it('scales an effect with the slot it was cast with (Aid, PHB p.239)', () => {
+    const c = base(), cast = { ...c, ...castSpell(c, aid, 4) };
+    expect(cast.castFx).toEqual({ 'spell:a': { lvl: 4 } });
+    expect(maxHpOf(cast) - maxHpOf(c)).toBe(15);
+  });
+  it('reads the spell’s own level when switched on by hand', () => {
+    const c = base({ effectsOn: ['spell:a'] });
+    expect(maxHpOf(c) - maxHpOf(base())).toBe(5);
+  });
+  it('records the level for every cast path', () => {
+    const wand: Item = { id: 'w', name: 'Wand', qty: 1, eq: true, count: 7, max: 7 };
+    const conc: Spell = { id: 'h', name: 'Hold', lvl: 2, time: 'Action', range: '60 feet', c: true, from: 'item:w', chg: 1, chgMax: 3, always: true };
+    const c = { ...blankCharacter(), inv: [wand], spells: [conc] };
+    expect(castFromItem(c, conc, 3).castFx).toEqual({ 'spell:h': { lvl: 4 } });
+    const res = [{ id: 'r', name: 'Free', count: 1, max: 1, recharge: 'long' as const, casts: 'a' }];
+    expect(castFree(base({ res }), aid, 'r').castFx).toEqual({ 'spell:a': { lvl: 2 } });
+  });
+  it('drops the entry when the effect ends, and the key when it is empty', () => {
+    const c = { ...base(), ...castSpell(base(), aid, 3) };
+    expect(normalize({ ...c, effectsOn: [] }).castFx).toBeUndefined();
+    expect('castFx' in normalize({ ...c, effectsOn: [] })).toBe(false);
+  });
+  it('ends Concentration and drops the entry when the item behind a spell goes', () => {
+    const wand: Item = { id: 'w', name: 'Wand', qty: 1, eq: true, count: 7, max: 7 };
+    const web: Spell = { id: 'h', name: 'Web', lvl: 2, time: 'Action', range: '60 feet', c: true, from: 'item:w', chg: 1, always: true };
+    const c0 = { ...blankCharacter(), inv: [wand], spells: [web], grants: [{ id: 'g', kind: 'checkAdv', name: 'x', target: 'str', adv: 'adv', when: 'active', from: 'spell:h' } as Grant] };
+    const c = { ...c0, ...castFromItem(c0, web, 1) };
+    expect(c.conc?.id).toBe('h');
+    const gone = normalize(removeRef(c, { kind: 'item', id: 'w' }));
+    expect(gone.conc).toBeNull();
+    expect(gone.castFx).toBeUndefined();
+  });
+  it('drops a bad level and an item that is gone', () => {
+    const c = base({ effectsOn: ['spell:a'], inv: [{ id: 'w', name: 'Sword', qty: 1, eq: true }] });
+    expect(normalize({ ...c, castFx: { 'spell:a': { lvl: 12, item: 'w' } } }).castFx).toEqual({ 'spell:a': { item: 'w' } });
+    expect(normalize({ ...c, castFx: { 'spell:a': { lvl: 3, item: 'gone' } } }).castFx).toEqual({ 'spell:a': { lvl: 3 } });
   });
 });

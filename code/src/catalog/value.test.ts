@@ -53,3 +53,16 @@ it('reads hlvl as half the level, rounded down', () => {
   expect(valueAt('1d6+hlvl', ctx(7))).toBe('1d6+3');
   expect(isValue('hlvl+cha>=1')).toBe(true);
 });
+
+describe('slot tables', () => {
+  it('parses a table keyed by the slot level of the cast', () => {
+    expect(isValue('@2:5,3:10')).toBe(true);
+    expect(isValue('@3:1,2:2')).toBe(false);
+    expect(isValue('@2:1d4,3:2')).toBe(false);
+  });
+  it('reads the slot level, or the first step without one (Magic Weapon, PHB p.295)', () => {
+    expect(valueAt('@2:1,3:2,6:3', { ...ctx(1), slot: 5 })).toBe(2);
+    expect(valueAt('@2:1,3:2,6:3', { ...ctx(1), slot: 6 })).toBe(3);
+    expect(valueAt('@2:1,3:2,6:3', ctx(20))).toBe(1);
+  });
+});

@@ -60,6 +60,8 @@ export interface Rider { id: string; name: string; dice: string }
 // '150/600;arrow', mastery and magic (+N to attack and damage rolls); armor's Strength requirement and Stealth
 // disadvantage; a container's capacity in lb, its volume text and xdim (extradimensional); rarity and attunement.
 // base: the catalog's base item id ('item/dagger') of a magic weapon or armor.
+// A spell effect's cast state (Character.castFx): the slot level it was cast with, the item it was cast on.
+export interface FxState { lvl?: number; item?: string }
 export interface Item extends Partial<Counter> {
   id: string; name: string; qty: number; eq: boolean; armor?: ArmorKind; acBase?: number; acBonus?: number; wt?: number; desc?: string; cid?: string;
   cat?: ItemEntry['cat']; cost?: string; wcat?: 'simple' | 'martial'; wrange?: 'melee' | 'ranged'; dmg?: string; dtype?: string; props?: string;
@@ -171,6 +173,9 @@ export interface Character {
   grants: Grant[]; profs: Prof[];
   /** Effects switched on: 'feature:<id>', 'item:<id>' or a non-Concentration 'spell:<id>' (a Concentration spell's is on through conc). */
   effectsOn: string[];
+  /** Cast state per effect source ('spell:<id>'): the slot level, the item it is on. Optional and absent by default:
+   *  frozen saves have no such key. Kept by normalize() only while the effect is on. */
+  castFx?: Record<string, FxState>;
   /** Weapons in hand: item ids, oldest first, one entry per hand (a Two-Handed weapon or a Versatile one in two hands twice). Changed only through setHands (hands.ts). */
   hands: string[];
   /** Weapon kinds (weaponKind slugs) chosen for Weapon Mastery, oldest first; picks past the slot count don't count. */

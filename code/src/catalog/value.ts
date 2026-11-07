@@ -1,10 +1,12 @@
 // Values in catalog grants: a number, a formula of PB, level and ability modifiers with an optional minimum
-// ('wis>=1'), dice ('1d6+1'), or a level table ('2:2,6:3,17:4', '1:1d8,5:1d10'). Stored as flat strings.
+// ('wis>=1'), dice ('1d6+1'), a level table ('2:2,6:3,17:4', '1:1d8,5:1d10'), or a slot table ('@2:5,3:10', Aid).
+// Stored as flat strings.
 import type { Ability } from '../types';
 
 // hlvl: half the level, rounded down (PHB p.8). level is the class level of what the value belongs to (classLevel).
 // magic: the +N of the item a grant comes from (Wand of the War Mage), 0 when none; a grant-only term.
-export interface ValueCtx { level: number; pb: number; mod: (a: Ability) => number; magic?: number }
+// slot: the slot level a spell's effect was cast with (castFx), for a slot table ('@2:1,3:2,6:3'); a grant-only term.
+export interface ValueCtx { level: number; pb: number; mod: (a: Ability) => number; magic?: number; slot?: number }
 
 const INT = '\\d+', DIE = '\\d*d\\d+';
 const TERM = `(?:${DIE}|${INT}|pb|lvl|hlvl|magic|str|dex|con|int|wis|cha)`;
@@ -13,11 +15,11 @@ const STEP = new RegExp(`^(${INT}):(${DIE}|${INT})$`);
 // No other term has a "d" followed by a digit (dex has none).
 export const hasDice = (v: string): boolean => /d\d/.test(v);
 
-// Level-table steps, or null when v is not a well-formed table.
+// Level-table steps, or null when v is not a well-formed table. A leading '@' keys the table by slot level instead.
 function steps(v: string): [number, string][] | null {
   if (!v.includes(':')) return null;
   const out: [number, string][] = [];
-  for (const part of v.split(',')) {
+  for (const part of v.replace(/^@/, '').split(',')) {
     const m = STEP.exec(part);
     if (!m || (out.length && Number(m[1]) <= out[out.length - 1][0])) return null;
     out.push([Number(m[1]), m[2]]);
@@ -33,7 +35,9 @@ export function isValue(v: string): boolean {
 export function valueAt(v: string, ctx: ValueCtx): number | string {
   const table = steps(v);
   if (table) {
-    const hit = table.filter(([l]) => l <= ctx.level).pop();
+    // A slot table without a slot (a grant not from a spell), or below its first step, reads the first step.
+    const slot = v.startsWith('@');
+    const hit = slot ? table.filter(([l]) => l <= (ctx.slot ?? 0)).pop() ?? table[0] : table.filter(([l]) => l <= ctx.level).pop();
     if (!hit) return 0;
     return hasDice(hit[1]) ? hit[1] : Number(hit[1]);
   }

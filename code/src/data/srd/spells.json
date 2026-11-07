@@ -67,7 +67,16 @@
     "conc": false,
     "ritual": false,
     "fx": "other",
-    "higher": "Each target’s Hit Points increase by 5 for each spell slot level above 2."
+    "higher": "Each target’s Hit Points increase by 5 for each spell slot level above 2.",
+    "grants": [
+      {
+        "kind": "hpFlat",
+        "name": "Aid",
+        "val": "@2:5,3:10,4:15,5:20,6:25,7:30,8:35,9:40",
+        "when": "active",
+        "id": "g1"
+      }
+    ]
   },
   {
     "id": "spell/alarm",

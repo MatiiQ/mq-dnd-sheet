@@ -265,6 +265,8 @@ export function migrate(data: unknown): Character {
     const ok = (x: unknown) => isEntry(k === 'spells' && isObj(x) && 'parts' in x ? { ...x, parts: null } : x);
     d[k] = (d[k] as unknown[]).filter(ok).map((x) => (typeof (x as Raw).id === 'string' ? x : { ...(x as object), id: newId() }));
   }
+  // castFx is optional and absent by default (blankCharacter has none), so it is copied here; normalize() cleans it.
+  if (raw.castFx !== undefined) d.castFx = raw.castFx;
   const c = d as unknown as Character;
   c.v = SAVE_VERSION;
 

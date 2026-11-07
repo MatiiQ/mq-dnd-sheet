@@ -5,7 +5,7 @@ import { hasDice, isValue, valueAt, type ValueCtx } from './catalog/value';
 import type { ProfCat } from './catalog/names';
 import { canLoad, setHands } from './hands';
 import { activeGrants, charLevel, classLevel, dropLinkOnly, hasActiveEffect, INCAPACITATING, inactiveReason, isActive, isEquipped, isOn, LINKED_LISTS, srcKindOfLink, type SourceKind, linkOf, parseLink, sourceLabel, sourceOf, SRC_KINDS } from './links';
-import type { AcEffect, Ability, ArmorKind, CastAbility, Character, ClassRow, Coin, Die, Concentration, Counter, DefenseKind, Grant, HpSnapshot, Item, Linked, Recharge, Resource, Size, Spell, SpeedKind, SpellSort, Tab, Unarmored } from './types';
+import type { AcEffect, Ability, ArmorKind, CastAbility, Character, ClassRow, Coin, Die, Concentration, Counter, DefenseKind, FxState, Grant, HpSnapshot, Item, Linked, Recharge, Resource, Size, Spell, SpeedKind, SpellSort, Tab, Unarmored } from './types';
 
 export const ABILITIES: [Ability, string][] = [
   ['str', 'Strength'], ['dex', 'Dexterity'], ['con', 'Constitution'],
@@ -63,7 +63,10 @@ export { charLevel, classLevel, levelIn, totalLevel } from './links';
 // The level is the class level of what the value belongs to (classLevel), so pass the grant or entry; pb is always the total's.
 export const valueCtx = (c: Character, g?: { from?: string; cid?: string }): ValueCtx => {
   const p = parseLink(g?.from), magic = p?.kind === 'item' ? c.inv.find((i) => i.id === p.id)?.magic : undefined;
-  return { level: g ? classLevel(c, g) : charLevel(c), pb: profBonus(charLevel(c)), mod: (a) => abilityMod(c, a), ...(magic ? { magic } : {}) };
+  // A grant from a spell reads the slot level it was cast with, else the spell's own level (switched on by hand).
+  const sp = p?.kind === 'spell' ? c.spells.find((s) => s.id === p.id) : undefined;
+  const slot = sp ? c.castFx?.[g!.from!]?.lvl ?? sp.lvl : undefined;
+  return { level: g ? classLevel(c, g) : charLevel(c), pb: profBonus(charLevel(c)), mod: (a) => abilityMod(c, a), ...(magic ? { magic } : {}), ...(slot ? { slot } : {}) };
 };
 const numIn = (ctx: ValueCtx, v: string | undefined) => { const n = v === undefined ? 0 : valueAt(v, ctx); return typeof n === 'number' ? n : 0; };
 // A grant value as a number now; dice or no value count as 0. Pass the grant whenever v is its value (`magic`).
@@ -368,8 +371,32 @@ const effectOnCast = (c: Character, sp: Spell): Partial<Character> => {
   return !sp.c && !c.effectsOn.includes(link) && hasActiveEffect(c, link) ? { effectsOn: [...c.effectsOn, link] } : {};
 };
 
-const castEffects = (c: Character, sp: Spell): Partial<Character> =>
-  ({ ...(sp.c ? setConc({ id: sp.id, name: sp.name }) : {}), ...acOnCast(c, sp), ...effectOnCast(c, sp) });
+// A cast records its slot level for an effect that lasts (Concentration or switched on), so slot tables read it (Aid,
+// Magic Weapon). A cantrip has no slot level.
+const castFxOn = (c: Character, sp: Spell, lvl: number): Partial<Character> => {
+  const link = linkOf('spell', sp.id);
+  if (lvl < 1 || !(sp.c || hasActiveEffect(c, link))) return {};
+  return { castFx: { ...c.castFx, [link]: { ...c.castFx?.[link], lvl } } };
+};
+const castEffects = (c: Character, sp: Spell, lvl: number = sp.lvl): Partial<Character> =>
+  ({ ...(sp.c ? setConc({ id: sp.id, name: sp.name }) : {}), ...acOnCast(c, sp), ...effectOnCast(c, sp), ...castFxOn(c, sp, lvl) });
+// Keeps a castFx entry only while its effect is on, with a slot level of 1–9 and an item that is still there; a castFx
+// that isn't an object, or is left empty, goes. Run by normalize() (so migrate() too).
+function fixCastFx(c: Character): Character {
+  if (!('castFx' in c)) return c;
+  const raw: unknown = c.castFx, out: Record<string, FxState> = {};
+  if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+    for (const [link, v] of Object.entries(raw as Record<string, unknown>)) {
+      if (!v || typeof v !== 'object' || !isOn(c, link)) continue;
+      const { lvl, item } = v as FxState;
+      const fx: FxState = { ...(Number.isInteger(lvl) && lvl! >= 1 && lvl! <= 9 ? { lvl } : {}), ...(typeof item === 'string' && c.inv.some((i) => i.id === item) ? { item } : {}) };
+      if (Object.keys(fx).length) out[link] = fx;
+    }
+  }
+  const { castFx: _, ...rest } = c;
+  if (!Object.keys(out).length) return rest;
+  return JSON.stringify(out) === JSON.stringify(raw) ? c : { ...rest, castFx: out };
+}
 
 // Casting with a slot uses one slot of that level. A Concentration spell starts Concentration, which ends any other (PHB p.363).
 // Pact slots and Spellcasting slots can cast each other's spells (PHB p.45); a pact slot is always of the pact level.
@@ -377,9 +404,9 @@ export const pactLeft = (c: Character) => Math.max(0, c.pactMax - c.pactUsed);
 export function castSpell(c: Character, sp: Spell, level: number, pool: 'slot' | 'pact' = 'slot'): Partial<Character> {
   // An item's spell never spends a slot or the pact pool: it is cast from the item (castFromItem).
   if (itemOfSpell(c, sp)) return {};
-  if (pool === 'pact') return level === c.pactLvl && level >= (sp.lvl || 0) && pactLeft(c) > 0 ? { pactUsed: c.pactUsed + 1, ...castEffects(c, sp) } : {};
+  if (pool === 'pact') return level === c.pactLvl && level >= (sp.lvl || 0) && pactLeft(c) > 0 ? { pactUsed: c.pactUsed + 1, ...castEffects(c, sp, level) } : {};
   if (!slotsLeft(c, level)) return {};
-  return { ...setSlotUsed(c, level, c.slotUsed[level] + 1), ...castEffects(c, sp) };
+  return { ...setSlotUsed(c, level, c.slotUsed[level] + 1), ...castEffects(c, sp, level) };
 }
 
 // Switches a source's effect on or off (Rage, Starry Form, Shillelagh), without casting or using anything.
@@ -416,9 +443,9 @@ export const castLevelOf = (sp: Spell, charges: number): number => (sp.castLvl ?
 export function castFromItem(c: Character, sp: Spell, charges = 0): Partial<Character> {
   const item = itemOfSpell(c, sp);
   if (!item || scrollOf(c, sp) || !isActive(c, sp)) return {};
-  if (sp.chg === undefined) return charges === 0 ? castEffects(c, sp) : {};
+  if (sp.chg === undefined) return charges === 0 ? castEffects(c, sp, castLevelOf(sp, 0)) : {};
   if (charges < sp.chg || charges > (sp.chgMax ?? sp.chg) || (item.count ?? 0) < charges) return {};
-  return { inv: c.inv.map((i) => (i.id === item.id ? { ...i, count: (i.count ?? 0) - charges } : i)), ...castEffects(c, sp) };
+  return { inv: c.inv.map((i) => (i.id === item.id ? { ...i, count: (i.count ?? 0) - charges } : i)), ...castEffects(c, sp, castLevelOf(sp, charges)) };
 }
 // The Spell Scroll a spell row comes from.
 export const SCROLL_ID = 'item/spell-scroll';
@@ -867,8 +894,8 @@ export function normalize(c0: Character): Character {
   const inv = c.inv.map(capped);
   const top = maxHpOf(c);
   if (c.hp > top || c.pactUsed > c.pactMax) changed = true;
-  // Last, a spent Spell Scroll whose effect has ended goes (castFromScroll).
-  return dropSpentScrolls(changed ? { ...c, res, inv, hp: Math.min(c.hp, top), pactUsed: Math.min(c.pactUsed, c.pactMax) } : c);
+  // Last, cast state of effects no longer on, then a spent Spell Scroll whose effect has ended (castFromScroll).
+  return dropSpentScrolls(fixCastFx(changed ? { ...c, res, inv, hp: Math.min(c.hp, top), pactUsed: Math.min(c.pactUsed, c.pactMax) } : c));
 }
 
 // Resource groups: a custom type name, else the source kind, else Other. Source kinds in SRC_KINDS order, then custom
