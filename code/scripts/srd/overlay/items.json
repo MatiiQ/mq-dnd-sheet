@@ -3264,5 +3264,166 @@
   },
   "item/tome-of-understanding": {
     "reads": "wis"
+  },
+  "item/ioun-stone": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "c1",
+        "name": "Stone",
+        "pick": 1,
+        "options": [
+          {
+            "id": "o1",
+            "kind": "ac",
+            "name": "Protection: +1 AC",
+            "acMode": "bonus",
+            "val": "1",
+            "opt": "Protection",
+            "needEq": true,
+            "needAtt": true
+          },
+          {
+            "id": "o2",
+            "kind": "checkAdv",
+            "name": "Awareness: Advantage on Initiative",
+            "target": "init",
+            "adv": "adv",
+            "opt": "Awareness",
+            "needEq": true,
+            "needAtt": true
+          },
+          {
+            "id": "o3",
+            "kind": "checkAdv",
+            "name": "Awareness: Advantage on Perception",
+            "target": "perception",
+            "adv": "adv",
+            "always": true,
+            "opt": "Awareness",
+            "needEq": true,
+            "needAtt": true
+          },
+          {
+            "id": "o4",
+            "kind": "abil",
+            "name": "Agility: DEX +2",
+            "ab": "dex",
+            "val": "2",
+            "cap": 20,
+            "opt": "Agility",
+            "needEq": true,
+            "needAtt": true
+          },
+          {
+            "id": "o5",
+            "kind": "abil",
+            "name": "Fortitude: CON +2",
+            "ab": "con",
+            "val": "2",
+            "cap": 20,
+            "opt": "Fortitude",
+            "needEq": true,
+            "needAtt": true
+          },
+          {
+            "id": "o6",
+            "kind": "abil",
+            "name": "Insight: WIS +2",
+            "ab": "wis",
+            "val": "2",
+            "cap": 20,
+            "opt": "Insight",
+            "needEq": true,
+            "needAtt": true
+          },
+          {
+            "id": "o7",
+            "kind": "abil",
+            "name": "Intellect: INT +2",
+            "ab": "int",
+            "val": "2",
+            "cap": 20,
+            "opt": "Intellect",
+            "needEq": true,
+            "needAtt": true
+          },
+          {
+            "id": "o8",
+            "kind": "abil",
+            "name": "Leadership: CHA +2",
+            "ab": "cha",
+            "val": "2",
+            "cap": 20,
+            "opt": "Leadership",
+            "needEq": true,
+            "needAtt": true
+          },
+          {
+            "id": "o9",
+            "kind": "abil",
+            "name": "Strength: STR +2",
+            "ab": "str",
+            "val": "2",
+            "cap": 20,
+            "opt": "Strength",
+            "needEq": true,
+            "needAtt": true
+          }
+        ]
+      }
+    ]
+  },
+  "item/potion-of-giant-strength": {
+    "grants": [
+      {
+        "kind": "choice",
+        "id": "c1",
+        "name": "Giant type",
+        "pick": 1,
+        "options": [
+          {
+            "id": "o1",
+            "kind": "abilSet",
+            "name": "Hill giant: STR 21",
+            "ab": "str",
+            "val": "21",
+            "when": "active"
+          },
+          {
+            "id": "o2",
+            "kind": "abilSet",
+            "name": "Frost or stone giant: STR 23",
+            "ab": "str",
+            "val": "23",
+            "when": "active"
+          },
+          {
+            "id": "o3",
+            "kind": "abilSet",
+            "name": "Fire giant: STR 25",
+            "ab": "str",
+            "val": "25",
+            "when": "active"
+          },
+          {
+            "id": "o4",
+            "kind": "abilSet",
+            "name": "Cloud giant: STR 27",
+            "ab": "str",
+            "val": "27",
+            "when": "active"
+          },
+          {
+            "id": "o5",
+            "kind": "abilSet",
+            "name": "Storm giant: STR 29",
+            "ab": "str",
+            "val": "29",
+            "when": "active"
+          }
+        ]
+      }
+    ]
   }
 }

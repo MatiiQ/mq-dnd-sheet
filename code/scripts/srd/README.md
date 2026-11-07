@@ -59,9 +59,12 @@ Spell Storing, Hat of Many Spells, Wand of Wonder, Ring of Elemental Command, Ne
 Brilliance (its gems), Chime of Opening and Robe of Stars (no charge counter), the gear chapter's Spell Scroll items,
 Candle of Invocation's Gate, Amulet of the Planes, the potions, and Luck Blade's once-per-dawn limit. Text
 by design: Defender (moving part of its bonus to AC until your next turn), Rod of Alertness (+1 AC and saves inside its
-light), Arrow-Catching Shield (+2 only against ranged attacks), Ioun Stone (a choice option must be a grant and only
-Protection has one: add its +1 AC as a custom AC bonus), and Rod of Lordly Might's other forms and buttons (it is a Mace
-with its +3; switch the form in Edit).
+light), Arrow-Catching Shield (+2 only against ranged attacks), and Rod of Lordly Might's other forms and buttons (it is
+a Mace with its +3; switch the form in Edit). Ioun Stone is a choice of the stones that have a grant: Protection (+1
+AC), Awareness (Advantage on Initiative and Perception), and Agility, Fortitude, Insight, Intellect, Leadership and
+Strength (+2, to a maximum of 20). Absorption, Greater Absorption, Mastery (+1 Proficiency Bonus), Regeneration,
+Reserve and Sustenance stay text: add one as the plain item. Potion of Giant Strength is the Belt's choice with
+switched-on `abilSet` grants, so the score lasts after drinking until switched off or a Long Rest.
 
 A magic weapon's "+N bonus to attack and damage rolls" is its `magic`, read by the builder (22 items, Rod of Lordly
 Might included). A staff that "can be wielded as a magic Quarterstaff" gets `base: 'item/quarterstaff'` from that

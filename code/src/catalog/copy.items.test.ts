@@ -411,3 +411,18 @@ describe('items that cast spells (catalog data)', () => {
     expect(c.res.find((r) => r.casts === row.id)).toMatchObject({ max: 1, recharge: 'dawn' });
   });
 });
+
+describe('Ioun Stone and Potion of Giant Strength', () => {
+  it('gives Awareness two Advantage grants', () => {
+    const c = addFromCatalog(blankCharacter(), cat, item('item/ioun-stone'), A({ c1: ['o2'] }));
+    expect(c.grants.filter((g) => g.kind === 'checkAdv').map((g) => g.target)).toEqual(['init', 'perception']);
+  });
+  it('gives Strength one +2 increase, to a maximum of 20', () => {
+    const c = addFromCatalog(blankCharacter(), cat, item('item/ioun-stone'), A({ c1: ['o9'] }));
+    expect(c.grants.filter((g) => g.kind === 'abil')).toMatchObject([{ ab: 'str', val: '2', cap: 20, needEq: true, needAtt: true }]);
+  });
+  it('sets Strength while the potion is switched on', () => {
+    const c = addFromCatalog(blankCharacter(), cat, item('item/potion-of-giant-strength'), A({ c1: ['o3'] }));
+    expect(c.grants.filter((g) => g.kind === 'abilSet')).toMatchObject([{ ab: 'str', val: '25', when: 'active' }]);
+  });
+});
