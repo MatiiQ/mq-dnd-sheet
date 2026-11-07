@@ -3,14 +3,14 @@
 // already raised (withLevel), so ChoiceFlow and the lists ask the counts of the new level; answers never touch the sheet
 // until Finish.
 import { useState, type ReactNode } from 'react';
-import { choicesOf, poolOptions } from '../catalog/copy';
+import { choicesOf, hasSpell, poolOptions } from '../catalog/copy';
 import type { FlowAnswers } from '../catalog/flow';
 import { entriesOf, type Catalog } from '../catalog/merge';
 import type { ChoiceSpec, ClassEntry, Entry } from '../catalog/schema';
 import { useCatalog } from '../catalog/useCatalog';
 import { applyLevel, fixedHp, levelPlan, prereqCheck, undoLevel, undoPreview, withLevel, type ClassPick, type LevelAnswers, type Step } from '../levelup';
 import { abilityMod, maxHpOf, maxHpRaw, totalLevel } from '../logic';
-import { Sheet } from '../sheet';
+import { Sheet, useSheet } from '../sheet';
 import type { Character, Die, LevelKey } from '../types';
 import { ChoiceFlow } from './pickers/ChoiceFlow';
 
@@ -283,7 +283,9 @@ function AsiScreen({ cat, raised, step, value, onChange }: { cat: Catalog; raise
 
 // New cantrips or spells to prepare: the class's list up to the highest level it prepares on its own (PHB p.45).
 function SpellScreen({ cat, step, value, onChange }: { cat: Catalog | null; step: Step; value: string[]; onChange: (ids: string[]) => void }) {
-  const spells = cat ? entriesOf(cat, 'spell').filter((e) => e.classes.split(',').includes(step.list ?? '') && (step.kind === 'cantrips' ? e.lvl === 0 : e.lvl >= 1 && e.lvl <= (step.maxLvl ?? 0))) : [];
+  const { c } = useSheet();
+  // A spell already on the sheet is not offered again (it would be added twice).
+  const spells = cat ? entriesOf(cat, 'spell').filter((e) => !hasSpell(c, e) && e.classes.split(',').includes(step.list ?? '') && (step.kind === 'cantrips' ? e.lvl === 0 : e.lvl >= 1 && e.lvl <= (step.maxLvl ?? 0))) : [];
   const toggle = (id: string) => onChange(value.includes(id) ? value.filter((x) => x !== id) : value.length < (step.owed ?? 0) ? [...value, id] : value);
   return (
     <div className="col gap-8">

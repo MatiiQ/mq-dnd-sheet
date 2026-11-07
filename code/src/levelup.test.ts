@@ -441,6 +441,17 @@ describe('Ability Score Improvement and spellcasting [13]', () => {
     expect(c.spells.find((x) => x.cid === 'spell/shield')).toMatchObject({ cls: sorc.id, castAb: 'cha', prep: true });
     expect(c.spells.find((x) => x.cid === 'spell/fire-bolt')).toMatchObject({ cls: sorc.id, castAb: 'cha' });
   });
+  it('a spell already on the sheet is not added again by a spell step', () => {
+    const r = ranger1({ dex: 13, wis: 13, cha: 13 });
+    const plan = levelPlan(r, { cls: 'class/sorcerer' }, cat, A())!;
+    const key = plan.steps.find((s) => s.kind === 'cantrips')!.key;
+    const twice = applyLevel(r, plan, fixed({ spells: { [key]: ['spell/fire-bolt', 'spell/fire-bolt'] } }), cat).c;
+    expect(twice.spells.filter((x) => x.cid === 'spell/fire-bolt')).toHaveLength(1);
+    const known = { ...r, spells: [...r.spells, { id: 'known', name: 'Fire Bolt', lvl: 0, time: '', range: '', cid: 'spell/fire-bolt' }] } as typeof r;
+    const planK = levelPlan(known, { cls: 'class/sorcerer' }, cat, A())!;
+    const c = applyLevel(known, planK, fixed({ spells: { [key]: ['spell/fire-bolt'] } }), cat).c;
+    expect(c.spells.filter((x) => x.cid === 'spell/fire-bolt')).toHaveLength(1);
+  });
   it('Eldritch Knight level and its undo restore castAb through the set difference', () => {
     const c2 = levelTo(fighter1(), 'class/fighter', 2);
     const ans = fixed({ sub: 'subclass/fighter/eldritch-knight' });

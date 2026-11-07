@@ -1,7 +1,7 @@
 // The character creator (spec 2026-11-06 §4): Class, Origin, Abilities, Details, Levels, then one summary and
 // "Create character". It holds answers only; the preview is replay(cat, answers), the same function Finish uses, so the
 // two can't differ. The answers and the step are saved as a draft after every step.
-import { useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { poolOptions } from '../catalog/copy';
 import type { FlowAnswers } from '../catalog/flow';
 import { entriesOf, type Catalog } from '../catalog/merge';
@@ -62,10 +62,24 @@ function Creator({ cat, initial, onCreate, notice }: { cat: Catalog; initial?: D
   const go = (n: number) => {
     const to = Math.max(0, Math.min(SUMMARY, n));
     setStep(to);
-    if (!writeDraft({ v: DRAFT_VERSION, step: to, answers: a }) && !warned.current) { warned.current = true; setSaveMsg('Draft couldn’t be saved: storage is full. You can still finish, but closing the app loses this character.'); }
   };
+  // The draft follows every answer, so Close or a closed app loses nothing; nothing is saved before a class is chosen.
+  useEffect(() => {
+    if (!a.cls) return;
+    if (!writeDraft({ v: DRAFT_VERSION, step, answers: a }) && !warned.current) { warned.current = true; setSaveMsg('Draft couldn’t be saved: storage is full. You can still finish, but closing the app loses this character.'); }
+  }, [a, step]);
+  // What replay left out: a class skill the origin already gives is only a note (Origin lets you swap it); anything else
+  // (a background or species whose choices were never finished, a level that no longer fits) blocks.
+  const dropped = base?.dropped ?? [];
+  const heldSkills = dropped.filter((d) => d.startsWith('Class skill ')).length;
+  const blocking = dropped.filter((d) => !d.startsWith('Class skill '));
+  const originOk = !blocking.some((d) => /^(Background|Species|Language)/.test(d));
+  const langs = Math.min(2, entriesOf(cat, 'prof').filter((p) => p.cat === 'language' && p.name !== 'Common').length);
+  const scoresOk = ABILITIES.every(([k]) => a.scores[k] !== undefined) && (a.method !== 'buy' || pointsSpent(a.scores) <= POINT_BUDGET);
   // Levels is ready once level 1's choices and every level up to the starting level are chosen.
-  const readyAt = [!!cls, !!a.background && !!a.species, true, true, !!a.firstDone && (a.start <= 1 || a.levels.length >= a.start - 1)];
+  const readyAt = [!!cls, !!a.background && !!a.species && originOk && a.languages.length === langs && !!cls && a.skills.length - heldSkills === cls.skills.pick, scoresOk, true,
+    !!a.firstDone && (a.start <= 1 || a.levels.length >= a.start - 1)];
+  const createOk = readyAt.every(Boolean) && blocking.length === 0;
   let body: ReactNode = null;
   if (step === 0) body = <ClassStep cat={cat} a={a} set={set} />;
   else if (step === 1) body = <OriginStep cat={cat} a={a} set={set} preview={preview} cls={cls} />;
@@ -90,7 +104,7 @@ function Creator({ cat, initial, onCreate, notice }: { cat: Catalog; initial?: D
         {step > 0 && <button type="button" className="btn" onClick={() => go(step - 1)}>Back</button>}
         {step < SUMMARY && step !== 4 && <button type="button" className="btn btn-primary" aria-disabled={!readyAt[step]} onClick={() => readyAt[step] && go(step + 1)}>Next</button>}
         {step === 4 && a.start === 1 && a.firstDone && <button type="button" className="btn btn-primary" onClick={() => go(SUMMARY)}>Next</button>}
-        {step === SUMMARY && <button type="button" className="btn btn-primary" aria-disabled={!preview || !readyAt.every(Boolean)} onClick={() => preview && readyAt.every(Boolean) && onCreate(preview)}>Create character</button>}
+        {step === SUMMARY && <button type="button" className="btn btn-primary" aria-disabled={!preview || !createOk} onClick={() => preview && createOk && onCreate(preview)}>Create character</button>}
       </div>
     </div>
   );
@@ -106,9 +120,9 @@ function ClassStep({ cat, a, set }: { cat: Catalog; a: CreatorAnswers; set: (f: 
       <h3 className="block-title">Class</h3>
       <div className="row wrap gap-6">
         {entriesOf(cat, 'class').map((e) => (
-          // A new class clears the class skill picks and the first level's answers (one copy of each).
+          // A new class clears the class skill picks and the answers of every level (they name the old class).
           <button key={e.id} type="button" className="pick-opt" aria-pressed={a.cls === e.id}
-            onClick={() => a.cls !== e.id && set((x) => ({ ...x, cls: e.id, skills: [], first: { flows: {}, spells: {} }, firstDone: false, equip: 'none' }))}>{e.name}</button>
+            onClick={() => a.cls !== e.id && set((x) => ({ ...x, cls: e.id, skills: [], first: { flows: {}, spells: {} }, firstDone: false, equip: 'none', levels: [] }))}>{e.name}</button>
         ))}
       </div>
       {cls && (
@@ -126,7 +140,7 @@ function ClassStep({ cat, a, set }: { cat: Catalog; a: CreatorAnswers; set: (f: 
             </div>
           )}
           <label className="row gap-8">Starting level
-            <NumInput className="input input-num" aria-label="Starting level" value={a.start} min={1} max={20} onCommit={(v) => set((x) => ({ ...x, start: v }))} />
+            <NumInput className="input input-num" aria-label="Starting level" value={a.start} min={1} max={20} onCommit={(v) => set((x) => ({ ...x, start: v, levels: x.levels.slice(0, v - 1) }))} />
           </label>
         </div>
       )}
@@ -204,6 +218,7 @@ function AbilityStep({ a, set, preview, cls }: { a: CreatorAnswers; set: (f: (x:
   const used = (i: number) => Object.values(a.scores).filter((v) => v === pool[i]).length > pool.slice(0, i).filter((v) => v === pool[i]).length;
   const assign = (ab: Ability) => { if (sel === null) return; set((x) => ({ ...x, scores: { ...x.scores, [ab]: pool[sel] } })); setSel(null); };
   const spent = pointsSpent(a.scores);
+  const diceFull = dice.every((d) => d.every((v) => v >= 1));
   return (
     <div className="col gap-10">
       <h3 className="block-title">Ability scores</h3>
@@ -221,7 +236,7 @@ function AbilityStep({ a, set, preview, cls }: { a: CreatorAnswers; set: (f: (x:
               <span className="muted">= {dropLowest(d)}</span>
             </div>
           ))}
-          <button type="button" className="btn" style={{ alignSelf: 'flex-start' }} onClick={() => { setRolled(dice.map(dropLowest)); set((x) => ({ ...x, scores: {} })); }}>Use these sets</button>
+          <button type="button" className="btn" style={{ alignSelf: 'flex-start' }} aria-disabled={!diceFull} onClick={() => { if (!diceFull) return; setRolled(dice.map(dropLowest)); set((x) => ({ ...x, scores: {} })); }}>Use these sets</button>
           <label className="row gap-6">Or six totals
             <input type="text" className="input" aria-label="Six totals" placeholder="15 14 13 12 10 8" onChange={(e) => { const t = e.target.value.split(/[\s,]+/).map(Number).filter((n) => n >= 3 && n <= 18); if (t.length === 6) { setRolled(t); set((x) => ({ ...x, scores: {} })); } }} />
           </label>
@@ -243,7 +258,7 @@ function AbilityStep({ a, set, preview, cls }: { a: CreatorAnswers; set: (f: (x:
                 <div className="row gap-4">
                   <Step small label={'Lower ' + k.toUpperCase()} onClick={() => set((x) => ({ ...x, scores: { ...x.scores, [k]: Math.max(8, (x.scores[k] ?? 8) - 1) } }))}>−</Step>
                   <strong>{v ?? 8}</strong>
-                  <Step small label={'Raise ' + k.toUpperCase()} onClick={() => set((x) => ({ ...x, scores: { ...x.scores, [k]: Math.min(15, (x.scores[k] ?? 8) + 1) } }))}>+</Step>
+                  <Step small label={'Raise ' + k.toUpperCase()} onClick={() => set((x) => { const next = { ...x.scores, [k]: Math.min(15, (x.scores[k] ?? 8) + 1) }; return pointsSpent(next) > POINT_BUDGET ? x : { ...x, scores: next }; })}>+</Step>
                 </div>
               ) : <button type="button" className="btn btn-sm" aria-label={'Assign to ' + label} onClick={() => assign(k)}>{v ?? '—'}</button>}
               {preview && v !== undefined && <span className="small">Final {effScore(preview, k)}</span>}

@@ -1,7 +1,7 @@
 // The level engine (spec §2): what the next level of one class gives (levelPlan), applying it (applyLevel) and taking
 // the last level back (undoLevel). Pure. The wizards are UI over these functions; the creator replays its stored answers
 // through applyLevel, so its preview and its result are the same function.
-import { addFromCatalog, addChoicePicks, choicesOf, classProfInputs, poolOptions, prereqMet, resolveChoices, titled, type AddChoices } from './catalog/copy';
+import { addFromCatalog, addChoicePicks, choicesOf, classProfInputs, hasSpell, poolOptions, prereqMet, resolveChoices, titled, type AddChoices } from './catalog/copy';
 import { valueAt } from './catalog/value';
 import { masterySlots } from './actions';
 import { activeGrants } from './links';
@@ -367,7 +367,7 @@ export function applyLevel(c: Character, plan: Plan, ans: LevelAnswers, cat: Cat
     for (const s of plan.steps.filter((y) => y.kind === 'cantrips' || y.kind === 'prepare')) {
       for (const id of ans.spells[s.key] ?? []) {
         const e = cat.byId.get(id);
-        if (e?.kind !== 'spell') continue;
+        if (e?.kind !== 'spell' || hasSpell(x, e)) continue;
         const ids = new Set(x.spells.map((sp) => sp.id));
         x = addFromCatalog(x, cat, e, { picks: {}, counted: {}, links: {} });
         x = { ...x, spells: x.spells.map((sp) => (ids.has(sp.id) ? sp : { ...spellForRow(sp, rr), ...(sp.lvl > 0 ? { prep: true } : {}) })) };

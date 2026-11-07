@@ -106,6 +106,18 @@ describe('the draft', () => {
     expect(readDraft()).toMatchObject({ draft: null });
     expect(localStorage.getItem(DRAFT_KEY)).toBeNull();
   });
+  it('drops a draft whose answers do not fit the creator, with a notice', () => {
+    const { details: _d, ...noDetails } = base();
+    for (const answers of [noDetails, { ...base(), levels: 'x' }, { ...base(), start: 99 }, { ...base(), first: { flows: {}, spells: { k: [1] } } }]) {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ v: 1, step: 0, answers }));
+      expect(readDraft()).toMatchObject({ draft: null, notice: expect.stringContaining('damaged') });
+      expect(localStorage.getItem(DRAFT_KEY)).toBeNull();
+    }
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({ v: 1, step: 9, answers: base() }));
+    expect(readDraft().draft).toBeNull();
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({ v: 1, step: 5, answers: base({ start: 2, levels: [lvl(2)] }) }));
+    expect(readDraft().draft).toMatchObject({ step: 5 });
+  });
   it('writes, reads back and clears; storage full gives false and nothing throws', () => {
     expect(writeDraft({ v: 1, step: 2, answers: base() })).toBe(true);
     expect(readDraft().draft).toMatchObject({ step: 2 });

@@ -8,7 +8,7 @@ import { entriesOf, type Catalog } from './catalog/merge';
 import type { ClassEntry } from './catalog/schema';
 import { isObj } from './catalog/schema';
 import { applyLevel, emptyCharacter, levelPlan, type ClassPick, type LevelAnswers } from './levelup';
-import { newId, skillLevel } from './logic';
+import { DICE, newId, skillLevel } from './logic';
 import type { Ability, Character, Die } from './types';
 
 export const DRAFT_KEY = 'dnd-draft', DRAFT_VERSION = 1;
@@ -116,6 +116,26 @@ export function staleStep(cat: Catalog, a: CreatorAnswers): number | null {
 }
 
 // ---- The draft (its own key, never in the backup) ----
+// The shape the creator reads without checking: a draft that doesn't fit is dropped, never opened (it would crash the
+// creator, and the crash screen hides the draft's Discard button).
+const isStrs = (v: unknown): v is string[] => Array.isArray(v) && v.every((x) => typeof x === 'string');
+const isFlow = (v: unknown): boolean => isObj(v) && Object.values(v).every((n) => isObj(n) && isObj(n.picks) && Object.values(n.picks).every(isStrs) && isObj(n.counted) && isObj(n.links));
+const isLevelAns = (v: unknown): boolean => isObj(v) && isObj(v.flows) && Object.values(v.flows).every(isFlow) && isObj(v.spells) && Object.values(v.spells).every(isStrs)
+  && (v.hp === undefined || (isObj(v.hp) && (v.hp.mode === 'fixed' || v.hp.mode === 'roll') && Number.isFinite(v.hp.val)))
+  && (v.sub === undefined || typeof v.sub === 'string') && (v.mastery === undefined || isStrs(v.mastery))
+  && (v.asi === undefined || (isObj(v.asi) && typeof v.asi.feat === 'string' && isFlow(v.asi.flow)));
+export function isAnswers(a: unknown): a is CreatorAnswers {
+  if (!isObj(a) || !isObj(a.details) || !Array.isArray(a.levels) || !isObj(a.scores)) return false;
+  const d = a.details;
+  return typeof a.cls === 'string' && (a.equip === 'A' || a.equip === 'B' || a.equip === 'none')
+    && Number.isInteger(a.start) && (a.start as number) >= 1 && (a.start as number) <= 20
+    && (a.background === undefined || typeof a.background === 'string') && (a.species === undefined || typeof a.species === 'string')
+    && isFlow(a.bgFlow) && isFlow(a.spFlow) && isStrs(a.skills) && isStrs(a.languages)
+    && (a.method === 'array' || a.method === 'buy' || a.method === 'rolled') && Object.values(a.scores).every((n) => Number.isInteger(n))
+    && ['name', 'align', 'appearance', 'notes'].every((k) => typeof d[k] === 'string')
+    && isLevelAns(a.first) && (a.firstDone === undefined || typeof a.firstDone === 'boolean')
+    && a.levels.every((L) => isObj(L) && isObj(L.pick) && (typeof L.pick.cls === 'string' || (typeof L.pick.name === 'string' && DICE.includes(L.pick.hd as never))) && isLevelAns(L.ans));
+}
 export function readDraft(): { draft: Draft | null; notice?: string } {
   let raw: string | null = null;
   try { raw = localStorage.getItem(DRAFT_KEY); } catch { return { draft: null }; }
@@ -123,7 +143,8 @@ export function readDraft(): { draft: Draft | null; notice?: string } {
   const drop = (notice: string) => { clearDraft(); return { draft: null, notice }; };
   let d: unknown;
   try { d = JSON.parse(raw); } catch { return drop('The saved character draft couldn’t be read, so it was discarded.'); }
-  if (!isObj(d) || d.v !== DRAFT_VERSION || !isObj(d.answers) || typeof d.step !== 'number') return drop('The saved character draft is from another version of the app, so it was discarded.');
+  if (!isObj(d) || d.v !== DRAFT_VERSION) return drop('The saved character draft is from another version of the app, so it was discarded.');
+  if (!isAnswers(d.answers) || !Number.isInteger(d.step) || (d.step as number) < 0 || (d.step as number) > CREATOR_STEPS.length) return drop('The saved character draft is damaged, so it was discarded.');
   return { draft: d as unknown as Draft };
 }
 export function writeDraft(d: Draft): boolean {

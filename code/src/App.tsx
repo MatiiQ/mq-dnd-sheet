@@ -36,8 +36,8 @@ export default function App() {
   const [draftAsk, setDraftAsk] = useState<{ draft: Draft | null; notice?: string }>(() => readDraft());
   const openCreator = () => {
     const r = readDraft();
-    if (r.draft) setDraftAsk(r);
-    else setCreating({});
+    if (r.draft || r.notice) setDraftAsk(r);
+    if (!r.draft) setCreating({});
   };
   const draftUi = (
     <>
@@ -56,7 +56,7 @@ export default function App() {
       )}
     </>
   );
-  const creator = creating && <CreatorWizard initial={creating.from} onClose={() => setCreating(null)}
+  const creator = creating && <CreatorWizard initial={creating.from} onClose={() => { setCreating(null); setDraftAsk(readDraft()); }}
     onCreate={(made) => { store.add(made); clearDraft(); setCreating(null); setWelcome(false); }} />;
   // Nothing open (no character of your own, no example open), or Menu › Characters: the welcome screen.
   if (!store.c || welcome) return (
