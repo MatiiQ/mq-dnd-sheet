@@ -376,7 +376,8 @@ function SpellRow({ sp, picking, setPicking, onEdit }: { sp: Spell; picking: boo
       <span className="muted">{[sp.time, sp.range].filter((x) => x).join(' · ')}</span>
       {(sp.dur || sp.comp) && <span className="muted">{[sp.dur, sp.comp].filter((x) => x).join(' · ')}</span>}
       {sp.dice && <span style={{ fontSize: 14, fontWeight: 700, marginTop: 2 }}>{sp.dice}</span>}
-      {sp.castAb && <span className="muted">Casts with {sp.castAb.toUpperCase()}: save DC {spellSaveDcFor(c, sp)} · attack {fmt(spellAttackFor(c, sp)!)}</span>}
+      {sp.castAb && sp.dc === undefined && sp.atkB === undefined && <span className="muted">Casts with {sp.castAb.toUpperCase()}: save DC {spellSaveDcFor(c, sp)} · attack {fmt(spellAttackFor(c, sp)!)}</span>}
+      {(sp.dc !== undefined || sp.atkB !== undefined) && <span className="muted">{[sp.dc !== undefined && 'save DC ' + sp.dc, sp.atkB !== undefined && 'attack ' + fmt(sp.atkB)].filter(Boolean).join(' · ')}</span>}
     </span>
   );
 

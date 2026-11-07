@@ -5,6 +5,7 @@ import { migrate } from '../migrate';
 import { saveEntry } from '../sheet';
 import type { Item, Spell } from '../types';
 import { mergeCatalog } from './merge';
+import { flowNodes, flowReview } from './flow';
 import type { Entry, ItemEntry, SpellEntry } from './schema';
 import { BLANK_ITEM, BLANK_SPELL, keepPrep, addFromCatalog, armorBaseMissing, draftFromItem, grantSpellName, withDetectedArmor, catForKind, draftFromSpell, spellFromForm, type SpellDraft, type AddChoices, itemFromEntry, itemFromForm, spellFromEntry, spellSummary, itemQuestions, itemStats, answeredName, hasSenseRule, senseRule, weaponRules, type ItemAnswers, type ItemDraft } from './copy';
 
@@ -363,5 +364,30 @@ describe('senseRule', () => {
     expect(senseRule(cat, ' darkvision ')?.id).toBe('rule/darkvision');
     expect(senseRule(cat, 'Keen Hearing')).toBeUndefined();
     expect([hasSenseRule('Truesight'), hasSenseRule('Keen Hearing')]).toEqual([true, false]);
+  });
+});
+
+describe('an item’s spell', () => {
+  const wand = { id: 'item/test-wand', kind: 'item', name: 'Test Wand', src: 'srd', desc: '', cat: 'wand',
+    grants: [{ id: 'g1', kind: 'spell', name: 'Fireball', spell: 'spell/fireball', always: true, dc: '15', atkB: '7' }] } as unknown as ItemEntry;
+  const wcat = mergeCatalog([...srdEntries, wand], null);
+  it('copies a fixed save DC and attack bonus as numbers', () => {
+    const c = addFromCatalog(blankCharacter(), wcat, wand, A());
+    expect(c.spells.find((s) => s.cid === 'spell/fireball')).toMatchObject({ dc: 15, atkB: 7, always: true });
+  });
+  it('keeps them through an edit in the spell form', () => {
+    const c = addFromCatalog(blankCharacter(), wcat, wand, A());
+    const row = c.spells.find((s) => s.cid === 'spell/fireball')!;
+    const edited = saveEntry<Spell>(c.spells, spellFromForm({ ...draftFromSpell(row), name: 'Wand Fireball' }), row.id).find((s) => s.id === row.id)!;
+    expect(edited).toMatchObject({ name: 'Wand Fireball', dc: 15, atkB: 7 });
+  });
+  it('never links to a spell row already there: two rows, the player’s own untouched', () => {
+    const own: Spell = { id: 'mine', ...spellFromEntry(spell('spell/fireball')), prep: true };
+    const c0 = { ...blankCharacter(), spells: [own] };
+    const ans = { '': { picks: {}, counted: {}, links: {} } };
+    expect(flowReview(wcat, c0, flowNodes(wcat, c0, wand, ans), ans).links).toEqual([]);
+    const c = addFromCatalog(c0, wcat, wand, A());
+    expect(c.spells.filter((s) => s.cid === 'spell/fireball')).toHaveLength(2);
+    expect(c.spells.find((s) => s.id === 'mine')!.from).toBeUndefined();
   });
 });

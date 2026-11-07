@@ -176,8 +176,9 @@ export const partsTotal = (parts: AcPart[]): number => parts.reduce((t, p) => t 
 export const castAbOf = (c: Character, sp: Spell): Ability | null => sp.castAb ?? (c.castAb === 'none' ? null : c.castAb);
 const atkParts = (c: Character, ab: Ability): AcPart[] => [...castBase(c, ab), ...castGrantParts(c, 'spellAtk')];
 const dcParts = (c: Character, ab: Ability): AcPart[] => [{ label: 'Base', value: 8 }, ...castBase(c, ab), ...castGrantParts(c, 'spellDc')];
-export const spellSaveDcFor = (c: Character, sp: Spell) => { const ab = castAbOf(c, sp); return ab && partsTotal(dcParts(c, ab)); };
-export const spellAttackFor = (c: Character, sp: Spell) => { const ab = castAbOf(c, sp); return ab && partsTotal(atkParts(c, ab)); };
+// An item spell's own number ("save DC 15") wins over the caster's, which it doesn't need.
+export const spellSaveDcFor = (c: Character, sp: Spell) => { if (sp.dc !== undefined) return sp.dc; const ab = castAbOf(c, sp); return ab && partsTotal(dcParts(c, ab)); };
+export const spellAttackFor = (c: Character, sp: Spell) => { if (sp.atkB !== undefined) return sp.atkB; const ab = castAbOf(c, sp); return ab && partsTotal(atkParts(c, ab)); };
 // The same two numbers as parts, for the breakdown under each badge (PHB p.41): a shared base (modifier, PB), then each
 // number's own grants, one part per grant labelled by its source. Their sums equal the values below.
 export const spellAttackParts = (c: Character): AcPart[] | null => (c.castAb === 'none' ? null : atkParts(c, c.castAb));
@@ -1053,7 +1054,8 @@ export function addGrants(c: Character, from: string, inputs: GrantInput[]): Cha
       // A spell with neither flag would load as prepared (migrate), so a granted one is always prepared or unprepared.
       // The grant's flags win over the catalog spell's prep: an always-prepared spell has no prep to linger after
       // "Always prepared" is unticked.
-      out.spells = [...out.spells, { ...sp, id, ...(s.always ? { always: true } : { prep: false }), ...(castAb ? { castAb } : {}), ...base, ...common(s) }];
+      const own = { ...(s.dc !== undefined ? { dc: num(c, s.dc) } : {}), ...(s.atkB !== undefined ? { atkB: num(c, s.atkB) } : {}) };
+      out.spells = [...out.spells, { ...sp, id, ...(s.always ? { always: true } : { prep: false }), ...(castAb ? { castAb } : {}), ...own, ...base, ...common(s) }];
     } else if (s.kind === 'action' && input.link) {
       out = linkTo('attacks', id);
     } else {

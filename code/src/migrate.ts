@@ -68,7 +68,8 @@ const SPELL_FIELDS: Record<string, FieldCheck> = {
   desc: isStr, school: isStr, classes: isStr, ritual: isBool, atk: among('melee', 'ranged'), save: among(...ABILITIES.map(([k]) => k)),
   dur: isStr, comp: isStr, dice: isStr, c: isBool, always: isBool, prep: isBool,
   fx: among('damage', 'healing', 'other'), dmg: isStr, dtype: isStr, scale: isStr, higher: isStr, healMod: (v) => v === true,
-  dmgMod: (v) => v === true, dtypes: isDtypes, cls: nonEmpty, acOther: (v) => v === true, linkAlways: (v) => v === true, linkCastAb: among('none', ...ABILITIES.map(([k]) => k))
+  dmgMod: (v) => v === true, dtypes: isDtypes, cls: nonEmpty, acOther: (v) => v === true, linkAlways: (v) => v === true, linkCastAb: among('none', ...ABILITIES.map(([k]) => k)),
+  dc: (v) => Number.isInteger(v), atkB: (v) => Number.isInteger(v)
 };
 const ATTACK_FIELDS: Record<string, FieldCheck> = { econ: among('action', 'bonus', 'reaction', 'free', 'other'), group: among('weapon', 'other') };
 const ITEM_FIELDS: Record<string, FieldCheck> = {

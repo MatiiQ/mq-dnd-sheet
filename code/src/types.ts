@@ -86,6 +86,8 @@ export interface Spell extends Linked {
   linkAlways?: true; linkCastAb?: Ability | 'none';
   // acOther: cast on another creature: an AC spell adds no AC, and a ranged or Touch Concentration spell's active effects don't count on you.
   acFx?: AcEffect; acVal?: number; acOther?: true; castAb?: Ability; cid?: string;
+  // An item spell's own numbers ("save DC 15"), read before the caster's (spellSaveDcFor, spellAttackFor).
+  dc?: number; atkB?: number;
   // Catalog fields: dice stays the free-text summary shown in the row; dmg/dtype are the damage dice and type.
   desc?: string; school?: string; classes?: string; ritual?: boolean; atk?: 'melee' | 'ranged'; save?: Ability;
   fx?: 'damage' | 'healing' | 'other'; dmg?: string; dtype?: string; scale?: string; higher?: string;

@@ -44,7 +44,8 @@ export function flowReview(cat: Catalog, c: Character, nodes: FlowNode[], answer
       if (isCountable(spec)) counts.push({ node, spec, on: own.counted[spec.id] ?? countedDefault(c, node.entry, spec) });
       const kind = LINKABLE[spec.kind];
       const name = spec.kind === 'spell' ? grantSpellName(cat, spec) : spec.name;
-      const found = kind ? findUnlinked(c, kind, name) : null;
+      // An item's spell is cast from the item (its charges, its DC), so it is always its own row, never a link.
+      const found = kind && !(spec.kind === 'spell' && node.entry.kind === 'item') ? findUnlinked(c, kind, name) : null;
       // Plan 3's defaults: link a resource or an action of the same name; a spell asks.
       if (found) links.push({ node, spec, name, found, choice: own.links[spec.id] ?? (spec.kind === 'spell' ? null : 'link') });
     }

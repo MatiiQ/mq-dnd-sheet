@@ -304,3 +304,12 @@ describe('spell slots from classes (PHB p.45)', () => {
     expect(slotsFor(c, srd)).toEqual(pad(4, 2));
   });
 });
+
+describe('an item spell’s own numbers', () => {
+  it('uses its own save DC and attack bonus, even with no spellcasting ability', () => {
+    const c = { ...blankCharacter(), castAb: 'none' as const };
+    const s = { id: 's', name: 'Fireball', lvl: 3, time: 'Action', range: '150 feet', dc: 15, atkB: 7 };
+    expect(spellSaveDcFor(c, s)).toBe(15);
+    expect(spellAttackFor(c, s)).toBe(7);
+  });
+});

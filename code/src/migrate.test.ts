@@ -67,6 +67,11 @@ describe('field checks', () => {
     expect(c.saveProf).toEqual({ str: true });
     expect(c.conds).toEqual({ Prone: true });
   });
+  it('drops a bad item spell DC or attack bonus, never the spell', () => {
+    const sp = { id: 's', name: 'S', lvl: 1, time: 'Action', range: 'Self', prep: true };
+    expect(migrate({ ...blankCharacter(), spells: [{ ...sp, dc: 'x', atkB: 1.5 }] }).spells[0]).toEqual(sp);
+    expect(migrate({ ...blankCharacter(), spells: [{ ...sp, dc: 15, atkB: 7 }] }).spells[0]).toEqual({ ...sp, dc: 15, atkB: 7 });
+  });
   it('repairs a copy, never the save it reads', () => {
     const save = { ...blankCharacter(), abilAdj: { str: 2.5 } };
     expect(migrate(save).abilAdj).toEqual({ str: 2 });

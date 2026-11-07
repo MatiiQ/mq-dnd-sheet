@@ -101,6 +101,7 @@ export interface GrantSpec {
   uses?: string;                                                                    // action: the feature whose counter it shows (a catalog id); res names one of the entry's own
   regainTo?: string;                                                                // action: tap to regain the counter up to this Value, or 'all'
   dc?: string; dcAb?: string;                                                       // action: a save DC, a Value ('8+pb') plus the best of these abilities (a comma list, or '$<choiceId>')
+  atkB?: string;                                                                    // spell (also dc): an item spell's fixed attack bonus and save DC, Values
   dice?: string; dtype?: string; on?: string; perTurn?: boolean; swap?: string;     // xdmg; swap: the name of an xdmg row this one replaces
   die?: string; abs?: string;                                                       // unarmed (also dtype), atkAbil
   wrange?: 'melee' | 'ranged'; amode?: 'melee' | 'ranged'; prop?: string; weapon?: string; oneHand?: boolean;   // atkBonus, dmgBonus
@@ -175,7 +176,7 @@ const GRANTS: Record<GrantKind, Record<string, [Check, boolean]>> = {
   checkAdv: { target: [str, true], adv: [oneOf('adv', 'dis'), true], always: [bool, false], note: [str, false] },
   // An Emanation from you while the grant counts (range: a Value, may be a level table); incap: ends while Incapacitated.
   aura: { range: [value, true], note: [str, false], incap: [bool, false] },
-  spell: { spell: [str, true], always: [bool, false], castAb: [or(ability, ref), false] },
+  spell: { spell: [str, true], always: [bool, false], castAb: [or(ability, ref), false], dc: [value, false], atkB: [value, false] },
   speed: { mode: [oneOf('walk', 'climb', 'swim', 'fly', 'burrow'), true], val: [or(value, oneOf('walk', 'walk2')), true], hover: [bool, false], floor: [bool, false] },
   ac: { acMode: [oneOf('bonus', 'unarmored', 'dexCap'), true], val: [value, false], ab: [or(ability, ref), false], shieldOk: [bool, false] },
   init: { val: [value, true] },
