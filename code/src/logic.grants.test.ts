@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { blankCharacter, sampleCharacter } from './defaults';
 import type { GrantSpec } from './catalog/schema';
-import { castAbOf, removeChip, grantChips, addGrants, findUnlinked, removalChain, removalSummary, normalize, mergedDefenses, removeRef, modeSpeed, effScore, armorClass, longRest, activeAuras, preparedCount, saveMod, spellUsable } from './logic';
+import { readManual, castAbOf, removeChip, grantChips, addGrants, findUnlinked, removalChain, removalSummary, normalize, mergedDefenses, removeRef, modeSpeed, effScore, armorClass, longRest, activeAuras, preparedCount, saveMod, spellUsable } from './logic';
 import { migrate } from './migrate';
 import { inactiveReason, isActive } from './links';
 import type { Character, Grant, Item, Spell } from './types';
@@ -369,5 +369,32 @@ describe('auras', () => {
     expect(a.defenses[0].needAura).toBe(AOP);
     const b = addGrants(c, 'item:ha', [{ spec: { id: 'y', kind: 'aura', name: 'A', range: '10', needHand: true } }]);
     expect(b.grants[0].needHand).toBe(true);
+  });
+});
+
+describe('reading a manual (SRD 5.2.1, Manual of Gainful Exercise)', () => {
+  const book = { id: 'bk', name: 'Manual of Gainful Exercise', qty: 1, eq: false, reads: 'str' as const };
+  const belt = { id: 'g', kind: 'abil' as const, name: 'STR +2', ab: 'str', val: '2', cap: 20, from: 'feature:asi' };
+  const base = (str: number, grants = [belt]) => ({ ...blankCharacter(), abil: { ...blankCharacter().abil, str }, inv: [book],
+    feats: [{ id: 'asi', g: 'other' as const, name: 'ASI', desc: '' }], grants } as unknown as Parameters<typeof readManual>[0]);
+  it('adds +2 to a maximum of 30, on top of cap-20 increases', () => {
+    const c = base(18);
+    expect(effScore(c, 'str')).toBe(20);
+    const read = readManual(c, 'bk');
+    expect(effScore(read, 'str')).toBe(22);
+    expect(effScore(readManual(base(29, []), 'bk'), 'str')).toBe(30);
+  });
+  it('outlives the book, and goes with its feature', () => {
+    const read = readManual(base(18), 'bk');
+    const noBook = removeRef(read, { kind: 'item', id: 'bk' });
+    expect(effScore(noBook, 'str')).toBe(22);
+    const feat = noBook.feats.find((f) => f.name === 'Manual of Gainful Exercise')!;
+    expect(feat.desc).toBe('Read: +2 Strength, to a maximum of 30.');
+    expect(effScore(removeRef(noBook, { kind: 'feature', id: feat.id }), 'str')).toBe(20);
+  });
+  it('reads a book once', () => {
+    const read = readManual(base(18), 'bk');
+    expect(read.inv[0].reads).toBeUndefined();
+    expect(readManual(read, 'bk')).toBe(read);
   });
 });

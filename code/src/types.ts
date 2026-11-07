@@ -66,6 +66,8 @@ export interface Item extends Partial<Counter> {
   id: string; name: string; qty: number; eq: boolean; armor?: ArmorKind; acBase?: number; acBonus?: number; wt?: number; desc?: string; cid?: string;
   cat?: ItemEntry['cat']; cost?: string; wcat?: 'simple' | 'martial'; wrange?: 'melee' | 'ranged'; dmg?: string; dtype?: string; props?: string;
   thrown?: string; vers?: string; ammo?: string; mastery?: string; magic?: number;
+  /** A manual or tome not yet read: reading it raises this score (readManual). */
+  reads?: Ability;
   strReq?: number; stealthDis?: boolean; cap?: number; capVol?: string; xdim?: boolean; rarity?: string; attune?: boolean; base?: string;
   // sec: the id of the section the player put it in (its kind); none, or one that is gone, = the default list.
   // in: the id of the extradimensional container it sits in (one level deep; it is then never equipped).

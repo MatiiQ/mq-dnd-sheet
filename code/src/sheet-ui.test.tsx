@@ -112,6 +112,14 @@ describe('entry forms and rows', () => {
     act(() => { sel.value = 'ls'; sel.dispatchEvent(new Event('change', { bubbles: true })); });
     expect(saved().castFx).toEqual({ 'spell:mw': { item: 'ls' } });
   });
+  it('reads a manual from its Inventory row', () => {
+    renderSheet({ inv: [{ id: 'bk', name: 'Manual of Gainful Exercise', qty: 1, eq: false, reads: 'str' }] });
+    tab('Inventory');
+    tap(label('Read Manual of Gainful Exercise'));
+    expect(saved().inv[0].reads).toBeUndefined();
+    expect(saved().feats.some((f) => f.name === 'Manual of Gainful Exercise')).toBe(true);
+    expect(label('Read Manual of Gainful Exercise')).toBeFalsy();
+  });
   it('takes Haste out of AC when it is cast on another creature', () => {
     const haste = { id: 'h', name: 'Haste', lvl: 3, time: 'Action', range: '30 feet', c: true, acFx: 'bonus' as const, acVal: 2 };
     renderSheet({ spells: [haste], conc: { id: 'h', name: 'Haste' }, slotMax: [0, 0, 0, 1, 0, 0, 0, 0, 0, 0] });

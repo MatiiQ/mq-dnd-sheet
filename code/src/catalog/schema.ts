@@ -41,6 +41,7 @@ export interface ItemEntry extends EntryBase {
   baseOf?: string;
   magic?: number;      // "+N bonus to attack and damage rolls" (1–3)
   magicPick?: boolean; // the bonus is the player's +1, +2 or +3, asked when added (Weapon, Armor, Shield +N…)
+  reads?: Ability;     // a manual or tome: reading it raises this score by 2, to a maximum of 30 (readManual)
   grants?: Spec[];
 }
 export interface FeatEntry extends EntryBase { kind: 'feat'; cat: 'origin' | 'general' | 'style' | 'boon'; prereq?: string; repeat?: boolean; grants: Spec[] }
@@ -236,7 +237,7 @@ const ITEM: Record<string, [Check, boolean]> = {
   vers: [str, false], ammo: [str, false], mastery: [str, false],
   armor: [oneOf(...ARMOR_KINDS), false], acBase: [num, false], acBonus: [num, false], strReq: [num, false], stealthDis: [bool, false],
   cap: [num, false], capVol: [str, false], xdim: [bool, false],
-  rarity: [str, false], attune: [bool, false], charges: [value, false], recharge: [RECHARGE, false], regain: [value, false], regainOn: [oneOf('short', 'dawn'), false],
+  rarity: [str, false], attune: [bool, false], reads: [ability, false], charges: [value, false], recharge: [RECHARGE, false], regain: [value, false], regainOn: [oneOf('short', 'dawn'), false],
   base: [(v) => v === 'armor' || v === 'weapon' || v === 'ammo' || (typeof v === 'string' && /^item\/[a-z0-9-]+$/.test(v)), false],
   baseOf: [(v) => typeof v === 'string' && v.split(',').every((x) => /^item\/[a-z0-9-]+$/.test(x)), false],
   magic: [whole(1, 3), false], magicPick: [oneOf(true), false]

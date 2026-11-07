@@ -1,7 +1,7 @@
 import { useState, type CSSProperties } from 'react';
 import { armorBaseMissing, BLANK_ITEM, catForKind, draftFromItem, itemFromForm, itemStats, weaponRules, withDetectedArmor, WEAPON_PROPS, type ItemDraft, type ItemKind, type WeaponProp } from '../../catalog/copy';
 import { isValue } from '../../catalog/value';
-import { removeRef, CARRY_MULT, SIZES, regainLabel, capital, coinWeight, maxFields, maxOf, rechargeOf, regainEvent, carriedWeight, carryCapacity, carryUpOf, sizeOf, effScore, fmt, addGrants, grantChips, isContainer, newId, withoutKeys, type GrantInput } from '../../logic';
+import { removeRef, CARRY_MULT, SIZES, regainLabel, capital, coinWeight, maxFields, maxOf, rechargeOf, regainEvent, carriedWeight, carryCapacity, carryUpOf, sizeOf, effScore, fmt, addGrants, grantChips, isContainer, newId, readManual, withoutKeys, type GrantInput } from '../../logic';
 import {
   addSection, bagGroups, containerLoad, DEFAULT_SECTION, inventoryGroups, moveInto, moveSection, removeContainer, removeContainerSummary, removeSection, renameSection,
   setItemSection, takeOut
@@ -227,6 +227,7 @@ export function InventoryTab() {
               border: '1px solid ' + (it.eq ? 'var(--accent)' : 'var(--line-2)'), background: 'transparent', color: it.eq ? 'var(--accent)' : 'var(--muted)'
             }}>{it.eq ? 'Equipped' : 'Carried'}</button>}
             {hasActiveEffect(c, linkOf('item', it.id)) && <EffectSwitch link={linkOf('item', it.id)} name={it.name} />}
+            {it.reads && <button type="button" className="btn btn-sm toggle-btn" aria-label={'Read ' + it.name} onClick={() => update((p) => readManual(p, it.id))}>Read</button>}
             {/* An item with charges counts its charges here instead of its quantity (charged items come one at a time). */}
             {it.count !== undefined ? (
               <div className="row gap-4">

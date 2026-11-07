@@ -3246,5 +3246,23 @@
         "needEq": true
       }
     ]
+  },
+  "item/manual-of-bodily-health": {
+    "reads": "con"
+  },
+  "item/manual-of-gainful-exercise": {
+    "reads": "str"
+  },
+  "item/manual-of-quickness-of-action": {
+    "reads": "dex"
+  },
+  "item/tome-of-clear-thought": {
+    "reads": "int"
+  },
+  "item/tome-of-leadership-and-influence": {
+    "reads": "cha"
+  },
+  "item/tome-of-understanding": {
+    "reads": "wis"
   }
 }

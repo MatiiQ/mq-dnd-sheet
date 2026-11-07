@@ -77,6 +77,11 @@ describe('field checks', () => {
     expect(c.saveProf).toEqual({ str: true });
     expect(c.conds).toEqual({ Prone: true });
   });
+  it('drops a bad manual score, never the item', () => {
+    const it = { id: 'bk', name: 'Manual', qty: 1, eq: false };
+    expect(migrate({ ...blankCharacter(), inv: [{ ...it, reads: 'luck' }] }).inv[0]).toEqual(it);
+    expect(migrate({ ...blankCharacter(), inv: [{ ...it, reads: 'str' }] }).inv[0]).toEqual({ ...it, reads: 'str' });
+  });
   it('drops bad item charge fields, never the spell', () => {
     const sp = { id: 's', name: 'S', lvl: 3, time: 'Action', range: 'Self', prep: true };
     const load = (x: object) => migrate({ ...blankCharacter(), spells: [{ ...sp, ...x }] }).spells[0];

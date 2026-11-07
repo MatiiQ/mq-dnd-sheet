@@ -42,7 +42,7 @@ export function spellFromEntry(e: SpellEntry): Omit<Spell, 'id'> {
 }
 
 const ITEM_COPY = ['cost', 'wt', 'wcat', 'wrange', 'dmg', 'dtype', 'props', 'thrown', 'vers', 'ammo', 'mastery', 'armor', 'acBase', 'acBonus',
-  'strReq', 'stealthDis', 'cap', 'capVol', 'xdim', 'rarity', 'attune', 'magic'] as const;
+  'strReq', 'stealthDis', 'cap', 'capVol', 'xdim', 'rarity', 'attune', 'magic', 'reads'] as const;
 // A catalog item as a character's item: one, not equipped. Charges: a whole number fills count and max; a formula
 // ('pb') is maxV with count 0 (addFromCatalog fills it to the maximum). `base` is copied only as an item id, never
 // the generic 'armor'/'weapon'. Grants are not copied here (addFromCatalog adds them, linked to the new item).

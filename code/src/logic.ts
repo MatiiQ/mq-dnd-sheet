@@ -380,6 +380,20 @@ const castFxOn = (c: Character, sp: Spell, lvl: number): Partial<Character> => {
 };
 const castEffects = (c: Character, sp: Spell, lvl: number = sp.lvl): Partial<Character> =>
   ({ ...(sp.c ? setConc({ id: sp.id, name: sp.name }) : {}), ...acOnCast(c, sp), ...effectOnCast(c, sp), ...castFxOn(c, sp, lvl) });
+// Reading a manual or tome (SRD 5.2.1, Manual of Bodily Health and the others): its score rises by 2, to a maximum of
+// 30, for good. The bonus becomes a Feature with a cap-30 abil grant, so it outlives the book and stacks after cap-20
+// increases; the book loses `reads`. Nothing happens for an item with no `reads`.
+export function readManual(c: Character, itemId: string): Character {
+  const item = c.inv.find((i) => i.id === itemId);
+  const ab = item?.reads;
+  if (!item || !ab) return c;
+  const name = ABILITIES.find(([k]) => k === ab)![1], id = newId();
+  const read: Character = {
+    ...c, inv: c.inv.map((i) => (i.id === itemId ? withoutKeys(i, ['reads']) : i)),
+    feats: [...c.feats, { id, g: 'other', name: item.name, desc: 'Read: +2 ' + name + ', to a maximum of 30.' }]
+  };
+  return addGrants(read, linkOf('feature', id), [{ spec: { id: 'g1', kind: 'abil', name: name + ' +2', ab, val: '2', cap: 30 } }]);
+}
 // Chooses the item an effect is on (Magic Weapon's weapon), or clears it with null.
 export function setFxItem(c: Character, link: string, itemId: string | null): Partial<Character> {
   const { item: _, ...rest } = c.castFx?.[link] ?? {};

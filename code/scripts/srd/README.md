@@ -39,7 +39,8 @@ text. Handy Haversack (900 lb across its three pouches) and Portable Hole (no we
 
 Items that set an ability score ("your score is 19", the `abilSet` grant): Amulet of Health (CON 19), Gauntlets of Ogre
 Power (STR 19), Headband of Intellect (INT 19) and Belt of Giant Strength (STR 21–29, a choice by giant type). Manuals
-and tomes raise a score permanently when read; they stay text, because a grant counts only while the item is equipped.
+and tomes carry `reads` (the score): the Inventory row's Read button adds a Feature with a +2 cap-30 `abil` grant ("to
+a maximum of 30", SRD 5.2.1), so the increase outlives the book; Manual of Golems has none.
 
 Weapons: all 38 rows match `reference/06-equipment.md` (PHB p.215) in category, type, damage, properties, mastery and
 cost.
