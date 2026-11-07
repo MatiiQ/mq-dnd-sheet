@@ -2281,7 +2281,15 @@
     "cls": "barbarian",
     "lvl": 7,
     "desc": "Your instincts are so honed that you have Advantage on Initiative rolls.",
-    "grants": []
+    "grants": [
+      {
+        "kind": "checkAdv",
+        "name": "Advantage on Initiative",
+        "target": "init",
+        "adv": "adv",
+        "id": "g1"
+      }
+    ]
   },
   {
     "id": "feature/barbarian/improved-brutal-strike",

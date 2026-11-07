@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { armorClass, charLevel, armorSlowBy, fmt, untrainedArmor, initiative, modeSpeed, profBonus, speedNow, speedOf, UNARMORED, walkSpeed, zeroSpeedBy } from '../logic';
+import { armorClass, charLevel, armorSlowBy, fmt, untrainedArmor, initiative, initiativeAdv, modeSpeed, profBonus, speedNow, speedOf, UNARMORED, walkSpeed, zeroSpeedBy } from '../logic';
 import { removeEntry, saveEntry, useEntryForm, useSheet } from '../sheet';
 import type { AcMod, SpeedKind, Unarmored } from '../types';
 import { AddButton, Caret, EntryActions, EntryForm, NumInput, PartTiles, Step, TextField } from './ui';
@@ -30,6 +30,8 @@ export function Vitals() {
     (slowBy ? slowBy.name + ': −10 ft, needs Strength ' + slowBy.strReq + '. ' : '') +
     (edit ? 'Use − / + to set each base speed.' : 'Without a climb or swim speed, each foot costs 1 extra foot.');
 
+  // Advantage and Disadvantage cancel (PHB p.360).
+  const ia = initiativeAdv(c), initAdv = ia.adv && !ia.dis ? 'Advantage' : ia.dis && !ia.adv ? 'Disadvantage' : '';
   return (
     <section id="sec-vitals" aria-label="Combat vitals" className="vitals section">
       <div className="card stat-bar">
@@ -38,7 +40,10 @@ export function Vitals() {
           <span className="row gap-4 stat-label">Armor class<Caret open={c.acOpen} /></span>
           {acHint && <span className="stat-hint">{acHint}</span>}
         </button>
-        <div className="stat"><span className="stat-value">{fmt(initiative(c))}</span><span className="stat-label">Initiative</span></div>
+        <div className="stat" aria-label={'Initiative ' + fmt(initiative(c)) + (initAdv ? ', ' + initAdv + ' (' + ia.by.join(', ') + ')' : '')}>
+          <span className="stat-value">{fmt(initiative(c))}</span><span className="stat-label">Initiative</span>
+          {initAdv && <span className="stat-hint">{initAdv === 'Advantage' ? 'Adv' : 'Dis'}</span>}
+        </div>
         <button type="button" className={'stat' + (c.speedOpen ? ' open' : '')} onClick={() => update({ speedOpen: !c.speedOpen })} aria-expanded={c.speedOpen} aria-controls="speed-panel">
           <span className="stat-value" style={{ color: zeroBy.length ? 'var(--danger)' : undefined }}>{speedNow(c)}<span className="stat-unit"> ft</span></span>
           <span className="row gap-4 stat-label">Speed<Caret open={c.speedOpen} /></span>

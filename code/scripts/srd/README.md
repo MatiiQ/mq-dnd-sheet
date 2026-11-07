@@ -49,7 +49,8 @@ proficiencies, score settings, spell attack and spell save DC), weapon riders as
 (the staffs and the Rod of Lordly Might's flame blade included; the cost is named there and nothing is spent
 automatically; the Rod's 4d6 Necrotic stays text), and potions' effects while switched on. Advantage on ability checks
 is a `checkAdv` grant (Boots and Cloak of Elvenkind, Eyes of the Eagle and of Minute Seeing; the Cloak's Disadvantage on
-Perception against you stays text). Advantage on Initiative and spells cast from an item stay as text. Text
+Perception against you stays text). Advantage on Initiative is a `checkAdv` grant with target `init` (Sentinel Shield,
+Rod of Alertness, Barbarian's Feral Instinct). Spells cast from an item stay as text. Text
 by design: Defender (moving part of its bonus to AC until your next turn), Rod of Alertness (+1 AC and saves inside its
 light), Arrow-Catching Shield (+2 only against ranged attacks), Ioun Stone (a choice option must be a grant and only
 Protection has one: add its +1 AC as a custom AC bonus), and Rod of Lordly Might's other forms and buttons (it is a Mace

@@ -1179,7 +1179,26 @@
   },
   "item/sentinel-shield": {
     "armor": "shield",
-    "acBase": 2
+    "acBase": 2,
+    "grants": [
+      {
+        "kind": "checkAdv",
+        "name": "Advantage on Initiative",
+        "target": "init",
+        "adv": "adv",
+        "needEq": true,
+        "id": "g1"
+      },
+      {
+        "kind": "checkAdv",
+        "name": "Advantage on Perception",
+        "target": "perception",
+        "adv": "adv",
+        "always": true,
+        "needEq": true,
+        "id": "g2"
+      }
+    ]
   },
   "item/shield-1-2-or-3": {
     "armor": "shield",
@@ -1838,6 +1857,29 @@
         "target": "Dexterity saves",
         "when": "active",
         "id": "g3"
+      }
+    ]
+  },
+  "item/rod-of-alertness": {
+    "grants": [
+      {
+        "kind": "checkAdv",
+        "name": "Advantage on Initiative",
+        "target": "init",
+        "adv": "adv",
+        "needEq": true,
+        "needAtt": true,
+        "id": "g1"
+      },
+      {
+        "kind": "checkAdv",
+        "name": "Advantage on Perception",
+        "target": "perception",
+        "adv": "adv",
+        "always": true,
+        "needEq": true,
+        "needAtt": true,
+        "id": "g2"
       }
     ]
   }

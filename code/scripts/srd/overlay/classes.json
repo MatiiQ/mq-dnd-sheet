@@ -4397,5 +4397,16 @@
   },
   "class/wizard": {
     "equipA": "item/dagger*2;item/arcane-focus-staff;item/robe;Spellbook;item/scholars-pack"
+  },
+  "feature/barbarian/feral-instinct": {
+    "grants": [
+      {
+        "kind": "checkAdv",
+        "name": "Advantage on Initiative",
+        "target": "init",
+        "adv": "adv",
+        "id": "g1"
+      }
+    ]
   }
 }

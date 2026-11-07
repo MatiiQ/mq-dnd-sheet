@@ -189,6 +189,21 @@ export const spellAttack = (c: Character) => { const p = spellAttackParts(c); re
 // Initiative uses no skill (the 2014 rule applied it to Initiative; the 2024 one doesn't).
 export const initiative = (c: Character) => abilityMod(c, 'dex') + c.initMisc + checkBonus(c, ['dex']) +
   activeGrants(c, 'init').reduce((t, g) => t + num(c, g.val, g), 0);
+// Advantage or Disadvantage on the Initiative roll, a Dexterity check (PHB p.23): checkAdv grants on Initiative, on
+// Dexterity or on all checks; Invisible gives Advantage (PHB p.370), Incapacitated (and every condition that includes
+// it) and Poisoned give Disadvantage (PHB p.369, p.372). Being surprised by combat itself stays text: the sheet has no
+// surprised state. `by` names the sources and conditions.
+export function initiativeAdv(c: Character): { adv: boolean; dis: boolean; by: string[] } {
+  let adv = false, dis = false;
+  const by: string[] = [];
+  for (const g of checkGrants(c, 'checkAdv', ['init', 'dex'])) {
+    if (g.adv === 'dis') dis = true; else adv = true;
+    by.push(sourceLabel(c, g) ?? g.name);
+  }
+  if (c.conds.Invisible) { adv = true; by.push('Invisible'); }
+  for (const n of [...INCAPACITATING, 'Poisoned']) if (c.conds[n]) { dis = true; by.push(n); }
+  return { adv, dis, by };
+}
 
 // Armor table: name, category, base AC; a Shield adds 2. One suit of armor and one Shield at a time (PHB p.219).
 export const ARMORS: [string, ArmorKind, number][] = [
@@ -1164,6 +1179,7 @@ function grantLabel(c: Character, g: Grant): string {
     case 'spellDc': return fmt(v) + ' spell save DC';
     case 'aura': return auraRange(c, g) + '-ft aura';
     case 'checkAdv': {
+      if (g.target === 'init') return (g.adv === 'dis' ? 'Disadvantage' : 'Advantage') + ' on Initiative' + (g.note ? ' (' + g.note + ')' : '');
       const t = SKILLS.find(([k]) => k === g.target)?.[1] ?? ABILITIES.find(([k]) => k === g.target)?.[1] ?? g.target;
       return (g.adv === 'dis' ? 'Disadvantage' : 'Advantage') + ' on ' + t + ' checks' + (g.note ? ' (' + g.note + ')' : '');
     }

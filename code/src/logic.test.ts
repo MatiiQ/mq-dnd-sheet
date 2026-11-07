@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { newId } from './logic';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
-import { ABILITIES, charLevel, hasHistory, setBaseRows, valueCtx, profBonus, regainLabel, speedOf, grantChips, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, carriedWeight, carryCapacity, fmt, hitDieRoll, hpColor, hpRingStops, initiative, parseWeight, passiveScore, passiveParts, passiveNotes, pillView, resPill, setPill, preparedCount, saveMod, skillMod, slotsLeft, num, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable } from './logic';
+import { ABILITIES, charLevel, hasHistory, setBaseRows, valueCtx, profBonus, regainLabel, speedOf, grantChips, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, carriedWeight, carryCapacity, fmt, hitDieRoll, hpColor, hpRingStops, initiative, initiativeAdv, parseWeight, passiveScore, passiveParts, passiveNotes, pillView, resPill, setPill, preparedCount, saveMod, skillMod, slotsLeft, num, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable } from './logic';
 import { migrate } from './migrate';
 import { extraDamage } from './actions';
 import { inactiveReason } from './links';
@@ -533,5 +533,39 @@ describe('class rows edited by hand', () => {
 describe('newId', () => {
   it('newId is unique within one millisecond', () => {
     expect(new Set(Array.from({ length: 1000 }, newId)).size).toBe(1000);
+  });
+});
+
+describe('Advantage on Initiative', () => {
+  const adv = (p: Partial<Grant> = {}) => gr({ kind: 'checkAdv', target: 'init', adv: 'adv', ...p });
+  it('reads a checkAdv grant on Initiative', () => {
+    expect(initiativeAdv(make({ grants: [adv()] }))).toMatchObject({ adv: true, dis: false });
+  });
+  it('adds Poisoned as Disadvantage (PHB p.372)', () => {
+    expect(initiativeAdv(make({ grants: [adv()], conds: { Poisoned: true } }))).toMatchObject({ adv: true, dis: true });
+  });
+  it('gives Invisible Advantage (PHB p.370)', () => {
+    const r = initiativeAdv(make({ grants: [], conds: { Invisible: true } }));
+    expect(r).toMatchObject({ adv: true, dis: false });
+    expect(r.by).toContain('Invisible');
+  });
+  it('gives Incapacitated and the conditions that include it Disadvantage (PHB p.369)', () => {
+    for (const n of ['Incapacitated', 'Stunned']) {
+      const r = initiativeAdv(make({ grants: [], conds: { [n]: true } }));
+      expect(r).toMatchObject({ adv: false, dis: true });
+      expect(r.by).toContain(n);
+    }
+    expect(initiativeAdv(make({ grants: [], conds: { Invisible: true, Incapacitated: true } }))).toMatchObject({ adv: true, dis: true });
+  });
+  it('reads Dexterity and all-check grants, not other skills', () => {
+    expect(initiativeAdv(make({ grants: [adv({ target: 'dex' })] })).adv).toBe(true);
+    expect(initiativeAdv(make({ grants: [adv({ target: 'stealth' })] }))).toMatchObject({ adv: false, dis: false });
+  });
+  it('skips an unequipped item’s grant', () => {
+    const shield: Item = { id: 'sh', name: 'Sentinel Shield', qty: 1, eq: false };
+    expect(initiativeAdv(make({ inv: [shield], grants: [adv({ from: 'item:sh', needEq: true })] })).adv).toBe(false);
+  });
+  it('names Initiative in the chip', () => {
+    expect(grantChips(make({ grants: [adv()] }), 'feature:f10').map((x) => x.label)).toContain('Advantage on Initiative');
   });
 });

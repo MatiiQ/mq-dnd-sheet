@@ -78,7 +78,8 @@ export function GrantEditor({ fromKind, onAdd, onCancel }: { fromKind: SourceKin
   const [choice, setChoice] = useState<'link' | 'new' | null>(null);
   const set = (k: string, val: string | boolean) => setD((x) => ({ ...x, [k]: val }));
   // A skill or save target must be the rules' key ('arcana', 'int'): a typed name would match nothing, so pick it.
-  const target = kind === 'checkBonus' || kind === 'checkAdv' ? sel('target', 'Skill or ability', [...SKILL_OPTS, ...ABIL_CHECKS])
+  const target = kind === 'checkAdv' ? sel('target', 'Skill or ability', [...SKILL_OPTS, ...ABIL_CHECKS, ['init', 'Initiative']])
+    : kind === 'checkBonus' ? sel('target', 'Skill or ability', [...SKILL_OPTS, ...ABIL_CHECKS])
     : kind === 'prof' && (d.cat === 'skill' || d.cat === 'expertise') ? sel('target', 'Skill', SKILL_OPTS)
       : kind === 'prof' && d.cat === 'save' ? sel('target', 'Saving throw', ABIL) : null;
   const fields = GRANT_FIELDS[kind].map((f) => (f.key === 'target' && target ? target : f));

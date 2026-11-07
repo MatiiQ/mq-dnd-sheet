@@ -39,6 +39,13 @@ const feat: Feature = { id: 'f', g: 'class', name: 'Rage', desc: 'first\nsecond'
 beforeEach(() => { localStorage.clear(); });
 
 describe('entry forms and rows', () => {
+  it('shows Advantage on Initiative under the value', () => {
+    renderSheet({ feats: [{ id: 'f', g: 'class', name: 'Feral Instinct', desc: '' }],
+      grants: [{ id: 'g', kind: 'checkAdv', name: 'Feral Instinct', target: 'init', adv: 'adv', from: 'feature:f' }] });
+    const stat = document.querySelector('[aria-label^="Initiative"]');
+    expect(stat?.textContent).toContain('Adv');
+    expect(stat?.getAttribute('aria-label')).toContain('Advantage');
+  });
   it('adds a hand resistance beside a switched-off grant', () => {
     renderSheet({ feats: [feat], defenses: [{ id: 'd', kind: 'res', name: 'Slashing', from: 'feature:f', when: 'active' }] });
     editMode();
