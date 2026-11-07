@@ -207,3 +207,11 @@ describe('class starting equipment and multiclass traits', () => {
     expect(validateEntry({ ...base, primary: 'str|dex,wis' })).not.toEqual([]);
   });
 });
+
+describe('needAura and needHand on a catalog grant', () => {
+  const feature = (g: object) => validateEntry({ id: 'feat/x', kind: 'feat', name: 'X', src: 'srd', desc: '', cat: 'general', grants: [{ id: 'a', kind: 'saveBonus', name: 'A', ab: 'all', val: '1', ...g }] });
+  it('accepts needAura, refuses needHand on a feat', () => {
+    expect(feature({ needHand: true })).not.toEqual([]);
+    expect(feature({ needAura: 'feature/paladin/aura-of-protection' })).toEqual([]);
+  });
+});

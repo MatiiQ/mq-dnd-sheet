@@ -6,7 +6,7 @@ import { SRD_VERSION } from '../catalog/schema';
 import { setLayoutMode, useLayoutMode, useWide, type LayoutMode } from '../layout';
 import { classLine, totalLevel, acOnOther, acSpellIdle, activeAuras, CONDITIONS, PILL_STATS, TABS, fmt, hpColor, maxHpOf, pillView, resPill, setConc, setPill, toggleAcSpell, type PillView, type RestEvent } from '../logic';
 import { useSheet } from '../sheet';
-import { EXAMPLES, charInfo, charName, saveBackupFile, type CharacterStore } from '../storage';
+import { EXAMPLES, charInfo, charName, importNote, saveBackupFile, type CharacterStore } from '../storage';
 import { undoPreview } from '../levelup';
 import type { Character, Spell, Tab } from '../types';
 import { CheckIcon, ChevronDown, ChevronRight, MenuIcon, PencilIcon, StarIcon, XIcon, useArmed } from './ui';
@@ -279,11 +279,9 @@ function Menu({ store, onClose, onSwitched, onRest, onLevelUp, onUndoLevel, onCr
   const importBackup = async (file: File | undefined) => {
     if (!file) return;
     try {
-      const { added, newer, failed } = store.importAll(JSON.parse(await file.text()));
+      const r = store.importAll(JSON.parse(await file.text()));
       onSwitched(false, true);
-      setBackupMsg('Imported ' + added + (added === 1 ? ' character.' : ' characters.') +
-        (newer ? ' ' + newer + ' saved by a newer version of the app ' + (newer === 1 ? 'was' : 'were') + ' skipped: update the app, then import again.' : '') +
-        (failed ? ' ' + failed + ' could not be imported.' : ''));
+      setBackupMsg(importNote(r));
     } catch (e) {
       setBackupMsg(e instanceof Error && e.message.includes('backup') ? e.message : 'That file could not be read as a backup.');
     }

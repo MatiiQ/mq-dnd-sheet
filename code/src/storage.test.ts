@@ -3,7 +3,7 @@ import { withClass } from './test-fixtures';
 import { blankCharacter, druidSample, SAVE_VERSION, sampleCharacter } from './defaults';
 import { isActive } from './links';
 import { longRest } from './logic';
-import { addToStore, applyPatch, deleteFromStore, exportStore, freshList, initialStore, load, openExampleOnNextLoad, persistStore, rawBackup, switchStore, unreadableSheets, writeBackup, type Store } from './storage';
+import { addToStore, applyPatch, deleteFromStore, exportStore, freshList, importNote, initialStore, load, openExampleOnNextLoad, persistStore, rawBackup, switchStore, unreadableSheets, writeBackup, type Store } from './storage';
 
 const renamed = (): Store => ({
   id: 'a', list: [{ id: 'a', name: 'Ilyra Moonbrook' }, { id: 'b', name: 'Other' }],
@@ -52,6 +52,15 @@ describe('backup import', () => {
     stubStorage(() => true);
     expect(() => writeBackup(backupOf(2))).toThrow(/backup/);
   });
+  it('does not bring back a message that was open at export time', () => {
+    stubStorage();
+    const c = { ...blankCharacter(), restMsg: { title: 'Long Rest', body: 'Rested.' } };
+    expect(writeBackup({ ...backupOf(0), characters: [c] }).added[0].c.restMsg).toBeNull();
+  });
+  it('says what an import did, skipped newer saves included', () => {
+    expect(importNote({ added: 1, newer: 0, failed: 0 })).toBe('Imported 1 character.');
+    expect(importNote({ added: 2, newer: 1, failed: 1 })).toBe('Imported 2 characters. 1 saved by a newer version of the app was skipped: update the app, then import again. 1 could not be imported.');
+  });
   it('rejects a file that is not a backup', () => {
     stubStorage();
     expect(() => writeBackup({ app: 'other' })).toThrow('Not a character sheet backup file.');
@@ -67,7 +76,12 @@ describe('unreadable sheet', () => {
     expect(m.get('dnd-sheet-v3:x:unreadable')).toBe('{not json');
     m.set('dnd-sheet-v3:x', '{second');
     load('x');
+    load('x');
     expect(m.get('dnd-sheet-v3:x:unreadable')).toBe('{not json');
+    expect(m.get('dnd-sheet-v3:x:2:unreadable')).toBe('{second');
+    expect(m.has('dnd-sheet-v3:x:3:unreadable')).toBe(false);
+    expect(unreadableSheets().map((u) => u.key).sort()).toEqual(['dnd-sheet-v3:x', 'dnd-sheet-v3:x:2:unreadable', 'dnd-sheet-v3:x:unreadable']);
+    expect(initialStore().list.map((e) => e.id)).toEqual(['x']);
   });
 });
 
@@ -85,7 +99,7 @@ describe('save from a newer app', () => {
     expect(m.get('dnd-sheet-v3:x:unreadable')).toBe(newer());
     expect(unreadableSheets().map((x) => x.key)).toEqual(['dnd-sheet-v3:x:unreadable']);
   });
-  it('does not promise a copy it could not keep', () => {
+  it('does not promise a copy it could not keep, for a newer save', () => {
     const m = stubStorage();
     m.set('dnd-sheet-v3:x', newer());
     const setItem = localStorage.setItem;
@@ -101,6 +115,14 @@ describe('save from a newer app', () => {
     expect(r.added).toHaveLength(1);
     expect(m.size).toBe(1);
     expect(() => writeBackup({ ...backupOf(1), characters: [JSON.parse(newer())] })).toThrow(/newer version/);
+  });
+  it('keeps a newer save beside an earlier copy, so the notice tells the truth', () => {
+    const m = stubStorage();
+    m.set('dnd-sheet-v3:x', newer());
+    m.set('dnd-sheet-v3:x:unreadable', 'old v1 text');
+    expect(load('x').restMsg?.body).toContain('stays on this device');
+    expect(m.get('dnd-sheet-v3:x:unreadable')).toBe('old v1 text');
+    expect(m.get('dnd-sheet-v3:x:2:unreadable')).toBe(newer());
   });
   it('opens a current save without a copy or a notice', () => {
     const m = stubStorage();
@@ -151,6 +173,12 @@ describe('reaching every saved character', () => {
     expect(s.c!.ch.name).toBe('Ann');
     expect(s.list[0].name).toBe('Ann');
   });
+  it('lists an id the index names twice only once', () => {
+    const m = stubStorage();
+    m.set('dnd-index-v3', JSON.stringify({ active: 'a', list: [{ id: 'a', name: 'Ann' }, { id: 'a', name: 'Ann again' }] }));
+    m.set('dnd-sheet-v3:a', named('Ann'));
+    expect(initialStore().list.map((x) => x.name)).toEqual(['Ann']);
+  });
   it('adds a sheet missing from a good index, keeping the active one', () => {
     const m = stubStorage();
     m.set('dnd-index-v3', JSON.stringify({ active: 'a', list: [{ id: 'a', name: 'Ann' }] }));
@@ -187,7 +215,7 @@ describe('reaching every saved character', () => {
     expect(c.restMsg?.title).toBe('Save can’t be read');
     expect(m.get('dnd-sheet-v3:x:unreadable')).toBe('not json');
   });
-  it('does not promise a copy it could not keep', () => {
+  it('does not promise a copy it could not keep, for an unparseable save', () => {
     const m = stubStorage();
     m.set('dnd-sheet-v3:x', 'not json');
     const setItem = localStorage.setItem;

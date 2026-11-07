@@ -5,7 +5,7 @@ import type { ChoiceSpec, ClassEntry, Entry, FeatureEntry } from './catalog/sche
 import { clearDraft, DRAFT_KEY, dropLowest, pointsSpent, readDraft, replay, staleStep, writeDraft, type CreatorAnswers } from './creator';
 import { isActive } from './links';
 import { maxHpOf } from './logic';
-import type { Character } from './types';
+import { noIds } from './test-fixtures';
 
 const skills: ChoiceSpec = { kind: 'choice', id: 'skills', name: 'Skills', pick: 2, pool: 'skill:stealth|insight|survival|nature' };
 const ranger: ClassEntry = { id: 'class/ranger', kind: 'class', name: 'Ranger', src: 'srd', desc: '', hd: 10, saves: 'str,dex', skills, armor: '', weapons: '', slots: [], primary: 'dex,wis' };
@@ -32,7 +32,6 @@ const base = (p: Partial<CreatorAnswers> = {}): CreatorAnswers => ({
   levels: [], ...p
 });
 const lvl = (_n: number) => ({ pick: { cls: 'class/ranger' }, ans: { hp: { mode: 'fixed' as const, val: 6 }, flows: {}, spells: {} } });
-const noIds = (c: Character) => JSON.parse(JSON.stringify(c).replace(/"n[0-9a-z]{8,}"/g, '"ID"').replace(/(feature|class|grant|item|spell):n[0-9a-z]{8,}/g, '$1:ID'));
 
 describe('creator replay', () => {
   it('two replays give the same character with ids ignored, and answers replay on a fresh sheet', () => {

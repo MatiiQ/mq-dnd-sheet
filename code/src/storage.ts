@@ -51,15 +51,19 @@ export function unreadableSheets(): { key: string; text: string }[] {
   } catch { return []; }
 }
 
-// Copies a sheet's raw text to `<key>:unreadable`. Only into an empty key: the first copy is never overwritten, which
-// also makes this safe to repeat inside setS updaters (StrictMode runs them twice). kept: false when storage refused.
-// Deleting the character leaves the copy behind on purpose, as it may be the only copy of that data.
-// shortcut: a key already holding an older copy keeps it and this text is not kept; give each copy its own key if that happens.
+// Copies a sheet's raw text to `<key>:unreadable`, or to `<key>:2:unreadable`, `:3:`… when that key holds other text:
+// a copy is never overwritten. A key already holding this same text counts as the copy, which makes this safe to repeat
+// inside setS updaters (StrictMode runs them twice). kept: false when storage refused.
+// Deleting the character leaves the copies behind on purpose, as one may be the only copy of that data.
 function keepRaw(key: string): { raw: string | null; kept: boolean } {
   let raw: string | null = null;
   try {
     raw = localStorage.getItem(key);
-    if (raw && localStorage.getItem(key + UNREADABLE) === null) localStorage.setItem(key + UNREADABLE, raw);
+    if (raw) {
+      let k = key + UNREADABLE;
+      for (let n = 2; ![null, raw].includes(localStorage.getItem(k)); n++) k = key + ':' + n + UNREADABLE;
+      if (localStorage.getItem(k) === null) localStorage.setItem(k, raw);
+    }
     return { raw, kept: true };
   } catch { return { raw, kept: false }; }
 }
@@ -115,7 +119,8 @@ export const addToStore = (s: Store, added: { id: string; c: Character }[]): Sto
 
 export function initialStore(): Store {
   const idx = readJSON(INDEX_KEY) as { active?: string; list?: IndexEntry[] } | null;
-  const listed = Array.isArray(idx?.list) ? idx.list.filter((x) => x && typeof x.id === 'string' && typeof x.name === 'string') : [];
+  // A damaged index can name an id twice: the first entry stays.
+  const listed = Array.isArray(idx?.list) ? idx.list.filter((x, i, all) => x && typeof x.id === 'string' && typeof x.name === 'string' && all.findIndex((y) => y?.id === x.id) === i) : [];
   // A sheet the index doesn't name (a damaged index, a save that stopped halfway) still gets its entry.
   const saved = [...listed, ...sheetIds().filter((id) => !listed.some((x) => x.id === id)).map((id) => {
     const data = readJSON(sheetKey(id));
@@ -202,12 +207,19 @@ export function writeBackup(data: unknown): { added: { id: string; c: Character 
   if (!d || d.app !== BACKUP_APP || !Array.isArray(d.characters)) throw new Error('Not a character sheet backup file.');
   const found = d.characters.filter((x) => x && typeof x === 'object' && (x as Character).ch);
   if (!found.length) throw new Error('The backup has no characters.');
-  const chars = found.filter((x) => !isNewerSave(x)).map(migrate), newer = found.length - chars.length;
+  // A message still open at export time (a rest's summary) is not shown again; migrate() may still add its own.
+  const chars = found.filter((x) => !isNewerSave(x)).map((x) => migrate({ ...(x as object), restMsg: null })), newer = found.length - chars.length;
   if (!chars.length) throw new Error('This backup was saved by a newer version of the app. Open the app online to update it, then import again.');
   const added = chars.map((c) => ({ id: newId(), c })).filter((a) => writeJSON(sheetKey(a.id), a.c));
   if (!added.length) throw new Error('The backup could not be saved: storage is full.');
   return { added, newer, failed: d.characters.length - newer - added.length };
 }
+
+// What an import did, for the message under the button that started it.
+export const importNote = ({ added, newer, failed }: { added: number; newer: number; failed: number }) =>
+  'Imported ' + added + (added === 1 ? ' character.' : ' characters.') +
+  (newer ? ' ' + newer + ' saved by a newer version of the app ' + (newer === 1 ? 'was' : 'were') + ' skipped: update the app, then import again.' : '') +
+  (failed ? ' ' + failed + ' could not be imported.' : '');
 
 // All characters, the active one, and every way to change them. Saves on each change.
 export function useCharacters() {

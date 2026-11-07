@@ -1,35 +1,27 @@
 // @vitest-environment happy-dom
 import { act } from 'react';
-import { createRoot, type Root } from 'react-dom/client';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { mergeCatalog } from './catalog/merge';
 import type { ClassEntry } from './catalog/schema';
 import App from './App';
 import { blankCharacter } from './defaults';
 import { modeSpeed, speedNow } from './logic';
+import { btnStarting, label, mount, tap, unmount } from './test-dom';
 import { haAura, holyAvenger, paladin, withClass, withClasses } from './test-fixtures';
 import type { Character, Feature, Item } from './types';
 
-(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 // The catalog, in this file only: a synthetic Ranger with no features, so the level-up wizard has a class to read.
 const ranger: ClassEntry = { id: 'class/ranger', kind: 'class', name: 'Ranger', src: 'srd', desc: '', hd: 10, saves: 'str,dex',
   skills: { kind: 'choice', id: 'skills', name: 'Skills', pick: 1, pool: 'skill:any' }, armor: '', weapons: '', slots: [] };
 vi.mock('./catalog/useCatalog', () => ({ useCatalog: () => ({ status: 'ready', cat: mergeCatalog([ranger], null) }) }));
 
-let root: Root;
 const renderSheet = (p: Partial<Character>) => {
   localStorage.setItem('dnd-index-v3', JSON.stringify({ active: 'x', list: [{ id: 'x', name: 'Test' }] }));
   localStorage.setItem('dnd-sheet-v3:x', JSON.stringify({ ...blankCharacter(), ...p }));
-  root = createRoot(document.body.appendChild(document.createElement('div')));
-  act(() => root.render(<App />));
+  mount(<App />);
 };
 const saved = (): Character => JSON.parse(localStorage.getItem('dnd-sheet-v3:x')!);
-const tap = (el: Element | null | undefined) => {
-  if (!el) throw new Error('nothing to tap');
-  act(() => { el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); });
-};
-const label = (s: string) => document.querySelector(`[aria-label="${s}"]`);
 const editMode = () => tap(label('Edit character'));
 const tab = (name: string) => tap([...document.querySelectorAll('nav a, nav button')].find((e) => e.textContent?.trim().startsWith(name)));
 // Types into a text input the way a player does: focus, a new value, then blur (TypeInNumber commits on blur).
@@ -45,7 +37,6 @@ const typeInto = (el: Element | null, v: string) => {
 const feat: Feature = { id: 'f', g: 'class', name: 'Rage', desc: 'first\nsecond' };
 
 beforeEach(() => { localStorage.clear(); });
-afterEach(() => { act(() => root.unmount()); document.body.innerHTML = ''; });
 
 describe('entry forms and rows', () => {
   it('adds a hand resistance beside a switched-off grant', () => {
@@ -111,8 +102,7 @@ describe('entry forms and rows', () => {
     renderSheet({ feats: [feat], grants: [asi] });
     editMode();
     expect(label('Reset strength to original 10')).toBeNull();
-    act(() => root.unmount());
-    document.body.innerHTML = '';
+    unmount();
     renderSheet({ abilAdj: { str: 1 } });
     editMode();
     expect(label('Reset strength to original 10')).not.toBeNull();
@@ -441,12 +431,13 @@ describe('class rows in Edit details', () => {
 });
 
 describe('level-up and undo from the menu', () => {
-  const button = (t: string) => [...document.querySelectorAll('button')].find((b) => b.textContent?.startsWith(t));
-  const menu = () => tap(label('Menu: rests and characters'));
-  it('level-up then undo', () => {
+  const button = btnStarting;
+  // Opening the menu mounts the PHB data row, whose pack lookup settles a tick later: let it finish inside the test.
+  const menu = async () => { tap(label('Menu: rests and characters')); await act(async () => {}); };
+  it('level-up then undo', async () => {
     renderSheet(withClass({ ...blankCharacter(), maxHp: 10, hp: 10 }, { name: 'Ranger', clsId: 'class/ranger', hd: 10, lvl: 1 }));
     const before = saved().levels.length;
-    menu();
+    await menu();
     tap(button('Level up'));
     tap(button('Next'));
     tap(button('Fixed (6)'));
@@ -454,15 +445,15 @@ describe('level-up and undo from the menu', () => {
     tap(button('Finish'));
     expect(saved().classes[0].lvl).toBe(2);
     expect(saved().levels).toHaveLength(before + 1);
-    menu();
+    await menu();
     tap(button('Undo level 2'));
     tap(button('Undo the level'));
     expect(saved().classes[0].lvl).toBe(1);
     expect(saved().levels).toHaveLength(before);
   });
-  it('undo is greyed on a base-only character, and level-up at level 20', () => {
+  it('undo is greyed on a base-only character, and level-up at level 20', async () => {
     renderSheet(withClass(blankCharacter(), { lvl: 20 }));
-    menu();
+    await menu();
     const undo = button('Undo level')!;
     expect(undo.getAttribute('aria-disabled')).toBe('true');
     expect(undo.textContent).toContain('baseline, can’t be undone');

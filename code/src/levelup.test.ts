@@ -7,6 +7,7 @@ import { abilityMod, hdSpent, longRest, maxHpOf, removeRef } from './logic';
 import { migrate } from './migrate';
 import { blankCharacter } from './defaults';
 import type { Character } from './types';
+import { noIds } from './test-fixtures';
 
 // ---- A synthetic catalog (invented names and numbers; only the shapes match the SRD) ----
 const skills = (pick: number, pool = 'skill:stealth|survival|nature|insight'): ChoiceSpec => ({ kind: 'choice', id: 'skills', name: 'Skills', pick, pool });
@@ -240,9 +241,6 @@ describe('multiclass prerequisite and subclass [11b]', () => {
     expect(typed.classes[0]).toMatchObject({ sub: 'Beast Master', subId: '' });
   });
 });
-
-// A character compared with its generated ids blanked out.
-const noIds = (c: Character) => JSON.parse(JSON.stringify(c).replace(/"n[0-9a-z]{8,}"/g, '"ID"'));
 
 describe('level undo [11c]', () => {
   it('undo restores the maximum and lowers current HP by the raw change', () => {

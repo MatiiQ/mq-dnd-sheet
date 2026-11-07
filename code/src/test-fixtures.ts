@@ -1,5 +1,6 @@
-import { blankCharacter } from './defaults';
-import type { Character, ClassRow, Grant, Item } from './types';
+import { blankCharacter, sampleCharacter } from './defaults';
+import { armorClass } from './logic';
+import type { Character, ClassRow, Grant, Item, Spell } from './types';
 
 // Class rows in order (ids c1, c2…; '' names, d8, no casting unless given), with base records adding up.
 export function withClasses(c: Character, rows: Partial<ClassRow>[]): Character {
@@ -50,3 +51,14 @@ export function paladin(level: number, p: Partial<Character> = {}): Character {
 }
 export const holyAvenger = (p: Partial<Item> = {}): Item => ({ id: 'ha', name: 'Holy Sword', qty: 1, eq: true, cat: 'weapon', wcat: 'martial', wrange: 'melee', dmg: '1d8', dtype: 'Slashing', attune: true, ...p });
 export const haAura: Grant = { id: 'ga', kind: 'aura', name: 'Holy Sword', range: '1:10,17:30', needEq: true, needAtt: true, needHand: true, from: 'item:ha' };
+
+// Shorthands shared by the logic.*.test.ts files: Ilyra with changes, a spell, an AC with no extras, an equipped item, a grant.
+export const make = (p: Partial<Character> = {}): Character => ({ ...sampleCharacter(), ...p });
+export const sp = (p: Partial<Spell> = {}): Spell => ({ id: 's1', name: 'Bless', lvl: 1, time: 'Action', range: '30 ft', srcName: 'Cleric', ...p });
+export const hm = { id: 'sp4', name: 'Hunter’s Mark' };
+export const ac = (p: Partial<Character>) => armorClass(make({ inv: [], spells: [], acMods: [], acOn: [], acUnarm: 'none', conc: null, ...p }));
+export const it_ = (p: Partial<Item>): Item => ({ id: 'a', name: 'X', qty: 1, eq: true, ...p });
+export const gr = (p: Partial<Grant> & { kind: Grant['kind'] }): Grant => ({ id: 'g' + p.kind, name: p.kind, from: 'feature:f10', ...p } as Grant);
+
+// A character with every generated id (n…, feature:n…) replaced, so two replays of the same answers compare equal.
+export const noIds = (c: Character) => JSON.parse(JSON.stringify(c).replace(/"n[0-9a-z]{8,}"/g, '"ID"').replace(/(feature|class|grant|item|spell):n[0-9a-z]{8,}/g, '$1:ID'));

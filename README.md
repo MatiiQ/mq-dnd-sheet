@@ -199,7 +199,7 @@ npm run dev
 |---|---|
 | `npm install` | Installs the dependencies. |
 | `npm run dev` | Starts the Vite dev server on port 5173, reachable from the iPad at `http://<your-computer's-IP>:5173` on the same Wi-Fi. No service worker, so changes show on reload. |
-| `npm test` | Runs Vitest once: the rules logic (`logic.test.ts`, `hands.test.ts`, `actions.test.ts`, `inventory.test.ts`), the catalog, the data parsers, the service worker and the component tests. Add a test whenever rules behaviour changes. |
+| `npm test` | Runs Vitest once: the rules logic (`logic*.test.ts`, `hands.test.ts`, `actions.test.ts`, `inventory.test.ts`), the catalog, the data parsers, the service worker and the component tests. Add a test whenever rules behaviour changes. |
 | `npm run build` | Type-checks the app (`tsc --noEmit`) and the scripts (`tsc -p scripts`), then builds the production app into `dist/`, including the service worker `dist/sw.js`. |
 | `npm run preview` | Serves `dist/` with the service worker active, to test the offline behaviour and installing as a Home Screen app. Run `npm run build` first. |
 | `npm run icons` | Redraws the app icons into `public/icons/*.png` (a gold d20 on a dark ground). A new file in `public/` must also be added to `PUBLIC_FILES` in `vite.config.ts`, or the service worker won't cache it. |

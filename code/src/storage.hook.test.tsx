@@ -1,19 +1,12 @@
 // @vitest-environment happy-dom
 import { act } from 'react';
-import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { sampleCharacter } from './defaults';
+import { mount } from './test-dom';
 import { initialStore, saveBackupFile, useCharacters, type CharacterStore } from './storage';
-
-(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 let store: CharacterStore;
 function Probe() { store = useCharacters(); return null; }
-let root: Root;
-const mount = () => {
-  root = createRoot(document.body.appendChild(document.createElement('div')));
-  act(() => root.render(<Probe />));
-};
 const sheet = (id: string) => JSON.parse(localStorage.getItem('dnd-sheet-v3:' + id) ?? 'null');
 const index = () => JSON.parse(localStorage.getItem('dnd-index-v3') ?? 'null');
 
@@ -22,8 +15,7 @@ const persist = vi.fn(async () => true);
 Object.defineProperty(navigator, 'storage', { value: { persist }, configurable: true });
 
 describe('useCharacters with nothing open', () => {
-  beforeEach(() => { localStorage.clear(); mount(); });
-  afterEach(() => { act(() => root.unmount()); });
+  beforeEach(() => { localStorage.clear(); mount(<Probe />); });
   it('has no character, and update does nothing', () => {
     expect(store.c).toBeNull();
     act(() => store.update({ hp: 3 }));
@@ -33,8 +25,8 @@ describe('useCharacters with nothing open', () => {
 });
 
 describe('useCharacters', () => {
-  beforeEach(() => { localStorage.clear(); mount(); });
-  afterEach(() => { act(() => root.unmount()); vi.unstubAllGlobals(); });
+  beforeEach(() => { localStorage.clear(); mount(<Probe />); });
+  afterEach(() => { vi.unstubAllGlobals(); });
 
   // Firefox answers persist() with a prompt, so it waits for a change instead of coming on load.
   it('asks for persistent storage once, at the first store change after load', () => {

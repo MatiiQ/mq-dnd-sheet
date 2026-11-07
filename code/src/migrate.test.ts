@@ -497,3 +497,16 @@ describe('save v2: repair', () => {
     expect(maxHpOf(druidSample())).toBe(99);
   });
 });
+
+describe('needAura and needHand on load', () => {
+  const defense = { id: 'd', kind: 'imm' as const, name: 'Frightened', from: 'feature:f' };
+  it('drops a value that is not a feature id or a boolean', () => {
+    const m = migrate({ ...blankCharacter(), defenses: [{ ...defense, needAura: 5, needHand: 'yes' }] as never });
+    expect(m.defenses[0]).not.toHaveProperty('needAura');
+    expect(m.defenses[0]).not.toHaveProperty('needHand');
+  });
+  it('drops needAura from an entry with no source, which no longer rides on the aura', () => {
+    const { from: _f, ...hand } = defense;
+    expect(migrate({ ...blankCharacter(), defenses: [{ ...hand, needAura: 'feature/paladin/aura-of-protection' }] as never }).defenses[0]).not.toHaveProperty('needAura');
+  });
+});

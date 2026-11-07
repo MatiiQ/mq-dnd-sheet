@@ -1,15 +1,15 @@
 // @vitest-environment happy-dom
 import { act } from 'react';
-import { createRoot, type Root } from 'react-dom/client';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { mergeCatalog } from '../catalog/merge';
 import type { ClassEntry, Entry } from '../catalog/schema';
 import { DRAFT_KEY, replay, type Draft } from '../creator';
 import { effScore } from '../logic';
+import { btn, label, mount, tap, type } from '../test-dom';
+import { noIds } from '../test-fixtures';
 import type { Character } from '../types';
 import { CreatorWizard, NEW_ANSWERS } from './CreatorWizard';
 
-(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 const cls = (name: string): ClassEntry => ({ id: 'class/' + name.toLowerCase(), kind: 'class', name, src: 'srd', desc: 'About ' + name, hd: 10, saves: 'str,dex', primary: 'dex',
   skills: { kind: 'choice', id: 'skills', name: 'Skills', pick: 2, pool: 'skill:stealth|insight|survival' }, armor: '', weapons: '', slots: [] });
 const lang = (name: string): Entry => ({ id: 'prof/' + name.toLowerCase(), kind: 'prof', name, src: 'srd', desc: '', cat: 'language' } as Entry);
@@ -24,28 +24,30 @@ const entries: Entry[] = [cls('Ranger'), cls('Rogue'),
   lang('Common'), lang('Elvish'), lang('Dwarvish')];
 const cat = mergeCatalog(entries, null);
 
-let root: Root;
 beforeEach(() => localStorage.clear());
-afterEach(() => { act(() => root.unmount()); document.body.innerHTML = ''; });
-const render = (onCreate: (c: Character) => void, initial?: Draft) => {
-  root = createRoot(document.body.appendChild(document.createElement('div')));
-  act(() => root.render(<CreatorWizard cat={cat} initial={initial} onCreate={onCreate} onClose={() => {}} />));
-};
-const btn = (t: string) => [...document.querySelectorAll('button')].find((b) => b.textContent === t);
-const tap = (el: Element | null | undefined) => { if (!el) throw new Error('nothing to tap'); act(() => { el.dispatchEvent(new MouseEvent('click', { bubbles: true })); }); };
-const label = (s: string) => document.querySelector(`[aria-label="${s}"]`);
-const type = (el: Element | null, v: string) => act(() => {
-  const input = el as HTMLInputElement;
-  Object.getOwnPropertyDescriptor(Object.getPrototypeOf(input), 'value')!.set!.call(input, v);
-  input.dispatchEvent(new Event('input', { bubbles: true }));
-});
+const render = (onCreate: (c: Character) => void, initial?: Draft) =>
+  mount(<CreatorWizard cat={cat} initial={initial} onCreate={onCreate} onClose={() => {}} />);
 const draft = (): Draft => JSON.parse(localStorage.getItem(DRAFT_KEY)!);
-const noIds = (c: Character) => JSON.parse(JSON.stringify(c).replace(/"n[0-9a-z]{8,}"/g, '"ID"').replace(/(feature|class|grant|item|spell):n[0-9a-z]{8,}/g, '$1:ID'));
-
-// Class Ranger at level 1, Sage (INT, WIS), Elf, Elvish + Dwarvish, Stealth + Survival, Point Buy 15/15/15/8/8/8, "Thorin".
-function throughOrigin() {
-  tap(btn('Ranger'));
+// Types into the Starting level field the way a player does: focus, a value, blur.
+const setStart = (n: number) => {
+  const input = label('Starting level') as HTMLInputElement;
+  act(() => { input.focus(); });
+  type(input, String(n));
+  act(() => { input.blur(); });
+};
+// Taps Next to the level's summary, then Finish.
+function finishLevel() {
+  for (let i = 0; i < 6 && !btn('Finish'); i++) tap(btn('Next'));
+  tap(btn('Finish'));
+}
+// A level after the first: its intro, Fixed (6) HP, then to its summary and Finish.
+function fixedLevel() {
   tap(btn('Next'));
+  tap(btn('Fixed (6)'));
+  finishLevel();
+}
+// From the Origin step: Sage (INT, WIS), Elf, Elvish + Dwarvish, Stealth + Survival.
+function throughOriginRest() {
   tap(btn('Sage'));
   tap(btn('INT +1'));
   tap(btn('WIS +1'));
@@ -58,6 +60,15 @@ function throughOrigin() {
   tap(btn('Survival'));
   tap(btn('Next'));
 }
+// The class at level 1, then the origin above.
+function throughOrigin(cls = 'Ranger') {
+  tap(btn(cls));
+  tap(btn('Next'));
+  throughOriginRest();
+}
+// Point Buy at its start (every score 8, 0 of 27 spent) is a complete set.
+const abilities = () => { tap(btn('Point Buy')); tap(btn('Next')); };
+// Point Buy 15/15/15/8/8/8, "Thorin", the Levels step's level 1 (no choices for the synthetic Ranger), then the summary.
 function toCreate() {
   throughOrigin();
   tap(btn('Point Buy'));
@@ -66,13 +77,8 @@ function toCreate() {
   tap(btn('Next'));
   type(document.querySelector('.wizard input[type="text"]'), 'Thorin');
   tap(btn('Next'));
-  level1();
+  finishLevel();
   tap(btn('Next'));
-}
-// The Levels step's level 1 (no choices for the synthetic Ranger): to its summary, then Finish.
-function level1() {
-  for (let i = 0; i < 6 && !btn('Finish'); i++) tap(btn('Next'));
-  tap(btn('Finish'));
 }
 
 describe('CreatorWizard', () => {
@@ -91,12 +97,14 @@ describe('CreatorWizard', () => {
     expect(c.profs.filter((p) => p.cat === 'language').map((p) => p.name)).toEqual(['Common', 'Elvish', 'Dwarvish']);
     expect(noIds(c)).toEqual(noIds(replay(cat, draft().answers).c));
   });
-  it('writes the draft with the current step after each step', () => {
+  it('writes the draft on every answer, not only when a step changes, with the current step', () => {
     render(() => {});
+    expect(localStorage.getItem(DRAFT_KEY)).toBeNull();
     tap(btn('Ranger'));
+    expect(draft().answers.cls).toBe('class/ranger');
+    expect(draft().step).toBe(0);
     tap(btn('Next'));
     expect(draft().step).toBe(1);
-    expect(draft().answers.cls).toBe('class/ranger');
   });
   it('changing the class clears the skill picks and the first level answers', () => {
     render(() => {});
@@ -111,93 +119,53 @@ describe('CreatorWizard', () => {
   it('changing the class clears the levels chosen for the old one', () => {
     render(() => {});
     tap(btn('Ranger'));
-    const start = label('Starting level') as HTMLInputElement;
-    act(() => { start.focus(); });
-    type(start, '2');
-    act(() => { start.blur(); });
+    setStart(2);
     tap(btn('Next'));
     throughOriginRest();
     abilities();
-    tap(btn('Next'));
-    level1();
-    tap(btn('Next'));
-    tap(btn('Fixed (6)'));
-    for (let i = 0; i < 6 && !btn('Finish'); i++) tap(btn('Next'));
-    tap(btn('Finish'));
+    tap(btn('Next')); // details
+    finishLevel();
+    fixedLevel();
     expect(draft().answers.levels).toHaveLength(1);
     tap(btn('Class'));
     tap(btn('Rogue'));
     expect(draft().answers.levels).toEqual([]);
     expect(replay(cat, draft().answers).c.classes.map((r) => r.name)).toEqual(['Rogue']);
   });
-  it('saves the draft on every answer, not only when a step changes', () => {
-    render(() => {});
-    expect(localStorage.getItem(DRAFT_KEY)).toBeNull();
-    tap(btn('Ranger'));
-    expect(draft().answers.cls).toBe('class/ranger');
-    expect(draft().step).toBe(0);
-  });
-  it('lowering the starting level drops later level answers', () => {
+  it('lowering the starting level keeps only the levels that still apply', () => {
     render(() => {});
     tap(btn('Ranger'));
-    const start = label('Starting level') as HTMLInputElement;
-    act(() => { start.focus(); });
-    type(start, '5');
-    act(() => { start.blur(); });
+    setStart(5);
     tap(btn('Next'));
     throughOriginRest();
     abilities();
     tap(btn('Next')); // details
     expect(document.body.textContent).toContain('Level 1 of 5');
-    level1();
+    finishLevel();
     for (let n = 2; n <= 5; n++) {
       expect(document.body.textContent).toContain('Level ' + n + ' of 5');
-      tap(btn('Next'));
-      tap(btn('Fixed (6)'));
-      for (let i = 0; i < 6 && !btn('Finish'); i++) tap(btn('Next'));
-      tap(btn('Finish'));
+      fixedLevel();
     }
     tap(btn('Class'));
-    const s2 = label('Starting level') as HTMLInputElement;
-    act(() => { s2.focus(); });
-    type(s2, '3');
-    act(() => { s2.blur(); });
+    setStart(3);
     expect(document.body.textContent).not.toContain('above the starting level');
     expect(draft().answers.levels).toHaveLength(2);
     tap(btn('Summary'));
     expect(document.body.textContent).toContain('Ranger 3');
   });
 });
-function throughOriginRest() {
-  tap(btn('Sage'));
-  tap(btn('INT +1'));
-  tap(btn('WIS +1'));
-  tap(btn('Next')); // the background flow's own Next: its second step asks "Already counted"
-  tap(btn('Add'));
-  tap(btn('Elf'));
-  tap(btn('Elvish'));
-  tap(btn('Dwarvish'));
-  tap(btn('Stealth'));
-  tap(btn('Survival'));
-  tap(btn('Next'));
-}
-// Point Buy at its start (every score 8, 0 of 27 spent) is a complete set.
-const abilities = () => { tap(btn('Point Buy')); tap(btn('Next')); };
 
 describe('level 1 choices in the creator', () => {
   it('asks a level-1 feature choice, so a Rogue is created with its class', () => {
     const onCreate = vi.fn();
     render(onCreate);
-    tap(btn('Rogue'));
-    tap(btn('Next'));
-    throughOriginRest();
+    throughOrigin('Rogue');
     abilities();
     tap(btn('Next')); // details
     expect(document.body.textContent).toContain('Level 1');
     tap(btn('Stealth'));
     tap(btn('Add'));
-    for (let i = 0; i < 6 && !btn('Finish'); i++) tap(btn('Next'));
-    tap(btn('Finish'));
+    finishLevel();
     tap(btn('Next'));
     tap(btn('Create character'));
     const c: Character = onCreate.mock.calls[0][0];
@@ -210,9 +178,7 @@ describe('the summary waits for the levels', () => {
   it('Summary and Create stay locked until level 1 and every level to the start are chosen', () => {
     const onCreate = vi.fn();
     render(onCreate);
-    tap(btn('Rogue'));
-    tap(btn('Next'));
-    throughOriginRest();
+    throughOrigin('Rogue');
     expect(btn('Summary')?.getAttribute('aria-disabled')).toBe('true');
     tap(btn('Summary'));
     expect(btn('Create character')).toBeUndefined();
@@ -222,17 +188,15 @@ describe('the summary waits for the levels', () => {
 describe('class skills after a background change', () => {
   it('a skill the new background gives can be dropped and replaced', () => {
     render(() => {});
-    tap(btn('Ranger'));
-    tap(btn('Next'));
-    throughOriginRest();          // Sage, Elf, Stealth + Survival
+    throughOrigin();               // Sage, Elf, Stealth + Survival
     tap(btn('Origin'));
-    tap(btn('Stealth'));          // out
-    tap(btn('Insight'));          // in: Insight + Survival
-    tap(btn('Acolyte'));          // now gives Insight
+    tap(btn('Stealth'));           // out
+    tap(btn('Insight'));           // in: Insight + Survival
+    tap(btn('Acolyte'));           // now gives Insight
     const insight = [...document.querySelectorAll('button')].find((b) => b.textContent?.startsWith('Insight'))!;
     expect(insight.textContent).toContain('from your origin');
-    tap(insight);                 // drop it
-    tap(btn('Stealth'));          // replace it
+    tap(insight);                  // drop it
+    tap(btn('Stealth'));           // replace it
     tap(btn('Next'));
     expect(draft().answers.skills.sort()).toEqual(['stealth', 'survival']);
   });
@@ -260,9 +224,7 @@ describe('the steps wait for complete answers', () => {
   });
   it('Abilities needs all six scores, and Point Buy stops at 27 points', () => {
     render(() => {});
-    tap(btn('Ranger'));
-    tap(btn('Next'));
-    throughOriginRest();
+    throughOrigin();
     expect(btn('Next')?.getAttribute('aria-disabled')).toBe('true');   // Standard Array, nothing assigned
     tap(btn('Point Buy'));
     for (const ab of ['STR', 'DEX', 'CON', 'INT']) for (let i = 0; i < 7; i++) tap(label('Raise ' + ab));

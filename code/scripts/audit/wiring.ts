@@ -1,6 +1,6 @@
 // Whether catalog data reaches the app. Imports the app's add flow, so it runs under Vitest, not plain node.
 // shortcut: these checks only catch names nothing mentions (field-unread stops at the copy to the character; the others
-// search the code for a word), so a green result doesn't prove a field works. logic.test.ts covers behaviour.
+// search the code for a word), so a green result doesn't prove a field works. the logic*.test.ts files cover behaviour.
 import { atLevel, addFromCatalog, addPackage, choicesOf, classProfInputs, featureCandidates, freeText, itemQuestions, itemStats, matchId, nestedEntries, optionGroups, poolOptions, type AddChoices, type FeatureType, type ItemAnswers } from '../../src/catalog/copy.ts';
 import type { Catalog } from '../../src/catalog/merge.ts';
 import type { ClassEntry, Entry } from '../../src/catalog/schema.ts';
