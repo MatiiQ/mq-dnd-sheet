@@ -105,6 +105,9 @@ export interface Spell extends Linked {
   parts?: SpellPart[];
   // cls: the ClassRow id of the class that prepared it (prepared spells count per class, PHB p.45).
   cls?: string;
+  // makes: a cast brings a creature (pet) or a form the caster takes (form), tracked as a Companions card.
+  // single: a new casting replaces its creature (Find Familiar, Find Steed), so a cast refills the one card.
+  makes?: 'pet' | 'form'; single?: boolean;
 }
 // Hit die sizes (PHB p.45: different dice are tracked separately).
 export type Die = 6 | 8 | 10 | 12;
@@ -123,7 +126,33 @@ export interface LevelRecord {
   hp?: { mode: 'max' | 'fixed' | 'roll'; val: number; gain: number };
   added: string[]; picks: Record<string, string[]>; set: LevelSet[];
 }
-export interface Feature extends Linked { id: string; g: FeatureGroup; name: string; desc: string; cid?: string }
+// makes: the feature makes a creature (Primal Companion) or a form (Wild Shape) without a spell.
+export interface Feature extends Linked { id: string; g: FeatureGroup; name: string; desc: string; cid?: string; makes?: 'pet' | 'form' }
+// A creature the character commands (pet) or a form the character takes (form), numbers typed by hand.
+export interface CreatureAttack { id: string; name: string; hit: string; dmg: string }
+// Only the source fields of Linked: when/needEq/needAura… mean nothing on a card. srcName is set while it is linked,
+// so a card whose source goes still names it.
+export interface Creature extends Pick<Linked, 'from' | 'srcKind' | 'srcName'> {
+  id: string; name: string; kind: 'pet' | 'form';
+  /** pet: summoned (false = dismissed); form: assumed. */
+  on: boolean;
+  ac: number;
+  /** A form's hp, temp and conds are unused (damage goes to the character); its maxHp is the beast's HP (formTemp 'hp'). */
+  hp: number; maxHp: number; temp: number;
+  speed: string; init: string; note: string;
+  atk: CreatureAttack[];
+  conds: Record<string, boolean>;
+  /** Off when Concentration on its spell ends (pet or form) / on a Long Rest (pet). */
+  ends?: 'conc' | 'long';
+  /** The slot level it was summoned at, shown on the card. */
+  lvl?: number;
+  /** pet: can be sent to a pocket dimension (Find Familiar); away: there now (only while on and pocket). */
+  pocket?: boolean; away?: boolean;
+  /** form: Temporary HP on assume (wildshape: the Druid level, × 3 for a Moon druid; hp: maxHp). */
+  formTemp?: 'wildshape' | 'hp';
+  /** form: physical scores. */
+  str?: number; dex?: number; con?: number;
+}
 export interface Concentration { id: string; name: string }
 // hdUsed is set only when a spent Hit Die is linked to the change (undoGivesDie), so undoing it refunds that die:
 // the die size and that pool's spent count before the die was spent.
@@ -178,6 +207,8 @@ export interface Character {
   /** Cast state per effect source ('spell:<id>'): the slot level, the item it is on. Optional and absent by default:
    *  frozen saves have no such key. Kept by normalize() only while the effect is on. */
   castFx?: Record<string, FxState>;
+  /** Companions and forms (optional, absent by default: frozen saves have no such key). */
+  creatures?: Creature[];
   /** Weapons in hand: item ids, oldest first, one entry per hand (a Two-Handed weapon or a Versatile one in two hands twice). Changed only through setHands (hands.ts). */
   hands: string[];
   /** Weapon kinds (weaponKind slugs) chosen for Weapon Mastery, oldest first; picks past the slot count don't count. */

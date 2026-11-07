@@ -5,7 +5,7 @@ import { AC_EFFECTS, grantErrors, isDtypes, isObj, ITEM_CATS, partErrors } from 
 import { isValue } from './catalog/value';
 import { dropLinkOnly, fixLinks, GROUP_SRC, parseLink, sourceOf, SRC_KINDS } from './links';
 import { abilityMod, ABILITIES, CAST_NAMES, clamp, totalLevel, isMaxFormula, LEVEL_KEYS, newId, ROW_FIELDS, normalize, PROF_CATS, regainEvent, sanitizePills, SIZES, slots, SPELL_SORTS, strings, TABS, UNARMORED, uniqueStrings, withoutKeys } from './logic';
-import type { Ability, AcEffect, Attack, Character, ClassRow, Counter, DefenseKind, Die, Feature, Item, LevelRecord, LevelSet, Linked, Recharge, Resource, Section, Sense, Spell, When } from './types';
+import type { Ability, AcEffect, Attack, Character, ClassRow, Counter, Creature, CreatureAttack, DefenseKind, Die, Feature, Item, LevelRecord, LevelSet, Linked, Recharge, Resource, Section, Sense, Spell, When } from './types';
 
 const sameType = (def: unknown, v: unknown) => (Array.isArray(def) ? Array.isArray(v) : isObj(def) ? isObj(v) : typeof v === typeof def);
 const DEFENSE_KINDS: DefenseKind[] = ['res', 'vul', 'imm', 'adv'];
@@ -70,7 +70,14 @@ const SPELL_FIELDS: Record<string, FieldCheck> = {
   fx: among('damage', 'healing', 'other'), dmg: isStr, dtype: isStr, scale: isStr, higher: isStr, healMod: (v) => v === true,
   dmgMod: (v) => v === true, dtypes: isDtypes, cls: nonEmpty, acOther: (v) => v === true, linkAlways: (v) => v === true, linkCastAb: among('none', ...ABILITIES.map(([k]) => k)),
   dc: (v) => Number.isInteger(v), atkB: (v) => Number.isInteger(v),
-  chg: (v) => wholeIn(v, 1, 50), chgMax: (v) => wholeIn(v, 1, 50), castLvl: (v) => wholeIn(v, 1, 9)
+  chg: (v) => wholeIn(v, 1, 50), chgMax: (v) => wholeIn(v, 1, 50), castLvl: (v) => wholeIn(v, 1, 9),
+  makes: among('pet', 'form'), single: (v) => v === true
+};
+const FEATURE_FIELDS: Record<string, FieldCheck> = { makes: among('pet', 'form') };
+// A creature's optional fields on load; the required ones are set in cleanCreature.
+const CREATURE_FIELDS: Record<string, FieldCheck> = {
+  ends: among('conc', 'long'), lvl: (v) => wholeIn(v, 1, 9), pocket: isBool, away: isBool, formTemp: among('wildshape', 'hp'),
+  str: (v) => wholeIn(v, 1, 30), dex: (v) => wholeIn(v, 1, 30), con: (v) => wholeIn(v, 1, 30)
 };
 const ATTACK_FIELDS: Record<string, FieldCheck> = { econ: among('action', 'bonus', 'reaction', 'free', 'other'), group: among('weapon', 'other') };
 const ITEM_FIELDS: Record<string, FieldCheck> = {
@@ -134,7 +141,32 @@ function cleanItem(x: Item, sections: Section[]): Item {
 }
 // Typed attacks are manual actions: their numbers stay as typed; a bad timing or section goes.
 const cleanAttack = (a: Attack): Attack => cleanFields(cleanLinked(texts(a, ['hit', 'dmg', 'info', 'mastery'])), ATTACK_FIELDS);
-const cleanFeature = (x: Feature): Feature => cleanCid(cleanLinked({ ...texts(x, ['desc']), g: Object.hasOwn(GROUP_SRC, x.g) ? x.g : 'other' }));
+const cleanFeature = (x: Feature): Feature => cleanFields(cleanCid(cleanLinked({ ...texts(x, ['desc']), g: Object.hasOwn(GROUP_SRC, x.g) ? x.g : 'other' })), FEATURE_FIELDS);
+// A creature's attacks on load, like a spell's parts: a part that isn't an object with a string name goes, missing
+// strings read '', a missing or repeated id gets a new one.
+function cleanAtk(v: unknown): CreatureAttack[] {
+  const out: CreatureAttack[] = [];
+  for (const a of Array.isArray(v) ? v : []) {
+    if (!isObj(a) || typeof a.name !== 'string') continue;
+    const id = typeof a.id === 'string' && a.id && !out.some((x) => x.id === a.id) ? a.id : newId();
+    out.push({ id, name: a.name, hit: typeof a.hit === 'string' ? a.hit : '', dmg: typeof a.dmg === 'string' ? a.dmg : '' });
+  }
+  return out;
+}
+// A creature on load (it has no fixed fields to fall back on, so each is set here): a bad field goes or reads blank,
+// never the entry. Unknown condition names are kept, as on the character. fixCreatures (normalize) clamps the numbers.
+function cleanCreature(x: Raw): Creature {
+  const { atk, conds, kind, on, ac, hp, maxHp, temp, speed, init, note, from, srcKind, srcName, ...rest } = x;
+  const num = (v: unknown) => (finite(v) && v >= 0 ? v : 0);
+  const str = (v: unknown) => (typeof v === 'string' ? v : '');
+  const link = cleanLinked({ from, srcKind, srcName } as Linked);
+  return {
+    ...cleanFields(rest, CREATURE_FIELDS), ...link,
+    id: typeof x.id === 'string' ? x.id : newId(), name: x.name as string, kind: kind === 'form' ? 'form' : 'pet', on: on === true,
+    ac: num(ac), hp: num(hp), maxHp: num(maxHp), temp: num(temp), speed: str(speed), init: str(init), note: str(note),
+    atk: cleanAtk(atk), conds: isObj(conds) ? Object.fromEntries(Object.entries(conds).filter(([, b]) => typeof b === 'boolean')) as Record<string, boolean> : {}
+  } as Creature;
+}
 const cleanSense = ({ desc, plus, ...se }: Sense): Sense =>
   cleanLinked({ ...texts(se, ['range']), ...(typeof desc === 'string' ? { desc } : {}), ...(typeof plus === 'boolean' ? { plus } : {}) });
 // A named section once per id (the first stays); `in` only as a string (fixContainers checks the bag).
@@ -267,6 +299,11 @@ export function migrate(data: unknown): Character {
   }
   // castFx is optional and absent by default (blankCharacter has none), so it is copied here; normalize() cleans it.
   if (raw.castFx !== undefined) d.castFx = raw.castFx;
+  // creatures is optional and absent by default too; atk and conds are the one list and record a creature may hold.
+  if (Array.isArray(raw.creatures)) {
+    d.creatures = raw.creatures.filter((x) => isObj(x) && isEntry({ ...x, atk: null, conds: null })).map((x) => cleanCreature(x as Raw))
+      .map((x, i, all) => (all.findIndex((y) => y.id === x.id) === i ? x : { ...x, id: newId() }));
+  }
   const c = d as unknown as Character;
   c.v = SAVE_VERSION;
 

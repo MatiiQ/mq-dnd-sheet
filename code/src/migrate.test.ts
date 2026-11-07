@@ -541,3 +541,44 @@ describe('needAura and needHand on load', () => {
     expect(migrate({ ...blankCharacter(), defenses: [{ ...hand, needAura: 'feature/paladin/aura-of-protection' }] as never }).defenses[0]).not.toHaveProperty('needAura');
   });
 });
+
+describe('companions (creatures)', () => {
+  const pet = {
+    id: 'k1', name: 'Wolf', kind: 'pet', on: true, ac: 13, hp: 11, maxHp: 11, temp: 0, speed: '40 ft', init: '+2', note: '',
+    atk: [{ id: 'a1', name: 'Bite', hit: '+4', dmg: '1d6+2 Piercing' }], conds: { Prone: true }
+  };
+  const fx = fixtures.find(([f]) => f === 'save-v2-multiclass.json')![1];
+  it('keeps a creature’s attacks and conditions (the isEntry exception)', () => {
+    const c = migrate({ ...blankCharacter(), creatures: [pet] });
+    expect(c.creatures).toEqual([pet]);
+  });
+  it('drops a damaged attack part, never the creature; fills missing strings and ids', () => {
+    const c = migrate({ ...blankCharacter(), creatures: [{ ...pet, atk: [pet.atk[0], 'x', { hit: '+1' }, { id: 'a1', name: 'Claw' }] }] });
+    const atk = c.creatures![0].atk;
+    expect(atk.map((a) => a.name)).toEqual(['Bite', 'Claw']);
+    expect(atk[1]).toMatchObject({ hit: '', dmg: '' });
+    expect(atk[1].id).not.toBe('a1');
+  });
+  it('drops a damaged creature field, never the entry', () => {
+    const c = migrate({ ...blankCharacter(), creatures: [{ ...pet, ac: 'x', ends: 'never', lvl: 12, conds: { Prone: 'yes', Grappled: true }, atk: 'x', speed: 3, kind: 'dragon' }] });
+    const k = c.creatures![0];
+    expect(k).toMatchObject({ name: 'Wolf', ac: 0, speed: '', kind: 'pet', conds: { Grappled: true }, atk: [] });
+    expect(k.ends).toBeUndefined();
+    expect(k.lvl).toBeUndefined();
+  });
+  it('drops a creature with no name, and a creatures value that isn’t a list', () => {
+    expect(migrate({ ...blankCharacter(), creatures: [{ ...pet, name: 3 }, pet] }).creatures!.map((k) => k.id)).toEqual(['k1']);
+    expect('creatures' in migrate({ ...blankCharacter(), creatures: 'x' })).toBe(false);
+  });
+  it('loads a save without creatures with no creatures key', () => {
+    expect('creatures' in migrate(fx)).toBe(false);
+  });
+  it('drops a bad makes or single on a spell and a bad makes on a feature', () => {
+    const sp = { id: 's', name: 'Find Familiar', lvl: 1, time: 'Action', range: '10 feet' };
+    const c = migrate({ ...blankCharacter(), spells: [{ ...sp, makes: 'dragon', single: 'yes' }, { ...sp, id: 't', makes: 'pet', single: true }],
+      feats: [{ id: 'f', g: 'class', name: 'Wild Shape', desc: '', makes: 'x' }, { id: 'g', g: 'class', name: 'Wild Shape', desc: '', makes: 'form' }] });
+    expect([c.spells[0].makes, c.spells[0].single]).toEqual([undefined, undefined]);
+    expect([c.spells[1].makes, c.spells[1].single]).toEqual(['pet', true]);
+    expect([c.feats[0].makes, c.feats[1].makes]).toEqual([undefined, 'form']);
+  });
+});
