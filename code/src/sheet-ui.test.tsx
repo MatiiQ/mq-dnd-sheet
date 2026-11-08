@@ -46,6 +46,26 @@ describe('entry forms and rows', () => {
     expect(stat?.textContent).toContain('Adv');
     expect(stat?.getAttribute('aria-label')).toContain('Advantage');
   });
+  it('types the rolled Initiative total into the Initiative panel and clears it', () => {
+    renderSheet({});
+    tap(document.querySelector('[aria-label^="Initiative"]'));
+    typeInto(label('Rolled initiative total'), '17');
+    expect(saved().initRoll).toBe(17);
+    expect(document.querySelector('[aria-label^="Initiative"]')?.textContent).toContain('Rolled 17');
+    tap(label('Clear the rolled initiative'));
+    expect(saved().initRoll).toBeUndefined();
+  });
+  it('shows a granted skill source only after a tap, and names the grant first in Edit mode', () => {
+    renderSheet({ feats: [{ id: 'f', g: 'species', name: 'Keen Senses', desc: '' }],
+      grants: [{ id: 'g', kind: 'prof', name: 'Perception', cat: 'skill', target: 'perception', from: 'feature:f' }] });
+    const row = () => [...document.querySelectorAll('.skill-row')].find((e) => e.textContent?.startsWith('Perception'));
+    expect(row()?.textContent).not.toContain('from');
+    tap(row());
+    expect(row()?.textContent).toContain('Proficient from');
+    editMode();
+    const edit = label('Perception: Proficient from Species · Keen Senses. Tap to change.');
+    expect(edit?.textContent).not.toContain('Not proficient');
+  });
   it('adds a hand resistance beside a switched-off grant', () => {
     renderSheet({ feats: [feat], defenses: [{ id: 'd', kind: 'res', name: 'Slashing', from: 'feature:f', when: 'active' }] });
     editMode();
@@ -127,10 +147,15 @@ describe('entry forms and rows', () => {
     renderSheet({ spells: [haste], conc: { id: 'h', name: 'Haste' }, slotMax: [0, 0, 0, 1, 0, 0, 0, 0, 0, 0] });
     tab('Spells');
     const sw = label('Cast Haste on another creature, so it adds no AC');
-    expect(sw?.textContent).toBe('On: me');
+    expect(label('Cast Haste on me')?.getAttribute('aria-pressed')).toBe('true');
+    expect(sw?.getAttribute('aria-pressed')).toBe('false');
     tap(sw);
     expect(saved().spells[0].acOther).toBe(true);
-    expect(label('Cast Haste on another creature, so it adds no AC')?.textContent).toBe('On: other');
+    expect(label('Cast Haste on another creature, so it adds no AC')?.getAttribute('aria-pressed')).toBe('true');
+    tap(label('Cast Haste on another creature, so it adds no AC'));
+    expect(saved().spells[0].acOther).toBe(true); // tapping the pressed choice changes nothing
+    tap(label('Cast Haste on me'));
+    expect(saved().spells[0].acOther).toBeUndefined();
   });
   it('takes Fly off your speed when it is cast on another creature', () => {
     const fly = { id: 's', name: 'Fly', lvl: 3, time: 'Action', range: 'Touch', c: true };
@@ -138,12 +163,12 @@ describe('entry forms and rows', () => {
       grants: [{ id: 'g', kind: 'speed', name: 'Fly', mode: 'fly', val: '60', when: 'active', from: 'spell:s' }] });
     tab('Spells');
     const sw = label('Cast Fly on another creature, so it counts only for them');
-    expect(sw?.textContent).toBe('On: me');
+    expect(sw?.getAttribute('aria-pressed')).toBe('false');
     expect(modeSpeed(saved(), 'fly').base).toBe(60);
     tap(sw);
     expect(saved().spells[0].acOther).toBe(true);
     expect(modeSpeed(saved(), 'fly').base).toBe(0);
-    expect(label('Cast Fly on another creature, so it counts only for them')?.textContent).toBe('On: other');
+    expect(label('Cast Fly on another creature, so it counts only for them')?.getAttribute('aria-pressed')).toBe('true');
   });
 
   it('keeps line breaks in a feature description', () => {

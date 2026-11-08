@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import {
-  attacksPerAction, extraDamage, extraText, featureActions, lightExtra, masterySlots, otherWeapons, spellActions, unarmedStrike, weaponAttacks,
+  attacksPerAction, extraDamage, extraText, featureActions, lightExtra, masterySlots, otherWeapons, spellActions, switchFeatureEffect, unarmedStrike, weaponAttacks,
   type SpellAction, type WeaponAttack
 } from '../../actions';
 import { capWords, dtypeText, titled, weaponRules } from '../../catalog/copy';
@@ -8,8 +8,8 @@ import { entriesOf } from '../../catalog/merge';
 import { useCatalog } from '../../catalog/useCatalog';
 import { RuleNotes } from '../RuleNotes';
 import { canLoad, hasProp, isWeapon, NO_SHIELD, putAway, putInHand, shieldOn as shieldOf, twoHanded, versatile, weaponKind, weaponsHeld } from '../../hands';
-import { linkOf, sourceLabel } from '../../links';
-import { castSpell, COMBAT_ACTIONS, itemOfSpell, pactLeft, fmt, freeCastsOf, ORDINAL, regainTo, removeRef, slotsLeft, spellUsable, toggled, type AcPart } from '../../logic';
+import { isOn, linkOf, sourceLabel } from '../../links';
+import { advWord, castSpell, COMBAT_ACTIONS, itemOfSpell, pactLeft, fmt, freeCastsOf, ORDINAL, regainTo, removeRef, slotsLeft, spellAtkAdv, spellUsable, toggled, type AcPart } from '../../logic';
 import { patchEntry, removeEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { Attack, Character, Econ, Item, Rider, Spell } from '../../types';
 import { afterSummonCast } from '../Companions';
@@ -33,6 +33,15 @@ function Parts({ label, parts }: { label: string; parts: AcPart[] }) {
   return <span className="muted">{label}: {parts.map((p) => p.label + ' ' + fmt(p.value) + (p.note ? ' (' + p.note + ')' : '')).join(' · ') || 'none'}</span>;
 }
 // An attack's two numbers, read out by name.
+// A feature's effect from its Actions row: switching on spends a use (switchFeatureEffect); greyed at 0 uses.
+function FeatureEffectSwitch({ link, name, resId }: { link: string; name: string; resId?: string }) {
+  const { c, update } = useSheet();
+  const on = isOn(c, link), next = switchFeatureEffect(c, link, resId);
+  return (
+    <button type="button" aria-pressed={on} aria-label={on ? 'Switch off ' + name : next ? 'Use ' + name + ' and switch it on' : name + ': no uses left'}
+      className={'btn btn-sm toggle-btn' + (on ? ' on' : '')} disabled={!next} onClick={() => next && update(next)}>{on ? 'On' : 'Off'}</button>
+  );
+}
 function AttackNums({ hit, dmg }: { hit: string; dmg: string }) {
   return (
     <div className="row wrap gap-10 act-nums">
@@ -246,13 +255,14 @@ export function ActionsTab() {
   ));
 
   // ---- spells ----
+  const atkAdvWord = advWord(spellAtkAdv(c));
   const spellRow = (x: SpellAction) => {
     const sp = c.spells.find((s) => s.id === x.spellId)!;
     return shows(x.econ) && (
       <ActRow key={`${x.spellId}:${x.part ?? 'main'}`} econ={x.econ} name={x.name}
         sub={[sp.lvl ? ORDINAL[sp.lvl] + ' level' : 'Cantrip', x.range, x.note].filter(Boolean).join(' · ')}
         side={<div className="row wrap gap-8 act-nums">
-          {x.hit !== undefined && <><span className="sr-only">Spell attack</span><DieBadge value={fmt(x.hit)} /></>}
+          {x.hit !== undefined && <><span className="sr-only">Spell attack</span><DieBadge value={fmt(x.hit)} />{atkAdvWord && <span className="act-dc">{atkAdvWord === 'Advantage' ? 'Adv' : 'Dis'}</span>}</>}
           {x.dc !== undefined && <span className="act-dc">DC {x.dc}{x.save ? ' ' + x.save.toUpperCase() : ''}</span>}
           {x.dice && <span className="act-dmg">{x.dice}{dtypeText(x) ? ' ' + dtypeText(x) : ''}</span>}
           {x.part === undefined && <CastButtons sp={sp} effect={!!x.effect} />}
@@ -276,8 +286,9 @@ export function ActionsTab() {
     const r = f.resId ? c.res.find((x) => x.id === f.resId) : undefined;
     return shows(f.econ) && (
       <ActRow key={f.grantId} econ={f.econ} name={f.name} sub={[f.dice, f.note].filter(Boolean).join(' · ') || undefined}
-        side={(r || f.dc !== undefined) && <div className="row gap-4">
+        side={(r || f.dc !== undefined || f.effect) && <div className="row gap-4">
           {f.dc !== undefined && <span className="act-dc">DC {f.dc}</span>}
+          {f.effect && <FeatureEffectSwitch link={f.effect} name={f.name} resId={f.resId} />}
           {r && <>
           {f.regainTo !== undefined && <button type="button" className="btn btn-sm" aria-label={'Regain ' + r.name} onClick={() => update((p) => regainTo(p, r.id, f.regainTo!))}>Regain</button>}
           <Step label={'Use ' + r.name} onClick={() => update((p) => ({ res: patchEntry(p.res, r.id, (x) => ({ count: Math.max(0, x.count - 1) })) }))}>−</Step>

@@ -4,7 +4,7 @@ import { mergeCatalog } from './catalog/merge';
 import type { Entry, ItemEntry, SpellEntry } from './catalog/schema';
 import { addFromCatalog, itemFromEntry, spellFromEntry, type AddChoices } from './catalog/copy';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
-import { attacksPerAction, cantripDice, econOf, extraDamage, extraText, featureActions, hasMastery, lightExtra, masterySlots, otherWeapons, resOfFeature, spellActions, unarmedStrike, weaponAbility, weaponAttacks, weaponProficient, type Use } from './actions';
+import { attacksPerAction, cantripDice, econOf, extraDamage, extraText, featureActions, switchFeatureEffect, hasMastery, lightExtra, masterySlots, otherWeapons, resOfFeature, spellActions, unarmedStrike, weaponAbility, weaponAttacks, weaponProficient, type Use } from './actions';
 import { weaponKind } from './hands';
 import { takeOut } from './inventory';
 import { addGrants, castSpell, normalize, setFxItem } from './logic';
@@ -638,5 +638,30 @@ describe('Magic Weapon on one weapon', () => {
     const c = cast(2, ls.id);
     const gone = applyPatch(c, (p) => ({ inv: p.inv.filter((i) => i.id !== ls.id) }));
     expect(gone.castFx?.['spell:mw']?.item).toBeUndefined();
+  });
+});
+
+describe('switching a feature effect on from its Actions row', () => {
+  // Innate Sorcery: a Bonus Action, twice per Long Rest; using it turns it on (PHB p.140).
+  const c = (count: number): Character => normalize({
+    ...blankCharacter(),
+    feats: [{ id: 'is', g: 'class', name: 'Innate Sorcery', desc: '' }],
+    res: [{ id: 'r1', name: 'Innate Sorcery', count, max: 2, recharge: 'long', from: 'feature:is' }],
+    grants: [
+      { id: 'a', kind: 'action', name: 'Innate Sorcery', econ: 'bonus', res: 'r1', from: 'feature:is' },
+      { id: 'd', kind: 'spellDc', name: 'Innate Sorcery', val: '1', when: 'active', from: 'feature:is' }
+    ]
+  });
+  it('marks the row as switchable', () => {
+    expect(featureActions(c(2))[0].effect).toBe('feature:is');
+  });
+  it('spends one use to switch on, refuses at 0, and gives nothing back when switched off', () => {
+    const on = { ...c(2), ...switchFeatureEffect(c(2), 'feature:is', 'r1')! };
+    expect(on.effectsOn).toEqual(['feature:is']);
+    expect(on.res[0].count).toBe(1);
+    const off = { ...on, ...switchFeatureEffect(on, 'feature:is', 'r1')! };
+    expect(off.effectsOn).toEqual([]);
+    expect(off.res[0].count).toBe(1);
+    expect(switchFeatureEffect(c(0), 'feature:is', 'r1')).toBeNull();
   });
 });

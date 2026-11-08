@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   removeRef, ABILITIES, castingRows, itemOfSpell, scrollNote, scrollOf, setFxItem, pactLeft, clamp, CAST_NAMES, newId, ORDINAL, ownFreeCasts, setOwnFreeCast, SPELL_SORTS, acAfterEdit, castRitual, castSpell, concAfterEdit, detectAcSpell, effectsAfterEdit, fmt, preparedCount, setConc, setSlotUsed,
-  slotsLeft, sortSpells, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, freeCastsOf, spellAttackFor, spellSaveDcFor
+  slotsLeft, sortSpells, spellAtkAdv, advWord, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, freeCastsOf, spellAttackFor, spellSaveDcFor
 } from '../../logic';
 import { hasActiveEffect, inactiveReason, isOn, linkOf, sourceLabel } from '../../links';
 import { BLANK_SPELL, draftFromSpell, keepPrep, spellFromForm, type SpellDraft } from '../../catalog/copy';
@@ -30,6 +30,7 @@ export function SpellsTab() {
   const picking = openForm?.kind === 'pick-spell';
   const usePrep = c.usePrep;
   const dc = spellSaveDC(c), atk = spellAttack(c);
+  const atkAdv = spellAtkAdv(c), atkAdvWord = advWord(atkAdv);
   const prepCount = preparedCount(c);
   const breakdown = statOpen === 'dc' ? spellDcParts(c) : statOpen === 'atk' ? spellAttackParts(c) : null;
   const toggleStat = (k: 'dc' | 'atk') => setStatOpen(statOpen === k ? null : k);
@@ -143,7 +144,7 @@ export function SpellsTab() {
       <div className="row wrap gap-12" style={{ alignItems: 'stretch' }}>
         <StatCard label="Spellcasting ability" value={abilityCard} />
         <DieStat label="Spell save DC" value={dc === null ? '' : String(dc)} open={statOpen === 'dc'} onToggle={dc === null ? undefined : () => toggleStat('dc')} />
-        <DieStat label="Spell attack" value={atk === null ? '' : fmt(atk)} open={statOpen === 'atk'} onToggle={atk === null ? undefined : () => toggleStat('atk')} />
+        <DieStat label={'Spell attack' + (atkAdvWord ? ' · ' + atkAdvWord + ' (' + atkAdv.by.join(', ') + ')' : '')} value={atk === null ? '' : fmt(atk)} open={statOpen === 'atk'} onToggle={atk === null ? undefined : () => toggleStat('atk')} />
         {usePrep && (
           <div className="well col" style={{ flex: '1 1 140px' }}>
             <span className="small">Prepared spells</span>

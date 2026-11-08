@@ -215,6 +215,21 @@ export function initiativeAdv(c: Character): { adv: boolean; dis: boolean; by: s
   return { adv, dis, by };
 }
 
+// Advantage or Disadvantage on spell attack rolls: checkAdv grants with target 'spellAtk' (Innate Sorcery: Advantage on
+// the attack rolls of Sorcerer spells while it is active, PHB p.140). Simplified: like spellDc grants it counts for every
+// spell, not only the class's own, and conditions that change attack rolls (Poisoned, Invisible...) stay rule text.
+export function spellAtkAdv(c: Character): { adv: boolean; dis: boolean; by: string[] } {
+  let adv = false, dis = false;
+  const by: string[] = [];
+  for (const g of activeGrants(c, 'checkAdv').filter((x) => x.target === 'spellAtk')) {
+    if (g.adv === 'dis') dis = true; else adv = true;
+    by.push(sourceLabel(c, g) ?? g.name);
+  }
+  return { adv, dis, by };
+}
+// One word for an Advantage state, '' when there is none or both cancel (PHB p.360).
+export const advWord = (a: { adv: boolean; dis: boolean }) => (a.adv && !a.dis ? 'Advantage' : a.dis && !a.adv ? 'Disadvantage' : '');
+
 // Armor table: name, category, base AC; a Shield adds 2. One suit of armor and one Shield at a time (PHB p.219).
 export const ARMORS: [string, ArmorKind, number][] = [
   ['Padded Armor', 'light', 11], ['Leather Armor', 'light', 11], ['Studded Leather Armor', 'light', 12],
@@ -952,8 +967,11 @@ export function normalize(c0: Character): Character {
   if (c.hp > top || c.pactUsed > c.pactMax) changed = true;
   // Last, the companions and forms (a Concentration they end clears its castFx here too), cast state of effects no
   // longer on, then a spent Spell Scroll whose effect has ended (castFromScroll).
-  return dropSpentScrolls(fixCastFx(fixCreatures(changed ? { ...c, res, inv, hp: Math.min(c.hp, top), pactUsed: Math.min(c.pactUsed, c.pactMax) } : c)));
+  return fixInitRoll(dropSpentScrolls(fixCastFx(fixCreatures(changed ? { ...c, res, inv, hp: Math.min(c.hp, top), pactUsed: Math.min(c.pactUsed, c.pactMax) } : c))));
 }
+// The rolled Initiative total (Character.initRoll): a whole number 1–99 stays, anything else goes.
+const fixInitRoll = (c: Character): Character =>
+  !('initRoll' in c) || (Number.isInteger(c.initRoll) && c.initRoll! >= 1 && c.initRoll! <= 99) ? c : withoutKeys(c, ['initRoll']);
 
 // Resource groups: a custom type name, else the source kind, else Other. Source kinds in SRC_KINDS order, then custom
 // names A–Z.
@@ -1045,7 +1063,7 @@ export function longRest(c: Character): Character {
     Object.values(c.abilAdj).some((v) => (v || 0) < 0) ? ', reduced ability scores restored' : ''
   ].join('');
   return {
-    ...withoutKeys(c, ['hdLast']), maxHp, abilAdj, hp: maxHpOf({ ...c, maxHp, abilAdj }), temp: 0, slotUsed: slots([]), pactUsed: 0, hdUsed: {}, ds: 0, df: 0, acOn: [], effectsOn: [],
+    ...withoutKeys(c, ['hdLast', 'initRoll']), maxHp, abilAdj, hp: maxHpOf({ ...c, maxHp, abilAdj }), temp: 0, slotUsed: slots([]), pactUsed: 0, hdUsed: {}, ds: 0, df: 0, acOn: [], effectsOn: [],
     hpUndo: null, ...setConc(null), res, inv, exh: Math.max(0, c.exh - 1),
     ...(c.creatures ? { creatures: c.creatures.map((k) => (endsNow(k) ? { ...k, on: false } : k)) } : {}),
     restMsg: {
@@ -1066,7 +1084,7 @@ export function shortRest(c: Character, rolls?: Record<string, number>): Charact
   // Pact Magic slots come back on a Short Rest (PHB p.154); they are their own pool, so other slots stay spent.
   const slotsBack = c.pactUsed > 0;
   return {
-    ...withoutKeys(c, ['hdLast']), res, inv, ...(slotsBack ? { pactUsed: 0 } : {}),
+    ...withoutKeys(c, ['hdLast', 'initRoll']), res, inv, ...(slotsBack ? { pactUsed: 0 } : {}),
     restMsg: {
       title: 'Short Rest',
       body: (slotsBack ? 'Spell slots restored. ' : '') +
@@ -1348,6 +1366,7 @@ function grantLabel(c: Character, g: Grant): string {
     case 'tempHp': return v + ' Temporary HP when switched on';
     case 'checkAdv': {
       if (g.target === 'init') return (g.adv === 'dis' ? 'Disadvantage' : 'Advantage') + ' on Initiative' + (g.note ? ' (' + g.note + ')' : '');
+      if (g.target === 'spellAtk') return (g.adv === 'dis' ? 'Disadvantage' : 'Advantage') + ' on spell attacks' + (g.note ? ' (' + g.note + ')' : '');
       const t = SKILLS.find(([k]) => k === g.target)?.[1] ?? ABILITIES.find(([k]) => k === g.target)?.[1] ?? g.target;
       return (g.adv === 'dis' ? 'Disadvantage' : 'Advantage') + ' on ' + t + ' checks' + (g.note ? ' (' + g.note + ')' : '');
     }
@@ -1361,7 +1380,7 @@ function grantTarget(g: Grant): PillTarget {
   if (ABILITY_GRANTS.includes(g.kind) || (g.kind === 'prof' && ['skill', 'save', 'expertise', 'half'].includes(g.cat ?? ''))) return { sec: 'sec-abilities' };
   if (g.kind === 'prof') return { tab: 'features' };
   if (VITAL_GRANTS.includes(g.kind)) return { sec: 'sec-vitals' };
-  if (g.kind === 'checkAdv') return { sec: 'sec-senses' };
+  if (g.kind === 'checkAdv') return g.target === 'spellAtk' ? { tab: 'spells' } : { sec: 'sec-senses' };
   if (g.kind === 'aura') return { sec: 'sec-conditions' };
   if (g.kind === 'hpLvl' || g.kind === 'hpFlat' || g.kind === 'tempHp') return { sec: 'sec-hp' };
   if (g.kind === 'casting' || g.kind === 'spell' || g.kind === 'spellAtk' || g.kind === 'spellDc') return { tab: 'spells' };

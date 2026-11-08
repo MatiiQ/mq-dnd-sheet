@@ -299,6 +299,8 @@ export function migrate(data: unknown): Character {
   }
   // castFx is optional and absent by default (blankCharacter has none), so it is copied here; normalize() cleans it.
   if (raw.castFx !== undefined) d.castFx = raw.castFx;
+  // initRoll is optional and absent by default; normalize() keeps only a whole number 1–99.
+  if (raw.initRoll !== undefined) d.initRoll = raw.initRoll as number;
   // creatures is optional and absent by default too; atk and conds are the one list and record a creature may hold.
   if (Array.isArray(raw.creatures)) {
     d.creatures = raw.creatures.filter((x) => isObj(x) && isEntry({ ...x, atk: null, conds: null })).map((x) => cleanCreature(x as Raw))

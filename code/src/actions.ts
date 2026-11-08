@@ -3,8 +3,8 @@
 import { slug, type SpellPart } from './catalog/schema';
 import { valueAt } from './catalog/value';
 import { hasProp, isWeapon, twoHanded, versatile, weaponKind, weaponMatches, weaponsHeld } from './hands';
-import { activeGrants, isActive, linkOf, sourceLabel, sourceOf } from './links';
-import { ABILITIES, abilityMod, charLevel, abilityName, castAbOf, fmt, normName, num, partsTotal, profBonus, profList, hasProf, saveDc, spellAttackFor, spellSaveDcFor, spellUsable, valueCtx, type AcPart } from './logic';
+import { activeGrants, hasActiveEffect, isActive, isOn, linkOf, sourceLabel, sourceOf } from './links';
+import { ABILITIES, abilityMod, charLevel, abilityName, castAbOf, fmt, normName, num, partsTotal, profBonus, profList, hasProf, saveDc, spellAttackFor, spellSaveDcFor, spellUsable, toggleEffect, valueCtx, type AcPart } from './logic';
 import type { Ability, Character, Econ, Feature, Grant, Item, Resource, Spell } from './types';
 
 // The "Weapons not held" list: weapons not in hand, equipped first. A weapon inside a container is left out: the player
@@ -344,7 +344,8 @@ function spellRow(c: Character, sp: Spell, r: RowFields): Omit<SpellAction, 'nam
 // Dice or numbers from a grant, at the level (valueAt: num reads dice as 0), with a real minus.
 const valueText = (c: Character, v: string, g?: Grant) => String(valueAt(v, valueCtx(c, g))).replace(/-/g, '−');
 
-export interface FeatureAction { grantId: string; name: string; econ: Econ; dice?: string; resId?: string; regainTo?: number | 'all'; dc?: number; source?: string; note?: string }
+// effect: the source's link when the feature has an effect to switch on (Innate Sorcery, Rage); its row shows the switch.
+export interface FeatureAction { grantId: string; name: string; econ: Econ; dice?: string; resId?: string; effect?: string; regainTo?: number | 'all'; dc?: number; source?: string; note?: string }
 // The counter of the feature with this catalog id (a Domain's option spends the class's Channel Divinity).
 export function resOfFeature(c: Character, cid: string): Resource | undefined {
   const f = c.feats.find((x) => x.cid === cid);
@@ -357,9 +358,18 @@ export const featureActions = (c: Character): FeatureAction[] => activeGrants(c,
   return {
     grantId: g.id, name: g.name, econ: g.econ ?? 'other', ...(g.dice ? { dice: valueText(c, g.dice, g) } : {}), ...(resId ? { resId } : {}),
     ...(g.dc ? { dc: saveDc(c, g) } : {}), ...(g.regainTo ? { regainTo: g.regainTo === 'all' ? 'all' as const : num(c, g.regainTo, g) } : {}),
-    ...(source ? { source } : {}), ...(g.note ? { note: g.note } : {})
+    ...(source ? { source } : {}), ...(g.note ? { note: g.note } : {}), ...(g.from && hasActiveEffect(c, g.from) ? { effect: g.from } : {})
   };
 });
+// Switching a feature's effect on from its Actions row spends one use of the row's counter: using the feature is what
+// turns it on (Innate Sorcery, PHB p.140). null at 0 uses. Switching off gives nothing back.
+export function switchFeatureEffect(c: Character, link: string, resId?: string): Partial<Character> | null {
+  if (isOn(c, link)) return toggleEffect(c, link);
+  const r = resId ? c.res.find((x) => x.id === resId) : undefined;
+  if (r && r.count <= 0) return null;
+  const p = toggleEffect(c, link);
+  return r ? { ...p, res: c.res.map((x) => (x.id === r.id ? { ...x, count: x.count - 1 } : x)) } : p;
+}
 
 export interface ExtraDamage { key: string; name: string; dice: string; dtype?: string; when: string; source?: string; manual?: boolean }
 // Extra damage on a hit: active xdmg grants (Sneak Attack's dice at the level, Hunter's Mark while concentrating on

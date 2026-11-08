@@ -145,7 +145,7 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
       )}
 
       {/* A count per die size instead of one pip per die, so each stays on one row up to level 20. */}
-      {pools.map((p) => (
+      {pools.map((p, i) => (
         <div key={p.die} className="row gap-10">
           <DieBadge value={'d' + p.die} />
           <div className="col" role="group" aria-label={'d' + p.die + ' Hit Dice: ' + (p.size - p.used) + ' of ' + p.size + ' left'} style={{ lineHeight: 1.1 }}>
@@ -156,16 +156,19 @@ export function HitPoints({ hdPrompt, setHdPrompt }: { hdPrompt: boolean; setHdP
             <Step label={'Remove a d' + p.die + ' Hit Die'} onClick={() => update((x) => ({ hdUsed: { ...x.hdUsed, [p.die]: Math.min(p.size, p.used + 1) } }))}>−</Step>
             <Step label={'Restore a d' + p.die + ' Hit Die'} onClick={() => update((x) => ({ hdUsed: { ...x.hdUsed, [p.die]: Math.max(0, p.used - 1) } }))}>+</Step>
           </div>
+          {/* Spend sits on the first die row; with several die sizes the select picks which one it spends. */}
+          {i === 0 && (
+            <div className="row gap-10" style={{ marginLeft: 'auto' }}>
+              {pools.length > 1 && (
+                <select className="input" aria-label="Hit Die size" value={String(pool?.die ?? '')} onChange={(e) => setDieChoice(Number(e.target.value) as Die)}>
+                  {pools.map((q) => <option key={q.die} value={q.die} disabled={q.used >= q.size}>d{q.die}</option>)}
+                </select>
+              )}
+              <button type="button" className="btn" style={{ fontSize: 14, padding: '0 12px' }} aria-disabled={!canSpendHD} onClick={spendHD}>Spend Hit Die</button>
+            </div>
+          )}
         </div>
       ))}
-      <div className="row gap-10">
-        {pools.length > 1 && (
-          <select className="input" aria-label="Hit Die size" value={String(pool?.die ?? '')} onChange={(e) => setDieChoice(Number(e.target.value) as Die)}>
-            {pools.map((p) => <option key={p.die} value={p.die} disabled={p.used >= p.size}>d{p.die}</option>)}
-          </select>
-        )}
-        <button type="button" className="btn" style={{ fontSize: 14, padding: '0 12px', marginLeft: 'auto' }} aria-disabled={!canSpendHD} onClick={spendHD}>Spend Hit Die</button>
-      </div>
       {hdPrompt && <Notice className="notice-blue" label="Dismiss Hit Die note" onClose={() => setHdPrompt(false)}>Hit Die spent. Roll {hdRoll} (minimum 1), type the total in Amount above, then tap Heal.</Notice>}
 
       {c.hp === 0 && (

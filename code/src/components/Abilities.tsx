@@ -28,6 +28,9 @@ function AbilityCard({ k, name }: { k: Ability; name: string }) {
   const { c, update, edit } = useSheet();
   const wide = useWide();
   const [open, setOpen] = useState(false);
+  // Rows ('save' or a skill key) whose granted source is shown outside Edit mode, after a tap. UI state only.
+  const [shown, setShown] = useState<string[]>([]);
+  const toggleShown = (key: string) => setShown((l) => (l.includes(key) ? l.filter((x) => x !== key) : [...l, key]));
   const cur = effScore(c, k), base = c.abil[k], changed = cur !== base;
   const saveProf = !!c.saveProf[k];
   // A grant can make a save proficient on top of the hand toggle; the dot shows the result and names the grant.
@@ -42,7 +45,7 @@ function AbilityCard({ k, name }: { k: Ability; name: string }) {
     return next < 1 || next > 30 ? {} : { abilAdj: { ...p.abilAdj, [k]: adj + d } };
   });
   const saveText = fmt(saveMod(c, k));
-  const saveRow = <><ProfDot level={save.on ? 1 : 0} /><span className="grow col" style={{ fontWeight: 600 }}>Saving Throw{save.by && <span className="small">Proficient from {save.by}</span>}</span><span style={{ fontWeight: 700 }}>{saveText}</span></>;
+  const saveRow = <><ProfDot level={save.on ? 1 : 0} /><span className="grow col" style={{ fontWeight: 600 }}>Saving Throw{save.by && (edit || shown.includes('save')) && <span className="small">Proficient from {save.by}</span>}</span><span style={{ fontWeight: 700 }}>{saveText}</span></>;
 
   return (
     <div className="card" style={{ gap: 2 }}>
@@ -87,6 +90,10 @@ function AbilityCard({ k, name }: { k: Ability; name: string }) {
           onClick={() => update((p) => ({ saveProf: { ...p.saveProf, [k]: !p.saveProf[k] } }))}>
           {saveRow}
         </button>
+      ) : save.by ? (
+        <button type="button" className="row gap-10 save-row row-tap" aria-expanded={shown.includes('save')} onClick={() => toggleShown('save')}>
+          {saveRow}
+        </button>
       ) : (
         <div className="row gap-10 save-row">
           {saveRow}
@@ -99,14 +106,20 @@ function AbilityCard({ k, name }: { k: Ability; name: string }) {
         const modText = fmt(skillMod(c, key, k));
         const armor = key === 'stealth' ? stealthDisBy(c) : undefined;
         const dis = armor && <span className="small">Disadvantage from {armor.name}</span>;
-        const label = <><ProfDot level={lv} /><span className="grow col">{skill}{by && <span className="small">{LEVEL_NAMES[lv]} from {by}</span>}{dis}</span></>;
+        // The granted level leads; the hand value shows only when it is set (it is below the granted one whenever by is).
+        const status = by ? LEVEL_NAMES[lv] + ' from ' + by + (hand ? ' · ' + LEVEL_NAMES[hand] + ' set by hand' : '') : LEVEL_NAMES[hand];
+        const label = <><ProfDot level={lv} /><span className="grow col">{skill}{by && shown.includes(key) && <span className="small">{LEVEL_NAMES[lv]} from {by}</span>}{dis}</span></>;
         return edit ? (
-          <button key={key} type="button" aria-label={skill + ': ' + LEVEL_NAMES[hand] + (by ? ', ' + LEVEL_NAMES[lv] + ' from ' + by : '') + '. Tap to change.'} className="row gap-10 abil-edit-row skill-edit"
+          <button key={key} type="button" aria-label={skill + ': ' + status + '. Tap to change.'} className="row gap-10 abil-edit-row skill-edit"
             style={{ cursor: 'pointer', background: 'transparent', border: 'none', borderBottom: '1px dashed var(--line)', minHeight: 44, textAlign: 'left' }}
             onClick={() => update((p) => ({ skillProf: { ...p.skillProf, [key]: ((p.skillProf[key] || 0) + 1) % 3 } }))}>
             <ProfDot level={lv} />
-            <span className="grow skill-edit-name"><span>{skill}</span><span className="small">{LEVEL_NAMES[hand]}{by && ' · ' + LEVEL_NAMES[lv] + ' from ' + by}</span>{dis}</span>
+            <span className="grow skill-edit-name"><span>{skill}</span><span className="small">{status}</span>{dis}</span>
             <span className="skill-edit-mod">{modText}</span>
+          </button>
+        ) : by ? (
+          <button key={key} type="button" className="row gap-10 skill-row row-tap" aria-expanded={shown.includes(key)} onClick={() => toggleShown(key)}>
+            {label}<span style={{ fontWeight: 600 }}>{modText}</span>
           </button>
         ) : (
           <div key={key} className="row gap-10 skill-row">

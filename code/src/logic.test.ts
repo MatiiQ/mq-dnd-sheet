@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { newId } from './logic';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
-import { ABILITIES, charLevel, hasHistory, setBaseRows, valueCtx, profBonus, regainLabel, speedOf, grantChips, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, carriedWeight, carryCapacity, fmt, hitDieRoll, hpColor, hpRingStops, initiative, initiativeAdv, parseWeight, passiveScore, passiveParts, passiveNotes, pillView, resPill, setPill, preparedCount, saveMod, skillMod, slotsLeft, num, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable } from './logic';
+import { ABILITIES, charLevel, hasHistory, setBaseRows, valueCtx, profBonus, regainLabel, speedOf, grantChips, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, carriedWeight, carryCapacity, fmt, hitDieRoll, hpColor, hpRingStops, initiative, initiativeAdv, parseWeight, passiveScore, passiveParts, passiveNotes, pillView, resPill, setPill, preparedCount, saveMod, skillMod, slotsLeft, num, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, advWord, spellAtkAdv, shortRest, longRest } from './logic';
 import { migrate } from './migrate';
 import { extraDamage } from './actions';
 import { inactiveReason } from './links';
@@ -582,5 +582,36 @@ describe('Speed floor', () => {
   });
   it('reads as a floor in its chip', () => {
     expect(grantChips(make({ grants: [fl] }), 'feature:f10').map((x) => x.label)).toContain('Speed at least 30 ft');
+  });
+});
+
+describe('rolled Initiative total (initRoll)', () => {
+  it('keeps a whole number 1–99 and drops anything else', () => {
+    expect(normalize(make({ initRoll: 17 })).initRoll).toBe(17);
+    for (const bad of [0, 100, 2.5, NaN, undefined]) expect('initRoll' in normalize(make({ initRoll: bad }))).toBe(false);
+    expect('initRoll' in normalize(make({ initRoll: '12' as unknown as number }))).toBe(false);
+  });
+  it('is cleared by a Short or Long Rest', () => {
+    expect('initRoll' in shortRest(make({ initRoll: 14 }))).toBe(false);
+    expect('initRoll' in longRest(make({ initRoll: 14 }))).toBe(false);
+  });
+  it('survives migrate() when valid', () => {
+    expect(migrate({ ...make(), initRoll: 9 }).initRoll).toBe(9);
+    expect('initRoll' in migrate({ ...make(), initRoll: -3 })).toBe(false);
+  });
+});
+
+describe('spell attack Advantage (checkAdv target spellAtk)', () => {
+  // Innate Sorcery: Advantage on Sorcerer spell attacks while active (PHB p.140).
+  const g = gr({ kind: 'checkAdv', name: 'Innate Sorcery', target: 'spellAtk', adv: 'adv', when: 'active' });
+  it('counts only while the effect is on, and not for "all checks" grants', () => {
+    expect(advWord(spellAtkAdv(make({ grants: [g] })))).toBe('');
+    const on = make({ grants: [g], effectsOn: ['feature:f10'] });
+    expect(advWord(spellAtkAdv(on))).toBe('Advantage');
+    expect(spellAtkAdv(make({ grants: [gr({ kind: 'checkAdv', target: 'all', adv: 'adv' })] })).adv).toBe(false);
+  });
+  it('cancels with Disadvantage (PHB p.360)', () => {
+    const dis = gr({ id: 'g2', kind: 'checkAdv', target: 'spellAtk', adv: 'dis' });
+    expect(advWord(spellAtkAdv(make({ grants: [g, dis], effectsOn: ['feature:f10'] })))).toBe('');
   });
 });

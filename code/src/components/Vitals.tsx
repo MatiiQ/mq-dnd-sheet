@@ -1,14 +1,16 @@
-import type { CSSProperties } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { armorClass, charLevel, armorSlowBy, fmt, untrainedArmor, initiative, initiativeAdv, modeSpeed, profBonus, speedNow, speedOf, UNARMORED, walkSpeed, zeroSpeedBy } from '../logic';
 import { removeEntry, saveEntry, useEntryForm, useSheet } from '../sheet';
 import type { AcMod, SpeedKind, Unarmored } from '../types';
-import { AddButton, Caret, EntryActions, EntryForm, NumInput, PartTiles, Step, TextField } from './ui';
+import { AddButton, Caret, EntryActions, EntryForm, NumInput, PartTiles, Step, TextField, TypeInNumber, XIcon } from './ui';
 
 const SPEEDS: ['walk' | SpeedKind, string][] = [['walk', 'Walk'], ['climb', 'Climb'], ['swim', 'Swim'], ['fly', 'Fly'], ['burrow', 'Burrow']];
 
 export function Vitals() {
   const { c, update, edit } = useSheet();
   const ac = armorClass(c);
+  // The Initiative panel (the rolled total of this combat) is UI state; the total itself is saved (initRoll).
+  const [initOpen, setInitOpen] = useState(false);
   const untrained = untrainedArmor(c);
   // The first part is the base AC and shows as a bare number; every other part is a signed bonus.
   const acValue = (v: number, i: number) => (i === 0 ? String(v) : fmt(v));
@@ -40,10 +42,13 @@ export function Vitals() {
           <span className="row gap-4 stat-label">Armor class<Caret open={c.acOpen} /></span>
           {acHint && <span className="stat-hint">{acHint}</span>}
         </button>
-        <div className="stat" aria-label={'Initiative ' + fmt(initiative(c)) + (initAdv ? ', ' + initAdv + ' (' + ia.by.join(', ') + ')' : '')}>
-          <span className="stat-value">{fmt(initiative(c))}</span><span className="stat-label">Initiative</span>
+        <button type="button" className={'stat' + (initOpen ? ' open' : '')} onClick={() => setInitOpen(!initOpen)} aria-expanded={initOpen} aria-controls="init-panel"
+          aria-label={'Initiative ' + fmt(initiative(c)) + (initAdv ? ', ' + initAdv + ' (' + ia.by.join(', ') + ')' : '') + (c.initRoll !== undefined ? ', rolled ' + c.initRoll : '') + '. Set the rolled total.'}>
+          <span className="stat-value">{fmt(initiative(c))}</span>
+          <span className="row gap-4 stat-label">Initiative<Caret open={initOpen} /></span>
+          {c.initRoll !== undefined && <span className="stat-roll">Rolled {c.initRoll}</span>}
           {initAdv && <span className="stat-hint">{initAdv === 'Advantage' ? 'Adv' : 'Dis'}</span>}
-        </div>
+        </button>
         <button type="button" className={'stat' + (c.speedOpen ? ' open' : '')} onClick={() => update({ speedOpen: !c.speedOpen })} aria-expanded={c.speedOpen} aria-controls="speed-panel">
           <span className="stat-value" style={{ color: zeroBy.length ? 'var(--danger)' : undefined }}>{speedNow(c)}<span className="stat-unit"> ft</span></span>
           <span className="row gap-4 stat-label">Speed<Caret open={c.speedOpen} /></span>
@@ -51,6 +56,19 @@ export function Vitals() {
         </button>
         <div className="stat"><span className="stat-value">+{profBonus(charLevel(c))}</span><span className="stat-label">Proficiency</span></div>
       </div>
+
+      {initOpen && (
+        <div id="init-panel" className="block">
+          <h2 className="block-title">Initiative</h2>
+          <div className="row gap-8">
+            <label className="row gap-8">Rolled total this combat
+              <TypeInNumber className="input input-num" style={{ width: 64 }} aria-label="Rolled initiative total" value={c.initRoll ?? 0} onCommit={(v) => update({ initRoll: v })} />
+            </label>
+            {c.initRoll !== undefined && <button type="button" className="icon-btn faint" aria-label="Clear the rolled initiative" onClick={() => update({ initRoll: undefined })}><XIcon /></button>}
+          </div>
+          <span className="small">Bonus {fmt(initiative(c))}{initAdv ? ', ' + initAdv + ' (' + ia.by.join(', ') + ')' : ''}. A Short or Long Rest clears the total.</span>
+        </div>
+      )}
 
       {c.acOpen && (
         <div id="ac-panel" className="block">

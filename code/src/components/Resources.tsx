@@ -136,7 +136,7 @@ export function Resources() {
               return (
                 f.editingId === r.id ? <div key={r.id}>{form}</div> : (
                 <EntryRow key={r.id} id={'res-' + r.id} name={r.name} className={'res-entry' + (edit ? '' : ' res-fixed') + (why ? ' inactive' : '')}
-                  head={<><strong>{r.name}</strong><span className="muted">{why ? 'Inactive: ' + why : r.note || 'Custom resource'}</span></>}
+                  head={<><strong>{r.name}</strong><span className="muted">{why ? 'Inactive: ' + why : r.note || src || 'Custom resource'}</span></>}
                   side={
                     <div className="res-count">
                       <Step label={'Decrease ' + r.name} onClick={() => bump(r.id, -1)}>−</Step>

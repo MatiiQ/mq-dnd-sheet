@@ -207,6 +207,8 @@ export interface Character {
   /** Cast state per effect source ('spell:<id>'): the slot level, the item it is on. Optional and absent by default:
    *  frozen saves have no such key. Kept by normalize() only while the effect is on. */
   castFx?: Record<string, FxState>;
+  /** The rolled Initiative total of the current combat (optional, absent by default): 1–99, cleared by a rest. */
+  initRoll?: number;
   /** Companions and forms (optional, absent by default: frozen saves have no such key). */
   creatures?: Creature[];
   /** Weapons in hand: item ids, oldest first, one entry per hand (a Two-Handed weapon or a Versatile one in two hands twice). Changed only through setHands (hands.ts). */

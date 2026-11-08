@@ -3329,6 +3329,14 @@
         "name": "Innate Sorcery",
         "val": "1",
         "when": "active"
+      },
+      {
+        "id": "g4",
+        "kind": "checkAdv",
+        "name": "Innate Sorcery",
+        "target": "spellAtk",
+        "adv": "adv",
+        "when": "active"
       }
     ]
   },

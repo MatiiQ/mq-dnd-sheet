@@ -184,9 +184,14 @@ export function AcTargetSwitch({ sp }: { sp: Spell }) {
   const forAc = acCanTargetOther(sp);
   if (!forAc && !effectCanTargetOther(c, sp)) return null;
   const other = !!sp.acOther;
+  // Two choices side by side, the current one pressed: a single "On: me" button read like an on/off switch.
+  const pick = (want: boolean) => () => { if (want !== other) update((p) => toggleAcTarget(p, sp.id)); };
   return (
-    <button type="button" aria-pressed={other} aria-label={'Cast ' + sp.name + ' on another creature, so ' + (forAc ? 'it adds no AC' : 'it counts only for them')} className={'btn btn-sm toggle-btn' + (other ? ' on' : '')}
-      onClick={() => update((p) => toggleAcTarget(p, sp.id))}>{other ? 'On: other' : 'On: me'}</button>
+    <div role="group" aria-label={'Who ' + sp.name + ' is cast on'} className="row gap-4">
+      <span className="small muted">Target</span>
+      <button type="button" aria-pressed={!other} aria-label={'Cast ' + sp.name + ' on me'} className={'btn btn-sm toggle-btn' + (other ? '' : ' on')} onClick={pick(false)}>Me</button>
+      <button type="button" aria-pressed={other} aria-label={'Cast ' + sp.name + ' on another creature, so ' + (forAc ? 'it adds no AC' : 'it counts only for them')} className={'btn btn-sm toggle-btn' + (other ? ' on' : '')} onClick={pick(true)}>Other</button>
+    </div>
   );
 }
 

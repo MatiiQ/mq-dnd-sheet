@@ -333,6 +333,7 @@ button.stat.open { border-radius: 12px; box-shadow: inset 0 0 0 2px var(--accent
 .stat-value { font-family: var(--serif); font-weight: 700; font-size: 28px; line-height: 1; white-space: nowrap; }
 .stat-unit { font-family: var(--sans); font-size: 12px; font-weight: 600; color: var(--muted); }
 .stat-label { font-size: 13px; font-weight: 600; color: var(--accent); line-height: 1.1; }
+.stat-roll { font-size: 12px; font-weight: 700; color: var(--text); line-height: 1.2; } /* shown in two columns too, unlike .stat-hint */
 .stat-hint { font-size: 11px; font-weight: 600; color: var(--muted); line-height: 1.2; }
 .tile { background: var(--well); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
 .speed-grid { --min: 150px; }
@@ -379,6 +380,8 @@ button.mod-token { border: none; color: inherit; cursor: pointer; padding: 0; }
 .abil-grid { --min: 300px; gap: 12px; } /* cards stretch to the tallest in their row */
 .save-row { border-bottom: 1px solid var(--line); min-height: 36px; padding: 0 2px; }
 .skill-row { min-height: 34px; padding: 0 2px; }
+.row-tap { width: 100%; background: transparent; border: none; border-radius: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; } /* a row that shows its source on tap */
+.save-row.row-tap { border-bottom: 1px solid var(--line); }
 .save-edit { padding: 0 10px; }
 .skill-edit { padding: 0 2px; }
 .skill-edit-mod { font-weight: 600; min-width: 28px; text-align: right; }
