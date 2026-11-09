@@ -244,25 +244,30 @@ export function replayOrigin(cat: Catalog, a: CreatorAnswers, opts: { fill?: boo
 // from a.skills the origin doesn't give (screens only: Expertise offers them); before[n−1] for n ≥ 2: the character
 // after level n−1. fill (the creator): a level whose screens aren't all ready is skipped silently and stops the loop;
 // without it, today's replay (an unfinished level is reported).
+// levels[n−1]: level n's plan, raised character and screens as replaySteps' readiness check (fill) worked them out, so
+// creatorScreens lists them without building them again.
+export interface LevelWork { plan: Plan; raised: Character; screens: LevelScreenSpec[] }
 export interface ReplaySteps {
   before: Character[]; c: Character; dropped: string[];
   originFor: { background: Character; species: Character; full: Character };
   failed: { background?: string; species?: string; languages?: string };
+  levels: LevelWork[];
 }
 const SKIP_SKILLS = (s: Step) => s.key === 'profs/skills';
 // A level's answers and class: level 1 is a.first with a.cls, level n ≥ 2 is a.levels[n − 2] (or its default).
 const levelAt = (a: CreatorAnswers, n: number) => (n === 1 ? { pick: { cls: a.cls } as CreatorAnswers['levels'][number]['pick'], ans: a.first } : a.levels[n - 2] ?? defaultLevel(a, n - 2));
-function levelReady(cat: Catalog, before: Character, pick: ClassPick, ans: LevelAnswers, n: number): boolean {
+function levelWork(cat: Catalog, before: Character, pick: ClassPick, ans: LevelAnswers, n: number): LevelWork | null {
   const plan = levelPlan(before, pick, cat, ans);
-  if (!plan) return false;
+  if (!plan) return null;
   const raised = withLevel(before, pick, cat).c;
-  return levelScreens(raised, plan, cat, ans, { review: false, ...(n === 1 ? { skip: SKIP_SKILLS } : {}) }).every((x) => x.ready);
+  return { plan, raised, screens: levelScreens(raised, plan, cat, ans, { review: false, ...(n === 1 ? { skip: SKIP_SKILLS } : {}) }) };
 }
+const workReady = (w: LevelWork | null) => !!w && w.screens.every((x) => x.ready);
 export function replaySteps(cat: Catalog, a: CreatorAnswers, opts: { fill?: boolean } = {}): ReplaySteps {
   const o = replayOrigin(cat, a, opts);
-  const dropped = [...o.dropped], before: Character[] = [];
+  const dropped = [...o.dropped], before: Character[] = [], levels: LevelWork[] = [];
   let c = o.c;
-  const done = (): ReplaySteps => ({ before, c, dropped, originFor: o.originFor, failed: o.failed });
+  const done = (): ReplaySteps => ({ before, c, dropped, originFor: o.originFor, failed: o.failed, levels });
   const cls = cat.byId.get(a.cls);
   if (cls?.kind !== 'class') return done();
   // Level 1: the class skill flow comes from `skills`, minus skills the origin already gives.
@@ -270,7 +275,11 @@ export function replaySteps(cat: Catalog, a: CreatorAnswers, opts: { fill?: bool
   for (const k of held) dropped.push('Class skill ' + k + ': already proficient from your origin');
   before.push({ ...c, skillProf: { ...c.skillProf, ...Object.fromEntries(a.skills.map((k) => [k, Math.max(1, c.skillProf[k] ?? 0)])) } });
   const firstAns = uncountLevel(a.first);
-  if (opts.fill && !levelReady(cat, before[0], { cls: a.cls }, firstAns, 1)) return done();
+  if (opts.fill) {
+    const w = levelWork(cat, before[0], { cls: a.cls }, firstAns, 1);
+    if (w) levels.push(w);
+    if (!workReady(w)) return done();
+  }
   const flows = Object.fromEntries(Object.entries(firstAns.flows).filter(([k]) => k !== 'profs' && k !== 'profs/skills'));
   const first: LevelAnswers = { ...firstAns, flows: { ...flows, 'profs/skills': { '': { picks: { skills: a.skills.filter((k) => !held.includes(k)) }, counted: {}, links: {} } } } };
   try {
@@ -288,9 +297,14 @@ export function replaySteps(cat: Catalog, a: CreatorAnswers, opts: { fill?: bool
     const n = i + 2;
     if (n > start) { dropped.push('Level ' + n + ': above the starting level'); continue; }
     const L = a.levels[i], ans = uncountLevel(L.ans);
-    if (opts.fill && !levelReady(cat, c, L.pick as ClassPick, ans, n)) break;
+    let w: LevelWork | null = null;
+    if (opts.fill) {
+      w = levelWork(cat, c, L.pick as ClassPick, ans, n);
+      if (w) levels[n - 1] = w;
+      if (!workReady(w)) break;
+    }
     try {
-      const plan = levelPlan(c, L.pick as ClassPick, cat, ans);
+      const plan = w?.plan ?? levelPlan(c, L.pick as ClassPick, cat, ans);
       if (!plan) throw new Error('no level to gain');
       c = applyLevel(c, plan, ans, cat, { noLinks: true }).c;
       if (n < start) before.push(c);
@@ -400,13 +414,12 @@ export function creatorScreens(cat: Catalog, a: CreatorAnswers, opts: { fill?: b
     if (!screens.every((x) => x.ready)) break;
     const before = r.before[n - 1];
     if (!before) break;
-    const L = levelAt(a, n), ans = uncountLevel(L.ans);
-    const pick = L.pick as ClassPick;
-    const plan = levelPlan(before, pick, cat, ans);
-    if (!plan) break;
-    const raised = withLevel(before, pick, cat).c;
+    const L = levelAt(a, n);
+    const w = r.levels[n - 1] ?? levelWork(cat, before, L.pick as ClassPick, uncountLevel(L.ans), n);
+    if (!w) break;
+    const { plan, raised } = w;
     const stage = `level/${n}` as StageId;
-    for (const spec of levelScreens(raised, plan, cat, ans, { review: false, ...(n === 1 ? { skip: SKIP_SKILLS } : {}) })) {
+    for (const spec of w.screens) {
       const waiting = spec.kind === 'features' && n > 1 && !a.levels[n - 2];
       push(stage, `level/${n}/${spec.key}`, spec.title, { kind: 'level', n, c: raised, plan, screen: spec, before },
         waiting ? not('Open this level to choose its class') : { ready: spec.ready, ...(spec.missing ? { missing: spec.missing } : {}) });
