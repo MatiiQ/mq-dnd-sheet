@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import srdEntries from '../data/srd/index';
 import { mergeCatalog, rekeyPack } from './merge';
-import { catalogId, PHB_TO_SRD, slug, type BackgroundEntry, type Entry, type FeatEntry } from './schema';
+import { catalogId, PHB_TO_SRD, slug, type BackgroundEntry, type ClassEntry, type Entry, type FeatEntry } from './schema';
 
 // A minimal spell whose name slugs back to the id's last part, as the builders make it.
 const entry = (id: string, src: 'srd' | 'phb'): Entry => ({ id, kind: 'spell', name: id.split('/').pop()!, src, desc: 'x', lvl: 1, school: 'Abjuration',
@@ -9,6 +9,18 @@ const entry = (id: string, src: 'srd' | 'phb'): Entry => ({ id, kind: 'spell', n
 const spellAlias = () => Object.entries(PHB_TO_SRD).find(([, s]) => srdEntries.some((e) => e.id === catalogId('spell', s)))!;
 
 describe('mergeCatalog', () => {
+  it('a dropped pack class gives its likes, complexity and stdArray to a copy of the SRD class', () => {
+    const WIZ_ARRAY = { str: 8, dex: 12, con: 13, int: 15, wis: 14, cha: 10 };
+    const wizard: ClassEntry = { id: 'class/wizard', kind: 'class', name: 'Wizard', src: 'srd', desc: 'SRD text', hd: 6, saves: 'int,wis',
+      skills: { kind: 'choice', id: 's', name: 'Skills', pick: 2, pool: 'skill:any' }, armor: '', weapons: '' };
+    const srd: ClassEntry[] = [{ ...wizard, likes: undefined }];
+    const pack: ClassEntry[] = [{ ...wizard, src: 'phb', desc: 'PHB text', likes: 'Books', complexity: 'Average', stdArray: WIZ_ARRAY }];
+    const cat = mergeCatalog(srd, pack);
+    const w = cat.byId.get('class/wizard') as ClassEntry;
+    expect([w.likes, w.complexity, w.stdArray, w.desc]).toEqual(['Books', 'Average', WIZ_ARRAY, wizard.desc]);
+    expect(srd[0].likes).toBeUndefined();
+    expect(cat.list).toContain(w);
+  });
   it('keeps the SRD entry unless the pack entry is marked to replace it', () => {
     const srd = [entry('spell/aid', 'srd'), entry('spell/bless', 'srd')];
     expect(mergeCatalog(srd, [entry('spell/aid', 'phb')]).byId.get('spell/aid')!.src).toBe('srd');

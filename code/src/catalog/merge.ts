@@ -34,9 +34,18 @@ export function rekeyPack(pack: Entry[]): Entry[] {
 }
 
 // A pack entry whose id the SRD already has is dropped unless it is marked `replace`; the list is sorted by kind, then name.
+// A dropped pack class still gives a copy of the SRD class the creator's fields it lacks (likes, complexity, stdArray).
+const CLASS_EXTRAS = ['likes', 'complexity', 'stdArray'] as const;
 export function mergeCatalog(srd: Entry[], pack: Entry[] | null): Catalog {
   const byId = new Map(srd.map((e) => [e.id, e]));
-  for (const e of pack ? rekeyPack(pack) : []) if (!byId.has(e.id) || e.replace) byId.set(e.id, e);
+  for (const e of pack ? rekeyPack(pack) : []) {
+    const old = byId.get(e.id);
+    if (!old || e.replace) byId.set(e.id, e);
+    else if (e.kind === 'class' && old.kind === 'class') {
+      const extra = Object.fromEntries(CLASS_EXTRAS.filter((k) => old[k] === undefined && e[k] !== undefined).map((k) => [k, e[k]]));
+      if (Object.keys(extra).length) byId.set(e.id, { ...old, ...extra });
+    }
+  }
   const list = [...byId.values()].sort((a, b) => (a.kind < b.kind ? -1 : a.kind > b.kind ? 1 : a.name.localeCompare(b.name)));
   return { list, byId };
 }
