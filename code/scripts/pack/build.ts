@@ -6,7 +6,7 @@ import type { Entry } from '../../src/catalog/schema.ts';
 import { applyOverlay, type Overlay } from '../lib/overlay.ts';
 import { normText } from '../lib/text.ts';
 import { checkEntries } from '../lib/write.ts';
-import { parseClassMd, parseEquipmentMd, parseFeatsMd, parseOriginsMd, parseSpellsMd } from './parse.ts';
+import { parseClassMd, parseClassTablesMd, parseEquipmentMd, parseFeatsMd, parseOriginsMd, parseSpellsMd } from './parse.ts';
 
 const root = new URL('../../../', import.meta.url);
 const ref = (p: string) => new URL(`reference/${p}`, root);
@@ -38,16 +38,24 @@ for (const u of jsonFiles(ref('authored/'))) {
   }
 }
 const entries = applyOverlay(parsed, overlay);
+// The Class Overview's likes and complexity and the Standard Array by Class go on each class (the creator's tiles).
+const classTables = parseClassTablesMd(read(ref('02-character-creation.md')));
+for (const e of entries) if (e.kind === 'class') {
+  const t = classTables[e.name];
+  if (!t) throw new Error(`${e.id}: not in the Class Overview table`);
+  Object.assign(e, t);
+}
 
 // The SRD stays by default, so the committed data and every device agree; the pack keeps PHB-only entries and the
-// ones the overlay marks to replace their SRD entry.
+// ones the overlay marks to replace their SRD entry. Classes always go in: mergeCatalog keeps the SRD class and takes
+// only likes, complexity and stdArray from the pack's.
 const srdDir = new URL('code/src/data/srd/', root);
 const srdText = jsonFiles(srdDir).map(read).join('\n');
 const srdIds = new Set(jsonFiles(srdDir).flatMap((u) => (JSON.parse(read(u)) as Entry[]).map((e) => e.id)));
-const written = checkEntries('pack', entries.filter((e) => !srdIds.has(e.id) || e.replace));
+const written = checkEntries('pack', entries.filter((e) => !srdIds.has(e.id) || e.replace || e.kind === 'class'));
 const kinds = [...new Set(entries.map((e) => e.kind))];
 for (const k of kinds) {
-  const p = entries.filter((e) => e.kind === k).length, w = written.filter((e) => e.kind === k).length, d = entries.filter((e) => e.kind === k && srdIds.has(e.id) && !e.replace).length;
+  const p = entries.filter((e) => e.kind === k).length, w = written.filter((e) => e.kind === k).length, d = entries.filter((e) => e.kind === k && srdIds.has(e.id) && !e.replace && e.kind !== 'class').length;
   if (p - d !== w) throw new Error(`${k}: parsed ${p} − dropped ${d} ≠ written ${w}`);
   console.log(`${k.padEnd(10)} parsed ${String(p).padStart(4)}  dropped ${String(d).padStart(4)}  written ${String(w).padStart(4)}`);
 }

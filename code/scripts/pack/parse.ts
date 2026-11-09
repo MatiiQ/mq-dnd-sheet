@@ -276,6 +276,30 @@ export function parseClassMd(md: string): [ClassEntry, SubclassEntry[], FeatureE
 }
 
 // A focus row names only its form ("Orb"); the table's heading gives the rest of the catalog name.
+// The Class Overview (PHB p.33: likes, complexity; Primary Ability is ignored) and the Standard Array by Class
+// (PHB p.38) tables, keyed by class name. Headings are matched by prefix. Throws on a row that isn't a permutation
+// of the Standard Array and on a class found in one table only.
+const STD_ARRAY = [15, 14, 13, 12, 10, 8];
+export function parseClassTablesMd(md: string): Record<string, { likes: string; complexity: string; stdArray: Record<Ability, number> }> {
+  const all = blocks(md);
+  const rows = (prefix: string) => {
+    const b = all.find((x) => x.depth === 3 && x.title.startsWith(prefix));
+    if (!b) throw new Error(`no "${prefix}" table`);
+    return table(b.lines);
+  };
+  const overview = rows('Class Overview'), arrays = rows('Standard Array by Class');
+  const out: Record<string, { likes: string; complexity: string; stdArray: Record<Ability, number> }> = {};
+  for (const r of overview) {
+    const a = arrays.find((x) => x.Class === r.Class);
+    if (!a) throw new Error(`${r.Class}: no Standard Array row`);
+    const stdArray = Object.fromEntries(['Str', 'Dex', 'Con', 'Int', 'Wis', 'Cha'].map((k) => [ab(k), Number(a[k])])) as Record<Ability, number>;
+    if (![...Object.values(stdArray)].sort((x, y) => y - x).every((n, i) => n === STD_ARRAY[i])) throw new Error(`${r.Class}: Standard Array row is not a permutation of 15, 14, 13, 12, 10, 8`);
+    out[r.Class] = { likes: r.Likes, complexity: r.Complexity, stdArray };
+  }
+  for (const a of arrays) if (!out[a.Class]) throw new Error(`${a.Class}: no Class Overview row`);
+  return out;
+}
+
 const FOCUS_TABLE = /^(Arcane Focus|Druidic Focus|Holy Symbol)/;
 const ARMOR_KIND: Record<string, ArmorKind> = { Light: 'light', Medium: 'medium', Heavy: 'heavy', Shield: 'shield' };
 export function parseEquipmentMd(md: string): ItemEntry[] {

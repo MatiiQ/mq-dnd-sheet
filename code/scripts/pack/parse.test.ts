@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { catalogId, PHB_TO_SRD, validateEntry } from '../../src/catalog/schema.ts';
 import { parseSpells } from '../srd/spells.ts';
-import { parseBackgroundFields, parseClassMd, parseEquipmentMd, parseFeatsMd, parseOriginsMd, parseSpellsMd } from './parse.ts';
+import { parseBackgroundFields, parseClassMd, parseClassTablesMd, parseEquipmentMd, parseFeatsMd, parseOriginsMd, parseSpellsMd } from './parse.ts';
 
 const fx = (f: string) => readFileSync(new URL(`./fixtures/${f}`, import.meta.url), 'utf8');
 
@@ -170,5 +170,19 @@ describe('text the parser used to drop', () => {
     const feats = parseClassMd(md)[2];
     expect(feats.find((f) => f.name === 'Wild Magic Surge')!.desc).toBe('Roll.\nWild Magic Surge Table\nd100 — Effect\n01-04 — Again.');
     expect(feats.find((f) => f.name === 'Tamed Surge')!.desc).toBe('Choose.');
+  });
+});
+
+describe('parseClassTablesMd', () => {
+  it('parses the Class Overview and Standard Array tables', () => {
+    const t = parseClassTablesMd(fx('class-tables.md'));
+    expect(Object.keys(t)).toEqual(['Alpha', 'Beta']);
+    expect(t.Alpha).toEqual({ likes: 'Puzzles', complexity: 'Low', stdArray: { str: 8, dex: 12, con: 13, int: 15, wis: 14, cha: 10 } });
+  });
+  it('refuses a Standard Array row that is not a permutation', () => {
+    expect(() => parseClassTablesMd(fx('class-tables.md').replace('| Beta | 15 |', '| Beta | 9 |'))).toThrow(/Beta: Standard Array row/);
+  });
+  it('refuses a class present in one table only', () => {
+    expect(() => parseClassTablesMd(fx('class-tables.md').replace('| Beta | Loud songs', '| Gamma | Loud songs'))).toThrow(/Beta|Gamma/);
   });
 });
