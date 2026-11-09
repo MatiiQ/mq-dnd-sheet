@@ -43,6 +43,7 @@ function finishLevel() {
 // A level after the first: its intro, Fixed (6) HP, then to its summary and Finish.
 function fixedLevel() {
   tap(btn('Next'));
+  tap(btn('Next')); // the features screen
   tap(btn('Fixed (6)'));
   finishLevel();
 }
@@ -163,8 +164,8 @@ describe('level 1 choices in the creator', () => {
     abilities();
     tap(btn('Next')); // details
     expect(document.body.textContent).toContain('Level 1');
-    tap(btn('Stealth'));
-    tap(btn('Add'));
+    tap(btn('Next')); // the features screen
+    tap([...document.querySelectorAll('.tile-pick')].find((b) => b.textContent?.startsWith('Stealth')));
     finishLevel();
     tap(btn('Next'));
     tap(btn('Create character'));

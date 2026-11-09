@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { mergeCatalog } from '../catalog/merge';
 import type { ClassEntry, Entry, FeatureEntry } from '../catalog/schema';
@@ -6,13 +7,18 @@ import { blankCharacter } from '../defaults';
 import { btn as button, mount, tap, type } from '../test-dom';
 import { withClass } from '../test-fixtures';
 import type { Character } from '../types';
-import { applyLevel, levelPlan } from '../levelup';
-import { LevelUpWizard, UndoLevelPrompt } from './LevelUpWizard';
+import { applyLevel, levelPlan, withLevel, type LevelAnswers, type LevelScreenSpec } from '../levelup';
+import { ClassScreen, LevelScreen, LevelUpWizard, UndoLevelPrompt } from './LevelUpWizard';
 
 const cls = (name: string, hd: 6 | 8 | 10 | 12): ClassEntry => ({ id: 'class/' + name.toLowerCase(), kind: 'class', name, src: 'srd', desc: '', hd, saves: 'str,dex',
   skills: { kind: 'choice', id: 'skills', name: 'Skills', pick: 1, pool: 'skill:any' }, armor: '', weapons: '', slots: [] });
 const feat = (c: string, s: string, lvl: number, p: Partial<FeatureEntry> = {}): FeatureEntry => ({ id: `feature/${c}/${s}`, kind: 'feature', name: s, src: 'srd', desc: '', cls: c, lvl, grants: [], ...p });
-const entries: Entry[] = [cls('Ranger', 10), cls('Warlock', 8), feat('ranger', 'roving', 2),
+const spellyChoice = { kind: 'choice' as const, id: 'c', name: 'Gift', pick: 1, options: [{ id: 'o1', kind: 'prof' as const, name: 'Elvish', cat: 'language' as const, target: 'Elvish' }] };
+const entries: Entry[] = [cls('Ranger', 10), cls('Warlock', 8), feat('ranger', 'roving', 2, { desc: 'Gains a thing. Long rest.' }),
+  feat('ranger', 'spelly', 3, { grants: [spellyChoice, { id: 'g1', kind: 'spell', name: 'Light', spell: 'Light' }] }),
+  feat('ranger', 'ability-score-improvement', 4, { grants: [{ kind: 'choice', id: 'feat', name: 'Feat', pick: 1, pool: 'feat:any' }] }),
+  { id: 'feat/ac-feat', kind: 'feat', name: 'AC Feat', src: 'srd', desc: '', cat: 'general', grants: [{ id: 'g1', kind: 'ac', name: 'AC +1', acMode: 'bonus', val: '1' }] } as Entry,
+  ...['dagger', 'spear'].map((n) => ({ id: 'item/' + n, kind: 'item', name: n[0].toUpperCase() + n.slice(1), src: 'srd', desc: '', cat: 'weapon', mastery: 'Sap' }) as Entry),
   feat('warlock', 'eldritch-invocations', 1, { grants: [{ kind: 'choice', id: 'inv', name: 'Invocations', pick: 1, pickAt: '1:1,2:3', pool: 'feature:of=invocation' }] }),
   ...['a', 'b', 'c', 'd'].map((x) => feat('warlock', 'inv-' + x, 1, { of: 'invocation' }))];
 const cat = mergeCatalog(entries, null);
@@ -27,6 +33,7 @@ describe('LevelUpWizard', () => {
     const onApply = vi.fn();
     render(c, onApply);
     expect(document.querySelector('[aria-pressed="true"]')?.textContent).toContain('Ranger 1 → 2');
+    next();
     next();
     const roll = document.querySelector('[aria-label="HP roll"]');
     type(roll, '0');
@@ -47,9 +54,10 @@ describe('LevelUpWizard', () => {
       { id: 'ia', g: 'class', name: 'inv-a', desc: '', cid: 'feature/warlock/inv-a', from: 'feature:ei' }] };
     render(c, () => {});
     next();
+    next();
     tap(button('Fixed (5)'));
-    for (let i = 0; i < 5 && !document.body.textContent?.includes('Invocations'); i++) next();
-    expect(document.body.textContent).toContain('choose 2');
+    for (let i = 0; i < 5 && !document.body.textContent?.includes('Invocations ·'); i++) next();
+    expect(document.body.textContent).toContain('Choose 2');
   });
   it('without the catalog: level up with HP only, and say features are added by hand', () => {
     const c = withClass({ ...blankCharacter(), maxHp: 10, hp: 10 }, { name: 'Ranger', clsId: 'class/ranger', hd: 10, lvl: 1 });
@@ -57,6 +65,8 @@ describe('LevelUpWizard', () => {
     render(c, onApply, null);
     expect(document.body.textContent).toContain('Level-up needs the class catalog');
     tap(button('Level up without it'));
+    next();
+    expect(document.body.textContent).toContain('No class data');
     next();
     tap(button('Fixed (6)'));
     for (let i = 0; i < 5 && !button('Finish'); i++) next();
@@ -80,5 +90,70 @@ describe('LevelUpWizard', () => {
     const up = applyLevel(c, levelPlan(c, { row: c.classes[0].id }, cat, ans)!, ans, cat).c;
     mount(<UndoLevelPrompt c={up} onConfirm={() => {}} onCancel={() => {}} />);
     expect(document.body.textContent).toContain('HP maximum −6.');
+  });
+  const ranger = (lvl: number, p: Partial<Character> = {}) => withClass({ ...blankCharacter(), maxHp: 10, hp: 10, ...p }, { name: 'Ranger', clsId: 'class/ranger', hd: 10, lvl });
+  const walkTo = (text: string) => { for (let i = 0; i < 12 && !document.body.textContent?.includes(text); i++) next(); };
+  it('still opens on "Which class gets the level?" and ends in its summary with Finish', () => {
+    render(ranger(1), () => {});
+    expect(document.body.textContent).toContain('Which class gets the level?');
+    next(); next();
+    tap(button('Fixed (6)'));
+    for (let i = 0; i < 8 && !button('Finish'); i++) next();
+    expect(button('Finish')).toBeTruthy();
+  });
+  it('the features screen shows a feature\'s description', () => {
+    render(ranger(1), () => {});
+    next();
+    expect(document.body.textContent).toContain('Gains a thing.');
+    expect(document.querySelector('.tile-more')).toBeTruthy();
+    expect(document.body.textContent).not.toContain('This level');
+    expect(document.querySelector('.stepper')).toBeTruthy();
+  });
+  it('an ASI feat with a countable grant still gets its "Already counted" screen', () => {
+    render(ranger(3, { acMods: [{ id: 'm', name: 'Ring', val: 1 }] as Character['acMods'] }), () => {});
+    next(); next();
+    tap(button('Fixed (6)'));
+    next();
+    tap([...document.querySelectorAll('.tile-pick')].find((b) => b.textContent?.startsWith('AC Feat'))!);
+    walkTo('Already counted in my numbers?');
+    expect(document.body.textContent).toContain('Already counted in my numbers?');
+  });
+  it('a level-up spell the sheet already has still gets its link-or-add question', () => {
+    render(ranger(2, { spells: [{ id: 's1', name: 'Light', lvl: 0 } as Character['spells'][number]] }), () => {});
+    next(); next();
+    tap(button('Fixed (6)'));
+    next();
+    tap([...document.querySelectorAll('.tile-pick')].find((b) => b.textContent === 'Elvish')!);
+    walkTo('You already have');
+    expect(document.body.textContent).toContain('You already have ‘Light’.');
+  });
+  it('a held Weapon Mastery kind already chosen can be tapped out, never in', () => {
+    const c = ranger(1), plan = levelPlan(c, { row: c.classes[0].id }, cat, { flows: {}, spells: {} })!;
+    const screen: LevelScreenSpec = { kind: 'step', key: 'mastery@2', title: 'Weapon Mastery', ready: false, step: { key: 'mastery@2', kind: 'mastery', title: 'Weapon Mastery', owed: 1, held: ['dagger'] } };
+    let seen: LevelAnswers = { flows: {}, spells: {} };
+    function H() {
+      const [a, setA] = useState<LevelAnswers>({ flows: {}, spells: {}, mastery: ['dagger'] });
+      seen = a;
+      return <LevelScreen cat={cat} c={withLevel(c, { row: c.classes[0].id }, cat).c} plan={plan} screen={screen} answers={a} set={setA} />;
+    }
+    mount(<H />);
+    const dagger = () => [...document.querySelectorAll('.tile-pick')].find((b) => b.textContent?.startsWith('Dagger'))!;
+    tap(dagger());
+    expect(seen.mastery).toEqual([]);
+    tap(dagger());
+    expect(seen.mastery).toEqual([]);
+    tap([...document.querySelectorAll('.tile-pick')].find((b) => b.textContent?.startsWith('Spear'))!);
+    expect(seen.mastery).toEqual(['spear']);
+  });
+  it('the features screen shows the warnings of steps without a screen', () => {
+    render(ranger(1, { abil: { ...blankCharacter().abil, cha: 14 } }), () => {});
+    tap(button('+ Add a class'));
+    tap([...document.querySelectorAll('button.pick-opt')].find((b) => b.textContent?.startsWith('Warlock'))!);
+    next();
+    expect(document.body.textContent).toContain('No multiclass proficiencies known');
+  });
+  it('ClassScreen shows a new class pick pressed, with the class list open', () => {
+    mount(<ClassScreen c={ranger(1)} cat={cat} pick={{ cls: 'class/warlock' }} onPick={() => {}} />);
+    expect([...document.querySelectorAll('button.pick-opt')].find((b) => b.textContent?.startsWith('Warlock'))?.getAttribute('aria-pressed')).toBe('true');
   });
 });

@@ -318,7 +318,7 @@ export function levelScreens(c: Character, plan: Plan, cat: Catalog | null, answ
   const review = opts.review ?? true;
   const prereq = plan.steps.find((s) => s.kind === 'prereq');
   const gate = prereq?.warn && !answers.anyway ? prereq.warn : undefined;
-  const out: LevelScreenSpec[] = [{ kind: 'features', key: 'features', title: 'This level', ready: !gate, ...(gate ? { missing: gate } : {}) }];
+  const out: LevelScreenSpec[] = [{ kind: 'features', key: 'features', title: 'Features', ready: !gate, ...(gate ? { missing: gate } : {}) }];
   const flows = (step: Step, entry: Entry, fa: FlowAnswers, o: ChoiceOpts, store: 'flows' | 'asi') => {
     for (const f of choiceSteps(cat!, c, entry, fa, o)) {
       const at = choiceKey(f);

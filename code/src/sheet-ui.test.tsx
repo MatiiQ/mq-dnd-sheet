@@ -548,6 +548,7 @@ describe('level-up and undo from the menu', () => {
     await menu();
     tap(button('Level up'));
     tap(button('Next'));
+    tap(button('Next'));
     tap(button('Fixed (6)'));
     for (let i = 0; i < 5 && !button('Finish'); i++) tap(button('Next'));
     tap(button('Finish'));

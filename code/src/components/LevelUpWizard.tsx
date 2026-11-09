@@ -3,16 +3,17 @@
 // already raised (withLevel), so ChoiceFlow and the lists ask the counts of the new level; answers never touch the sheet
 // until Finish.
 import { useState, type ReactNode } from 'react';
-import { choicesOf, poolOptions } from '../catalog/copy';
-import type { FlowAnswers } from '../catalog/flow';
+import { blocksPick, choicesOf, poolOptions, type PoolOption } from '../catalog/copy';
+import { togglePick, type FlowAnswers } from '../catalog/flow';
 import { entriesOf, type Catalog } from '../catalog/merge';
-import type { ChoiceSpec, ClassEntry, Entry } from '../catalog/schema';
+import type { ChoiceSpec, ClassEntry } from '../catalog/schema';
 import { useCatalog } from '../catalog/useCatalog';
-import { applyLevel, asks, fixedHp, levelPlan, levelSpellOptions, masteryOptions, prereqCheck, undoLevel, undoPreview, withLevel, type ClassPick, type LevelAnswers, type Step } from '../levelup';
-import { abilityMod, maxHpOf, maxHpRaw, totalLevel } from '../logic';
+import { applyLevel, asks, fixedHp, levelPlan, levelScreens, levelSpellOptions, masteryOptions, prereqCheck, undoLevel, undoPreview, withLevel, type ClassPick, type LevelAnswers, type LevelScreenSpec, type Plan, type Step } from '../levelup';
+import { abilityMod, maxHpOf, maxHpRaw, normName, totalLevel } from '../logic';
 import { Sheet, useSheet } from '../sheet';
 import type { Character, Die, LevelKey } from '../types';
 import { ChoiceFlow } from './pickers/ChoiceFlow';
+import { ChoiceTile, firstSentence, Stepper, type StepperStage } from './ui';
 
 const EMPTY: LevelAnswers = { flows: {}, spells: {} };
 const DICE: Die[] = [6, 8, 10, 12];
@@ -45,12 +46,9 @@ export function LevelUpWizard({ c, onApply, onClose, n, cat: given }: {
   );
 }
 
-// A screen of the wizard: one of the plan's steps that needs an answer, the overview of what the level brings, the summary.
-type Screen = { kind: 'step'; step: Step } | { kind: 'overview' } | { kind: 'summary' };
-
-// The class pick, then the steps of one level. The creator reuses it, one level at a time.
-// onFinish also gets the class pick and the answers, which the creator stores instead of the character. fixedPick: the
-// class is given (the creator's level 1), so there is no class screen; skip: steps answered elsewhere (its class skills).
+// The class pick, then the level's screens (levelScreens) with a Stepper, Back/Next and the summary's Finish. The creator
+// reuses LevelScreen for its levels. onFinish also gets the class pick and the answers. fixedPick: the class is given,
+// so there is no class screen; skip: steps answered elsewhere.
 export function LevelSteps({ c, cat, onFinish, fixedPick, skip }: {
   c: Character; cat: Catalog | null; onFinish: (next: Character, pick: ClassPick, answers: LevelAnswers) => void; fixedPick?: ClassPick; skip?: (s: Step) => boolean;
 }) {
@@ -60,94 +58,47 @@ export function LevelSteps({ c, cat, onFinish, fixedPick, skip }: {
   const [at, setAt] = useState(fixedPick ? 0 : -1);   // -1: the class screen
   if (totalLevel(c) >= 20) return <span role="status">Level 20: nothing more to gain.</span>;
   const plan = pick ? levelPlan(c, pick, cat, answers) : null;
-  const w = pick ? withLevel(c, pick, cat) : null;
-  const raised = w?.c ?? c;
-  const screens: Screen[] = plan ? [...plan.steps.filter((s) => asks(s) && !skip?.(s)).map((step): Screen => ({ kind: 'step', step })), { kind: 'overview' }, { kind: 'summary' }] : [];
+  const raised = pick ? withLevel(c, pick, cat).c : c;
+  const screens = plan ? levelScreens(raised, plan, cat, answers, { summary: true, review: true, skip }) : [];
   const choose = (p: ClassPick) => { setPick(p); setAnswers(EMPTY); };
-  const set = (f: (a: LevelAnswers) => LevelAnswers) => setAnswers(f);
+  const prereq = plan?.steps.find((s) => s.kind === 'prereq');
+  const classOk = !!plan && (!prereq?.warn || !!answers.anyway);
+  const first = fixedPick ? 0 : -1;
+  const idx = at < 0 || !plan ? -1 : Math.min(at, screens.length - 1);
+  const go = (i: number) => setAt(Math.max(first, Math.min(screens.length - 1, i)));
+  // A stage is open when every screen before it is ready.
+  const openUpTo = screens.findIndex((x) => !x.ready);
+  const stages: StepperStage[] = [
+    ...(fixedPick ? [] : [{ id: 'class', label: 'Class', state: idx < 0 ? 'current' as const : 'done' as const, enabled: true }]),
+    ...screens.map((x, i): StepperStage => ({ id: x.key, label: x.title, state: i === idx ? 'current' : x.ready && i < idx ? 'done' : 'ahead',
+      enabled: classOk && (openUpTo < 0 || i <= openUpTo) }))
+  ];
+  const screen = idx >= 0 ? screens[idx] : null;
+  const line = screen ? `${screen.title} (${idx + 1} of ${screens.length})` : 'Class';
+  const stepper = <Stepper stages={stages} line={line} onJump={(id) => (id === 'class' ? setAt(-1) : go(screens.findIndex((x) => x.key === id)))} />;
 
-  if (at < 0 || !plan) {
-    const prereq = plan?.steps.find((s) => s.kind === 'prereq');
-    const ok = !!plan && (!prereq?.warn || !!answers.anyway);
+  if (!screen || !plan) {
     return (
       <div className="col gap-12">
+        {plan && stepper}
         <ClassScreen c={c} cat={cat} pick={pick} onPick={choose} />
         {prereq && <div role="status" className={prereq.warn ? 'notice notice-blue col gap-6' : 'muted'}>
           <span>{prereq.warn ?? prereq.title}</span>
-          {prereq.warn && <label className="check"><input type="checkbox" checked={!!answers.anyway} onChange={(e) => set((a) => ({ ...a, anyway: e.target.checked || undefined }))} />Do it anyway</label>}
+          {prereq.warn && <label className="check"><input type="checkbox" checked={!!answers.anyway} onChange={(e) => setAnswers((a) => ({ ...a, anyway: e.target.checked || undefined }))} />Do it anyway</label>}
         </div>}
-        <Nav back={null} next={ok ? () => setAt(0) : undefined} />
+        <Nav back={null} next={classOk ? () => setAt(0) : undefined} />
       </div>
     );
   }
-  const idx = Math.min(at, screens.length - 1);
-  const screen = screens[idx];
-  const go = (i: number) => setAt(Math.max(fixedPick ? 0 : -1, Math.min(screens.length - 1, i)));
-  const ctx = { c: raised, update: () => {}, edit: false, form: null, setForm: () => {}, focus: null, reveal: () => {}, markFocusUsed: () => {} };
-  const bar = (
-    <div role="group" aria-label="Level-up steps" className="row wrap gap-4 wizard-bar">
-      {screens.map((s, i) => (
-        <button key={i} type="button" className="filter-btn" aria-pressed={i === idx} aria-current={i === idx ? 'step' : undefined} onClick={() => go(i)}>
-          {s.kind === 'step' ? s.step.title : s.kind === 'overview' ? 'This level' : 'Summary'}
-        </button>
-      ))}
-    </div>
-  );
-  let body: ReactNode = null, next: (() => void) | undefined = () => go(idx + 1), showNext = true;
-  if (screen.kind === 'step') {
-    const s = screen.step;
-    const flowDone = (key: string, flow: FlowAnswers) => { set((a) => ({ ...a, flows: { ...a.flows, [key]: flow } })); go(idx + 1); };
-    if (s.kind === 'hp') {
-      const die = raised.classes.find((r) => r.id === w?.row)?.hd ?? 8;
-      body = <HpScreen die={die} con={abilityMod(raised, 'con')} value={answers.hp} onChange={(hp) => set((a) => ({ ...a, hp }))} />;
-      if (!answers.hp) next = undefined;
-    } else if (s.kind === 'subclass') {
-      body = <SubclassScreen cat={cat} raised={raised} step={s} value={answers.sub} onChange={(sub) => set((a) => ({ ...a, sub }))} />;
-      if (!answers.sub) next = undefined;
-    } else if (s.kind === 'asi' && cat) {
-      body = <AsiScreen cat={cat} raised={raised} step={s} value={answers.asi} onChange={(asi) => set((a) => ({ ...a, asi }))} />;
-      if (!answers.asi) next = undefined;
-    } else if (s.kind === 'cantrips' || s.kind === 'prepare') {
-      body = <SpellScreen cat={cat} step={s} value={answers.spells[s.key] ?? []} onChange={(ids) => set((a) => ({ ...a, spells: { ...a.spells, [s.key]: ids } }))} />;
-    } else if (s.kind === 'mastery') {
-      body = <MasteryScreen cat={cat} step={s} value={answers.mastery ?? []} onChange={(m) => set((a) => ({ ...a, mastery: m }))} />;
-    } else if (cat) {
-      // A choice through ChoiceFlow: a feature's own choices, or one choice (class proficiencies, more picks, a grown count).
-      const entry: Entry = s.kind === 'feature' ? s.entry! : { ...(s.entry ?? { id: 'feature/' + (plan.cls?.id.split('/')[1] ?? 'x') + '/proficiencies', kind: 'feature', name: s.title, src: 'srd', desc: '', cls: '', lvl: 1 }), grants: [s.choice!] } as Entry;
-      showNext = false;
-      body = (
-        <>
-          {s.warn && <div role="status" className="notice notice-blue">{s.warn}</div>}
-          <ChoiceFlow key={s.key} entry={entry} cat={cat} initial={answers.flows[s.key] ? { answers: answers.flows[s.key], at: 0 } : undefined}
-            {...(s.held ? { held: s.held } : {})} {...(s.choice && s.owed !== undefined ? { pick: { [s.choice.id]: s.owed } } : {})}
-            onDone={(_, st) => flowDone(s.key, st.answers)} onCancel={() => go(idx - 1)} />
-        </>
-      );
-    }
-  } else if (screen.kind === 'overview') {
-    body = (
-      <div className="col gap-6">
-        <h3 className="block-title">{(plan.cls?.name ?? raised.classes.find((r) => r.lvl === plan.clsLvl)?.name ?? 'Class') + ' ' + plan.clsLvl}</h3>
-        {plan.steps.filter((s) => s.kind !== 'hp' && s.kind !== 'prereq').map((s) => (
-          <div key={s.key} className="col">
-            <span>{s.title}</span>
-            {s.warn && <span className="small picker-warn">{s.warn}</span>}
-          </div>
-        ))}
-      </div>
-    );
-  } else {
+  if (screen.kind === 'summary') {
     let dry: ReturnType<typeof applyLevel> | null = null, error = '';
     try { dry = applyLevel(c, plan, answers, cat); } catch (e) { error = e instanceof Error ? e.message : String(e); }
-    body = dry ? <Summary c={c} dry={dry} plan={plan.steps} cat={cat} useTable={answers.useTable ?? []} setUseTable={(u) => set((a) => ({ ...a, useTable: u }))} />
-      : <div role="status" className="notice notice-blue">{error}</div>;
-    showNext = false;
-    next = undefined;
     const finish = dry ? () => onFinish(dry!.c, pick!, answers) : undefined;
     return (
       <div className="col gap-12">
-        {bar}
-        {body}
+        {stepper}
+        {dry ? <Summary c={c} dry={dry} plan={plan.steps} cat={cat} useTable={answers.useTable ?? []} setUseTable={(u) => setAnswers((a) => ({ ...a, useTable: u }))} />
+          : <div role="status" className="notice notice-blue">{error}</div>}
         <div className="row wrap gap-8">
           <button type="button" className="btn" onClick={() => go(idx - 1)}>Back</button>
           <button type="button" className="btn btn-primary" aria-disabled={!finish} onClick={() => finish?.()}>Finish</button>
@@ -156,17 +107,16 @@ export function LevelSteps({ c, cat, onFinish, fixedPick, skip }: {
     );
   }
   return (
-    <Sheet.Provider value={ctx}>
-      <div className="col gap-12">
-        {bar}
-        {body}
-        <Nav back={fixedPick && idx === 0 ? null : () => go(idx - 1)} next={showNext ? next : null} />
-      </div>
-    </Sheet.Provider>
+    <div className="col gap-12">
+      {stepper}
+      <LevelScreen cat={cat} c={raised} plan={plan} screen={screen} answers={answers} set={setAnswers} />
+      {!screen.ready && screen.missing && <span className="small" role="status">{screen.missing}</span>}
+      <Nav back={fixedPick && idx === 0 ? null : () => go(idx - 1)} next={screen.ready ? () => go(idx + 1) : undefined} />
+    </div>
   );
 }
 
-// Back and Next; next undefined: shown disabled; null: not shown (ChoiceFlow brings its own).
+// Back and Next; next undefined: shown disabled; null: not shown.
 function Nav({ back, next }: { back: (() => void) | null; next: (() => void) | undefined | null }) {
   return (
     <div className="row wrap gap-8">
@@ -176,10 +126,70 @@ function Nav({ back, next }: { back: (() => void) | null; next: (() => void) | u
   );
 }
 
+// One screen of a level (levelScreens), shared by the level-up wizard and the creator. c: the raised character, which
+// the screens read through the Sheet context. review: false when the screens were listed without the review questions
+// (the creator). header: shown above the features screen.
+export function LevelScreen({ cat, c, plan, screen, answers, set, header, review = true }: {
+  cat: Catalog | null; c: Character; plan: Plan; screen: LevelScreenSpec; answers: LevelAnswers;
+  set: (f: (a: LevelAnswers) => LevelAnswers) => void; header?: ReactNode; review?: boolean;
+}) {
+  const ctx = { c, update: () => {}, edit: false, form: null, setForm: () => {}, focus: null, reveal: () => {}, markFocusUsed: () => {} };
+  let body: ReactNode = null;
+  if (screen.kind === 'features') body = <FeaturesScreen plan={plan} header={header} />;
+  else if (screen.kind === 'step') {
+    const s = screen.step;
+    if (s.kind === 'hp') {
+      const row = c.classes.find((r) => r.lvl === plan.clsLvl && (plan.cls ? r.clsId === plan.cls.id : true));
+      body = <HpScreen die={row?.hd ?? 8} con={abilityMod(c, 'con')} value={answers.hp} onChange={(hp) => set((a) => ({ ...a, hp }))} />;
+    } else if (s.kind === 'subclass') body = <SubclassScreen cat={cat} raised={c} step={s} value={answers.sub} onChange={(sub) => set((a) => ({ ...a, sub }))} />;
+    else if (s.kind === 'asi' && cat) body = <AsiScreen cat={cat} raised={c} step={s} value={answers.asi} onChange={(asi) => set((a) => ({ ...a, asi }))} />;
+    else if (s.kind === 'cantrips' || s.kind === 'prepare') body = <SpellScreen cat={cat} step={s} value={answers.spells[s.key] ?? []} onChange={(ids) => set((a) => ({ ...a, spells: { ...a.spells, [s.key]: ids } }))} />;
+    else if (s.kind === 'mastery') body = <MasteryScreen cat={cat} step={s} value={answers.mastery ?? []} onChange={(m) => set((a) => ({ ...a, mastery: m }))} />;
+  } else if (screen.kind === 'flow' && cat) {
+    const s = screen.step, key = s.key;
+    const flow = screen.store === 'asi' ? answers.asi?.flow ?? {} : answers.flows[key] ?? {};
+    const onAnswers = (u: (cur: FlowAnswers) => FlowAnswers) => set((a) => (screen.store === 'asi'
+      ? (a.asi ? { ...a, asi: { ...a.asi, flow: u(a.asi.flow) } } : a)
+      : { ...a, flows: { ...a.flows, [key]: u(a.flows[key] ?? {}) } }));
+    const own = screen.store === 'flows';
+    body = (
+      <>
+        {s.warn && <div role="status" className="notice notice-blue">{s.warn}</div>}
+        <ChoiceFlow entry={screen.entry} cat={cat} at={screen.at} answers={flow} onAnswers={onAnswers} onDone={() => {}} onCancel={() => {}}
+          noCounts={!review} noLinks={!review} {...(own && s.held ? { held: s.held } : {})} {...(own && s.choice && s.owed !== undefined ? { pick: { [s.choice.id]: s.owed } } : {})}
+          {...(plan.cls ? { ctx: { castAb: plan.cls.castAb, className: plan.cls.name } } : {})} />
+      </>
+    );
+  }
+  return <Sheet.Provider value={ctx}><div className="col gap-8">{body}</div></Sheet.Provider>;
+}
+
+// What the level gives: one tile per feature of the plan, then the warnings of steps that have no screen of their own.
+function FeaturesScreen({ plan, header }: { plan: Plan; header?: ReactNode }) {
+  const feats = plan.steps.filter((s) => s.kind === 'feature' && s.entry);
+  const warns = plan.steps.filter((s) => s.warn && !asks(s) && s.kind !== 'prereq');
+  return (
+    <div className="col gap-8">
+      {header}
+      <h3 className="block-title">What level {plan.n} gives</h3>
+      {feats.length > 0 ? (
+        <div className="tile-grid">
+          {feats.map((s) => {
+            const desc = s.entry!.desc ?? '';
+            return <ChoiceTile key={s.key} title={s.title} selected={false} body={desc ? firstSentence(desc) : undefined} more={desc && firstSentence(desc) !== desc.trim() ? desc : undefined} />;
+          })}
+        </div>
+      ) : <span className="muted">No new features at this level.</span>}
+      {warns.map((s) => <div key={s.key} role="status" className="notice notice-blue">{s.warn}</div>)}
+    </div>
+  );
+}
+
 // Which class gets the level: a card per current class, then "+ Add a class" (the catalog's other classes, or with no
 // catalog a typed name and its hit die).
-function ClassScreen({ c, cat, pick, onPick }: { c: Character; cat: Catalog | null; pick: ClassPick | null; onPick: (p: ClassPick) => void }) {
-  const [adding, setAdding] = useState(false);
+export function ClassScreen({ c, cat, pick, onPick }: { c: Character; cat: Catalog | null; pick: ClassPick | null; onPick: (p: ClassPick) => void }) {
+  // A new class picked already (the creator's stored pick): the class list starts open, so its pressed tile shows.
+  const [adding, setAdding] = useState(!!pick && 'cls' in pick && !c.classes.some((r) => r.clsId === pick.cls));
   const [name, setName] = useState('');
   const [die, setDie] = useState<Die>(8);
   const others = cat ? entriesOf(cat, 'class').filter((e) => !c.classes.some((r) => r.clsId === e.id)) : [];
@@ -247,8 +257,8 @@ function SubclassScreen({ cat, raised, step, value, onChange }: { cat: Catalog |
   return (
     <div className="col gap-8">
       <h3 className="block-title">Subclass</h3>
-      <div className="row wrap gap-6">
-        {opts.map((o) => <button key={o.value} type="button" className="pick-opt" aria-pressed={value === o.value} onClick={() => onChange(o.value)}>{o.label}</button>)}
+      <div className="tile-grid">
+        {opts.map((o) => <ChoiceTile key={o.value} title={o.label} selected={value === o.value} {...descTile(o.entry?.desc)} onSelect={() => onChange(o.value)} />)}
       </div>
       <label className="field">Other: type a name
         <input type="text" className="input" value={typed} onChange={(e) => onChange('name:' + e.target.value)} />
@@ -258,53 +268,85 @@ function SubclassScreen({ cat, raised, step, value, onChange }: { cat: Catalog |
   );
 }
 
-// Ability Score Improvement or a feat (Epic Boon at 19): pick the feat, then its choices.
+// A tile's body and More from a description: the first sentence, and the whole text when there is more.
+const descTile = (desc?: string, extra?: string) => {
+  const d = desc ?? '';
+  const more = [d, extra].filter(Boolean).join('\n\n');
+  return { ...(d ? { body: firstSentence(d) } : {}), ...(more && more.trim() !== firstSentence(d) ? { more } : {}) };
+};
+
+// Ability Score Improvement or a feat (Epic Boon at 19): pick the feat; its choices follow as their own screens. A feat
+// already on the sheet (not repeatable) can be tapped out, never in.
 function AsiScreen({ cat, raised, step, value, onChange }: { cat: Catalog; raised: Character; step: Step; value: LevelAnswers['asi']; onChange: (v: LevelAnswers['asi']) => void }) {
-  const [feat, setFeat] = useState(value?.feat ?? '');
   const ch = step.entry ? choicesOf(step.entry)[0] as ChoiceSpec | undefined : undefined;
   const opts = ch?.pool ? poolOptions(cat, raised, ch.pool, {}) : [];
-  const e = feat ? cat.byId.get(feat) : undefined;
+  const cur = value ? [value.feat] : [];
+  const tap = (o: PoolOption) => {
+    if (!ch) return;
+    const next = togglePick(ch, cur, o.value, { blocked: blocksPick(o.value, { option: o }) });
+    if (next) onChange(next.length ? { feat: next[0], flow: {} } : undefined);
+  };
   return (
     <div className="col gap-8">
       <h3 className="block-title">{step.title}</h3>
       {step.warn && <div role="status" className="notice notice-blue">{step.warn}</div>}
-      <div className="row wrap gap-6">
-        {opts.map((o) => <button key={o.value} type="button" className="pick-opt" aria-pressed={feat === o.value} onClick={() => { setFeat(o.value); onChange(undefined); }}>{o.label}</button>)}
+      <div className="tile-grid">
+        {opts.map((o) => {
+          const held = blocksPick(o.value, { option: o });
+          return <ChoiceTile key={o.value} title={o.label} selected={cur.includes(o.value)} held={held} picked={cur.includes(o.value)} warn={!!o.unmet}
+            meta={o.unmet ? 'Needs ' + o.unmet.join(', ') : undefined} {...descTile(o.entry?.desc)} onSelect={() => tap(o)} />;
+        })}
       </div>
-      {e && <ChoiceFlow key={feat} entry={e} cat={cat} initial={value?.feat === feat ? { answers: value.flow, at: 0 } : undefined}
-        onDone={(_, st) => onChange({ feat, flow: st.answers })} onCancel={() => setFeat('')} />}
-      {value && <span className="muted">Chosen: {cat.byId.get(value.feat)?.name}</span>}
     </div>
   );
 }
 
-// New cantrips or spells to prepare: the class's list up to the highest level it prepares on its own (PHB p.45).
+// New cantrips or spells to prepare: the class's list up to the highest level it prepares on its own (PHB p.45),
+// grouped by level, with a search above 12.
 function SpellScreen({ cat, step, value, onChange }: { cat: Catalog | null; step: Step; value: string[]; onChange: (ids: string[]) => void }) {
   const { c } = useSheet();
+  const [query, setQuery] = useState('');
   const spells = levelSpellOptions(cat, c, step);
+  const q = normName(query);
+  const shown = q ? spells.filter((e) => normName(e.name).includes(q)) : spells;
   const toggle = (id: string) => onChange(value.includes(id) ? value.filter((x) => x !== id) : value.length < (step.owed ?? 0) ? [...value, id] : value);
+  const levels = [...new Set(shown.map((e) => e.lvl))].sort((x, y) => x - y);
   return (
     <div className="col gap-8">
       <h3 className="block-title">{step.title}</h3>
       {step.warn && <span className="small">{step.warn}</span>}
       <span className="muted">{value.length} of {step.owed} chosen. You can also add spells later in the Spells tab.</span>
-      <div className="row wrap gap-6">
-        {spells.map((e) => <button key={e.id} type="button" className="pick-opt" aria-pressed={value.includes(e.id)} onClick={() => toggle(e.id)}>{e.name}{e.lvl ? ' (' + e.lvl + ')' : ''}</button>)}
-      </div>
+      {spells.length > 12 && <input type="search" className="input" aria-label="Search the spells" placeholder="Search" value={query} onChange={(e) => setQuery(e.target.value)} />}
+      {levels.map((l) => (
+        <div key={l} className="col gap-6">
+          <span className="label">{l === 0 ? 'Cantrips' : 'Level ' + l}</span>
+          <div className="tile-grid">
+            {shown.filter((e) => e.lvl === l).map((e) => (
+              <ChoiceTile key={e.id} title={e.name} selected={value.includes(e.id)} onSelect={() => toggle(e.id)}
+                meta={[e.school, e.time, e.range, e.conc && 'Concentration', e.ritual && 'Ritual'].filter(Boolean).join(' · ')}
+                {...descTile(e.desc, e.higher)} />
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
 
-// A Weapon Mastery slot gained at this level: pick the weapon kinds (the Weapon Mastery rules, PHB p.91).
+// A Weapon Mastery slot gained at this level: pick the weapon kinds (the Weapon Mastery rules, PHB p.91). A kind
+// already on the sheet can be tapped out, never in.
 function MasteryScreen({ cat, step, value, onChange }: { cat: Catalog | null; step: Step; value: string[]; onChange: (m: string[]) => void }) {
   const kinds = masteryOptions(cat);
   const held = step.held ?? [];
-  const toggle = (k: string) => onChange(value.includes(k) ? value.filter((x) => x !== k) : value.length < (step.owed ?? 0) ? [...value, k] : value);
+  const toggle = (k: string) => {
+    if (value.includes(k)) onChange(value.filter((x) => x !== k));
+    else if (!held.includes(k) && value.length < (step.owed ?? 0)) onChange([...value, k]);
+  };
   return (
     <div className="col gap-8">
       <h3 className="block-title">Weapon Mastery · choose {step.owed}</h3>
-      <div className="row wrap gap-6">
-        {kinds.map((k) => <button key={k.id} type="button" className="pick-opt" aria-pressed={value.includes(k.id)} aria-disabled={held.includes(k.id) || undefined} onClick={() => !held.includes(k.id) && toggle(k.id)}>{k.name}</button>)}
+      <div className="tile-grid">
+        {kinds.map((k) => <ChoiceTile key={k.id} title={k.name} selected={value.includes(k.id)} held={held.includes(k.id)} picked={value.includes(k.id)} onSelect={() => toggle(k.id)} />)}
       </div>
     </div>
   );
