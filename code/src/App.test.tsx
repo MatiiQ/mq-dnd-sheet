@@ -48,8 +48,9 @@ describe('Welcome', () => {
 
 describe('tabs', () => {
   it('closes a tab form when the tab changes, so reopening cannot save a blank edit', () => {
-    // Open Ilyra as the active example (a fresh install opens the welcome screen).
-    localStorage.setItem('dnd-index-v3', JSON.stringify({ active: 'example:ilyra', list: [] }));
+    // Open Ilyra as the active example: an example opens only next to a character of your own.
+    localStorage.setItem('dnd-sheet-v3:a1', JSON.stringify(blankCharacter()));
+    localStorage.setItem('dnd-index-v3', JSON.stringify({ active: 'example:ilyra', list: [{ id: 'a1', name: 'A' }] }));
     mount(<App />);
     tap(label('Edit character'));
     tab('Spells');

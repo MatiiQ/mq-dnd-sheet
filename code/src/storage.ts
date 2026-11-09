@@ -117,20 +117,34 @@ export const addToStore = (s: Store, added: { id: string; c: Character }[]): Sto
   list: [...freshList(s), ...added.map((a) => entryOf(a.id, a.c))]
 });
 
+type RawIndex = { active?: string; list?: IndexEntry[] } | null;
+// A damaged index can name an id twice: the first entry stays.
+const listedOf = (idx: RawIndex): IndexEntry[] =>
+  Array.isArray(idx?.list) ? idx.list.filter((x, i, all) => x && typeof x.id === 'string' && typeof x.name === 'string' && all.findIndex((y) => y?.id === x.id) === i) : [];
+
+// Your own characters' ids: the index's, then each sheet the index doesn't name (a damaged index, a save that stopped
+// halfway). An index entry whose sheet is gone still counts. Reads only the index and key names, never a sheet,
+// because the crash screen calls it while showing.
+export function savedIds(idx: unknown = readJSON(INDEX_KEY)): string[] {
+  const listed = listedOf(idx as RawIndex).map((x) => x.id);
+  return [...listed, ...sheetIds().filter((id) => !listed.includes(id))];
+}
+export function hasOwnCharacters(): boolean {
+  try { return savedIds().length > 0; } catch { return false; }
+}
+
 export function initialStore(): Store {
-  const idx = readJSON(INDEX_KEY) as { active?: string; list?: IndexEntry[] } | null;
-  // A damaged index can name an id twice: the first entry stays.
-  const listed = Array.isArray(idx?.list) ? idx.list.filter((x, i, all) => x && typeof x.id === 'string' && typeof x.name === 'string' && all.findIndex((y) => y?.id === x.id) === i) : [];
-  // A sheet the index doesn't name (a damaged index, a save that stopped halfway) still gets its entry.
-  const saved = [...listed, ...sheetIds().filter((id) => !listed.some((x) => x.id === id)).map((id) => {
+  const idx = readJSON(INDEX_KEY) as RawIndex;
+  const listed = listedOf(idx);
+  const saved = savedIds(idx).map((id) => listed.find((x) => x.id === id) ?? (() => {
     const data = readJSON(sheetKey(id));
     return isObj(data) ? entryOf(id, migrate(data)) : { id, name: 'Unreadable character' };
-  })];
-  // An open example reopens fresh, even when your own list is empty.
+  })());
+  // No characters of your own: nothing opens (the welcome screen), not even an example. Only the index gets written.
+  if (!saved.length) return EMPTY_STORE([]);
+  // An open example reopens fresh next to your own characters.
   const ex = example(String(idx?.active));
   if (ex) return { id: ex.id, list: saved, c: ex.make() };
-  // No characters of your own and no example open: nothing opens (the welcome screen). Only the index gets written.
-  if (!saved.length) return EMPTY_STORE([]);
   const id = saved.some((x) => x.id === idx?.active) ? idx!.active! : saved[0].id;
   return { id, list: saved, c: load(id) };
 }
@@ -246,7 +260,11 @@ export function useCharacters() {
     if (s !== loaded.current && !isExample(s.id)) askPersist();
   }, [s]);
 
-  const add = (c: Character) => setS((p) => addToStore(p, [{ id: newId(), c }]));
+  const add = (c: Character): string => {
+    const id = newId();
+    setS((p) => addToStore(p, [{ id, c }]));
+    return id;
+  };
 
   return {
     c: s.c, charId: s.id, list, saveFailed, isExample: isExample(s.id),
@@ -255,8 +273,6 @@ export function useCharacters() {
     switchTo: (id: string) => setS((p) => switchStore(p, id, load(id))),
     add,
     newBlank: () => add(blankCharacter()),
-    newSample: () => add(sampleCharacter()),
-    newDruid: () => add(druidSample()),
     duplicate: () => {
       if (!s.c) return;
       const copy: Character = JSON.parse(JSON.stringify(s.c));

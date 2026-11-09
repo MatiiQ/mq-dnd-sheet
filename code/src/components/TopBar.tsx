@@ -6,6 +6,7 @@ import { SRD_VERSION } from '../catalog/schema';
 import { setLayoutMode, useLayoutMode, useWide, type LayoutMode } from '../layout';
 import { classLine, totalLevel, acOnOther, acSpellIdle, activeAuras, CONDITIONS, PILL_STATS, TABS, fmt, hpColor, maxHpOf, pillView, resPill, setConc, setPill, toggleAcSpell, type PillView, type RestEvent } from '../logic';
 import { showCompanions } from '../creatures';
+import { druidSample, sampleCharacter } from '../defaults';
 import { useSheet, type FormState } from '../sheet';
 import { EXAMPLES, charInfo, charName, importFile, saveBackupFile, type CharacterStore } from '../storage';
 import { undoPreview } from '../levelup';
@@ -328,8 +329,8 @@ function Menu({ store, onClose, onSwitched, onRest, onLevelUp, onUndoLevel, onCr
           <div id="new-choice" className="new-choice">
             <button type="button" className="menu-btn plain" onClick={onCreate}>Step by step (creator)</button>
             <button type="button" className="menu-btn plain" onClick={() => { store.newBlank(); onSwitched(true); }}>Blank sheet</button>
-            <button type="button" className="menu-btn plain" onClick={() => { store.newSample(); onSwitched(); }}>Copy of Ilyra · Ranger 5</button>
-            <button type="button" className="menu-btn plain" onClick={() => { store.newDruid(); onSwitched(); }}>Copy of Seren · Druid 12</button>
+            <button type="button" className="menu-btn plain" onClick={() => { store.add(sampleCharacter()); onSwitched(); }}>Copy of Ilyra · Ranger 5</button>
+            <button type="button" className="menu-btn plain" onClick={() => { store.add(druidSample()); onSwitched(); }}>Copy of Seren · Druid 12</button>
             <button type="button" className="menu-btn" onClick={() => setChoosing(false)}>Cancel</button>
           </div>
         )}

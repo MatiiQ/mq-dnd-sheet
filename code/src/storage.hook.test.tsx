@@ -37,6 +37,14 @@ describe('useCharacters', () => {
     expect(persist).toHaveBeenCalledOnce();
   });
 
+  it('add and newBlank return the id of the character added, and the list holds it', () => {
+    let id = '';
+    act(() => { id = store.newBlank(); });
+    expect(store.list.some((x) => x.id === id)).toBe(true);
+    expect(store.charId).toBe(id);
+    expect('newSample' in store || 'newDruid' in store).toBe(false);
+  });
+
   it('saves a change to the sheet and the index', () => {
     act(() => store.newBlank());
     act(() => store.update((c) => ({ ch: { ...c.ch, name: 'Bob' } })));

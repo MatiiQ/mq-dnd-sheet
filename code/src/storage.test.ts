@@ -3,7 +3,7 @@ import { withClass } from './test-fixtures';
 import { blankCharacter, druidSample, SAVE_VERSION, sampleCharacter } from './defaults';
 import { isActive } from './links';
 import { longRest } from './logic';
-import { addToStore, applyPatch, deleteFromStore, exportStore, freshList, importFile, importNote, initialStore, load, openExampleOnNextLoad, persistStore, rawBackup, switchStore, unreadableSheets, writeBackup, type Store } from './storage';
+import { addToStore, applyPatch, deleteFromStore, EXAMPLES, exportStore, hasOwnCharacters, freshList, importFile, importNote, initialStore, load, openExampleOnNextLoad, persistStore, rawBackup, switchStore, unreadableSheets, writeBackup, type Store } from './storage';
 
 const renamed = (): Store => ({
   id: 'a', list: [{ id: 'a', name: 'Ilyra Moonbrook' }, { id: 'b', name: 'Other' }],
@@ -308,10 +308,32 @@ describe('example characters', () => {
     expect(s.c).toEqual(druidSample());
     expect(s.list.map((x) => x.id)).toEqual(['a']);
   });
-  it('reopens an active example after a reload even when your list is empty', () => {
+  it('with no character of your own, an example named by active does not open', () => {
     const m = stubStorage();
-    m.set('dnd-index-v3', JSON.stringify({ active: 'example:seren', list: [] }));
-    expect(initialStore()).toMatchObject({ id: 'example:seren', list: [] });
+    m.set('dnd-index-v3', JSON.stringify({ active: EXAMPLES[0].id, list: [] }));
+    expect(initialStore().c).toBeNull();
+  });
+  it('with a character of your own, an example named by active still opens', () => {
+    const m = stubStorage();
+    m.set('dnd-sheet-v3:a1', JSON.stringify(blankCharacter()));
+    m.set('dnd-index-v3', JSON.stringify({ active: EXAMPLES[0].id, list: [{ id: 'a1', name: 'A' }] }));
+    expect(initialStore().id).toBe(EXAMPLES[0].id);
+  });
+  it('hasOwnCharacters and initialStore agree when the index names a sheet that is gone', () => {
+    const m = stubStorage();
+    m.set('dnd-index-v3', JSON.stringify({ active: 'gone', list: [{ id: 'gone', name: 'Gone' }] }));
+    expect(hasOwnCharacters()).toBe(true);
+    expect(initialStore().list.map((x) => x.id)).toEqual(['gone']);
+    m.clear();
+    expect(hasOwnCharacters()).toBe(false);
+  });
+  it('hasOwnCharacters never parses a sheet', () => {
+    const m = stubStorage();
+    m.set('dnd-sheet-v3:bad', 'not json {');
+    const parse = vi.spyOn(JSON, 'parse');
+    expect(hasOwnCharacters()).toBe(true);
+    expect(parse.mock.calls.some((c) => c[0] === 'not json {')).toBe(false);
+    parse.mockRestore();
   });
   it('leaves an open example out of Export all', () => {
     const m = stubStorage();
