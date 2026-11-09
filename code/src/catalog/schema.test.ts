@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ABILITIES, ARMORS, SIZES } from '../logic';
-import { STANDARD_ARRAY } from '../creator';
-import { ABILITY_KEYS, ARMOR_KINDS, catalogId, grantErrors, SCHEMA_STANDARD_ARRAY, SIZE_KEYS, slug, validateEntry } from './schema';
+import { ABILITY_KEYS, ARMOR_KINDS, catalogId, grantErrors, SIZE_KEYS, slug, validateEntry } from './schema';
 
 describe('older packs', () => {
   // Review Focus: a pack already on a device still holds the fields removed from the schema.
@@ -41,9 +40,6 @@ describe('validateEntry', () => {
     expect(validateEntry(ok)).toEqual([]);
     expect(validateEntry({ ...ok, stdArray: { ...ok.stdArray, cha: 9 } })[0]).toMatch(/bad stdArray/);
     expect(validateEntry({ ...ok, stdArray: { str: 15, dex: 14, con: 13, int: 12, wis: 10 } })[0]).toMatch(/bad stdArray/);
-  });
-  it("the schema's Standard Array copy equals creator.ts's STANDARD_ARRAY", () => {
-    expect([...SCHEMA_STANDARD_ARRAY]).toEqual(STANDARD_ARRAY);
   });
   const trait = { id: 'trait/elf/darkvision', kind: 'trait', name: 'Darkvision', src: 'srd', desc: '…', species: 'elf', lvl: 1,
     grants: [{ id: 'g1', kind: 'sense', name: 'Darkvision 60 ft', range: '60' }] };

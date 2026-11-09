@@ -3,7 +3,7 @@ import { blocksPick, choicesOf, equipText, freeText, livePicks, optionGroups, po
 import { buildChoices, choiceKey, choiceNeed, choiceStepReady, choiceSteps, EMPTY, flowNodes, flowReview, spellAbilityDefault, togglePick, type ChoiceOpts, type CountItem, type FlowAnswers, type FlowNode, type LinkItem, type NodeAnswers } from '../../catalog/flow';
 import type { Catalog } from '../../catalog/merge';
 import type { ChoiceSpec, Entry } from '../../catalog/schema';
-import { ABILITIES, normName } from '../../logic';
+import { abilityName, normName } from '../../logic';
 import type { Ability, Character } from '../../types';
 import { useSheet } from '../../sheet';
 import { LinkOrAdd } from '../GrantEditor';
@@ -267,7 +267,6 @@ function ControlledStep({ entry, cat, preset, held, pick, at, answers = {}, onAn
       </div>
     );
   }
-  const abName = (a?: Ability) => ABILITIES.find(([k]) => k === a)?.[1];
   return (
     <div className="col gap-8 choice-flow" role="group" aria-label={choice.name + ' · ' + node.title}>
       <h4 className="pick-title">{choice.name} · {node.title}</h4>
@@ -275,7 +274,7 @@ function ControlledStep({ entry, cat, preset, held, pick, at, answers = {}, onAn
       {sa && (
         <span className="small">
           Used only for this feat’s spells.
-          {ctx && (ctx.castAb ? ` Your ${ctx.className} casts with ${abName(ctx.castAb)}.` : ` Your ${ctx.className} casts no spells.`)}
+          {ctx && (ctx.castAb ? ` Your ${ctx.className} casts with ${abilityName(ctx.castAb)}.` : ` Your ${ctx.className} casts no spells.`)}
           {choice.id === 'asi' && ' It also raises that score by 1.'}
         </span>
       )}

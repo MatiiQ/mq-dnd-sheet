@@ -128,7 +128,7 @@ export const ARMOR_KINDS: ArmorKind[] = ['light', 'medium', 'heavy', 'shield'];
 export const AC_EFFECTS: AcEffect[] = ['bonus', 'base', 'floor'];
 // The damage types (PHB p.360-361). The only list: logic.ts re-exports it, the builders build their regex from it.
 export const DAMAGE_TYPES = ['Acid', 'Bludgeoning', 'Cold', 'Fire', 'Force', 'Lightning', 'Necrotic', 'Piercing', 'Poison', 'Psychic', 'Radiant', 'Slashing', 'Thunder'];
-// creator.ts's STANDARD_ARRAY (PHB p.38).
+// The Standard Array (PHB p.38): the one list (creator.ts re-exports it as STANDARD_ARRAY, the pack parser reads it).
 export const SCHEMA_STANDARD_ARRAY = [15, 14, 13, 12, 10, 8];
 export const SIZE_KEYS: Size[] = ['tiny', 'small', 'medium', 'large', 'huge', 'gargantuan'];
 export const ITEM_CATS: ItemEntry['cat'][] = ['weapon', 'armor', 'shield', 'gear', 'tool', 'pack', 'ammo', 'focus', 'mount', 'magic'];

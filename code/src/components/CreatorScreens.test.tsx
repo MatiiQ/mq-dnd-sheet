@@ -5,7 +5,7 @@ import { mergeCatalog } from '../catalog/merge';
 import type { ChoiceSpec, ClassEntry, Entry, GrantSpec } from '../catalog/schema';
 import { creatorScreens, replaySteps, type CreatorAnswers } from '../creator';
 import { label, mount, tap, type, unmount } from '../test-dom';
-import { Bonus, ClassTiles, Equipment, OriginChoice, Scores, type ScreenProps } from './CreatorScreens';
+import { Bonus, ClassTiles, Equipment, Languages, OriginChoice, Scores, type ScreenProps } from './CreatorScreens';
 
 const skills: ChoiceSpec = { kind: 'choice', id: 'skills', name: 'Skills', pick: 2, pool: 'skill:arcana|history|insight' };
 const wizard: ClassEntry = { id: 'class/wizard', kind: 'class', name: 'Wizard', src: 'srd', desc: '', hd: 6, saves: 'int,wis', skills, armor: '', weapons: '', castAb: 'int',
@@ -17,7 +17,8 @@ const mi: Entry = { id: 'feat/mi', kind: 'feat', name: 'Magic Initiate', src: 's
   { id: 'g1', kind: 'spell', name: 'Light', spell: 'Light', castAb: '$ab' }] } as Entry;
 const sage: Entry = { id: 'background/sage', kind: 'background', name: 'Sage', src: 'srd', desc: '', feat: 'feat/mi', equip: '', equipA: 'Book', gpB: 50,
   grants: [{ kind: 'choice', id: 'abil', name: 'Ability scores', pick: 3, repeat: true, options: [abil('o1', 'int'), abil('o2', 'wis'), abil('o3', 'cha')] }] } as Entry;
-const cat = mergeCatalog([wizard, fighter, mi, sage, { id: 'prof/common', kind: 'prof', name: 'Common', src: 'srd', desc: '', cat: 'language' } as Entry], null);
+const lang = (name: string) => ({ id: 'prof/' + name.toLowerCase(), kind: 'prof', name, src: 'srd', desc: '', cat: 'language' } as Entry);
+const cat = mergeCatalog([wizard, fighter, mi, sage, lang('Common'), lang('Elvish'), lang('Dwarvish'), lang('Abyssal')], null);
 const A = (p: Partial<CreatorAnswers> = {}): CreatorAnswers => ({ cls: 'class/wizard', start: 1, background: 'background/sage', bgFlow: {}, spFlow: {}, skills: [], languages: [],
   method: 'array', scores: { str: 8, dex: 12, con: 13, int: 15, wis: 14, cha: 10 }, details: { name: '', align: '', appearance: '', notes: '' }, first: { flows: {}, spells: {} }, levels: [], ...p });
 const withAbil = (picks?: string[]) => A({ bgFlow: picks ? { '': { picks: { abil: picks }, counted: {}, links: {} } } : {} });
@@ -34,6 +35,14 @@ function render(Screen: (p: ScreenProps) => ReactNode, a: CreatorAnswers, set?: 
 const tile = (t: string) => [...document.querySelectorAll('.tile-pick')].find((b) => b.textContent?.startsWith(t));
 
 describe('creator screens', () => {
+  it("an older draft's rare language takes no slot: a Standard Language can still be picked", () => {
+    render(Languages, A({ languages: ['Abyssal', 'Elvish'] }));
+    expect(tile('Abyssal')).toBeUndefined();
+    expect(document.body.textContent).toContain('1 of 2 chosen');
+    tap(tile('Dwarvish'));
+    expect(seen.languages).toEqual(['Elvish', 'Dwarvish']);
+    expect(creatorScreens(cat, seen, { fill: true }).screens.find((s) => s.key === 'origin/languages')!.ready).toBe(true);
+  });
   it('class tile shows likes and complexity from the pack, else the blurb', () => {
     render(ClassTiles, A({ cls: '' }));
     expect(tile('Fighter')!.textContent).toContain('Likes Weapons · Low complexity');

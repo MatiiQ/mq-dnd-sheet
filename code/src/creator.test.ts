@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mergeCatalog } from './catalog/merge';
 import type { ChoiceSpec, ClassEntry, Entry, FeatureEntry, GrantSpec } from './catalog/schema';
 import { creatorScreens, firstOpen, nextOpen, replaySteps, stepperModel, type Screen } from './creator';
-import { applyRolled, arrayFill, assignScore, bonusMode, chooseClass, classArray, classTileText, clearDraft, DRAFT_KEY, dropLowest, ensureLevel, isAnswers, OLD_STEP_KEYS, parseTotals, pointsSpent, readDraft, replay, setBonusMode, setBonusPick, setFirst, setLevelAns, setLevelPick, setMethod, setStart, stageName, STANDARD_ARRAY, staleStep, toAnswerPick, writeDraft, type CreatorAnswers } from './creator';
+import { applyRolled, arrayFill, assignScore, bonusMode, chooseClass, classArray, classTileText, clearDraft, DRAFT_KEY, dropLowest, ensureLevel, isAnswers, languageOptions, OLD_STEP_KEYS, parseTotals, pointsSpent, readDraft, replay, setBonusMode, setBonusPick, setFirst, setLevelAns, setLevelPick, setMethod, setStart, stageName, STANDARD_ARRAY, staleStep, toAnswerPick, writeDraft, type CreatorAnswers } from './creator';
 import { isActive } from './links';
 import { maxHpOf, skillLevel } from './logic';
 import type { Character } from './types';
@@ -267,6 +267,8 @@ describe('answers and draft', () => {
     const a = base({ start: 4, levels: [lvl(2), lvl(3), lvl(4)] });
     const p = setLevelPick(a, 0, { cls: 'class/rogue' });
     expect(p.levels).toEqual([{ pick: { cls: 'class/rogue' }, ans: { flows: {}, spells: {} } }]);
+    // The class already chosen, tapped again: nothing changes.
+    expect(setLevelPick(a, 0, a.levels[0].pick)).toBe(a);
     const s = setLevelAns(a, 1, (x) => ({ ...x, sub: 'subclass/ranger/x' }));
     expect(s.levels).toHaveLength(2);
     expect(s.levels[1].ans).toMatchObject({ hp: FIXED, sub: 'subclass/ranger/x' });
@@ -395,6 +397,11 @@ describe('creatorScreens', () => {
     const buy = creatorScreens(cat2, fighterBase({ method: 'buy', scores: { str: 15, dex: 15, con: 15, int: 15, wis: 8, cha: 8 } }), { fill: true });
     expect(screen(buy, 'abilities/scores').missing).toBe('9 points over budget');
   });
+  it('the Languages screen offers only the Standard Languages (PHB p.37)', () => {
+    const names = languageOptions(mergeCatalog([...entries, lang('Druidic'), lang('Abyssal')], null)).map((p) => p.name);
+    expect(names).toContain('Elvish');
+    for (const rare of ['Common', 'Druidic', 'Abyssal']) expect(names).not.toContain(rare);
+  });
   it('one non-Common language in the catalog: languages asks for 1', () => {
     const oneLangCat = mergeCatalog(entries.filter((e) => e.id !== 'prof/dwarvish'), null);
     expect(screen(creatorScreens(oneLangCat, full({ languages: [] }), { fill: true }), 'origin/languages').missing).toBe('Choose 1 more language');
@@ -443,6 +450,13 @@ describe('creatorScreens', () => {
 });
 
 describe('replaySteps', () => {
+  it('every screen ready: the filled replay (the summary preview) equals Create\'s replay', () => {
+    const a = fighterBase({ start: 2, levels: [{ pick: { cls: 'class/fighter' }, ans: { hp: FX, flows: styleFlow(['s1', 's2']), spells: {} } }] });
+    const r = creatorScreens(cat2, a, { fill: true });
+    expect(r.screens.filter((s) => !s.ready).map((s) => s.key)).toEqual([]);
+    expect(noIds(r.replay.c)).toEqual(noIds(replaySteps(cat2, a).c));
+    expect(r.replay.c.classes[0].lvl).toBe(2);
+  });
   it('before[0] holds the class skills so Expertise offers them; replay\'s character is unchanged', () => {
     const a = full({ background: 'background/acolyte', bgFlow: { '': { picks: { tool: ['t1'] }, counted: {}, links: {} } } });
     const r = replaySteps(cat, a, { fill: true });

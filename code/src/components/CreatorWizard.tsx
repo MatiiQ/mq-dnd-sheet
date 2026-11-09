@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Catalog } from '../catalog/merge';
 import { useCatalog } from '../catalog/useCatalog';
 import {
-  creatorScreens, defaultLevel, DRAFT_VERSION, ensureLevel, firstOpen, nextOpen, replay, setFirst, setLevelAns, setLevelPick, staleStep, stepperModel,
+  creatorScreens, defaultLevel, details, DRAFT_VERSION, ensureLevel, firstOpen, nextOpen, replay, setFirst, setLevelAns, setLevelPick, staleStep, stepperModel,
   toAnswerPick, writeDraft, type CreatorAnswers, type Draft, type Screen
 } from '../creator';
 import type { ClassPick, LevelAnswers } from '../levelup';
@@ -101,7 +101,8 @@ function Creator({ cat, initial, onCreate, notice }: { cat: Catalog; initial?: D
     case 'equipment': body = <Equipment {...props} />; break;
     case 'details': body = <Details {...props} />; break;
     case 'level': body = <LevelBody cat={cat} a={a} set={set} screen={screen} title={r.stages.find((x) => x.id === screen.stage)?.title ?? ''} />; break;
-    case 'summary': body = <Summary a={a} preview={screen.key === 'summary' ? withDetails(replay(cat, { ...a, details: NO_DETAILS }).c, a) : null} />; break;
+    // Fill only changes unfinished answers, so once every screen is ready the memoized replay is what Create builds.
+    case 'summary': body = <Summary a={a} preview={details(r.replay.c, a)} />; break;
   }
   const last = screen.key === 'summary';
   return (
@@ -123,9 +124,6 @@ function Creator({ cat, initial, onCreate, notice }: { cat: Catalog; initial?: D
     </div>
   );
 }
-const withDetails = (c: Character, a: CreatorAnswers): Character => ({
-  ...c, ch: { ...c.ch, name: a.details.name, align: a.details.align }, notes: { ...c.notes, appearance: a.details.appearance, backstory: a.details.notes }
-});
 
 // A level's screen. Level n ≥ 2's features screen creates the level's answers once (an effect, never during render:
 // ensureLevel is a no-op on an existing entry), and holds "Change class" with the multiclass prerequisite.

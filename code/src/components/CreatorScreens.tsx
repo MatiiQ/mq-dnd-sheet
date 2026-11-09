@@ -6,10 +6,10 @@ import { choiceKey, type ChoiceStep, type FlowAnswers } from '../catalog/flow';
 import { entriesOf, type Catalog } from '../catalog/merge';
 import type { BackgroundEntry, ClassEntry, Entry, GrantSpec } from '../catalog/schema';
 import {
-  applyRolled, assignScore, assigned, bonusMode, chooseClass, classTileText, dropLowest, parseTotals, POINT_BUDGET, pointsSpent, scorePool,
+  applyRolled, assignScore, assigned, bonusMode, chooseClass, classOf, classTileText, dropLowest, languageOptions, parseTotals, POINT_BUDGET, pointsSpent, scorePool,
   setBonusMode, setBonusPick, setMethod, setStart, type CreatorAnswers, type ReplaySteps
 } from '../creator';
-import { ABILITIES, armorClass, classLine, effScore, fmt, maxHpOf, skillLevel } from '../logic';
+import { ABILITIES, abilityName, armorClass, classLine, effScore, fmt, maxHpOf, skillLevel } from '../logic';
 import { Sheet } from '../sheet';
 import type { Ability, Character } from '../types';
 import { ChoiceFlow } from './pickers/ChoiceFlow';
@@ -18,8 +18,6 @@ import { ChoiceTile, NumInput, Step } from './ui';
 export interface ScreenProps { cat: Catalog; a: CreatorAnswers; set: (f: (x: CreatorAnswers) => CreatorAnswers) => void; r: ReplaySteps }
 
 const ctxOf = (c: Character) => ({ c, update: () => {}, edit: false, form: null, setForm: () => {}, focus: null, reveal: () => {}, markFocusUsed: () => {} });
-const classOf = (cat: Catalog, id: string) => { const e = cat.byId.get(id); return e?.kind === 'class' ? (e as ClassEntry) : undefined; };
-const abName = (k: string) => ABILITIES.find(([x]) => x === k)?.[1] ?? k;
 const mod = (v: number) => fmt(Math.floor((v - 10) / 2));
 export function ClassTiles({ cat, a, set }: ScreenProps) {
   return (
@@ -97,13 +95,18 @@ export function OriginChoice({ cat, a, set, source, step, c }: ScreenProps & { s
 }
 
 export function Languages({ cat, a, set }: ScreenProps) {
-  const langs = entriesOf(cat, 'prof').filter((p) => p.cat === 'language' && p.name !== 'Common');
+  const langs = languageOptions(cat);
   const need = Math.min(2, langs.length);
-  const toggle = (n: string) => set((x) => ({ ...x, languages: x.languages.includes(n) ? x.languages.filter((s) => s !== n) : x.languages.length < need ? [...x.languages, n] : x.languages }));
+  // Only offered names count: an older draft's rare language (no tile to tap out) must not fill a slot.
+  const offered = (xs: string[]) => xs.filter((s) => langs.some((l) => l.name === s));
+  const toggle = (n: string) => set((x) => {
+    const cur = offered(x.languages);
+    return { ...x, languages: cur.includes(n) ? cur.filter((s) => s !== n) : cur.length < need ? [...cur, n] : cur };
+  });
   return (
     <div className="col gap-8">
       <h3 className="block-title">Languages</h3>
-      <span className="small">You know Common. Choose {need} more · {a.languages.length} of {need} chosen</span>
+      <span className="small">You know Common. Choose {need} more · {offered(a.languages).length} of {need} chosen</span>
       <div className="tile-grid">
         {langs.map((l) => <ChoiceTile key={l.id} title={l.name} selected={a.languages.includes(l.name)} onSelect={() => toggle(l.name)} />)}
       </div>
@@ -229,11 +232,11 @@ export function Bonus({ cat, a, set }: ScreenProps) {
       <h3 className="block-title">Background bonus ({bg.name}: {opts.map((o) => o.ab!.toUpperCase()).join(', ')})</h3>
       <div className="tile-grid">
         <ChoiceTile title="+2 and +1" body="One score +2, another +1" selected={mode === 'two'} onSelect={() => { setLocal('two'); if (mode !== 'two') set((x) => setBonusMode(x, 'two', opts.map((o) => o.id))); }} />
-        <ChoiceTile title="+1 to all three" body={opts.map((o) => abName(o.ab!)).join(', ')} selected={mode === 'three'} onSelect={() => { setLocal('three'); set((x) => setBonusMode(x, 'three', opts.map((o) => o.id))); }} />
+        <ChoiceTile title="+1 to all three" body={opts.map((o) => abilityName(o.ab as Ability)).join(', ')} selected={mode === 'three'} onSelect={() => { setLocal('three'); set((x) => setBonusMode(x, 'three', opts.map((o) => o.id))); }} />
       </div>
       {mode === 'two' && opts.map((o) => (
         <div key={o.id} className="row wrap gap-6" style={{ alignItems: 'center' }}>
-          <span style={{ minWidth: 110 }}>{abName(o.ab!)}</span>
+          <span style={{ minWidth: 110 }}>{abilityName(o.ab as Ability)}</span>
           <div className="tile-grid grow">
             <ChoiceTile title="+2" selected={two === o.id} onSelect={() => set((x) => setBonusPick(x, o.id, 2))} />
             <ChoiceTile title="+1" selected={one === o.id} onSelect={() => set((x) => setBonusPick(x, o.id, 1))} />

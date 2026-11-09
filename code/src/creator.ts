@@ -6,7 +6,7 @@ import { addFromCatalog, addPackage, choicesOf, validPicks } from './catalog/cop
 import { buildChoices, choiceKey, choiceStepReady, choiceSteps, type ChoiceStep, type FlowAnswers } from './catalog/flow';
 import { entriesOf, type Catalog } from './catalog/merge';
 import type { ClassEntry, Entry } from './catalog/schema';
-import { isObj } from './catalog/schema';
+import { isObj, SCHEMA_STANDARD_ARRAY } from './catalog/schema';
 import { applyLevel, emptyCharacter, levelPlan, levelScreens, withLevel, type ClassPick, type LevelAnswers, type LevelScreenSpec, type Plan, type Step } from './levelup';
 import type { StepperStage } from './components/ui';
 import { abilityName, DICE, newId, skillLevel } from './logic';
@@ -43,8 +43,13 @@ export function stageName(key: string): string | undefined {
 // Point Buy (PHB p.38): 27 points, scores 8–15, at these costs.
 export const POINT_COST: Record<number, number> = { 8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9 };
 export const POINT_BUDGET = 27;
-// Standard Array (PHB p.38).
-export const STANDARD_ARRAY = [15, 14, 13, 12, 10, 8];
+// Standard Array (PHB p.38); the one list lives in schema.ts (the catalog check and the pack parser read it too).
+export const STANDARD_ARRAY = SCHEMA_STANDARD_ARRAY;
+// The Standard Languages table (PHB p.37): the two languages besides Common come from it. The Rare Languages (Druidic,
+// Thieves' Cant, Abyssal…) come only from features.
+export const STANDARD_LANGUAGES = ['Common Sign Language', 'Draconic', 'Dwarvish', 'Elvish', 'Giant', 'Gnomish', 'Goblin', 'Halfling', 'Orc'];
+// The catalog's languages a new character chooses from.
+export const languageOptions = (cat: Catalog) => entriesOf(cat, 'prof').filter((p) => p.cat === 'language' && STANDARD_LANGUAGES.includes(p.name));
 
 // A class tile's two lines: "d12 · Primary: Strength · Saves: STR, CON", then the likes and complexity (Class Overview,
 // PHB p.33) when the pack gives both, else the app's blurb.
@@ -68,7 +73,6 @@ export const dropLowest = (dice: number[]) => [...dice].sort((a, b) => b - a).sl
 
 const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
-// The character before level 1: background and species, languages, the class's starting equipment and the scores.
 // ---- Pure answer writers (the creator's screens call these; each returns new answers) ----
 
 const ORDER: Ability[] = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
@@ -87,7 +91,7 @@ export function arrayFill(cls: ClassEntry | undefined, values: number[]): Partia
 export const scorePool = (a: CreatorAnswers): number[] => (a.method === 'rolled' ? a.rolled ?? [] : STANDARD_ARRAY);
 // A score counts as assigned when its value is in the pool.
 export const assigned = (a: CreatorAnswers, ab: Ability) => a.scores[ab] !== undefined && scorePool(a).includes(a.scores[ab]!);
-const classOf = (cat: Catalog, id: string) => { const e = cat.byId.get(id); return e?.kind === 'class' ? (e as ClassEntry) : undefined; };
+export const classOf = (cat: Catalog, id: string) => { const e = cat.byId.get(id); return e?.kind === 'class' ? (e as ClassEntry) : undefined; };
 
 // A new class: its skills, level 1, later levels and the class package start over; the scores follow the new class
 // when they are empty or still the old class's fill (Point Buy scores stay).
@@ -164,9 +168,11 @@ export function ensureLevel(a: CreatorAnswers, i: number): CreatorAnswers {
   for (let j = levels.length; j <= i; j++) levels.push(defaultLevel({ ...a, levels }, j));
   return { ...a, levels };
 }
-// Another class at a level: its answers start over and later levels go (they were built on it).
+// Another class at a level: its answers start over and later levels go (they were built on it). The same class again
+// (a tap on the tile already chosen) changes nothing.
 export function setLevelPick(a: CreatorAnswers, i: number, pick: CreatorAnswers['levels'][number]['pick']): CreatorAnswers {
   const e = ensureLevel(a, i);
+  if (JSON.stringify(e.levels[i].pick) === JSON.stringify(pick)) return e;
   return { ...e, levels: [...e.levels.slice(0, i), { pick, ans: { flows: {}, spells: {} } }] };
 }
 // A subclass or ASI feat change changes what later levels offer, so they go; other answers keep them.
@@ -322,7 +328,7 @@ export function replay(cat: Catalog, a: CreatorAnswers): { c: Character; dropped
   const r = replaySteps(cat, a);
   return { c: details(r.c, a), dropped: r.dropped };
 }
-const details = (c: Character, a: CreatorAnswers): Character => ({
+export const details = (c: Character, a: CreatorAnswers): Character => ({
   ...c, ch: { ...c.ch, name: a.details.name, align: a.details.align },
   notes: { ...c.notes, appearance: a.details.appearance, backstory: a.details.notes }
 });
@@ -386,7 +392,7 @@ export function creatorScreens(cat: Catalog, a: CreatorAnswers, opts: { fill?: b
   originChoices('bg', bg, a.bgFlow, r.originFor.background);
   push('origin', 'origin/species', 'Species', { kind: 'species' }, !a.species ? not('Choose a species') : r.failed.species ? not(r.failed.species) : READY);
   originChoices('sp', sp, a.spFlow, r.originFor.species);
-  const langOpts = entriesOf(cat, 'prof').filter((p) => p.cat === 'language' && p.name !== 'Common');
+  const langOpts = languageOptions(cat);
   const langNeed = Math.min(2, langOpts.length);
   const langHave = a.languages.filter((n) => langOpts.some((p) => p.name.toLowerCase() === n.toLowerCase())).length;
   push('origin', 'origin/languages', 'Languages', { kind: 'languages' },
