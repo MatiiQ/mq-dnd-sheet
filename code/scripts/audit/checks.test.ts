@@ -186,6 +186,12 @@ describe('catalog against the sheet', () => {
     const fly = 'The target gains a Fly Speed of 60 feet.';
     expect(keys(effectChecks([spell('Fly', { desc: fly }), spell('Has Grant', { desc: fly, grants: [{ id: 'g', kind: 'speed', name: 'Fly', mode: 'fly', val: '60' }] }), item('Gear', { desc: fly, cat: 'gear' })]))).toEqual(['effect-no-grant|spell/fly:speed']);
   });
+  it('unreadFieldChecks reports no class blurb, likes, complexity or stdArray', () => {
+    const cls = { id: 'class/fighter', kind: 'class', name: 'Fighter', src: 'srd', desc: 'x', hd: 10, saves: 'str,con', skills: { kind: 'choice', id: 's', name: 'Skills', pick: 2, pool: 'skill:any' }, armor: '', weapons: '',
+      blurb: 'x', likes: 'y', complexity: 'Low', stdArray: { str: 15, dex: 14, con: 13, int: 8, wis: 10, cha: 12 } } as unknown as Entry;
+    const found = keys(unreadFieldChecks(mergeCatalog([cls, spell('Burning Tune')], null)));
+    expect(found.filter((k) => /class\.(blurb|likes|complexity|stdArray)$/.test(k))).toEqual([]);
+  });
   it('traces entry fields nothing reads, and doesn’t flag ones the add flow reads', () => {
     const cls = { id: 'class/wizard', kind: 'class', name: 'Wizard', src: 'srd', desc: 'x', hd: 6, saves: 'int,wis', skills: { kind: 'choice', id: 's', name: 'Skills', pick: 2, pool: 'skill:any' }, armor: '', weapons: '', junk: 1 } as unknown as Entry;
     const found = keys(unreadFieldChecks(mergeCatalog([cls, spell('Burning Tune')], null)));

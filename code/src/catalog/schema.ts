@@ -62,6 +62,9 @@ export interface ClassEntry extends EntryBase {
   castAb?: Ability; slots?: number[][]; pact?: boolean; cantrips?: string; prepared?: string;
   primary?: string; multi?: { armor?: string; weapons?: string; tools?: string | ChoiceSpec; skills?: ChoiceSpec };
   equipA?: string; gpA?: number; gpB?: number;
+  // The creator's class tile (the app's own words; the Class Overview's likes and complexity from the pack, PHB p.33)
+  // and the class's suggested Standard Array (PHB p.38): a permutation of 15, 14, 13, 12, 10, 8.
+  blurb?: string; likes?: string; complexity?: string; stdArray?: Record<Ability, number>;
 }
 export interface SubclassEntry extends EntryBase { kind: 'subclass'; cls: string }
 // again: later levels at which the same feature is gained again, as a comma list ('8,12,16').
@@ -125,6 +128,8 @@ export const ARMOR_KINDS: ArmorKind[] = ['light', 'medium', 'heavy', 'shield'];
 export const AC_EFFECTS: AcEffect[] = ['bonus', 'base', 'floor'];
 // The damage types (PHB p.360-361). The only list: logic.ts re-exports it, the builders build their regex from it.
 export const DAMAGE_TYPES = ['Acid', 'Bludgeoning', 'Cold', 'Fire', 'Force', 'Lightning', 'Necrotic', 'Piercing', 'Poison', 'Psychic', 'Radiant', 'Slashing', 'Thunder'];
+// creator.ts's STANDARD_ARRAY (PHB p.38).
+export const SCHEMA_STANDARD_ARRAY = [15, 14, 13, 12, 10, 8];
 export const SIZE_KEYS: Size[] = ['tiny', 'small', 'medium', 'large', 'huge', 'gargantuan'];
 export const ITEM_CATS: ItemEntry['cat'][] = ['weapon', 'armor', 'shield', 'gear', 'tool', 'pack', 'ammo', 'focus', 'mount', 'magic'];
 
@@ -255,6 +260,8 @@ export const isDtypes = (v: unknown): boolean => {
   return xs.length >= 2 && new Set(xs).size === xs.length && xs.every((x) => DAMAGE_TYPES.includes(x));
 };
 const PREREQ_TERM = /^(lvl>=\d+|(str|dex|con|int|wis|cha)(\|(str|dex|con|int|wis|cha))*>=\d+|feature=[a-z0-9-]+(\|[a-z0-9-]+)*|armor=(light|medium|heavy|shield))$/;
+const stdArray: Check = (v) => isObj(v) && Object.keys(v).length === 6 && ABILITY_KEYS.every((k) => k in v)
+  && [...Object.values(v)].sort((a, b) => Number(b) - Number(a)).every((n, i) => n === SCHEMA_STANDARD_ARRAY[i]);
 const slotRows: Check = (v) => Array.isArray(v) && (v.length === 0 || (v.length === 20 && v.every((r) => Array.isArray(r) && r.length === 9 && r.every(whole(0, 9)))));
 const FIELDS: Record<Kind, Record<string, [Check, boolean]>> = {
   spell: SPELL,
@@ -267,7 +274,8 @@ const FIELDS: Record<Kind, Record<string, [Check, boolean]>> = {
     hd: [oneOf(6, 8, 10, 12), true], saves: [list(ability), true], armor: [str, true], weapons: [str, true], tools: [(v) => typeof v === 'string' || (typeof v === 'object' && v !== null && !Array.isArray(v)), false],
     castAb: [ability, false], slots: [slotRows, false], pact: [bool, false], cantrips: [value, false], prepared: [value, false],
     primary: [(v) => typeof v === 'string' && /^(str|dex|con|int|wis|cha)([,|](str|dex|con|int|wis|cha))*$/.test(v) && !(v.includes(',') && v.includes('|')), false],
-    multi: [(v) => typeof v === 'object' && v !== null && !Array.isArray(v), false], equipA: [str, false], gpA: [whole(0, 99999), false], gpB: [whole(0, 99999), false]
+    multi: [(v) => typeof v === 'object' && v !== null && !Array.isArray(v), false], equipA: [str, false], gpA: [whole(0, 99999), false], gpB: [whole(0, 99999), false],
+    blurb: [str, false], likes: [str, false], complexity: [str, false], stdArray: [stdArray, false]
   },
   subclass: { cls: [str, true] },
   feature: { cls: [str, true], sub: [str, false], lvl: [whole(1, 20), true], again: [str, false], of: [oneOf('invocation', 'maneuver', 'metamagic'), false], prereq: [str, false], repeat: [bool, false], makes: [oneOf('pet', 'form'), false] },

@@ -124,6 +124,9 @@ describe('SRD origins', () => {
 
 describe('SRD classes', () => {
   const list = (classes as Entry[]).filter((e): e is ClassEntry => e.kind === 'class');
+  it('every SRD class has a blurb', () => {
+    expect(list.filter((c) => !c.blurb).map((c) => c.id)).toEqual([]);
+  });
   it('hold the 12 classes, one subclass each', () => {
     expect(list.map((c) => c.name)).toEqual(['Barbarian', 'Bard', 'Cleric', 'Druid', 'Fighter', 'Monk', 'Paladin', 'Ranger', 'Rogue', 'Sorcerer', 'Warlock', 'Wizard']);
     expect((classes as Entry[]).filter((e) => e.kind === 'subclass')).toHaveLength(12);

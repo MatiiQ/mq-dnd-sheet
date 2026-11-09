@@ -24,7 +24,8 @@
       "armor": "Shields"
     },
     "slots": [],
-    "equipA": "item/greataxe;item/handaxe*4;item/explorers-pack"
+    "equipA": "item/greataxe;item/handaxe*4;item/explorers-pack",
+    "blurb": "A fierce warrior who fights best in a rage."
   },
   {
     "id": "class/bard",
@@ -295,7 +296,8 @@
     ],
     "cantrips": "1:2,4:3,10:4",
     "prepared": "1:4,2:5,3:6,4:7,5:9,6:10,7:11,8:12,9:14,10:15,11:16,13:17,15:18,17:19,18:20,19:21,20:22",
-    "equipA": "item/leather-armor;item/dagger*2;item/musical-instrument;item/entertainers-pack"
+    "equipA": "item/leather-armor;item/dagger*2;item/musical-instrument;item/entertainers-pack",
+    "blurb": "A performer whose music and words weave magic."
   },
   {
     "id": "class/cleric",
@@ -545,7 +547,8 @@
     ],
     "cantrips": "1:3,4:4,10:5",
     "prepared": "1:4,2:5,3:6,4:7,5:9,6:10,7:11,8:12,9:14,10:15,11:16,13:17,15:18,17:19,18:20,19:21,20:22",
-    "equipA": "item/chain-shirt;item/shield;item/mace;item/holy-symbol;item/priests-pack"
+    "equipA": "item/chain-shirt;item/shield;item/mace;item/holy-symbol;item/priests-pack",
+    "blurb": "A priest who channels divine power to heal and smite."
   },
   {
     "id": "class/druid",
@@ -796,7 +799,8 @@
     ],
     "cantrips": "1:2,4:3,10:4",
     "prepared": "1:4,2:5,3:6,4:7,5:9,6:10,7:11,8:12,9:14,10:15,11:16,13:17,15:18,17:19,18:20,19:21,20:22",
-    "equipA": "item/leather-armor;item/shield;item/sickle;item/druidic-focus-wooden-staff;item/explorers-pack;item/herbalism-kit"
+    "equipA": "item/leather-armor;item/shield;item/sickle;item/druidic-focus-wooden-staff;item/explorers-pack;item/herbalism-kit",
+    "blurb": "A keeper of nature who shapes beasts and the elements."
   },
   {
     "id": "class/fighter",
@@ -823,7 +827,8 @@
       "armor": "Light armor,Medium armor,Shields"
     },
     "slots": [],
-    "equipA": "item/chain-mail;item/greatsword;item/flail;item/javelin*8;item/dungeoneers-pack"
+    "equipA": "item/chain-mail;item/greatsword;item/flail;item/javelin*8;item/dungeoneers-pack",
+    "blurb": "A master of weapons, armor and battle tactics."
   },
   {
     "id": "class/monk",
@@ -854,7 +859,8 @@
     "gpB": 50,
     "multi": {},
     "slots": [],
-    "equipA": "item/spear;item/dagger*5;Artisan’s Tools or Musical Instrument (the one chosen for the tool proficiency);item/explorers-pack"
+    "equipA": "item/spear;item/dagger*5;Artisan’s Tools or Musical Instrument (the one chosen for the tool proficiency);item/explorers-pack",
+    "blurb": "A martial artist who strikes fast with focused energy."
   },
   {
     "id": "class/paladin",
@@ -1104,7 +1110,8 @@
       ]
     ],
     "prepared": "1:2,2:3,3:4,4:5,5:6,7:7,9:9,11:10,13:11,15:12,17:14,19:15",
-    "equipA": "item/chain-mail;item/shield;item/longsword;item/javelin*6;item/holy-symbol;item/priests-pack"
+    "equipA": "item/chain-mail;item/shield;item/longsword;item/javelin*6;item/holy-symbol;item/priests-pack",
+    "blurb": "A holy knight bound by an oath to fight evil."
   },
   {
     "id": "class/ranger",
@@ -1361,7 +1368,8 @@
       ]
     ],
     "prepared": "1:2,2:3,3:4,4:5,5:6,7:7,9:9,11:10,13:11,15:12,17:14,19:15",
-    "equipA": "item/studded-leather-armor;item/scimitar;item/shortsword;item/longbow;item/arrows*20;item/quiver;item/druidic-focus-sprig-of-mistletoe;item/explorers-pack"
+    "equipA": "item/studded-leather-armor;item/scimitar;item/shortsword;item/longbow;item/arrows*20;item/quiver;item/druidic-focus-sprig-of-mistletoe;item/explorers-pack",
+    "blurb": "A wilderness hunter who tracks foes with blade and bow."
   },
   {
     "id": "class/rogue",
@@ -1396,7 +1404,8 @@
       "tools": "Thieves’ Tools"
     },
     "slots": [],
-    "equipA": "item/leather-armor;item/dagger*2;item/shortsword;item/shortbow;item/arrows*20;item/quiver;item/thieves-tools;item/burglars-pack"
+    "equipA": "item/leather-armor;item/dagger*2;item/shortsword;item/shortbow;item/arrows*20;item/quiver;item/thieves-tools;item/burglars-pack",
+    "blurb": "A sly expert in stealth, skills and precise strikes."
   },
   {
     "id": "class/sorcerer",
@@ -1644,7 +1653,8 @@
     ],
     "cantrips": "1:4,4:5,10:6",
     "prepared": "1:2,2:4,3:6,4:7,5:9,6:10,7:11,8:12,9:14,10:15,11:16,13:17,15:18,17:19,18:20,19:21,20:22",
-    "equipA": "item/spear;item/dagger*2;item/arcane-focus-crystal;item/dungeoneers-pack"
+    "equipA": "item/spear;item/dagger*2;item/arcane-focus-crystal;item/dungeoneers-pack",
+    "blurb": "A caster whose magic flows from an inborn power."
   },
   {
     "id": "class/warlock",
@@ -1895,7 +1905,8 @@
     ],
     "cantrips": "1:2,4:3,10:4",
     "prepared": "1:2,2:3,3:4,4:5,5:6,6:7,7:8,8:9,9:10,11:11,13:12,15:13,17:14,19:15",
-    "equipA": "item/leather-armor;item/sickle;item/dagger*2;item/arcane-focus-orb;item/book;item/scholars-pack"
+    "equipA": "item/leather-armor;item/sickle;item/dagger*2;item/arcane-focus-orb;item/book;item/scholars-pack",
+    "blurb": "A caster who gained magic through a pact with a patron."
   },
   {
     "id": "class/wizard",
@@ -2143,7 +2154,8 @@
     ],
     "cantrips": "1:3,4:4,10:5",
     "prepared": "1:4,2:5,3:6,4:7,5:9,6:10,7:11,8:12,9:14,10:15,11:16,13:17,14:18,15:19,16:21,17:22,18:23,19:24,20:25",
-    "equipA": "item/dagger*2;item/arcane-focus-staff;item/robe;Spellbook;item/scholars-pack"
+    "equipA": "item/dagger*2;item/arcane-focus-staff;item/robe;Spellbook;item/scholars-pack",
+    "blurb": "A scholar who masters magic through study and a spellbook."
   },
   {
     "id": "feature/barbarian/ability-score-improvement",

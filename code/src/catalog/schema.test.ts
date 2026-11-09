@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ABILITIES, ARMORS, SIZES } from '../logic';
-import { ABILITY_KEYS, ARMOR_KINDS, catalogId, grantErrors, SIZE_KEYS, slug, validateEntry } from './schema';
+import { STANDARD_ARRAY } from '../creator';
+import { ABILITY_KEYS, ARMOR_KINDS, catalogId, grantErrors, SCHEMA_STANDARD_ARRAY, SIZE_KEYS, slug, validateEntry } from './schema';
 
 describe('older packs', () => {
   // Review Focus: a pack already on a device still holds the fields removed from the schema.
@@ -33,6 +34,17 @@ describe('catalog ids', () => {
 });
 
 describe('validateEntry', () => {
+  const wizardFixture = { id: 'class/wizard', kind: 'class', name: 'Wizard', src: 'srd', desc: '', hd: 6, saves: 'int,wis',
+    skills: { kind: 'choice', id: 's', name: 'Skills', pick: 2, pool: 'skill:any' }, armor: '', weapons: '' };
+  it('a class accepts blurb, likes, complexity and a Standard Array permutation, and refuses a bad array', () => {
+    const ok = { ...wizardFixture, blurb: 'x', likes: 'y', complexity: 'Low', stdArray: { str: 8, dex: 12, con: 13, int: 15, wis: 14, cha: 10 } };
+    expect(validateEntry(ok)).toEqual([]);
+    expect(validateEntry({ ...ok, stdArray: { ...ok.stdArray, cha: 9 } })[0]).toMatch(/bad stdArray/);
+    expect(validateEntry({ ...ok, stdArray: { str: 15, dex: 14, con: 13, int: 12, wis: 10 } })[0]).toMatch(/bad stdArray/);
+  });
+  it("the schema's Standard Array copy equals creator.ts's STANDARD_ARRAY", () => {
+    expect([...SCHEMA_STANDARD_ARRAY]).toEqual(STANDARD_ARRAY);
+  });
   const trait = { id: 'trait/elf/darkvision', kind: 'trait', name: 'Darkvision', src: 'srd', desc: '…', species: 'elf', lvl: 1,
     grants: [{ id: 'g1', kind: 'sense', name: 'Darkvision 60 ft', range: '60' }] };
   const feature = { id: 'feature/ranger/extra-attack', kind: 'feature', name: 'Extra Attack', src: 'srd', desc: '…', cls: 'ranger', lvl: 5,

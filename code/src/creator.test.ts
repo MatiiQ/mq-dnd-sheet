@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mergeCatalog } from './catalog/merge';
 import type { ChoiceSpec, ClassEntry, Entry, FeatureEntry } from './catalog/schema';
-import { clearDraft, DRAFT_KEY, dropLowest, pointsSpent, readDraft, replay, staleStep, writeDraft, type CreatorAnswers } from './creator';
+import { classArray, classTileText, clearDraft, DRAFT_KEY, dropLowest, pointsSpent, readDraft, replay, staleStep, writeDraft, type CreatorAnswers } from './creator';
 import { isActive } from './links';
 import { maxHpOf } from './logic';
 import { noIds } from './test-fixtures';
@@ -124,5 +124,24 @@ describe('the draft', () => {
     expect(readDraft().draft).toBeNull();
     vi.spyOn(localStorage, 'setItem').mockImplementation(() => { throw new Error('QuotaExceededError'); });
     expect(writeDraft({ v: 1, step: 2, answers: base() })).toBe(false);
+  });
+});
+
+describe('class tiles', () => {
+  const WIZ_ARRAY = { str: 8, dex: 12, con: 13, int: 15, wis: 14, cha: 10 };
+  it('classTileText: likes and complexity when both are set, else the blurb', () => {
+    expect(classTileText({ ...ranger, likes: 'Battle', complexity: 'Low', blurb: 'x' }).body).toBe('Likes Battle · Low complexity');
+    expect(classTileText({ ...ranger, likes: 'Battle', blurb: 'x' }).body).toBe('x');
+    expect(classTileText(ranger).body).toBe('');
+  });
+  it('classTileText meta: die, primary abilities, saves', () => {
+    expect(classTileText(ranger).meta).toBe('d10 · Primary: Dexterity and Wisdom · Saves: STR, DEX');
+    expect(classTileText({ ...ranger, primary: 'str|dex' }).meta).toBe('d10 · Primary: Strength or Dexterity · Saves: STR, DEX');
+    expect(classTileText({ ...ranger, primary: undefined }).meta).toBe('d10 · Saves: STR, DEX');
+  });
+  it('classArray: a permutation, else undefined', () => {
+    expect(classArray({ ...ranger, stdArray: WIZ_ARRAY })).toEqual(WIZ_ARRAY);
+    expect(classArray({ ...ranger, stdArray: { ...WIZ_ARRAY, cha: 9 } })).toBeUndefined();
+    expect(classArray(ranger)).toBeUndefined();
   });
 });

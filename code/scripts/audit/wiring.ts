@@ -7,6 +7,7 @@ import type { ClassEntry, Entry } from '../../src/catalog/schema.ts';
 import type { FlowAnswers } from '../../src/catalog/flow.ts';
 import { applyLevel, emptyCharacter, levelPlan, withLevel, type ClassPick, type LevelAnswers, type Plan } from '../../src/levelup.ts';
 import { blankCharacter } from '../../src/defaults.ts';
+import { classArray, classTileText } from '../../src/creator.ts';
 import { addGrants, spellUsable } from '../../src/logic.ts';
 import type { Character } from '../../src/types.ts';
 import { flatGrants, type Finding } from './checks.ts';
@@ -120,6 +121,8 @@ export function unreadFieldChecks(cat: Catalog): Finding[] {
     if (e.kind === 'class') {
       const c = { ...base, classes: [{ ...base.classes[0], name: e.name, clsId: matchId(traced, 'class', e.name) }] };
       for (const t of ['class', 'sub', 'feat', 'species', 'background'] as FeatureType[]) featureCandidates(traced, c, t);
+      // The creator's class tile and Standard Array read these.
+      classTileText(traced.byId.get(e.id) as ClassEntry); classArray(traced.byId.get(e.id) as ClassEntry);
       const classes = cat.list.filter((x) => x.kind === 'class'), next = classes[(classes.indexOf(e) + 1) % classes.length];
       try { levelClass(traced, traced.byId.get(e.id) as ClassEntry, traced.byId.get(next.id) as ClassEntry); }
       catch (err) { out.set(`level:${e.id}`, { check: 'level-throws', id: e.id, note: err instanceof Error ? err.message : String(err) }); }

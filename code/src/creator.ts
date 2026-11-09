@@ -8,7 +8,7 @@ import { entriesOf, type Catalog } from './catalog/merge';
 import type { ClassEntry } from './catalog/schema';
 import { isObj } from './catalog/schema';
 import { applyLevel, emptyCharacter, levelPlan, type ClassPick, type LevelAnswers } from './levelup';
-import { DICE, newId, skillLevel } from './logic';
+import { abilityName, DICE, newId, skillLevel } from './logic';
 import type { Ability, Character, Die } from './types';
 
 export const DRAFT_KEY = 'dnd-draft', DRAFT_VERSION = 1;
@@ -33,6 +33,23 @@ export const POINT_COST: Record<number, number> = { 8: 0, 9: 1, 10: 2, 11: 3, 12
 export const POINT_BUDGET = 27;
 // Standard Array (PHB p.38).
 export const STANDARD_ARRAY = [15, 14, 13, 12, 10, 8];
+
+// A class tile's two lines: "d12 · Primary: Strength · Saves: STR, CON", then the likes and complexity (Class Overview,
+// PHB p.33) when the pack gives both, else the app's blurb.
+export function classTileText(cls: ClassEntry): { meta: string; body: string } {
+  const p = cls.primary;
+  const primary = p ? p.split(/[,|]/).map((a) => abilityName(a as Ability)).join(p.includes('|') ? ' or ' : ' and ') : '';
+  const meta = ['d' + cls.hd, primary && 'Primary: ' + primary, 'Saves: ' + cls.saves.split(',').map((x) => x.toUpperCase()).join(', ')].filter(Boolean).join(' · ');
+  const { blurb = '', likes, complexity } = cls;
+  return { meta, body: likes && complexity ? `Likes ${likes} · ${complexity} complexity` : blurb };
+}
+// The class's suggested Standard Array (PHB p.38), when it is a permutation of STANDARD_ARRAY.
+export function classArray(cls: ClassEntry): Record<Ability, number> | undefined {
+  const a = cls.stdArray;
+  if (!a || !isObj(a)) return undefined;
+  const vals = (['str', 'dex', 'con', 'int', 'wis', 'cha'] as Ability[]).map((k) => a[k]);
+  return [...vals].sort((x, y) => y - x).every((n, i) => n === STANDARD_ARRAY[i]) ? a : undefined;
+}
 export const pointsSpent = (scores: Partial<Record<Ability, number>>) => Object.values(scores).reduce((t, s) => t + (POINT_COST[s ?? 8] ?? 0), 0);
 // "4 dice each" (PHB p.38): the total of the highest three of four typed d6 rolls.
 export const dropLowest = (dice: number[]) => [...dice].sort((a, b) => b - a).slice(0, 3).reduce((t, n) => t + n, 0);
