@@ -5,7 +5,7 @@ import App from './App';
 import { blankCharacter } from './defaults';
 import { writeDraft } from './creator';
 import { NEW_ANSWERS } from './components/CreatorWizard';
-import { btnStarting as btn, label, mount, tap } from './test-dom';
+import { btnStarting as btn, label, mount, tap, unmount } from './test-dom';
 import { withClass } from './test-fixtures';
 
 beforeEach(() => localStorage.clear());
@@ -62,6 +62,16 @@ describe('Welcome', () => {
     tap(btn('Characters'));
     tap([...document.querySelectorAll('.welcome-card')].find((b) => b.textContent?.includes('Bob')));
     expect(document.querySelector('.char-name')?.textContent).toBe('Bob');
+  });
+  it('the draft prompt shows with a string step key and with an old numeric step', () => {
+    const answers = { ...NEW_ANSWERS(), cls: 'class/ranger', details: { name: 'Thorin', align: '', appearance: '', notes: '' } };
+    localStorage.setItem('dnd-draft', JSON.stringify({ v: 1, step: 'abilities/scores', answers }));
+    mount(<App />);
+    expect(document.body.textContent).toContain('Continue creating Thorin (Abilities)?');
+    unmount();
+    localStorage.setItem('dnd-draft', JSON.stringify({ v: 1, step: 3, answers }));
+    mount(<App />);
+    expect(document.body.textContent).toContain('Continue creating Thorin (Details)?');
   });
   it('shows the draft bar with a draft', () => {
     writeDraft({ v: 1, step: 'abilities/scores', answers: { ...NEW_ANSWERS(), cls: 'class/ranger', details: { name: 'Thorin', align: '', appearance: '', notes: '' } } });

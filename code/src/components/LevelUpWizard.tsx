@@ -47,29 +47,25 @@ export function LevelUpWizard({ c, onApply, onClose, n, cat: given }: {
 }
 
 // The class pick, then the level's screens (levelScreens) with a Stepper, Back/Next and the summary's Finish. The creator
-// reuses LevelScreen for its levels. onFinish also gets the class pick and the answers. fixedPick: the class is given,
-// so there is no class screen; skip: steps answered elsewhere.
-export function LevelSteps({ c, cat, onFinish, fixedPick, skip }: {
-  c: Character; cat: Catalog | null; onFinish: (next: Character, pick: ClassPick, answers: LevelAnswers) => void; fixedPick?: ClassPick; skip?: (s: Step) => boolean;
-}) {
+// reuses LevelScreen for its levels. onFinish also gets the class pick and the answers.
+export function LevelSteps({ c, cat, onFinish }: { c: Character; cat: Catalog | null; onFinish: (next: Character, pick: ClassPick, answers: LevelAnswers) => void }) {
   const only = c.classes.length === 1 ? c.classes[0] : undefined;
-  const [pick, setPick] = useState<ClassPick | null>(fixedPick ?? (only ? { row: only.id } : null));
+  const [pick, setPick] = useState<ClassPick | null>(only ? { row: only.id } : null);
   const [answers, setAnswers] = useState<LevelAnswers>(EMPTY);
-  const [at, setAt] = useState(fixedPick ? 0 : -1);   // -1: the class screen
+  const [at, setAt] = useState(-1);   // -1: the class screen
   if (totalLevel(c) >= 20) return <span role="status">Level 20: nothing more to gain.</span>;
   const plan = pick ? levelPlan(c, pick, cat, answers) : null;
   const raised = pick ? withLevel(c, pick, cat).c : c;
-  const screens = plan ? levelScreens(raised, plan, cat, answers, { summary: true, review: true, skip }) : [];
+  const screens = plan ? levelScreens(raised, plan, cat, answers, { summary: true, review: true }) : [];
   const choose = (p: ClassPick) => { setPick(p); setAnswers(EMPTY); };
   const prereq = plan?.steps.find((s) => s.kind === 'prereq');
   const classOk = !!plan && (!prereq?.warn || !!answers.anyway);
-  const first = fixedPick ? 0 : -1;
   const idx = at < 0 || !plan ? -1 : Math.min(at, screens.length - 1);
-  const go = (i: number) => setAt(Math.max(first, Math.min(screens.length - 1, i)));
+  const go = (i: number) => setAt(Math.max(-1, Math.min(screens.length - 1, i)));
   // A stage is open when every screen before it is ready.
   const openUpTo = screens.findIndex((x) => !x.ready);
   const stages: StepperStage[] = [
-    ...(fixedPick ? [] : [{ id: 'class', label: 'Class', state: idx < 0 ? 'current' as const : 'done' as const, enabled: true }]),
+    { id: 'class', label: 'Class', state: idx < 0 ? 'current' : 'done', enabled: true },
     ...screens.map((x, i): StepperStage => ({ id: x.key, label: x.title, state: i === idx ? 'current' : x.ready && i < idx ? 'done' : 'ahead',
       enabled: classOk && (openUpTo < 0 || i <= openUpTo) }))
   ];
@@ -111,7 +107,7 @@ export function LevelSteps({ c, cat, onFinish, fixedPick, skip }: {
       {stepper}
       <LevelScreen cat={cat} c={raised} plan={plan} screen={screen} answers={answers} set={setAnswers} />
       {!screen.ready && screen.missing && <span className="small" role="status">{screen.missing}</span>}
-      <Nav back={fixedPick && idx === 0 ? null : () => go(idx - 1)} next={screen.ready ? () => go(idx + 1) : undefined} />
+      <Nav back={() => go(idx - 1)} next={screen.ready ? () => go(idx + 1) : undefined} />
     </div>
   );
 }
