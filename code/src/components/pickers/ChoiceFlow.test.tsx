@@ -1,9 +1,12 @@
 // @vitest-environment happy-dom
 // ChoiceFlow's answers as onDone hands them on, pinned on SRD entries with the steps' answers given through `initial`.
+import { StrictMode, useEffect, useState, type ReactNode } from 'react';
 import { describe, expect, it } from 'vitest';
 import srdEntries from '../../data/srd/index';
 import { mergeCatalog } from '../../catalog/merge';
 import type { AddChoices } from '../../catalog/copy';
+import { spellAbilityDefault, type FlowAnswers } from '../../catalog/flow';
+import type { Entry } from '../../catalog/schema';
 import { blankCharacter } from '../../defaults';
 import { Sheet } from '../../sheet';
 import { btn, mount, tap, unmount } from '../../test-dom';
@@ -99,5 +102,84 @@ describe('uncontrolled ChoiceFlow', () => {
     render('feat/skilled');
     tap(opt('Arcana'));
     expect(opt('Arcana').getAttribute('aria-pressed')).toBe('true');
+  });
+});
+
+// ---- Controlled mode (creator fixes, Task 10) ----
+const ctxValue = (c: Character = blankCharacter()) => ({ c, update: () => {}, edit: false, form: null, setForm: () => {}, focus: null, reveal: () => {}, markFocusUsed: () => {} });
+const Ctx = ({ children }: { children: ReactNode }) => <Sheet.Provider value={ctxValue()}>{children}</Sheet.Provider>;
+const two: Entry = { id: 'feat/two-choices', kind: 'feat', name: 'Two Choices', src: 'srd', desc: '', cat: 'general', grants: [
+  { kind: 'choice', id: 'first', name: 'First', pick: 1, options: [{ id: 'a', kind: 'prof', name: 'Option A', cat: 'language', target: 'A' }, { id: 'b', kind: 'prof', name: 'Option B', cat: 'language', target: 'B' }] },
+  { kind: 'choice', id: 'second', name: 'Second', pick: 1, options: [{ id: 'c', kind: 'prof', name: 'Option C', cat: 'language', target: 'C' }] }] } as Entry;
+const tile = (t: string) => [...document.querySelectorAll('.tile-pick')].find((b) => b.textContent?.startsWith(t));
+const MI = cat.byId.get('feat/magic-initiate')!;
+const WIZ = { '': { picks: { list: ['wizard'] }, counted: {}, links: {} } };
+
+describe('ChoiceFlow controlled', () => {
+  it('remounting per step keeps the answers held by the parent', () => {
+    let answers: FlowAnswers = {};
+    const onAnswers = (u: (a: FlowAnswers) => FlowAnswers) => { answers = u(answers); };
+    mount(<Ctx><ChoiceFlow entry={two} cat={cat} at="_/first" answers={answers} onAnswers={onAnswers} onDone={() => {}} onCancel={() => {}} /></Ctx>);
+    expect(document.body.textContent).toContain('First · Two Choices');
+    expect(document.body.textContent).toContain('0 of 1 chosen');
+    tap(tile('Option A'));
+    unmount();
+    mount(<Ctx><ChoiceFlow entry={two} cat={cat} at="_/second" answers={answers} onAnswers={onAnswers} onDone={() => {}} onCancel={() => {}} /></Ctx>);
+    expect(answers[''].picks.first).toEqual(['a']);
+    expect(tile('Option C')).toBeTruthy();
+    expect(btn('Next')).toBeFalsy();
+    expect(document.querySelector('.pick-opt')).toBeNull();
+  });
+  it('a step key that is not in the list renders nothing', () => {
+    mount(<Ctx><ChoiceFlow entry={two} cat={cat} at="_/gone" answers={{}} onAnswers={() => {}} onDone={() => {}} onCancel={() => {}} /></Ctx>);
+    expect(document.querySelector('.tile')).toBeNull();
+  });
+  it('two onAnswers updates in one tick both survive (a tap and the preselection)', () => {
+    let seen: FlowAnswers = {};
+    function Parent() {
+      const [a, setA] = useState<FlowAnswers>(WIZ);
+      seen = a;
+      // Runs in the same commit as ChoiceFlow's preselection effect (child effects run first).
+      useEffect(() => { setA((cur) => ({ ...cur, '': { ...cur[''], picks: { ...cur[''].picks, cantrips: ['spell/light'] } } })); }, []);
+      return <ChoiceFlow entry={MI} cat={cat} at="_/ab" answers={a} onAnswers={setA} ctx={{ castAb: 'int', className: 'Wizard' }} onDone={() => {}} onCancel={() => {}} />;
+    }
+    mount(<Ctx><Parent /></Ctx>);
+    expect(seen[''].picks.ab).toEqual(['int']);
+    expect(seen[''].picks.cantrips).toEqual(['spell/light']);
+  });
+  it('Magic Initiate: the spellcasting ability is preselected to the class castAb, once, never over a pick', () => {
+    let answers: FlowAnswers = WIZ, calls = 0;
+    const onAnswers = (u: (a: FlowAnswers) => FlowAnswers) => { calls++; answers = u(answers); };
+    mount(<StrictMode><Ctx><ChoiceFlow entry={MI} cat={cat} at="_/ab" answers={answers} onAnswers={onAnswers} ctx={{ castAb: 'wis', className: 'Cleric' }} onDone={() => {}} onCancel={() => {}} /></Ctx></StrictMode>);
+    expect(answers[''].picks.ab).toEqual(['wis']);
+    expect(calls).toBe(1);
+    expect(document.body.textContent).toContain('Used only for this feat’s spells.');
+    expect(document.body.textContent).toContain('Your Cleric casts with Wisdom.');
+    unmount();
+    answers = { '': { picks: { list: ['wizard'], ab: ['cha'] }, counted: {}, links: {} } };
+    mount(<StrictMode><Ctx><ChoiceFlow entry={MI} cat={cat} at="_/ab" answers={answers} onAnswers={onAnswers} ctx={{ castAb: 'int', className: 'Wizard' }} onDone={() => {}} onCancel={() => {}} /></Ctx></StrictMode>);
+    expect(answers[''].picks.ab).toEqual(['cha']);
+  });
+  it('without ctx the hint names no class', () => {
+    mount(<Ctx><ChoiceFlow entry={MI} cat={cat} at="_/ab" answers={WIZ} onAnswers={() => {}} onDone={() => {}} onCancel={() => {}} /></Ctx>);
+    expect(document.body.textContent).toContain('Used only for this feat’s spells.');
+    expect(document.body.textContent).not.toContain('casts');
+  });
+  it('a class with no castAb: "casts no spells"', () => {
+    mount(<Ctx><ChoiceFlow entry={MI} cat={cat} at="_/ab" answers={WIZ} onAnswers={() => {}} ctx={{ className: 'Fighter' }} onDone={() => {}} onCancel={() => {}} /></Ctx>);
+    expect(document.body.textContent).toContain('Your Fighter casts no spells.');
+  });
+  it('a pool option shows the first sentence of its entry and More for the rest', () => {
+    mount(<Ctx><ChoiceFlow entry={MI} cat={cat} at="_/cantrips" answers={WIZ} onAnswers={() => {}} onDone={() => {}} onCancel={() => {}} /></Ctx>);
+    expect(document.querySelector('.tile-grid')).toBeTruthy();
+    expect(document.querySelectorAll('.tile-more').length).toBeGreaterThan(0);
+  });
+});
+
+describe('spellAbilityDefault', () => {
+  it('class castAb, else INT, else the first option', () => {
+    expect(spellAbilityDefault(['int', 'wis', 'cha'], 'wis')).toBe('wis');
+    expect(spellAbilityDefault(['int', 'wis', 'cha'])).toBe('int');
+    expect(spellAbilityDefault(['wis', 'cha'], 'int')).toBe('wis');
   });
 });

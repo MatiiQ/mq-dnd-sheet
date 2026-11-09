@@ -2,7 +2,7 @@
 // ("Already counted" and link-or-add), and the AddChoices they build. Links resolve against the sheet given
 // (findUnlinked), so stored answers replay on a new sheet without naming its ids (the creator's draft).
 import { findUnlinked } from '../logic';
-import type { Character } from '../types';
+import type { Ability, Character } from '../types';
 import { atLevel, blocksPick, choiceActive, choiceOptions, choicesOf, countedDefault, featureName, grantSpellName, isCountable, livePicks, nestedEntries, pickCap, resolveChoices, validPicks, type AddChoices } from './copy';
 import type { Catalog } from './merge';
 import type { ChoiceSpec, Entry, GrantKind, GrantSpec } from './schema';
@@ -141,4 +141,9 @@ export function togglePick(choice: ChoiceSpec, cur: string[], v: string, o: { bl
   if (n > 0) return cur.filter((x) => x !== v);
   if (choice.pick === 1) return [v];
   return null;
+}
+
+// The spellcasting ability a feat's spells start with: the class's, when offered; else Intelligence; else the first.
+export function spellAbilityDefault(options: string[], castAb?: Ability): string {
+  return castAb && options.includes(castAb) ? castAb : options.includes('int') ? 'int' : options[0];
 }
