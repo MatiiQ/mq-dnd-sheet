@@ -529,3 +529,19 @@ button.tile-btn { font: inherit; color: inherit; text-align: left; cursor: point
 .form-banner { align-items: center; padding: 4px 4px 4px 12px; border-radius: 10px; background: var(--blue-bg); color: var(--blue-fg); font-weight: 600; }
 .check-row { min-height: 44px; align-items: center; }
 .check-row input { width: 22px; height: 22px; }
+
+/* ---------- creator tiles and stepper (creator fixes) ---------- */
+.tile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+.tile { display: flex; flex-direction: column; border: 1px solid var(--line-2); border-radius: 14px; background: var(--raised); overflow: hidden; }
+.tile.active { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.tile.held .tile-title { text-decoration: line-through; color: var(--off); }
+.tile-pick, .tile-static { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; text-align: left; color: var(--text); }
+.tile-pick { min-height: 44px; border: none; background: transparent; font: inherit; cursor: pointer; }
+.tile-title { font-weight: 700; }
+.tile-more { min-height: 44px; border: none; border-top: 1px solid var(--line); background: transparent; color: var(--accent); font: 600 13px var(--sans); cursor: pointer; }
+.tile-long { padding: 0 12px 10px; white-space: pre-line; color: var(--text-2); }
+.stepper { display: flex; flex-wrap: wrap; gap: 6px; }
+.stepper-btn { min-width: 44px; min-height: 44px; border-radius: 22px; border: 1px solid var(--line-2); background: var(--raised); color: var(--text); font: 700 15px var(--sans); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.stepper-btn.current { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.stepper-btn.done { color: var(--accent); }
+.stepper-btn[aria-disabled="true"] { opacity: .5; cursor: default; }

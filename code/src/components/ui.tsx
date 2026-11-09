@@ -341,3 +341,59 @@ export function TextField({ label, value, onChange, placeholder, style, list }: 
     </label>
   );
 }
+
+// ---------- creator and level-up tiles ----------
+
+// The start of a text: up to the first ". " (kept), or its first line.
+export function firstSentence(text: string): string {
+  const line = text.split('\n')[0];
+  const i = line.indexOf('. ');
+  return i < 0 ? line : line.slice(0, i + 1);
+}
+
+// One option as a tile: a select button (aria-pressed) and, beside it, a More button that opens the long text. No
+// onSelect: a plain tile (the features screen). held: already on the sheet, struck through; a tap still reaches
+// onSelect, whose togglePick only lets it come out. warn: an unmet prerequisite, still selectable.
+export function ChoiceTile({ title, meta, body, more, count, selected, held, warn, picked, onSelect }: {
+  title: string; meta?: ReactNode; body?: ReactNode; more?: ReactNode; count?: number; selected: boolean;
+  held?: boolean; warn?: boolean; picked?: boolean; onSelect?: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const inner = (
+    <>
+      <span className="tile-title">{title}{count && count > 1 ? ' ×' + count : ''}</span>
+      {meta && <span className={warn ? 'small picker-warn' : 'small'}>{meta}</span>}
+      {body && <span className="small tile-body">{body}</span>}
+    </>
+  );
+  return (
+    <div className={'tile' + (selected ? ' active' : '') + (held ? ' held' : '')}>
+      {onSelect ? (
+        <button type="button" className="tile-pick" aria-pressed={selected} aria-disabled={held || undefined} onClick={onSelect}
+          aria-label={held ? title + (picked ? ', on your sheet, tap to remove' : ', already on your sheet') : undefined}>{inner}</button>
+      ) : <div className="tile-static">{inner}</div>}
+      {more && <button type="button" className="tile-more" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? 'Less' : 'More'}</button>}
+      {more && open && <div className="small tile-long">{more}</div>}
+    </div>
+  );
+}
+
+export interface StepperStage { id: string; label: string; state: 'done' | 'current' | 'ahead'; enabled: boolean }
+// The creator's stages as a wrapping row of numbered buttons, and the line naming where you are.
+export function Stepper({ stages, line, onJump }: { stages: StepperStage[]; line: string; onJump: (id: string) => void }) {
+  return (
+    <nav className="col gap-6" aria-label="Steps">
+      <div className="stepper">
+        {stages.map((s, i) => (
+          <button key={s.id} type="button" className={'stepper-btn ' + s.state} aria-disabled={!s.enabled || undefined}
+            aria-current={s.state === 'current' ? 'step' : undefined}
+            aria-label={s.label + (s.state === 'done' ? ', done' : s.state === 'current' ? ', current' : !s.enabled ? ', not available yet' : '')}
+            onClick={() => { if (s.enabled) onJump(s.id); }}>
+            {s.state === 'done' ? <CheckIcon /> : i + 1}
+          </button>
+        ))}
+      </div>
+      <span className="small">{line}</span>
+    </nav>
+  );
+}

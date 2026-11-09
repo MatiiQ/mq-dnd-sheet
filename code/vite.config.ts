@@ -36,5 +36,6 @@ function serviceWorker(): Plugin {
 export default defineConfig({
   base: './',
   plugins: [react(), serviceWorker()],
-  test: { environment: 'node' }
+  // css: styles.css loads as text in tests (ui.test.tsx checks its touch-target rules); other CSS stays empty.
+  test: { environment: 'node', css: { include: [/styles\.css/] } }
 });
