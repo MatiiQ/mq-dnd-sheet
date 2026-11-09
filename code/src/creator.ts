@@ -219,9 +219,10 @@ export function replayOrigin(cat: Catalog, a: CreatorAnswers, opts: { fill?: boo
     }
     try { c = addFromCatalog(c, cat, e, buildChoices(cat, c, e, flow, {}, { noCounts: true, noLinks: true })); }
     catch (err) {
-      dropped.push(label + ' ' + e.name + ': ' + errText(err));
-      // A throw while a question of its own is still open is the unfinished flow, not a misfit.
+      // A throw while a question of its own is still open is the unfinished flow, not a misfit: while filling (the
+      // creator's preview) it is neither reported nor a failure; Create's replay still reports it.
       const asked = choiceSteps(cat, c, e, flow, ORIGIN_OPTS).every((st) => choiceStepReady(cat, c, st, flow, ORIGIN_OPTS).ready);
+      if (asked || !opts.fill) dropped.push(label + ' ' + e.name + ': ' + errText(err));
       if (asked) failed[which] = `${e.name} no longer fits: ${errText(err)}`;
     }
   }

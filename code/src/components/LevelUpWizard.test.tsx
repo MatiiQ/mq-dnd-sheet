@@ -5,7 +5,7 @@ import { mergeCatalog } from '../catalog/merge';
 import type { ClassEntry, Entry, FeatureEntry } from '../catalog/schema';
 import { blankCharacter } from '../defaults';
 import { btn as button, mount, tap, type } from '../test-dom';
-import { withClass } from '../test-fixtures';
+import { withClass, withClasses } from '../test-fixtures';
 import type { Character } from '../types';
 import { applyLevel, levelPlan, withLevel, type LevelAnswers, type LevelScreenSpec } from '../levelup';
 import { ClassScreen, LevelScreen, LevelUpWizard, UndoLevelPrompt } from './LevelUpWizard';
@@ -155,5 +155,14 @@ describe('LevelUpWizard', () => {
   it('ClassScreen shows a new class pick pressed, with the class list open', () => {
     mount(<ClassScreen c={ranger(1)} cat={cat} pick={{ cls: 'class/warlock' }} onPick={() => {}} />);
     expect([...document.querySelectorAll('button.pick-opt')].find((b) => b.textContent?.startsWith('Warlock'))?.getAttribute('aria-pressed')).toBe('true');
+  });
+  it('the HP screen reads the die of the row gaining the level, not another row at the same level', () => {
+    const c = withClasses({ ...blankCharacter(), maxHp: 10, hp: 10 }, [{ name: 'Rogue', hd: 8, lvl: 3 }, { name: 'Fighter', hd: 10, lvl: 2 }]);
+    const fighter = c.classes.find((r) => r.name === 'Fighter')!;
+    const pick = { row: fighter.id };
+    const plan = levelPlan(c, pick, null, { flows: {}, spells: {} })!;
+    const screen: LevelScreenSpec = { kind: 'step', key: 'hp', title: 'Hit points', ready: false, step: plan.steps.find((s) => s.kind === 'hp')! };
+    mount(<LevelScreen cat={null} c={withLevel(c, pick, null).c} plan={plan} screen={screen} answers={{ flows: {}, spells: {} }} set={() => {}} />);
+    expect(button('Fixed (6)')).toBeTruthy();
   });
 });

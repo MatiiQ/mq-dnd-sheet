@@ -135,7 +135,9 @@ export function LevelScreen({ cat, c, plan, screen, answers, set, header, review
   else if (screen.kind === 'step') {
     const s = screen.step;
     if (s.kind === 'hp') {
-      const row = c.classes.find((r) => r.lvl === plan.clsLvl && (plan.cls ? r.clsId === plan.cls.id : true));
+      // The row gaining the level, found as withLevel finds it from the pick.
+      const pk = plan.pick;
+      const row = 'row' in pk ? c.classes.find((r) => r.id === pk.row) : 'cls' in pk ? c.classes.find((r) => r.clsId === pk.cls) : c.classes.find((r) => !r.clsId && r.name === pk.name);
       body = <HpScreen die={row?.hd ?? 8} con={abilityMod(c, 'con')} value={answers.hp} onChange={(hp) => set((a) => ({ ...a, hp }))} />;
     } else if (s.kind === 'subclass') body = <SubclassScreen cat={cat} raised={c} step={s} value={answers.sub} onChange={(sub) => set((a) => ({ ...a, sub }))} />;
     else if (s.kind === 'asi' && cat) body = <AsiScreen cat={cat} raised={c} step={s} value={answers.asi} onChange={(asi) => set((a) => ({ ...a, asi }))} />;

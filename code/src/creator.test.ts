@@ -457,6 +457,11 @@ describe('replaySteps', () => {
     expect(r.c.classes[0].lvl).toBe(1);
     expect(replay(cat2, a).dropped.some((d) => d.startsWith('Level 2'))).toBe(true);
   });
+  it('a background with a question still open is not reported while filling; Create\'s replay reports it', () => {
+    const a = full({ background: 'background/acolyte', bgFlow: {} });
+    expect(replaySteps(cat, a, { fill: true }).dropped.filter((d) => d.startsWith('Background'))).toEqual([]);
+    expect(replay(cat, a).dropped.some((d) => d.startsWith('Background'))).toBe(true);
+  });
   it('level 1 half answered gives the origin with no class and no dropped', () => {
     const r = replaySteps(cat, full({ first: { flows: {}, spells: {} } }), { fill: true });
     expect(r.c.classes).toEqual([]);
