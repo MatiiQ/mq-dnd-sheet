@@ -33,6 +33,9 @@ export default function App() {
   const [welcome, setWelcome] = useState(false);
   // The creator, full screen over either; from a draft or fresh.
   const [creating, setCreating] = useState<{ from?: Draft } | null>(null);
+  // Welcome › Blank sheet: the new sheet opens in edit mode, once (cleared as soon as the sheet has shown it).
+  const [blankEdit, setBlankEdit] = useState(false);
+  const onBlank = () => { store.newBlank(); setWelcome(false); setBlankEdit(true); };
   // The creator's draft: read once on launch (a broken one is dropped with a notice); asked about before a new one.
   const [draftAsk, setDraftAsk] = useState<{ draft: Draft | null; notice?: string }>(() => readDraft());
   const openCreator = () => {
@@ -63,21 +66,30 @@ export default function App() {
   if (!store.c || welcome) return (
     <>
       {creator}
-      <Welcome store={store} draft={draftUi} onNew={openCreator} onImported={() => setWelcome(false)}
+      <Welcome store={store} draft={draftUi} onNew={openCreator} onBlank={onBlank} onImported={() => setWelcome(false)}
         onOpen={(id) => { store.switchTo(id); setWelcome(false); }} {...(store.c ? { onBack: () => setWelcome(false) } : {})} />
     </>
   );
   return (
     <>
       {creator}
-      <SheetApp store={store as CharacterStore & { c: Character }} draftUi={draftUi} onCreate={openCreator} onCharacters={() => setWelcome(true)} />
+      <SheetApp store={store as CharacterStore & { c: Character }} draftUi={draftUi} onCreate={openCreator} onCharacters={() => setWelcome(true)}
+        initialEdit={blankEdit} onEditShown={() => setBlankEdit(false)} />
     </>
   );
 }
 
-function SheetApp({ store, draftUi, onCreate, onCharacters }: { store: CharacterStore & { c: Character }; draftUi: ReactNode; onCreate: () => void; onCharacters: () => void }) {
+function SheetApp({ store, draftUi, onCreate, onCharacters, initialEdit = false, onEditShown }: {
+  store: CharacterStore & { c: Character }; draftUi: ReactNode; onCreate: () => void; onCharacters: () => void;
+  initialEdit?: boolean; onEditShown?: () => void;
+}) {
   const { c, update } = store;
-  const [edit, setEdit] = useState(false);
+  const [edit, setEdit] = useState(initialEdit);
+  // Edit mode from Blank sheet happens once: tell App it was shown (ref guard: StrictMode runs effects twice).
+  const editShown = useRef(false);
+  useEffect(() => {
+    if (initialEdit && !editShown.current) { editShown.current = true; onEditShown?.(); }
+  }, []);
   const [menuOpen, setMenuOpen] = useState(false);
   const [form, setForm] = useState<FormState>(null);
   const [activeSec, setActiveSec] = useState('sec-hp');

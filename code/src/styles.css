@@ -311,6 +311,7 @@ button.pill { border: none; font: inherit; font-size: 13px; cursor: pointer; }
 }
 .char-btn[aria-current="true"] { box-shadow: inset 0 0 0 2px var(--accent); color: var(--accent); }
 .new-choice { display: flex; flex-direction: column; gap: 6px; padding: 10px; border-radius: 14px; border: 1.5px dashed var(--accent); }
+.welcome-new { display: flex; flex-direction: column; gap: 6px; padding: 10px; border-radius: 14px; border: 1.5px dashed var(--accent); }
 /* A section label that opens and closes the list below it. */
 .disclosure {
   display: flex; align-items: center; gap: 6px; min-height: 44px; margin-top: 2px; padding: 0; border: none; background: transparent;

@@ -3,10 +3,11 @@
 import { useRef, useState, type ReactNode } from 'react';
 import { charInfo, charName, EXAMPLES, importFile, type CharacterStore } from '../storage';
 
-export function Welcome({ store, draft, onOpen, onNew, onBack, onImported }: {
-  store: CharacterStore; draft: ReactNode; onOpen: (id: string) => void; onNew: () => void; onBack?: () => void; onImported: () => void;
+export function Welcome({ store, draft, onOpen, onNew, onBlank, onBack, onImported }: {
+  store: CharacterStore; draft: ReactNode; onOpen: (id: string) => void; onNew: () => void; onBlank: () => void; onBack?: () => void; onImported: () => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
+  const [choosing, setChoosing] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const importBackup = async (file: File | undefined) => {
     if (!file) return;
@@ -41,10 +42,18 @@ export function Welcome({ store, draft, onOpen, onNew, onBack, onImported }: {
           </div>
         )}
         <div className="row wrap gap-8">
-          <button type="button" className="btn btn-primary" onClick={onNew}>+ New character</button>
+          <button type="button" className="btn btn-primary" aria-expanded={choosing} aria-controls="welcome-new"
+            onClick={() => setChoosing(!choosing)}>+ New character</button>
           <button type="button" className="btn" onClick={() => fileRef.current?.click()}>Import backup</button>
           <input ref={fileRef} type="file" accept="application/json,.json" hidden aria-label="Backup file" onChange={(e) => { void importBackup(e.target.files?.[0]); e.target.value = ''; }} />
         </div>
+        {choosing && (
+          <div id="welcome-new" className="welcome-new">
+            <button type="button" className="menu-btn plain" onClick={onNew}>Step by step</button>
+            <button type="button" className="menu-btn plain" onClick={onBlank}>Blank sheet</button>
+            <button type="button" className="menu-btn" onClick={() => setChoosing(false)}>Cancel</button>
+          </div>
+        )}
         <span className="label">Examples</span>
         <div className="col gap-8">
           {EXAMPLES.map(({ id, make }) => {

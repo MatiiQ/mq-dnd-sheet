@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import { StrictMode } from 'react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import App from './App';
 import { blankCharacter } from './defaults';
@@ -16,7 +17,30 @@ const saveTwo = () => {
   localStorage.setItem('dnd-index-v3', JSON.stringify({ active: 'a', list: [{ id: 'a', name: 'Ann' }, { id: 'b', name: 'Bob' }] }));
 };
 
+const isEditing = () => label('Done editing')?.getAttribute('aria-pressed') === 'true';
+const openMenu = () => tap(label('Menu: rests and characters'));
+
 describe('Welcome', () => {
+  it('+ New character opens a chooser; Cancel closes only the chooser', () => {
+    mount(<App />);
+    const add = btn('+ New character')!;
+    expect(add.getAttribute('aria-expanded')).toBe('false');
+    tap(add);
+    expect(add.getAttribute('aria-expanded')).toBe('true');
+    expect(btn('Step by step') && btn('Blank sheet') && btn('Cancel')).toBeTruthy();
+    expect(document.body.textContent).not.toMatch(/Copy of/);
+    tap(btn('Cancel'));
+    expect(btn('Step by step')).toBeFalsy();
+    expect(label('Characters')).toBeTruthy();
+  });
+  it('Blank sheet adds a character and opens it in edit mode once', () => {
+    mount(<StrictMode><App /></StrictMode>);
+    tap(btn('+ New character')); tap(btn('Blank sheet'));
+    expect(document.querySelector('.sheet')).toBeTruthy();
+    expect(isEditing()).toBe(true);
+    openMenu(); tap(btn('Characters')); tap(btn('Back to'));
+    expect(isEditing()).toBe(false);
+  });
   it('shows on a store with no characters', () => {
     mount(<App />);
     expect(btn('+ New character')).toBeTruthy();
