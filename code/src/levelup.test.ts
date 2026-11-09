@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { mergeCatalog } from './catalog/merge';
 import srdEntries from './data/srd/index';
 import type { ChoiceSpec, ClassEntry, Entry, FeatureEntry, SubclassEntry } from './catalog/schema';
-import { applyLevel, emptyCharacter, fixedHp, heldPicks, hpGain, levelPlan, levelSet, owedPicks, prereqCheck, undoLevel, undoPreview, withLevel, type ClassPick, type LevelAnswers } from './levelup';
+import { applyLevel, asks, emptyCharacter, fixedHp, heldPicks, hpGain, levelPlan, levelScreens, levelSet, levelSpellOptions, levelStepReady, masteryOptions, owedPicks, prereqCheck, stepEntry, undoLevel, undoPreview, withLevel, type ClassPick, type LevelAnswers } from './levelup';
 import { abilityMod, hdSpent, longRest, maxHpOf, removeRef } from './logic';
 import { migrate } from './migrate';
 import { blankCharacter } from './defaults';
@@ -501,3 +501,98 @@ describe('Ability Score Improvement and spellcasting [13]', () => {
   });
 });
 const effScoreOf = (c: Character, a: 'str') => c.abil[a] + c.grants.filter((g) => g.kind === 'abil' && g.ab === a).reduce((t, g) => t + Number(g.val), 0);
+
+// ---- Level screens as data (creator fixes, Task 11) ----
+describe('levelScreens and levelStepReady', () => {
+  const FIXED = { mode: 'fixed' as const, val: 6 };
+  const weapon = (n: string): Entry => ({ id: 'item/' + n, kind: 'item', name: n, src: 'srd', desc: '', cat: 'weapon', mastery: 'Sap' } as Entry);
+  const alertFeat: Entry = { id: 'feat/alert', kind: 'feat', name: 'Alert', src: 'srd', desc: '', cat: 'general', grants: [] } as Entry;
+  const acFeat: Entry = { id: 'feat/ac-feat', kind: 'feat', name: 'AC Feat', src: 'srd', desc: '', cat: 'general', grants: [{ id: 'g1', kind: 'ac', name: 'AC +1', acMode: 'bonus', val: '1' }] } as Entry;
+  const catW = mergeCatalog([...entries, weapon('longsword'), weapon('dagger'), weapon('spear'), alertFeat, acFeat], null);
+  const screens = (c: Character, pick: ClassPick, a: LevelAnswers, o?: Parameters<typeof levelScreens>[4], k = catW) => {
+    const plan = levelPlan(c, pick, k, a)!;
+    return { plan, raised: withLevel(c, pick, k).c, s: levelScreens(withLevel(c, pick, k).c, plan, k, a, o) };
+  };
+  const f3 = () => levelTo(fighter1(), 'class/fighter', 3);
+
+  it('features first, then the asking steps, summary only when asked', () => {
+    const c = f3(), pick = { row: c.classes[0].id };
+    const keys = screens(c, pick, A()).s.map((s) => s.key);
+    expect(keys[0]).toBe('features');
+    expect(keys).toContain('hp');
+    expect(keys).not.toContain('summary');
+    expect(screens(c, pick, A(), { summary: true }).s.at(-1)!.key).toBe('summary');
+  });
+  it('skip hides a step', () => {
+    const { s } = screens(fresh(), { cls: 'class/rogue' }, A(), { skip: (x) => x.key === 'profs/skills' });
+    expect(s.some((x) => x.key.startsWith('profs/skills'))).toBe(false);
+    expect(screens(fresh(), { cls: 'class/rogue' }, A()).s.some((x) => x.key === 'profs/skills/_/skills')).toBe(true);
+  });
+  it('the ASI feat adds its flow screens, and the level is unfinished until they are ready', () => {
+    const c = f3(), pick = { row: c.classes[0].id };
+    const a = A({ hp: FIXED, asi: { feat: 'feat/ability-score-improvement', flow: {} } });
+    const { s } = screens(c, pick, a);
+    const flows = s.filter((x) => x.kind === 'flow' && x.store === 'asi');
+    expect(flows.length).toBeGreaterThan(0);
+    expect(s.every((x) => x.ready)).toBe(false);
+    // Fighter 4 also owes Weapon Mastery picks (fighter1() took none); the fixture offers three kinds.
+    const done = screens(c, pick, A({ hp: FIXED, mastery: ['longsword', 'dagger', 'spear'], asi: asi('feat/ability-score-improvement', { asi: ['o1', 'o1'] }) })).s;
+    expect(done.filter((x) => !x.ready).map((x) => x.key)).toEqual([]);
+  });
+  it('review screens appear with review on and not with it off', () => {
+    const c = { ...f3(), acMods: [{ id: 'm', name: 'Ring', val: 1 }] as Character['acMods'] }, pick = { row: c.classes[0].id };
+    const a = A({ hp: FIXED, asi: { feat: 'feat/ac-feat', flow: {} } });
+    expect(screens(c, pick, a).s.some((x) => x.kind === 'flow' && x.flow.kind === 'review')).toBe(true);
+    expect(screens(c, pick, a, { review: false }).s.some((x) => x.kind === 'flow' && x.flow.kind === 'review')).toBe(false);
+  });
+  it('levelStepReady matches the old flags for hp, subclass and asi', () => {
+    const c = f3(), pick = { row: c.classes[0].id };
+    const { plan, raised } = screens(c, pick, A());
+    const hp = plan.steps.find((s) => s.kind === 'hp')!, asiStep = plan.steps.find((s) => s.kind === 'asi')!;
+    expect(levelStepReady(catW, raised, hp, A())).toEqual({ ready: false, missing: 'Choose fixed or rolled hit points' });
+    expect(levelStepReady(catW, raised, hp, A({ hp: FIXED }))).toEqual({ ready: true });
+    expect(levelStepReady(catW, raised, asiStep, A())).toEqual({ ready: false, missing: 'Choose a feat' });
+    expect(levelStepReady(catW, raised, asiStep, A({ asi: { feat: 'feat/ability-score-improvement', flow: {} } }))).toEqual({ ready: true });
+    const c2 = levelTo(fighter1(), 'class/fighter', 2);
+    const p3 = levelPlan(c2, { row: c2.classes[0].id }, catW, A())!;
+    const subStep = p3.steps.find((s) => s.kind === 'subclass')!;
+    expect(levelStepReady(catW, c2, subStep, A())).toEqual({ ready: false, missing: 'Choose a subclass' });
+    expect(levelStepReady(catW, c2, subStep, A({ sub: 'subclass/fighter/eldritch-knight' }))).toEqual({ ready: true });
+  });
+  it('cantrips, prepare and mastery now need min(owed, offered)', () => {
+    const cant = { key: 'cantrips:x', kind: 'cantrips' as const, title: 'Pick 2 cantrips', owed: 2, list: 'sorcerer', maxLvl: 0 };
+    const c = fresh();
+    expect(levelSpellOptions(catW, c, cant).map((e) => e.id)).toEqual(['spell/fire-bolt']);
+    expect(levelStepReady(catW, c, cant, A())).toEqual({ ready: false, missing: 'Choose 1' });
+    expect(levelStepReady(catW, c, cant, A({ spells: { 'cantrips:x': ['spell/fire-bolt'] } }))).toEqual({ ready: true });
+    const known = { ...c, spells: [{ id: 's', name: 'fire-bolt', lvl: 0, cid: 'spell/fire-bolt' } as Character['spells'][number]] };
+    expect(levelStepReady(catW, known, cant, A())).toEqual({ ready: true });
+    const prep = { key: 'prepare:x', kind: 'prepare' as const, title: 'Prepare 2 more', owed: 2, list: 'ranger', maxLvl: 2 };
+    expect(levelStepReady(catW, c, prep, A({ spells: { 'prepare:x': ['spell/cure'] } }))).toEqual({ ready: false, missing: 'Choose 1 more' });
+    const mast = { key: 'mastery@4', kind: 'mastery' as const, title: 'Weapon Mastery', owed: 2, held: ['longsword', 'dagger'] };
+    expect(masteryOptions(catW).map((k) => k.id)).toEqual(['dagger', 'longsword', 'spear']);
+    expect(levelStepReady(catW, c, mast, A({ mastery: ['spear'] }))).toEqual({ ready: true });
+    expect(levelStepReady(catW, c, mast, A({ mastery: ['dagger'] })).missing).toBe('Already on your sheet: dagger');
+  });
+  it('a taken feat at an ASI is "Already on your sheet"', () => {
+    const c0 = f3(), c = { ...c0, feats: [...c0.feats, { id: 'fa', g: 'feat', name: 'Alert', desc: '', cid: 'feat/alert' }] } as Character;
+    const { plan, raised } = screens(c, { row: c.classes[0].id }, A());
+    const asiStep = plan.steps.find((s) => s.kind === 'asi')!;
+    expect(levelStepReady(catW, raised, asiStep, A({ asi: { feat: 'feat/alert', flow: {} } })).missing).toBe('Already on your sheet: Alert');
+  });
+  it('a prerequisite warning gates the features screen until "anyway"', () => {
+    const r = ranger1();
+    const { s } = screens(r, { cls: 'class/wizard' }, A({ hp: FIXED }));
+    expect(s[0]).toMatchObject({ key: 'features', ready: false });
+    expect(s[0].missing).toMatch(/^Needs /);
+    expect(screens(r, { cls: 'class/wizard' }, A({ hp: FIXED, anyway: true })).s[0].ready).toBe(true);
+  });
+  it('stepEntry: the feature itself, or a wrapper holding only the step choice', () => {
+    const { plan } = screens(fresh(), { cls: 'class/rogue' }, A());
+    const profs = plan.steps.find((s) => s.key === 'profs/skills')!;
+    expect(stepEntry(plan, profs)).toMatchObject({ id: 'feature/rogue/proficiencies', grants: [profs.choice] });
+    const exp = plan.steps.find((s) => s.kind === 'feature' && s.entry?.id === 'feature/rogue/expertise')!;
+    expect(stepEntry(plan, exp)).toBe(exp.entry);
+    expect(asks(exp)).toBe(true);
+  });
+});

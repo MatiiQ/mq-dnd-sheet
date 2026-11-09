@@ -1,13 +1,13 @@
 // The level engine (spec §2): what the next level of one class gives (levelPlan), applying it (applyLevel) and taking
 // the last level back (undoLevel). Pure. The wizards are UI over these functions; the creator replays its stored answers
 // through applyLevel, so its preview and its result are the same function.
-import { addFromCatalog, addChoicePicks, choicesOf, classProfInputs, hasSpell, poolOptions, prereqMet, resolveChoices, titled, type AddChoices } from './catalog/copy';
+import { addFromCatalog, addChoicePicks, blocksPick, choicesOf, classProfInputs, hasSpell, poolOptions, prereqMet, resolveChoices, titled, type AddChoices } from './catalog/copy';
 import { valueAt } from './catalog/value';
 import { masterySlots } from './actions';
 import { activeGrants } from './links';
-import { buildChoices, type FlowAnswers } from './catalog/flow';
+import { buildChoices, choiceKey, choiceStepReady, choiceSteps, type ChoiceOpts, type ChoiceStep, type FlowAnswers } from './catalog/flow';
 import { entriesOf, type Catalog } from './catalog/merge';
-import type { ChoiceSpec, ClassEntry, Entry, FeatureEntry, GrantSpec } from './catalog/schema';
+import type { ChoiceSpec, ClassEntry, Entry, FeatureEntry, GrantSpec, SpellEntry } from './catalog/schema';
 import { atLevel } from './catalog/copy';
 import { blankCharacter } from './defaults';
 import { ABILITIES, abilityMod, addGrants, effScore, num, pactFor, SKILLS, slotsFor, spellForRow, valueCtx, LEVEL_KEYS, LIST_KIND, maxHpOf, maxHpRaw, newId, normalize, removalSummary, removeRef, ROW_FIELDS, totalLevel, withoutKeys, type Ref, type RefKind } from './logic';
@@ -246,6 +246,98 @@ export function levelPlan(c: Character, pick: ClassPick, cat: Catalog | null, an
   const slots = masterySlots(x) + gained;
   if (slots > c.mastery.length) steps.push({ key: 'mastery@' + n, kind: 'mastery', title: 'Weapon Mastery', owed: slots - c.mastery.length, held: [...c.mastery] });
   return { pick, cls, n, clsLvl: r.lvl, steps };
+}
+
+// ---- The level's screens as data (the level-up wizard and the creator share them) ----
+
+// Whether a step asks the player something (a screen of its own).
+export const asks = (s: Step) => s.kind === 'hp' || s.kind === 'subclass' || s.kind === 'asi' || s.kind === 'cantrips' || s.kind === 'prepare' || s.kind === 'mastery'
+  || ((s.kind === 'profs' || s.kind === 'choice' || s.kind === 'grow') && !!s.choice)
+  || (s.kind === 'feature' && !s.onSheet && !!s.entry && choicesOf(s.entry).length > 0);
+
+// The entry a step's ChoiceFlow asks: the feature itself, or a wrapper holding only the step's choice (class
+// proficiencies, more picks on an entry, a grown count).
+export function stepEntry(plan: Plan, step: Step): Entry {
+  if (step.kind === 'feature') return step.entry!;
+  const base = step.entry ?? { id: 'feature/' + (plan.cls?.id.split('/')[1] ?? 'x') + '/proficiencies', kind: 'feature', name: step.title, src: 'srd', desc: '', cls: '', lvl: 1 };
+  return { ...base, grants: [step.choice!] } as Entry;
+}
+
+// The spells a cantrips or prepare step offers: the class's list up to the highest level it prepares on its own
+// (PHB p.45), without the ones already on the sheet (they would be added twice).
+export function levelSpellOptions(cat: Catalog | null, c: Character, step: Step): SpellEntry[] {
+  return cat ? entriesOf(cat, 'spell').filter((e) => !hasSpell(c, e) && e.classes.split(',').includes(step.list ?? '') && (step.kind === 'cantrips' ? e.lvl === 0 : e.lvl >= 1 && e.lvl <= (step.maxLvl ?? 0))) : [];
+}
+// The weapon kinds a Weapon Mastery step offers (the Weapon Mastery rules, PHB p.91).
+export function masteryOptions(cat: Catalog | null): { id: string; name: string }[] {
+  return cat ? entriesOf(cat, 'item').filter((e) => e.cat === 'weapon' && e.mastery).map((e) => ({ id: e.id.split('/')[1], name: e.name })) : [];
+}
+
+const pickMissing = (need: number, have: number) => (have >= need ? { ready: true } : { ready: false, missing: have ? `Choose ${need - have} more` : `Choose ${need}` });
+
+// Whether a step of the level is answered. The counts a spell or mastery step owes are capped by what it offers, so a
+// short list never strands a level; with nothing offered the step is ready. Flow steps (choices) are read per screen.
+export function levelStepReady(cat: Catalog | null, c: Character, step: Step, answers: LevelAnswers): { ready: boolean; missing?: string } {
+  switch (step.kind) {
+    case 'hp': return answers.hp ? { ready: true } : { ready: false, missing: 'Choose fixed or rolled hit points' };
+    case 'subclass': return answers.sub ? { ready: true } : { ready: false, missing: 'Choose a subclass' };
+    case 'asi': {
+      if (!answers.asi) return { ready: false, missing: 'Choose a feat' };
+      const ch = step.entry ? choicesOf(step.entry)[0] : undefined;
+      const option = cat && ch?.pool ? poolOptions(cat, c, ch.pool, {}).find((o) => o.value === answers.asi!.feat) : undefined;
+      return option && blocksPick(option.value, { option }) ? { ready: false, missing: 'Already on your sheet: ' + option.label } : { ready: true };
+    }
+    case 'cantrips': case 'prepare': {
+      const offered = new Set(levelSpellOptions(cat, c, step).map((e) => e.id));
+      const have = (answers.spells[step.key] ?? []).filter((id) => offered.has(id)).length;
+      return pickMissing(Math.min(step.owed ?? 0, offered.size), have);
+    }
+    case 'mastery': {
+      const held = step.held ?? [], all = masteryOptions(cat);
+      const value = answers.mastery ?? [];
+      const dup = value.find((k) => held.includes(k));
+      if (dup) return { ready: false, missing: 'Already on your sheet: ' + (all.find((k) => k.id === dup)?.name ?? dup) };
+      const free = all.filter((k) => !held.includes(k.id));
+      return pickMissing(Math.min(step.owed ?? 0, free.length), value.filter((k) => free.some((x) => x.id === k)).length);
+    }
+    default: return { ready: true };
+  }
+}
+
+// A screen of a level: what the level brings (features), a step of the plan, one step of a ChoiceFlow (the step's own
+// choices in answers.flows[step.key], or the ASI feat's in answers.asi.flow), or the summary.
+export type LevelScreenSpec = ({ kind: 'features' } | { kind: 'step'; step: Step } | { kind: 'flow'; step: Step; entry: Entry; flow: ChoiceStep; at: string; store: 'flows' | 'asi' } | { kind: 'summary' })
+  & { key: string; title: string; ready: boolean; missing?: string };
+
+const flowTitle = (f: ChoiceStep) => (f.kind === 'choice' ? f.choice.name : f.kind === 'equip' ? 'Starting equipment' : 'Already counted');
+
+// The level's screens, in order: features, each asking step (a ChoiceFlow step is one screen per flow step), then the
+// summary when asked. c: the character with the level already raised (withLevel). skip: steps answered elsewhere;
+// review: false leaves out the "Already counted" and link questions (links are linked, the creator).
+export function levelScreens(c: Character, plan: Plan, cat: Catalog | null, answers: LevelAnswers, opts: { skip?: (s: Step) => boolean; summary?: boolean; review?: boolean } = {}): LevelScreenSpec[] {
+  const review = opts.review ?? true;
+  const prereq = plan.steps.find((s) => s.kind === 'prereq');
+  const gate = prereq?.warn && !answers.anyway ? prereq.warn : undefined;
+  const out: LevelScreenSpec[] = [{ kind: 'features', key: 'features', title: 'This level', ready: !gate, ...(gate ? { missing: gate } : {}) }];
+  const flows = (step: Step, entry: Entry, fa: FlowAnswers, o: ChoiceOpts, store: 'flows' | 'asi') => {
+    for (const f of choiceSteps(cat!, c, entry, fa, o)) {
+      const at = choiceKey(f);
+      out.push({ kind: 'flow', step, entry, flow: f, at, store, key: step.key + '/' + at, title: flowTitle(f), ...choiceStepReady(cat!, c, f, fa, o) });
+    }
+  };
+  for (const s of plan.steps.filter((x) => asks(x) && !opts.skip?.(x))) {
+    if (s.kind === 'hp' || s.kind === 'subclass' || s.kind === 'asi' || s.kind === 'cantrips' || s.kind === 'prepare' || s.kind === 'mastery') {
+      out.push({ kind: 'step', step: s, key: s.key, title: s.title, ...levelStepReady(cat, c, s, answers) });
+      const feat = s.kind === 'asi' && cat && answers.asi ? cat.byId.get(answers.asi.feat) : undefined;
+      if (feat) flows(s, feat, answers.asi!.flow, { noCounts: !review, noLinks: !review }, 'asi');
+      continue;
+    }
+    if (!cat) continue;
+    const o: ChoiceOpts = { noCounts: !review, noLinks: !review, ...(s.held ? { held: s.held } : {}), ...(s.choice && s.owed !== undefined ? { pick: { [s.choice.id]: s.owed } } : {}) };
+    flows(s, stepEntry(plan, s), answers.flows[s.key] ?? {}, o, 'flows');
+  }
+  if (opts.summary) out.push({ kind: 'summary', key: 'summary', title: 'Summary', ready: true });
+  return out;
 }
 
 // Equal as stored: an absent optional value is written '' (levelSet), so undefined and '' match.

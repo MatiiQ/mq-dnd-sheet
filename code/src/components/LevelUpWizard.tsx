@@ -3,12 +3,12 @@
 // already raised (withLevel), so ChoiceFlow and the lists ask the counts of the new level; answers never touch the sheet
 // until Finish.
 import { useState, type ReactNode } from 'react';
-import { choicesOf, hasSpell, poolOptions } from '../catalog/copy';
+import { choicesOf, poolOptions } from '../catalog/copy';
 import type { FlowAnswers } from '../catalog/flow';
 import { entriesOf, type Catalog } from '../catalog/merge';
 import type { ChoiceSpec, ClassEntry, Entry } from '../catalog/schema';
 import { useCatalog } from '../catalog/useCatalog';
-import { applyLevel, fixedHp, levelPlan, prereqCheck, undoLevel, undoPreview, withLevel, type ClassPick, type LevelAnswers, type Step } from '../levelup';
+import { applyLevel, asks, fixedHp, levelPlan, levelSpellOptions, masteryOptions, prereqCheck, undoLevel, undoPreview, withLevel, type ClassPick, type LevelAnswers, type Step } from '../levelup';
 import { abilityMod, maxHpOf, maxHpRaw, totalLevel } from '../logic';
 import { Sheet, useSheet } from '../sheet';
 import type { Character, Die, LevelKey } from '../types';
@@ -47,9 +47,6 @@ export function LevelUpWizard({ c, onApply, onClose, n, cat: given }: {
 
 // A screen of the wizard: one of the plan's steps that needs an answer, the overview of what the level brings, the summary.
 type Screen = { kind: 'step'; step: Step } | { kind: 'overview' } | { kind: 'summary' };
-const asks = (s: Step) => s.kind === 'hp' || s.kind === 'subclass' || s.kind === 'asi' || s.kind === 'cantrips' || s.kind === 'prepare' || s.kind === 'mastery'
-  || ((s.kind === 'profs' || s.kind === 'choice' || s.kind === 'grow') && !!s.choice)
-  || (s.kind === 'feature' && !s.onSheet && !!s.entry && choicesOf(s.entry).length > 0);
 
 // The class pick, then the steps of one level. The creator reuses it, one level at a time.
 // onFinish also gets the class pick and the answers, which the creator stores instead of the character. fixedPick: the
@@ -284,8 +281,7 @@ function AsiScreen({ cat, raised, step, value, onChange }: { cat: Catalog; raise
 // New cantrips or spells to prepare: the class's list up to the highest level it prepares on its own (PHB p.45).
 function SpellScreen({ cat, step, value, onChange }: { cat: Catalog | null; step: Step; value: string[]; onChange: (ids: string[]) => void }) {
   const { c } = useSheet();
-  // A spell already on the sheet is not offered again (it would be added twice).
-  const spells = cat ? entriesOf(cat, 'spell').filter((e) => !hasSpell(c, e) && e.classes.split(',').includes(step.list ?? '') && (step.kind === 'cantrips' ? e.lvl === 0 : e.lvl >= 1 && e.lvl <= (step.maxLvl ?? 0))) : [];
+  const spells = levelSpellOptions(cat, c, step);
   const toggle = (id: string) => onChange(value.includes(id) ? value.filter((x) => x !== id) : value.length < (step.owed ?? 0) ? [...value, id] : value);
   return (
     <div className="col gap-8">
@@ -301,7 +297,7 @@ function SpellScreen({ cat, step, value, onChange }: { cat: Catalog | null; step
 
 // A Weapon Mastery slot gained at this level: pick the weapon kinds (the Weapon Mastery rules, PHB p.91).
 function MasteryScreen({ cat, step, value, onChange }: { cat: Catalog | null; step: Step; value: string[]; onChange: (m: string[]) => void }) {
-  const kinds = cat ? entriesOf(cat, 'item').filter((e) => e.cat === 'weapon' && e.mastery).map((e) => ({ id: e.id.split('/')[1], name: e.name })) : [];
+  const kinds = masteryOptions(cat);
   const held = step.held ?? [];
   const toggle = (k: string) => onChange(value.includes(k) ? value.filter((x) => x !== k) : value.length < (step.owed ?? 0) ? [...value, k] : value);
   return (
