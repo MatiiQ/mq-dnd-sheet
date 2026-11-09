@@ -45,16 +45,20 @@ on a narrow one everything scrolls in one column. Menu › Layout forces 1 or 2 
 
 ### Characters
 - With no character of your own, the app opens on the **Characters** screen: your characters (name, class and levels,
-  an HP bar), **+ New character**, **Import backup**, and the two examples. **Menu › Characters** shows it any time, with
-  "Back to" the open sheet. Delete and duplicate stay in the menu.
+  an HP bar), **+ New character** (**Step by step** or **Blank sheet**, which opens in edit mode), **Import backup**, and
+  the two examples. An example opens on launch only next to a character of your own. **Menu › Characters** shows it any
+  time, with "Back to" the open sheet; the menu has no new-character button. Delete and duplicate stay in the menu.
 
 ### Creating a character
-- **Menu › New character › Step by step** opens the creator: class (with its starting equipment and a starting level
-  from 1 to 20), origin (background and its choices, species, two languages besides Common, then the class skills, with
-  your background's shown as already known), ability scores (Standard Array, Point Buy with a live 27-point counter, or
-  typed rolls: six totals or four dice each, lowest dropped), details, and for a starting level above 1 each level in
-  turn, multiclassing allowed. One summary, then **Create character**.
-- Your answers are saved as a draft after every step: reopening the app offers to continue or discard it.
+- **Menu › Characters › + New character › Step by step** opens the guided creator: one question per screen, with a
+  stage stepper on top (Class, Origin, Abilities, Equipment, Details, one stage per level, Summary; above starting level 3
+  the levels share one stage). Class tiles show the hit die, primary abilities, saves and, with the PHB data imported,
+  what the class likes and how complex it is; a starting level from 1 to 20. Origin: background, its choices, species,
+  two languages besides Common, the class skills. Abilities: Standard Array (filled with your class's suggestion), Point
+  Buy (27 points) or rolled totals, then the background bonus (+2 and +1, or +1 to all three). Equipment: your class's
+  and your background's packages. Then details, each level from 1 to the starting level (what it gives, its choices,
+  multiclassing through "Change class"), and one summary with **Create character**.
+- Your answers are saved as a draft after every change: reopening the app offers to continue or discard it.
 
 ### Levels and classes
 - **Menu › Level up** (or tap the class line in the header) opens a full-screen wizard: pick which class gets the level
@@ -147,8 +151,8 @@ on a narrow one everything scrolls in one column. Menu › Layout forces 1 or 2 
 Appearance, Personality, Backstory and Session notes.
 
 ### Characters and backup (Rest · More menu)
-- Several characters; **+ New character** gives a blank sheet or a copy of one of the two examples (Ilyra,
-  Ranger 5, and Seren, Druid 12). **Duplicate** and **Delete** are in the same menu.
+- Several characters; **Characters › + New character** gives the guided creator or a blank sheet, and the two examples
+  (Ilyra, Ranger 5, and Seren, Druid 12) open from the Characters screen. **Duplicate** and **Delete** are in the menu.
 - **Backup:** *Export this*, *Export all* (a JSON file, shared to Files or iCloud Drive from the iPad, downloaded elsewhere) and
   *Import* (adds the characters next to your own; it never overwrites).
 - If the device refuses to store a change, a red banner at the top tells you to export a backup.
