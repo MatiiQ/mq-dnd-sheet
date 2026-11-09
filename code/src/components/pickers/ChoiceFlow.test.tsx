@@ -6,7 +6,7 @@ import { mergeCatalog } from '../../catalog/merge';
 import type { AddChoices } from '../../catalog/copy';
 import { blankCharacter } from '../../defaults';
 import { Sheet } from '../../sheet';
-import { btn, mount, tap } from '../../test-dom';
+import { btn, mount, tap, unmount } from '../../test-dom';
 import type { Character } from '../../types';
 import { ChoiceFlow, type FlowState } from './ChoiceFlow';
 
@@ -59,5 +59,45 @@ describe('ChoiceFlow for the level-up wizard', () => {
     tap(opt('Stealth'));
     tap(btn('Add'));
     expect(got).toMatchObject({ picks: { c1: ['stealth'] } });
+  });
+  it('a held option already in the initial picks can be tapped out; a held option not picked can\'t be tapped in', () => {
+    mount(
+      <Sheet.Provider value={{ c: blankCharacter(), update: () => {}, edit: false, form: null, setForm: () => {}, focus: null, reveal: () => {}, markFocusUsed: () => {} }}>
+        <ChoiceFlow entry={cat.byId.get('feat/skilled')!} cat={cat} held={['athletics', 'stealth']} initial={{ answers: { '': { picks: { c1: ['athletics'] }, counted: {}, links: {} } }, at: 0 }}
+          onDone={() => {}} onCancel={() => {}} />
+      </Sheet.Provider>);
+    const opt = (t: string) => [...document.querySelectorAll('button.pick-opt')].find((b) => b.textContent?.startsWith(t))!;
+    expect(opt('Athletics').getAttribute('aria-pressed')).toBe('true');
+    tap(opt('Athletics'));
+    expect(opt('Athletics').getAttribute('aria-pressed')).toBe('false');
+    tap(opt('Stealth'));
+    expect(opt('Stealth').getAttribute('aria-pressed')).toBe('false');
+  });
+});
+
+describe('uncontrolled ChoiceFlow', () => {
+  const withAlert: Character = { ...blankCharacter(), skillProf: { arcana: 1 }, feats: [{ id: 'x', g: 'feat', name: 'Alert', desc: '', cid: 'feat/alert' }] };
+  const render = (id: string) => mount(
+    <Sheet.Provider value={{ c: withAlert, update: () => {}, edit: false, form: null, setForm: () => {}, focus: null, reveal: () => {}, markFocusUsed: () => {} }}>
+      <ChoiceFlow entry={cat.byId.get(id)!} cat={cat} onDone={() => {}} onCancel={() => {}} />
+    </Sheet.Provider>);
+  const opt = (t: string) => [...document.querySelectorAll('button.pick-opt')].find((b) => b.textContent?.startsWith(t))!;
+  it('still renders pick-opt', () => {
+    render('feat/skilled');
+    expect(document.querySelectorAll('button.pick-opt').length).toBeGreaterThan(0);
+  });
+  it('a taken entry option (a feat the sheet already has) can\'t be tapped in, while a taken skill option can', () => {
+    mount(
+      <Sheet.Provider value={{ c: withAlert, update: () => {}, edit: false, form: null, setForm: () => {}, focus: null, reveal: () => {}, markFocusUsed: () => {} }}>
+        <ChoiceFlow entry={{ id: 'feat/pick-origin', kind: 'feat', name: 'Pick', src: 'srd', desc: '', cat: 'general', grants: [{ kind: 'choice', id: 'f', name: 'Feat', pick: 1, pool: 'feat:cat=origin' }] }}
+          cat={cat} onDone={() => {}} onCancel={() => {}} />
+      </Sheet.Provider>);
+    tap(opt('Alert'));
+    expect(opt('Alert').getAttribute('aria-pressed')).toBe('false');
+    expect(opt('Alert').getAttribute('aria-disabled')).toBe('true');
+    unmount();
+    render('feat/skilled');
+    tap(opt('Arcana'));
+    expect(opt('Arcana').getAttribute('aria-pressed')).toBe('true');
   });
 });

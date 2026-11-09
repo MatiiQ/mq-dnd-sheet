@@ -84,6 +84,18 @@ describe('poolOptions', () => {
 
 describe('freeText and needed', () => {
   const blank = blankCharacter();
+  it('needed() with a taken entry option: min(pick, pickable ∪ stored)', () => {
+    const n = entriesOf(cat, 'feat').filter((e) => e.cat === 'origin').length;
+    const ch = { kind: 'choice' as const, id: 'f', name: 'Feats', pick: n, pool: 'feat:cat=origin' };
+    const withAlert: Character = { ...blank, feats: [{ id: 'x', g: 'feat', name: 'Alert', desc: '', cid: 'feat/alert' }] };
+    expect(needed(cat, blank, ch, {})).toBe(n);
+    expect(needed(cat, withAlert, ch, {})).toBe(n - 1);
+    expect(needed(cat, withAlert, ch, { f: ['feat/alert'] })).toBe(n);
+  });
+  it('needed() for skills marked taken still counts them', () => {
+    const ch = { kind: 'choice' as const, id: 'c2', name: 'Skill', pick: 2, pool: 'skill:arcana|history', orExpert: true };
+    expect(needed(cat, withSkills(['arcana', 'history']), ch, {})).toBe(2);
+  });
   it('is free text for unknown kinds and for name pools with no options', () => {
     expect(freeText(cat, blank, 'spell:lvl~3', {})).toBe(true);
     expect(freeText(cat, blank, 'spell:list=nope;lvl=1', {})).toBe(true);

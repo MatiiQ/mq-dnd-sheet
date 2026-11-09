@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { choiceActive, choicesOf, equipText, freeText, livePicks, needed, optionGroups, poolOptions, validPicks, type AddChoices } from '../../catalog/copy';
-import { buildChoices, EMPTY, flowNodes, flowReview, type FlowNode, type NodeAnswers } from '../../catalog/flow';
+import { blocksPick, choicesOf, equipText, freeText, livePicks, optionGroups, poolOptions, type AddChoices, type PoolOption } from '../../catalog/copy';
+import { buildChoices, choiceNeed, choiceStepReady, choiceSteps, EMPTY, flowNodes, flowReview, togglePick, type FlowNode, type NodeAnswers } from '../../catalog/flow';
 import type { Catalog } from '../../catalog/merge';
 import type { ChoiceSpec, Entry } from '../../catalog/schema';
 import { normName } from '../../logic';
@@ -10,11 +10,10 @@ import { LinkOrAdd } from '../GrantEditor';
 // Where the flow stood when it handed its answers on: given back as `initial`, it starts there again (Back from the item
 // questions). total: its step count, 0 when it had nothing to ask.
 export interface FlowState { answers: Record<string, NodeAnswers>; at: number; total?: number }
-interface ChoiceStep { node: FlowNode; choice: ChoiceSpec }
 
 // Asks a catalog entry's choices, then the "Already counted" switches and the link-or-add questions of what it will
 // add, and hands the answers to onDone (addFromCatalog's AddChoices) with where it stood. An entry with nothing to ask
-// goes straight through. held: options already on the sheet, shown crossed out and not selectable (the level-up wizard);
+// goes straight through. held: options already on the sheet, shown crossed out, can be tapped out but not in (the level-up wizard);
 // pick: a choice id → the count owed now, instead of the choice's own count (Metamagic +2 at level 10).
 export function ChoiceFlow({ entry, cat, preset, initial, held, pick, onDone, onCancel }: {
   entry: Entry; cat: Catalog; preset?: Record<string, string[]>; initial?: FlowState; held?: string[]; pick?: Record<string, number>;
@@ -25,13 +24,12 @@ export function ChoiceFlow({ entry, cat, preset, initial, held, pick, onDone, on
   const [at, setAt] = useState(initial?.at ?? 0);
   const [query, setQuery] = useState('');
 
+  const opts = { preset, held, pick };
   const nodes = flowNodes(cat, c, entry, answers, preset);
-  const steps: ChoiceStep[] = nodes.flatMap((node) => choicesOf(node.entry).filter((ch) => !node.preset[ch.id] && choiceActive(node.entry, ch, node.picks)).map((choice) => ({ node, choice })));
-  // What the answers add, for the last step's questions.
+  const steps = choiceSteps(cat, c, entry, answers, opts);
+  // What the answers add, for the review step's questions.
   const { counts, links } = flowReview(cat, c, nodes, answers);
-  const review = counts.length > 0 || links.length > 0;
-  const bg = nodes[0].entry.kind === 'background' && nodes[0].entry.equipA !== undefined ? nodes[0].entry : null;
-  const total = steps.length + (review ? 1 : 0) + (bg ? 1 : 0);
+  const total = steps.length;
   const idx = Math.min(at, Math.max(0, total - 1));
 
   const build = (): AddChoices => buildChoices(cat, c, entry, answers, preset);
@@ -48,11 +46,12 @@ export function ChoiceFlow({ entry, cat, preset, initial, held, pick, onDone, on
     return { ...n, picks };
   });
 
-  const step = idx < steps.length ? steps[idx] : null;
-  let ready = true, body = null;
-  if (bg && idx === total - 1) {
+  const step = steps[idx];
+  const ready = choiceStepReady(cat, c, step, answers, opts).ready;
+  let body = null;
+  if (step.kind === 'equip') {
+    const bg = nodes[0].entry as Extract<Entry, { kind: 'background' }>;
     const cur = answers['']?.equip;
-    ready = !!cur;
     const opt = (v: 'A' | 'B' | 'none', label: string, extra: string) => (
       <button key={v} type="button" className="pick-opt" aria-pressed={cur === v} onClick={() => setNode('', (n) => ({ ...n, equip: v }))}>
         <span className="col"><span>{label}</span><span className="small">{extra}</span></span>
@@ -65,25 +64,19 @@ export function ChoiceFlow({ entry, cat, preset, initial, held, pick, onDone, on
         <div className="col gap-6">{opt('A', 'Package A', equipText(cat, bg))}{opt('B', 'Package B', `${bg.gpB ?? 0} GP`)}{opt('none', 'Skip', 'Add no items or coins')}</div>
       </>
     );
-  } else if (step) {
+  } else if (step.kind === 'choice') {
     const { node, choice } = step;
     const cur = livePicks(cat, c, choice, node.picks, node.adding);
-    const valid = validPicks(choice, cur);
-    const need = pick?.[choice.id] ?? needed(cat, c, choice, node.picks, node.adding);
-    ready = valid.length >= need;
+    const need = choiceNeed(cat, c, node, choice, opts);
     const count = (v: string) => cur.filter((x) => x === v).length;
-    // A tap adds the option while there is room (a second time only with repeat), else takes it out again.
-    const toggle = (v: string) => {
-      const n = count(v);
-      const added = [...cur, v];
-      if (held?.includes(v)) return;
-      if (validPicks(choice, added).length === added.length && (pick?.[choice.id] === undefined || added.length <= pick[choice.id]) && (n === 0 || choice.repeat)) setPicks(node, choice, added);
-      else if (n > 0) setPicks(node, choice, cur.filter((x) => x !== v));
-      else if (choice.pick === 1) setPicks(node, choice, [v]);
+    const blocked = (v: string, option?: PoolOption) => blocksPick(v, { held, option });
+    const toggle = (v: string, option?: PoolOption) => {
+      const next = togglePick(choice, cur, v, { blocked: blocked(v, option), cap: pick?.[choice.id] });
+      if (next) setPicks(node, choice, next);
     };
-    const optButton = (value: string, label: string, extra?: string, warn?: boolean) => (
-      <button key={value} type="button" className="pick-opt" aria-pressed={count(value) > 0} aria-disabled={held?.includes(value) || undefined}
-        style={held?.includes(value) ? { textDecoration: 'line-through', color: 'var(--off)' } : undefined} onClick={() => toggle(value)}>
+    const optButton = (value: string, label: string, extra?: string, warn?: boolean, option?: PoolOption) => (
+      <button key={value} type="button" className="pick-opt" aria-pressed={count(value) > 0} aria-disabled={blocked(value, option) || undefined}
+        style={blocked(value, option) ? { textDecoration: 'line-through', color: 'var(--off)' } : undefined} onClick={() => toggle(value, option)}>
         <span className="col">
           <span>{label}{count(value) > 1 ? ' ×' + count(value) : ''}</span>
           {extra && <span className={warn ? 'small picker-warn' : 'small'}>{extra}</span>}
@@ -110,7 +103,7 @@ export function ChoiceFlow({ entry, cat, preset, initial, held, pick, onDone, on
         <div className="col gap-6">
           {opts.length > 12 && <input type="search" className="input" aria-label="Search the options" placeholder="Search" value={query} onChange={(e) => setQuery(e.target.value)} />}
           <div className="row wrap gap-6">
-            {shown.map((o) => optButton(o.value, o.label, o.unmet ? 'Needs ' + o.unmet.join(', ') : o.taken ? 'On the sheet' : undefined, !!o.unmet))}
+            {shown.map((o) => optButton(o.value, o.label, o.unmet ? 'Needs ' + o.unmet.join(', ') : o.taken ? 'On the sheet' : undefined, !!o.unmet, o))}
           </div>
         </div>
       );
@@ -124,7 +117,6 @@ export function ChoiceFlow({ entry, cat, preset, initial, held, pick, onDone, on
       </>
     );
   } else {
-    ready = links.every((x) => x.choice !== null);
     body = (
       <>
         <span className="label">{nodes[0].title}</span>

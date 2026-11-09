@@ -235,8 +235,30 @@ export function withDetectedArmor(d: ItemDraft): ItemDraft {
 // ---- Choices ----
 
 // One option of a choice step: the pick value, its label, and the catalog entry behind it when there is one.
-// taken: the character already has it (marked, still selectable). unmet: a feat's missing prerequisites.
+// taken: the character already has it. A taken entry option (a feat, feature, trait or subclass) can be tapped out,
+// never in (blocksPick); a taken skill, tool, language or spell is only a label and stays selectable (Keen Mind's
+// Expertise needs a proficient skill). unmet: a feat's missing prerequisites.
 export interface PoolOption { value: string; label: string; entry?: Entry; taken?: boolean; unmet?: string[] }
+
+const BLOCKING_KINDS = ['feat', 'feature', 'trait', 'subclass'];
+// Whether a value can't be picked (only taken out again): held by the level-up wizard, or a taken entry option.
+export function blocksPick(value: string, o: { held?: string[]; option?: PoolOption }): boolean {
+  return !!o.held?.includes(value) || !!(o.option?.taken && o.option.entry && BLOCKING_KINDS.includes(o.option.entry.kind));
+}
+// A choice's need capped by what can still be picked: the unblocked options joined with the stored valid picks (a set
+// union, so a stored pick counts once). keepStored: false leaves out a stored pick that is itself blocked. A repeat
+// choice fills up to two picks per option (validPicks).
+export function pickCap(choice: ChoiceSpec, base: number, opts: PoolOption[], stored: string[], held?: string[], keepStored = true): number {
+  const pickable = new Set(opts.filter((o) => !blocksPick(o.value, { held, option: o })).map((o) => o.value));
+  for (const v of validPicks(choice, stored)) if (keepStored || !blocksPick(v, { held, option: opts.find((o) => o.value === v) })) pickable.add(v);
+  return Math.min(base, choice.repeat ? 2 * pickable.size : pickable.size);
+}
+// The options a choice offers as PoolOptions: its option groups, or its pool's options; null for a typed pool.
+export function choiceOptions(cat: Catalog, c: Character, choice: ChoiceSpec, picks: Record<string, string[]>, adding: Entry[] = []): PoolOption[] | null {
+  if (choice.options) return optionGroups(choice).map((g) => ({ value: g.value, label: g.label }));
+  if (!choice.pool || freeText(cat, c, choice.pool, picks)) return null;
+  return poolOptions(cat, c, choice.pool, picks, adding);
+}
 
 // Tool groups: ProfEntry has no group field. The generic group names are never options.
 export const TOOL_GROUPS: Record<string, string[]> = {
@@ -375,8 +397,8 @@ export function poolOptions(cat: Catalog, c: Character, pool: string, picks: Rec
     case 'spell':
       return filtered(entriesOf(cat, 'spell'), filter, ['list', 'lvl', 'school', 'ritual']).map((e) => ent(e, hasSpell(c, e))).sort(byName);
     case 'feat':
-      // feat:any: "another feat you qualify for" names no category, so any counts (PHB p.199). Taken and unmet feats
-      // stay selectable, marked, as in every pool; a repeatable feat is never "on the sheet".
+      // feat:any: "another feat you qualify for" names no category, so any counts (PHB p.199). Unmet feats stay
+      // selectable, marked; a taken feat is marked and can't be picked (blocksPick); a repeatable feat is never "on the sheet".
       return (filter === 'any' ? entriesOf(cat, 'feat') : filtered(entriesOf(cat, 'feat'), filter, ['cat'])).map((e) => {
         const { missing } = prereqMet(c, e.prereq, adding);
         return { ...ent(e, !e.repeat && hasFeature(c, e)), ...(missing.length ? { unmet: missing } : {}) };
@@ -432,10 +454,11 @@ export function freeText(cat: Catalog, c: Character, pool: string, picks: Record
   return NAME_KINDS.includes(kind) && poolOptions(cat, c, pool, picks).length === 0;
 }
 
-// Picks this choice needs: `pick`, or for a pool with options, no more than it offers (none when it offers none).
+// Picks this choice needs: `pick`, or for a pool with options, no more than can be picked (pickCap: the options a
+// taken entry doesn't block, plus the stored picks; none when it offers none). Typed and option-list choices: `pick`.
 export function needed(cat: Catalog, c: Character, choice: ChoiceSpec, picks: Record<string, string[]>, adding: Entry[] = []): number {
   if (!choice.pool || freeText(cat, c, choice.pool, picks)) return choice.pick;
-  return Math.min(choice.pick, poolOptions(cat, c, choice.pool, picks, adding).length);
+  return pickCap(choice, choice.pick, poolOptions(cat, c, choice.pool, picks, adding), livePicks(cat, c, choice, picks, adding));
 }
 
 // A choice's picks as they stand: a skill:proficient pick that has left the pool (the skill it named was changed) goes.
