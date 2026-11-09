@@ -64,7 +64,7 @@ describe('Welcome', () => {
     expect(document.querySelector('.char-name')?.textContent).toBe('Bob');
   });
   it('shows the draft bar with a draft', () => {
-    writeDraft({ v: 1, step: 2, answers: { ...NEW_ANSWERS(), cls: 'class/ranger', details: { name: 'Thorin', align: '', appearance: '', notes: '' } } });
+    writeDraft({ v: 1, step: 'abilities/scores', answers: { ...NEW_ANSWERS(), cls: 'class/ranger', details: { name: 'Thorin', align: '', appearance: '', notes: '' } } });
     mount(<App />);
     expect(document.body.textContent).toContain('Continue creating Thorin');
   });

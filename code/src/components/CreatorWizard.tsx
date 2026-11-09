@@ -7,7 +7,7 @@ import type { FlowAnswers } from '../catalog/flow';
 import { entriesOf, type Catalog } from '../catalog/merge';
 import type { ClassEntry, Entry } from '../catalog/schema';
 import { useCatalog } from '../catalog/useCatalog';
-import { CREATOR_STEPS, DRAFT_VERSION, dropLowest, POINT_BUDGET, pointsSpent, replay, replayOrigin, STANDARD_ARRAY, staleStep, writeDraft, type CreatorAnswers, type Draft } from '../creator';
+import { DRAFT_VERSION, OLD_STEP_KEYS, stageName, dropLowest, POINT_BUDGET, pointsSpent, replay, replayOrigin, STANDARD_ARRAY, staleStep, writeDraft, type CreatorAnswers, type Draft } from '../creator';
 import { emptyCharacter, type ClassPick } from '../levelup';
 import { ABILITIES, classLine, effScore, maxHpOf } from '../logic';
 import { Sheet } from '../sheet';
@@ -17,10 +17,13 @@ import { ChoiceFlow } from './pickers/ChoiceFlow';
 import { NumInput, Step } from './ui';
 
 export const NEW_ANSWERS = (): CreatorAnswers => ({
-  cls: '', equip: 'none', start: 1, bgFlow: {}, spFlow: {}, skills: [], languages: [], method: 'array', scores: {},
+  cls: '', start: 1, bgFlow: {}, spFlow: {}, skills: [], languages: [], method: 'array', scores: {},
   details: { name: '', align: '', appearance: '', notes: '' }, first: { flows: {}, spells: {} }, levels: []
 });
-const SUMMARY = CREATOR_STEPS.length;
+// Bridge until the new creator (Task 16): the old step index, read from and written as a screen key.
+const OLD_STEPS = ['Class', 'Origin', 'Abilities', 'Details', 'Levels'] as const;
+const SUMMARY = OLD_STEPS.length;
+const oldIndex = (key: string) => ({ Class: 0, Origin: 1, Abilities: 2, Equipment: 2, Details: 3, Summary: 5 } as Record<string, number>)[stageName(key) ?? ''] ?? (stageName(key)?.startsWith('Level') ? 4 : 0);
 const ctxOf = (c: Character) => ({ c, update: () => {}, edit: false, form: null, setForm: () => {}, focus: null, reveal: () => {}, markFocusUsed: () => {} });
 
 export function CreatorWizard({ initial, onCreate, onClose, cat: given, notice }: {
@@ -49,7 +52,7 @@ function Creator({ cat, initial, onCreate, notice }: { cat: Catalog; initial?: D
   const [a, setA] = useState<CreatorAnswers>(initial?.answers ?? NEW_ANSWERS());
   // A draft naming catalog ids the catalog no longer has (a pack change) reopens at the first step that names one.
   const [stale] = useState(() => (initial ? staleStep(cat, initial.answers) : null));
-  const [step, setStep] = useState(stale ?? initial?.step ?? 0);
+  const [step, setStep] = useState(stale ?? (initial ? oldIndex(initial.step) : 0));
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
   const warned = useRef(false);
   const set = (f: (x: CreatorAnswers) => CreatorAnswers) => setA(f);
@@ -66,7 +69,7 @@ function Creator({ cat, initial, onCreate, notice }: { cat: Catalog; initial?: D
   // The draft follows every answer, so Close or a closed app loses nothing; nothing is saved before a class is chosen.
   useEffect(() => {
     if (!a.cls) return;
-    if (!writeDraft({ v: DRAFT_VERSION, step, answers: a }) && !warned.current) { warned.current = true; setSaveMsg('Draft couldn’t be saved: storage is full. You can still finish, but closing the app loses this character.'); }
+    if (!writeDraft({ v: DRAFT_VERSION, step: OLD_STEP_KEYS[step], answers: a }) && !warned.current) { warned.current = true; setSaveMsg('Draft couldn’t be saved: storage is full. You can still finish, but closing the app loses this character.'); }
   }, [a, step]);
   // What replay left out: a class skill the origin already gives is only a note (Origin lets you swap it); anything else
   // (a background or species whose choices were never finished, a level that no longer fits) blocks.
@@ -90,7 +93,7 @@ function Creator({ cat, initial, onCreate, notice }: { cat: Catalog; initial?: D
   return (
     <div className="col gap-12">
       <div role="group" aria-label="Creator steps" className="row wrap gap-4 wizard-bar">
-        {[...CREATOR_STEPS, 'Summary'].map((t, i) => (
+        {[...OLD_STEPS, 'Summary'].map((t, i) => (
           <button key={t} type="button" className="filter-btn" aria-pressed={i === step} aria-current={i === step ? 'step' : undefined}
             aria-disabled={i > step && !readyAt.slice(0, i).every(Boolean)} onClick={() => (i <= step || readyAt.slice(0, i).every(Boolean)) && go(i)}>{t}</button>
         ))}

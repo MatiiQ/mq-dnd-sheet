@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mergeCatalog } from './catalog/merge';
 import type { ChoiceSpec, ClassEntry, Entry, FeatureEntry } from './catalog/schema';
-import { classArray, classTileText, clearDraft, DRAFT_KEY, dropLowest, pointsSpent, readDraft, replay, staleStep, writeDraft, type CreatorAnswers } from './creator';
+import { applyRolled, arrayFill, assignScore, bonusMode, chooseClass, classArray, classTileText, clearDraft, DRAFT_KEY, dropLowest, ensureLevel, isAnswers, OLD_STEP_KEYS, parseTotals, pointsSpent, readDraft, replay, setBonusMode, setBonusPick, setFirst, setLevelAns, setLevelPick, setMethod, setStart, stageName, STANDARD_ARRAY, staleStep, toAnswerPick, writeDraft, type CreatorAnswers } from './creator';
 import { isActive } from './links';
 import { maxHpOf } from './logic';
 import { noIds } from './test-fixtures';
@@ -115,15 +115,16 @@ describe('the draft', () => {
     localStorage.setItem(DRAFT_KEY, JSON.stringify({ v: 1, step: 9, answers: base() }));
     expect(readDraft().draft).toBeNull();
     localStorage.setItem(DRAFT_KEY, JSON.stringify({ v: 1, step: 5, answers: base({ start: 2, levels: [lvl(2)] }) }));
-    expect(readDraft().draft).toMatchObject({ step: 5 });
+    expect(readDraft().draft).toMatchObject({ step: 'summary' });
   });
   it('writes, reads back and clears; storage full gives false and nothing throws', () => {
-    expect(writeDraft({ v: 1, step: 2, answers: base() })).toBe(true);
-    expect(readDraft().draft).toMatchObject({ step: 2 });
+    expect(writeDraft({ v: 1, step: 'abilities/scores', answers: base() })).toBe(true);
+    expect(readDraft().draft).toMatchObject({ step: 'abilities/scores' });
     clearDraft();
     expect(readDraft().draft).toBeNull();
-    vi.spyOn(localStorage, 'setItem').mockImplementation(() => { throw new Error('QuotaExceededError'); });
-    expect(writeDraft({ v: 1, step: 2, answers: base() })).toBe(false);
+    const full = vi.spyOn(localStorage, 'setItem').mockImplementation(() => { throw new Error('QuotaExceededError'); });
+    expect(writeDraft({ v: 1, step: 'abilities/scores', answers: base() })).toBe(false);
+    full.mockRestore();
   });
 });
 
@@ -143,5 +144,143 @@ describe('class tiles', () => {
     expect(classArray({ ...ranger, stdArray: WIZ_ARRAY })).toEqual(WIZ_ARRAY);
     expect(classArray({ ...ranger, stdArray: { ...WIZ_ARRAY, cha: 9 } })).toBeUndefined();
     expect(classArray(ranger)).toBeUndefined();
+  });
+});
+
+describe('answers and draft', () => {
+  afterEach(() => { localStorage.clear(); });
+  const writeRaw = (d: unknown) => localStorage.setItem(DRAFT_KEY, JSON.stringify(d));
+  const FIXED = { mode: 'fixed' as const, val: 6 };
+  const NEW = (): CreatorAnswers => ({ cls: '', start: 1, bgFlow: {}, spFlow: {}, skills: [], languages: [], method: 'array', scores: {},
+    details: { name: '', align: '', appearance: '', notes: '' }, first: { flows: {}, spells: {} }, levels: [] });
+  const WIZ_ARRAY = { str: 8, dex: 12, con: 13, int: 15, wis: 14, cha: 10 };
+  const wizardWithArray: ClassEntry = { ...ranger, id: 'class/wizard', name: 'Wizard', hd: 6, primary: 'int', stdArray: WIZ_ARRAY };
+  const fighterNoArray: ClassEntry = { ...ranger, id: 'class/fighter', name: 'Fighter', primary: 'str|dex' };
+  const withPicks = (abil: string[]): CreatorAnswers => ({ ...NEW(), bgFlow: { '': { picks: { abil }, counted: {}, links: {} } } });
+
+  it('old numeric steps map to the first screen of their stage; bad numbers discard the draft', () => {
+    for (const [n, key] of OLD_STEP_KEYS.entries()) { writeRaw({ v: 1, step: n, answers: base() }); expect(readDraft().draft!.step).toBe(key); }
+    for (const bad of [-1, 2.5, 99]) { writeRaw({ v: 1, step: bad, answers: base() }); expect(readDraft().notice).toMatch(/damaged/); }
+  });
+  it('screen keys with / and > round-trip through the draft', () => {
+    writeDraft({ v: 1, step: 'origin/sp/>trait/elf/elven-lineage/lineage', answers: base() });
+    expect(readDraft().draft!.step).toBe('origin/sp/>trait/elf/elven-lineage/lineage');
+  });
+  it('an old rolled draft keeps its six scores as the pool; with fewer, scores clear', () => {
+    writeRaw({ v: 1, step: 2, answers: base({ method: 'rolled', scores: { str: 14, dex: 14, con: 12, int: 10, wis: 9, cha: 8 } }) });
+    expect(readDraft().draft!.answers.rolled).toEqual([14, 14, 12, 10, 9, 8]);
+    writeRaw({ v: 1, step: 2, answers: base({ method: 'rolled', scores: { str: 14 } }) });
+    expect(readDraft().draft!.answers.scores).toEqual({});
+    writeRaw({ v: 1, step: 2, answers: base({ method: 'rolled', scores: { str: 8, dex: 14, con: 12, int: 10, wis: 9, cha: 20 } }) });
+    expect(readDraft().draft!.answers).toMatchObject({ scores: {} });
+    expect(readDraft().draft!.answers.rolled).toBeUndefined();
+    writeRaw({ v: 1, step: 2, answers: base({ method: 'rolled', scores: { str: 8, dex: 14, con: 12, int: 10, wis: 9, cha: 15 } }) });
+    expect(readDraft().draft!.answers.rolled).toEqual([8, 14, 12, 10, 9, 15]);
+  });
+  it('isAnswers accepts unset equip and old none; refuses a bad rolled', () => {
+    expect(isAnswers({ ...base(), equip: undefined })).toBe(true);
+    expect(isAnswers(base({ equip: 'none' }))).toBe(true);
+    expect(isAnswers({ ...base(), rolled: [3, 4, 5, 6, 7] })).toBe(false);
+    expect(isAnswers({ ...base(), rolled: [3, 4, 5, 6, 7, 19] })).toBe(false);
+    expect(isAnswers({ ...base(), rolled: [3, 4, 5, 6, 7, 18] })).toBe(true);
+  });
+  it('an old draft with a typed-class level pick opens', () => {
+    const a = base({ start: 2, levels: [{ pick: { name: 'Mystic', hd: 8 }, ans: { hp: FIXED, flows: {}, spells: {} } }] });
+    writeRaw({ v: 1, step: 4, answers: a });
+    expect(readDraft().draft).not.toBeNull();
+  });
+  it('stageName from a key', () => {
+    expect(['class/start', 'origin/bg/_/tool', 'abilities/bonus', 'equipment', 'details', 'level/3/features', 'summary', 'nope'].map(stageName))
+      .toEqual(['Class', 'Origin', 'Abilities', 'Equipment', 'Details', 'Level 3', 'Summary', undefined]);
+  });
+  it('arrayFill: stdArray (Wizard), the shortcut (Fighter STR|DEX), Rolled by rank', () => {
+    expect(arrayFill(wizardWithArray, STANDARD_ARRAY)).toEqual({ int: 15, wis: 14, con: 13, dex: 12, cha: 10, str: 8 });
+    expect(arrayFill(fighterNoArray, STANDARD_ARRAY)).toEqual({ str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 });
+    expect(arrayFill(wizardWithArray, [17, 16, 12, 11, 9, 7])).toEqual({ int: 17, wis: 16, con: 12, dex: 11, cha: 9, str: 7 });
+    expect(arrayFill(rogue, STANDARD_ARRAY)).toEqual({ dex: 15, con: 14, str: 13, int: 12, wis: 10, cha: 8 });
+    expect(arrayFill(rogue, [15, 14])).toEqual({});
+  });
+  it('a class change refills untouched scores and keeps changed ones; leaves equip unset', () => {
+    let a = chooseClass({ ...NEW(), equip: 'A' }, cat, 'class/ranger');
+    expect(a.equip).toBeUndefined();
+    expect(a.scores).toEqual(arrayFill(ranger, STANDARD_ARRAY));
+    expect(chooseClass(a, cat, 'class/ranger')).toBe(a);
+    a = chooseClass(a, cat, 'class/rogue');
+    expect(a.scores).toEqual(arrayFill(rogue, STANDARD_ARRAY));
+    a = assignScore(a, 'cha', 15);
+    expect(chooseClass(a, cat, 'class/ranger').scores).toEqual(a.scores);
+    const buy = { ...NEW(), method: 'buy' as const, scores: { str: 15, dex: 8, con: 8, int: 8, wis: 8, cha: 8 } };
+    expect(chooseClass(buy, cat, 'class/rogue').scores).toEqual(buy.scores);
+  });
+  it('assignScore swaps, and two equal rolled totals both stay assignable', () => {
+    const a = applyRolled({ ...NEW(), method: 'rolled' }, [14, 14, 12, 10, 9, 8], rogue);
+    const b = assignScore(a, 'str', 14);
+    expect(Object.values(b.scores).filter((v) => v === 14)).toHaveLength(2);
+  });
+  it('a method change clears scores and keeps rolled: Rolled → Array → Rolled finds the totals', () => {
+    const a = applyRolled({ ...NEW(), cls: 'class/rogue', method: 'rolled' }, [16, 14, 12, 11, 10, 9], rogue);
+    const arr = setMethod(a, 'array', rogue);
+    expect(arr.scores).toEqual(arrayFill(rogue, STANDARD_ARRAY));
+    const back = setMethod(arr, 'rolled', rogue);
+    expect(back.rolled).toEqual([16, 14, 12, 11, 10, 9]);
+    expect(back.scores).toEqual(arrayFill(rogue, back.rolled!));
+    expect(setMethod(a, 'buy', rogue).scores).toEqual({ str: 8, dex: 8, con: 8, int: 8, wis: 8, cha: 8 });
+  });
+  it('assignScore with two equal rolled totals swaps with the first holder in STR..CHA order', () => {
+    const a = { ...NEW(), method: 'rolled' as const, rolled: [14, 14, 12, 10, 9, 8], scores: { str: 8, dex: 14, con: 14, int: 12, wis: 10, cha: 9 } };
+    const b = assignScore(a, 'str', 14);
+    expect([b.scores.str, b.scores.dex, b.scores.con]).toEqual([14, 8, 14]);
+  });
+  it('parseTotals refuses anything but six totals from 3 to 18', () => {
+    expect(parseTotals('15 14 13 12 10 8')).toEqual([15, 14, 13, 12, 10, 8]);
+    expect(parseTotals('15, 14, 13, 12, 10, 8')).toEqual([15, 14, 13, 12, 10, 8]);
+    expect(parseTotals('15 14 1')).toBeNull();
+    expect(parseTotals('15 14 13 12 10 19')).toBeNull();
+    expect(parseTotals('15 14 13 12 10 8.5')).toBeNull();
+  });
+  it('bonus mode writes picks.abil in one write: three ids, or cleared', () => {
+    expect(setBonusMode(withPicks(['o1', 'o2']), 'three', ['o1', 'o2', 'o3']).bgFlow[''].picks.abil).toEqual(['o1', 'o2', 'o3']);
+    expect(setBonusMode(withPicks(['o1', 'o2', 'o3']), 'two', ['o1', 'o2', 'o3']).bgFlow[''].picks.abil).toEqual([]);
+    expect(bonusMode(['o1', 'o1', 'o2'])).toBe('two');
+    expect(bonusMode(['o1', 'o2', 'o3'])).toBe('three');
+    expect(bonusMode([])).toBeNull();
+  });
+  it('setBonusPick: +2 is the repeated id, +1 another; the same ability for both moves it', () => {
+    let a = setBonusPick(withPicks([]), 'o1', 2);
+    expect(a.bgFlow[''].picks.abil).toEqual(['o1', 'o1']);
+    a = setBonusPick(a, 'o2', 1);
+    expect(a.bgFlow[''].picks.abil).toEqual(['o1', 'o1', 'o2']);
+    a = setBonusPick(a, 'o2', 2);
+    expect(a.bgFlow[''].picks.abil).toEqual(['o2', 'o2']);
+  });
+  it('ensureLevel creates every missing entry up to i and is a no-op on an existing one', () => {
+    expect(ensureLevel({ ...base(), levels: [] }, 1).levels).toHaveLength(2);
+    expect(ensureLevel({ ...base(), levels: [] }, 1).levels[1]).toEqual({ pick: { cls: 'class/ranger' }, ans: { flows: {}, spells: {} } });
+    const a = ensureLevel(base(), 0);
+    expect(ensureLevel(a, 0)).toBe(a);
+    const typed = { ...base(), levels: [{ pick: { name: 'Mystic', hd: 8 as const }, ans: { flows: {}, spells: {} } }] };
+    expect(ensureLevel(typed, 1).levels[1].pick).toEqual({ name: 'Mystic', hd: 8 });
+  });
+  it('truncation: another class at level k resets its ans and drops later levels; a subclass change keeps level k\'s other answers', () => {
+    const a = base({ start: 4, levels: [lvl(2), lvl(3), lvl(4)] });
+    const p = setLevelPick(a, 0, { cls: 'class/rogue' });
+    expect(p.levels).toEqual([{ pick: { cls: 'class/rogue' }, ans: { flows: {}, spells: {} } }]);
+    const s = setLevelAns(a, 1, (x) => ({ ...x, sub: 'subclass/ranger/x' }));
+    expect(s.levels).toHaveLength(2);
+    expect(s.levels[1].ans).toMatchObject({ hp: FIXED, sub: 'subclass/ranger/x' });
+    expect(setLevelAns(a, 1, (x) => ({ ...x, spells: { k: ['spell/a'] } })).levels).toHaveLength(3);
+    const f = setFirst(a, (x) => ({ ...x, sub: 'subclass/ranger/x' }));
+    expect(f.levels).toEqual([]);
+    expect(setFirst(a, (x) => ({ ...x, mastery: ['dagger'] })).levels).toHaveLength(3);
+  });
+  it('setStart 5 → 3 truncates levels', () => {
+    expect(setStart({ ...base(), start: 5, levels: [lvl(2), lvl(3), lvl(4), lvl(5)] }, 3).levels).toHaveLength(2);
+    expect(setStart(base(), 25).start).toBe(20);
+    expect(setStart(base(), 0).start).toBe(1);
+  });
+  it('toAnswerPick names a row by its class id, or its typed name', () => {
+    const c = replay(cat, base()).c;
+    expect(toAnswerPick(c, { row: c.classes[0].id })).toEqual({ cls: 'class/ranger' });
+    expect(toAnswerPick(c, { cls: 'class/rogue' })).toEqual({ cls: 'class/rogue' });
   });
 });

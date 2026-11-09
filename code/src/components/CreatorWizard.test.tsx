@@ -103,9 +103,9 @@ describe('CreatorWizard', () => {
     expect(localStorage.getItem(DRAFT_KEY)).toBeNull();
     tap(btn('Ranger'));
     expect(draft().answers.cls).toBe('class/ranger');
-    expect(draft().step).toBe(0);
+    expect(draft().step).toBe('class');
     tap(btn('Next'));
-    expect(draft().step).toBe(1);
+    expect(draft().step).toBe('origin/background');
   });
   it('changing the class clears the skill picks and the first level answers', () => {
     render(() => {});
@@ -237,7 +237,7 @@ describe('the steps wait for complete answers', () => {
     const onCreate = vi.fn();
     const answers = { ...NEW_ANSWERS(), cls: 'class/ranger', background: 'background/sage', species: 'species/elf', languages: ['Elvish', 'Dwarvish'], skills: ['stealth', 'survival'],
       scores: { str: 8, dex: 8, con: 8, int: 8, wis: 8, cha: 8 }, firstDone: true };
-    render(onCreate, { v: 1, step: 5, answers });
+    render(onCreate, { v: 1, step: 'summary', answers });
     expect(document.body.textContent).toContain('No longer fits');
     expect(btn('Create character')?.getAttribute('aria-disabled')).toBe('true');
     tap(btn('Create character'));
