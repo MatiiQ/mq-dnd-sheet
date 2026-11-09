@@ -2,12 +2,13 @@
 // character: replay builds the character from them with the same applyLevel calls Finish uses, so the preview and the
 // result are the same function. Answers name catalog ids and step keys only, never a generated id, so they replay on a
 // fresh sheet. The draft (the answers and the step) lives in its own key, never in a character or the backup.
-import { addFromCatalog, addPackage } from './catalog/copy';
-import { buildChoices, type FlowAnswers } from './catalog/flow';
+import { addFromCatalog, addPackage, choicesOf, validPicks } from './catalog/copy';
+import { buildChoices, choiceKey, choiceStepReady, choiceSteps, type ChoiceStep, type FlowAnswers } from './catalog/flow';
 import { entriesOf, type Catalog } from './catalog/merge';
-import type { ClassEntry } from './catalog/schema';
+import type { ClassEntry, Entry } from './catalog/schema';
 import { isObj } from './catalog/schema';
-import { applyLevel, emptyCharacter, levelPlan, type ClassPick, type LevelAnswers } from './levelup';
+import { applyLevel, emptyCharacter, levelPlan, levelScreens, withLevel, type ClassPick, type LevelAnswers, type LevelScreenSpec, type Plan, type Step } from './levelup';
+import type { StepperStage } from './components/ui';
 import { abilityName, DICE, newId, skillLevel } from './logic';
 import type { Ability, Character, Die } from './types';
 
@@ -186,79 +187,295 @@ export function toAnswerPick(before: Character, p: ClassPick): CreatorAnswers['l
   return r.clsId ? { cls: r.clsId } : { name: r.name, hd: r.hd };
 }
 
-// The creator's level-1 step reads it; replay goes on from it.
-export function replayOrigin(cat: Catalog, a: CreatorAnswers): { c: Character; dropped: string[] } {
-  const dropped: string[] = [];
+// Old drafts' "Already counted" ticks are ignored: the creator asks no such question (its flows replay with noCounts).
+const uncount = (f: FlowAnswers): FlowAnswers => Object.fromEntries(Object.entries(f).map(([k, n]) => [k, { ...n, counted: {} }]));
+const uncountLevel = (x: LevelAnswers): LevelAnswers => ({ ...x, flows: Object.fromEntries(Object.entries(x.flows).map(([k, f]) => [k, uncount(f)])), ...(x.asi ? { asi: { ...x.asi, flow: uncount(x.asi.flow) } } : {}) });
+const abilChoice = (e: Entry | undefined) => (e ? choicesOf(e).find((ch) => ch.id === 'abil') : undefined);
+const ORIGIN_OPTS = { skipChoices: ['abil'], noCounts: true, noLinks: true, noEquip: true };
+
+// The origin, in the spec's order: background, species, languages, the class's starting equipment, the scores.
+// fill (the creator's preview): an unfinished background bonus replays as "+1 to all three", an unanswered package as
+// none, so the background is on the preview before Abilities and Equipment; the stored answers never change.
+// originFor: the characters the Origin screens read (before the background, before the species, the whole origin).
+// failed: a background, species or language that can't be added although its own questions are answered.
+export function replayOrigin(cat: Catalog, a: CreatorAnswers, opts: { fill?: boolean } = {}): {
+  c: Character; dropped: string[]; originFor: ReplaySteps['originFor']; failed: ReplaySteps['failed'];
+} {
+  const dropped: string[] = [], failed: ReplaySteps['failed'] = {};
   let c = emptyCharacter();
-  for (const [id, flow, label] of [[a.background, a.bgFlow, 'Background'], [a.species, a.spFlow, 'Species']] as const) {
+  const originFor = { background: c, species: c, full: c };
+  for (const [id, flow0, label, which] of [[a.background, a.bgFlow, 'Background', 'background'], [a.species, a.spFlow, 'Species', 'species']] as const) {
+    if (which === 'species') originFor.species = c;
     if (!id) continue;
     const e = cat.byId.get(id);
-    if (!e) { dropped.push(label + ': not in the loaded catalog'); continue; }
-    try { c = addFromCatalog(c, cat, e, buildChoices(cat, c, e, flow)); }
-    catch (err) { dropped.push(label + ' ' + e.name + ': ' + errText(err)); }
+    if (!e) { dropped.push(label + ': not in the loaded catalog'); failed[which] = `${id.split('/').pop()} no longer fits: not in the loaded catalog`; continue; }
+    let flow = uncount(flow0);
+    if (opts.fill && which === 'background') {
+      const node = flow[''] ?? { picks: {}, counted: {}, links: {} };
+      const ch = abilChoice(e);
+      const picks = { ...node.picks };
+      if (ch && validPicks(ch, picks.abil ?? []).length < ch.pick) picks.abil = (ch.options ?? []).map((o) => o.id).slice(0, 3);
+      flow = { ...flow, '': { ...node, picks, ...(e.kind === 'background' && e.equipA !== undefined && !node.equip ? { equip: 'none' as const } : {}) } };
+    }
+    try { c = addFromCatalog(c, cat, e, buildChoices(cat, c, e, flow, {}, { noCounts: true, noLinks: true })); }
+    catch (err) {
+      dropped.push(label + ' ' + e.name + ': ' + errText(err));
+      // A throw while a question of its own is still open is the unfinished flow, not a misfit.
+      const asked = choiceSteps(cat, c, e, flow, ORIGIN_OPTS).every((st) => choiceStepReady(cat, c, st, flow, ORIGIN_OPTS).ready);
+      if (asked) failed[which] = `${e.name} no longer fits: ${errText(err)}`;
+    }
   }
   // Common plus the chosen languages (PHB p.37), as language proficiencies like the sheet's own.
   const langs = entriesOf(cat, 'prof').filter((p) => p.cat === 'language');
   for (const name of ['Common', ...a.languages]) {
     const e = langs.find((p) => p.name.toLowerCase() === name.toLowerCase());
-    if (!e) { dropped.push('Language ' + name + ': not in the loaded catalog'); continue; }
+    if (!e) { dropped.push('Language ' + name + ': not in the loaded catalog'); failed.languages = `${name} no longer fits: not in the loaded catalog`; continue; }
     if (!c.profs.some((p) => p.cat === 'language' && p.name === e.name)) c = { ...c, profs: [...c.profs, { id: newId(), cat: 'language', name: e.name }] };
   }
   const cls = cat.byId.get(a.cls);
   if (cls?.kind !== 'class') dropped.push('Class: not in the loaded catalog');
   else c = addPackage(c, cat, cls as ClassEntry, a.equip ?? 'none');
   c = { ...c, abil: { ...c.abil, ...a.scores } };
-  return { c, dropped };
+  originFor.full = c;
+  return { c, dropped, originFor, failed };
 }
 
-// What Finish builds, in the spec's order: the empty character (no class, no HP), background and species, languages,
-// the class's starting equipment, the scores, level 1 of the class, then levels 2..start; details last. Never throws on
-// stored answers: what no longer fits goes in dropped (named for the player), and later levels stop there.
-export function replay(cat: Catalog, a: CreatorAnswers): { c: Character; dropped: string[] } {
-  const { c: o, dropped } = replayOrigin(cat, a);
-  let c = o;
+// The replay, level by level, keeping the character before each level. before[0]: the origin plus the class skills
+// from a.skills the origin doesn't give (screens only: Expertise offers them); before[n−1] for n ≥ 2: the character
+// after level n−1. fill (the creator): a level whose screens aren't all ready is skipped silently and stops the loop;
+// without it, today's replay (an unfinished level is reported).
+export interface ReplaySteps {
+  before: Character[]; c: Character; dropped: string[];
+  originFor: { background: Character; species: Character; full: Character };
+  failed: { background?: string; species?: string; languages?: string };
+}
+const SKIP_SKILLS = (s: Step) => s.key === 'profs/skills';
+// A level's answers and class: level 1 is a.first with a.cls, level n ≥ 2 is a.levels[n − 2] (or its default).
+const levelAt = (a: CreatorAnswers, n: number) => (n === 1 ? { pick: { cls: a.cls } as CreatorAnswers['levels'][number]['pick'], ans: a.first } : a.levels[n - 2] ?? defaultLevel(a, n - 2));
+function levelReady(cat: Catalog, before: Character, pick: ClassPick, ans: LevelAnswers, n: number): boolean {
+  const plan = levelPlan(before, pick, cat, ans);
+  if (!plan) return false;
+  const raised = withLevel(before, pick, cat).c;
+  return levelScreens(raised, plan, cat, ans, { review: false, ...(n === 1 ? { skip: SKIP_SKILLS } : {}) }).every((x) => x.ready);
+}
+export function replaySteps(cat: Catalog, a: CreatorAnswers, opts: { fill?: boolean } = {}): ReplaySteps {
+  const o = replayOrigin(cat, a, opts);
+  const dropped = [...o.dropped], before: Character[] = [];
+  let c = o.c;
+  const done = (): ReplaySteps => ({ before, c, dropped, originFor: o.originFor, failed: o.failed });
   const cls = cat.byId.get(a.cls);
-  if (cls?.kind !== 'class') return { c: details(c, a), dropped };
+  if (cls?.kind !== 'class') return done();
   // Level 1: the class skill flow comes from `skills`, minus skills the origin already gives.
   const held = a.skills.filter((k) => skillLevel(c, k).level >= 1);
   for (const k of held) dropped.push('Class skill ' + k + ': already proficient from your origin');
-  const flows = Object.fromEntries(Object.entries(a.first.flows).filter(([k]) => k !== 'profs' && k !== 'profs/skills'));
-  const first: LevelAnswers = { ...a.first, flows: { ...flows, 'profs/skills': { '': { picks: { skills: a.skills.filter((k) => !held.includes(k)) }, counted: {}, links: {} } } } };
+  before.push({ ...c, skillProf: { ...c.skillProf, ...Object.fromEntries(a.skills.map((k) => [k, Math.max(1, c.skillProf[k] ?? 0)])) } });
+  const firstAns = uncountLevel(a.first);
+  if (opts.fill && !levelReady(cat, before[0], { cls: a.cls }, firstAns, 1)) return done();
+  const flows = Object.fromEntries(Object.entries(firstAns.flows).filter(([k]) => k !== 'profs' && k !== 'profs/skills'));
+  const first: LevelAnswers = { ...firstAns, flows: { ...flows, 'profs/skills': { '': { picks: { skills: a.skills.filter((k) => !held.includes(k)) }, counted: {}, links: {} } } } };
   try {
     const plan = levelPlan(c, { cls: a.cls }, cat, first);
     if (!plan) throw new Error('no level to gain');
-    c = applyLevel(c, plan, first, cat).c;
+    c = applyLevel(c, plan, first, cat, { noLinks: true }).c;
   } catch (err) {
     dropped.push('Level 1: ' + errText(err));
-    return { c: details(c, a), dropped };
+    return done();
   }
   const start = Math.max(1, Math.min(20, a.start));
+  // The character before level 2, whether or not level 2 has answers yet (its screens read it).
+  if (start >= 2) before.push(c);
   for (let i = 0; i < a.levels.length; i++) {
     const n = i + 2;
     if (n > start) { dropped.push('Level ' + n + ': above the starting level'); continue; }
-    const L = a.levels[i];
+    const L = a.levels[i], ans = uncountLevel(L.ans);
+    if (opts.fill && !levelReady(cat, c, L.pick as ClassPick, ans, n)) break;
     try {
-      const plan = levelPlan(c, L.pick as ClassPick, cat, L.ans);
+      const plan = levelPlan(c, L.pick as ClassPick, cat, ans);
       if (!plan) throw new Error('no level to gain');
-      c = applyLevel(c, plan, L.ans, cat).c;
+      c = applyLevel(c, plan, ans, cat, { noLinks: true }).c;
+      if (n < start) before.push(c);
     } catch (err) {
       for (let j = i; j < a.levels.length && j + 2 <= start; j++) dropped.push('Level ' + (j + 2) + (j === i ? ': ' + errText(err) : ': after a level that no longer fits'));
       break;
     }
   }
-  return { c: details(c, a), dropped };
+  return done();
+}
+
+// What Create builds: replaySteps without fill, then the details.
+export function replay(cat: Catalog, a: CreatorAnswers): { c: Character; dropped: string[] } {
+  const r = replaySteps(cat, a);
+  return { c: details(r.c, a), dropped: r.dropped };
 }
 const details = (c: Character, a: CreatorAnswers): Character => ({
   ...c, ch: { ...c.ch, name: a.details.name, align: a.details.align },
   notes: { ...c.notes, appearance: a.details.appearance, backstory: a.details.notes }
 });
 
-// The first creator step that names a catalog id the catalog lacks (a pack change): the creator reopens there.
-export function staleStep(cat: Catalog, a: CreatorAnswers): number | null {
-  if (a.cls && !cat.byId.has(a.cls)) return 0;
-  if ((a.background && !cat.byId.has(a.background)) || (a.species && !cat.byId.has(a.species))) return 1;
-  if (a.levels.some((L) => 'cls' in L.pick && !cat.byId.has(L.pick.cls))) return 4;
-  return null;
+// ---- The screen list ----
+
+export type StageId = 'class' | 'origin' | 'abilities' | 'equipment' | 'details' | `level/${number}` | 'summary';
+export type ScreenBody =
+  | { kind: 'class' | 'start' | 'background' | 'species' | 'languages' | 'skills' | 'scores' | 'bonus' | 'equipment' | 'details' | 'summary' }
+  | { kind: 'origin-choice'; source: 'bg' | 'sp'; step: ChoiceStep; c: Character }
+  | { kind: 'level'; n: number; c: Character; plan: Plan; screen: LevelScreenSpec; before: Character };
+export interface Screen { stage: StageId; key: string; title: string; ready: boolean; missing?: string; body: ScreenBody }
+export interface Stage { id: StageId; title: string; listed: boolean; done: boolean }
+
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+const not = (missing: string) => ({ ready: false, missing });
+const READY = { ready: true };
+
+// Every stage, Class to Summary with one stage per level up to the starting level, and the screens listed so far: a
+// level's screens only once every screen before it is ready (spec §2). ready/missing come from the same rules as Next.
+export function creatorScreens(cat: Catalog, a: CreatorAnswers, opts: { fill?: boolean } = {}): { stages: Stage[]; screens: Screen[]; replay: ReplaySteps } {
+  const r = replaySteps(cat, a, opts);
+  const screens: Screen[] = [];
+  const cls = classOf(cat, a.cls);
+  const start = Math.max(1, Math.min(20, a.start));
+  const push = (stage: StageId, key: string, title: string, body: ScreenBody, rd: { ready: boolean; missing?: string }) =>
+    screens.push({ stage, key, title, body, ready: rd.ready, ...(rd.ready || !rd.missing ? {} : { missing: rd.missing }) });
+  push('class', 'class', 'Class', { kind: 'class' }, cls ? READY : not('Choose a class'));
+  push('class', 'class/start', 'Starting level', { kind: 'start' }, READY);
+  const levelTitle = (n: number) => {
+    const p = levelAt(a, n).pick;
+    return `Level ${n}: ${'cls' in p ? cat.byId.get(p.cls)?.name ?? 'Class' : p.name}`;
+  };
+  const stages: Stage[] = [
+    { id: 'class', title: 'Class', listed: true, done: false }, { id: 'origin', title: 'Origin', listed: false, done: false },
+    { id: 'abilities', title: 'Abilities', listed: false, done: false }, { id: 'equipment', title: 'Equipment', listed: false, done: false },
+    { id: 'details', title: 'Details', listed: false, done: false },
+    ...Array.from({ length: start }, (_, i): Stage => ({ id: `level/${i + 1}`, title: levelTitle(i + 1), listed: false, done: false })),
+    { id: 'summary', title: 'Summary', listed: false, done: false }
+  ];
+  const finish = () => {
+    for (const st of stages) {
+      const own = screens.filter((x) => x.stage === st.id);
+      if (own.length) st.listed = true;
+      st.done = st.listed && own.every((x) => x.ready);
+    }
+    return { stages, screens, replay: r };
+  };
+  if (!cls) return finish();
+
+  // Origin.
+  const bg = a.background ? cat.byId.get(a.background) : undefined, sp = a.species ? cat.byId.get(a.species) : undefined;
+  push('origin', 'origin/background', 'Background', { kind: 'background' }, !a.background ? not('Choose a background') : r.failed.background ? not(r.failed.background) : READY);
+  const originChoices = (src: 'bg' | 'sp', e: Entry | undefined, flow0: FlowAnswers, c: Character) => {
+    if (!e) return;
+    const flow = uncount(flow0);
+    for (const st of choiceSteps(cat, c, e, flow, ORIGIN_OPTS)) {
+      push('origin', `origin/${src}/${choiceKey(st)}`, st.kind === 'choice' ? st.choice.name : 'Choices', { kind: 'origin-choice', source: src, step: st, c }, choiceStepReady(cat, c, st, flow, ORIGIN_OPTS));
+    }
+  };
+  originChoices('bg', bg, a.bgFlow, r.originFor.background);
+  push('origin', 'origin/species', 'Species', { kind: 'species' }, !a.species ? not('Choose a species') : r.failed.species ? not(r.failed.species) : READY);
+  originChoices('sp', sp, a.spFlow, r.originFor.species);
+  const langOpts = entriesOf(cat, 'prof').filter((p) => p.cat === 'language' && p.name !== 'Common');
+  const langNeed = Math.min(2, langOpts.length);
+  const langHave = a.languages.filter((n) => langOpts.some((p) => p.name.toLowerCase() === n.toLowerCase())).length;
+  push('origin', 'origin/languages', 'Languages', { kind: 'languages' },
+    r.failed.languages ? not(r.failed.languages) : langHave >= langNeed ? READY : not(`Choose ${plural(langNeed - langHave, 'more language', 'more languages')}`));
+  const skillHave = a.skills.filter((k) => skillLevel(r.originFor.full, k).level < 1).length;
+  push('origin', 'origin/skills', cls.name + ' skills', { kind: 'skills' },
+    skillHave >= cls.skills.pick ? READY : not(`Choose ${plural(cls.skills.pick - skillHave, 'more ' + cls.name + ' skill', 'more ' + cls.name + ' skills')}`));
+
+  // Abilities.
+  const all = ORDER.every((k) => (a.method === 'buy' ? a.scores[k] !== undefined : assigned(a, k)));
+  const over = a.method === 'buy' ? pointsSpent(a.scores) - POINT_BUDGET : 0;
+  push('abilities', 'abilities/scores', 'Ability scores', { kind: 'scores' }, !all ? not('Assign all six scores') : over > 0 ? not(`${plural(over, 'point', 'points')} over budget`) : READY);
+  const ab = abilChoice(bg);
+  if (ab) push('abilities', 'abilities/bonus', 'Background bonus', { kind: 'bonus' },
+    validPicks(ab, a.bgFlow['']?.picks.abil ?? []).length >= ab.pick ? READY : not('Choose your background bonus'));
+
+  // Equipment: the class's package and the background's.
+  const clsOpen = cls.equipA !== undefined && !a.equip;
+  const bgOpen = bg?.kind === 'background' && bg.equipA !== undefined && !a.bgFlow['']?.equip;
+  push('equipment', 'equipment', 'Starting equipment', { kind: 'equipment' },
+    clsOpen && bgOpen ? not('Choose both starting equipment options') : clsOpen ? not('Choose the class starting equipment') : bgOpen ? not('Choose the background starting equipment') : READY);
+  push('details', 'details', 'Details', { kind: 'details' }, READY);
+
+  // Levels: listed one after another while everything before is ready.
+  for (let n = 1; n <= start; n++) {
+    if (!screens.every((x) => x.ready)) break;
+    const before = r.before[n - 1];
+    if (!before) break;
+    const L = levelAt(a, n), ans = uncountLevel(L.ans);
+    const pick = L.pick as ClassPick;
+    const plan = levelPlan(before, pick, cat, ans);
+    if (!plan) break;
+    const raised = withLevel(before, pick, cat).c;
+    const stage = `level/${n}` as StageId;
+    for (const spec of levelScreens(raised, plan, cat, ans, { review: false, ...(n === 1 ? { skip: SKIP_SKILLS } : {}) })) {
+      const waiting = spec.kind === 'features' && n > 1 && !a.levels[n - 2];
+      push(stage, `level/${n}/${spec.key}`, spec.title, { kind: 'level', n, c: raised, plan, screen: spec, before },
+        waiting ? not('Open this level to choose its class') : { ready: spec.ready, ...(spec.missing ? { missing: spec.missing } : {}) });
+    }
+  }
+  push('summary', 'summary', 'Summary', { kind: 'summary' }, READY);
+  return finish();
+}
+
+// The first screen that isn't ready (in the stage when given), else the stage's first, else the summary.
+export function firstOpen(screens: Screen[], stage?: StageId | 'levels'): string {
+  const own = stage === undefined ? screens : screens.filter((x) => (stage === 'levels' ? x.stage.startsWith('level/') : x.stage === stage));
+  return own.find((x) => !x.ready)?.key ?? (stage === undefined ? undefined : own[0]?.key) ?? 'summary';
+}
+// Where the creator stands after the list changed: `at` while it is still listed; else the first not-ready screen at or
+// after the first screen that followed `at` and still exists; else the first not-ready screen.
+export function nextOpen(prev: Screen[], screens: Screen[], at: string): string {
+  if (screens.some((x) => x.key === at)) return at;
+  const i = prev.findIndex((x) => x.key === at);
+  const after = i < 0 ? undefined : prev.slice(i + 1).find((x) => screens.some((y) => y.key === x.key));
+  if (after) {
+    const j = screens.findIndex((x) => x.key === after.key);
+    const open = screens.slice(j).find((x) => !x.ready);
+    if (open) return open.key;
+  }
+  return firstOpen(screens);
+}
+
+// The Stepper's stages, its line and where each stage jumps. With a starting level above 3 the level stages collapse
+// into one "Levels 1–N" stage (spec §2 "Stepper").
+export function stepperModel(r: { stages: Stage[]; screens: Screen[] }, at: string, start: number): { stages: StepperStage[]; line: string; jump: Record<string, string> } {
+  const collapse = start > 3;
+  const cur = r.screens.find((x) => x.key === at);
+  const isLevel = (id: string) => id.startsWith('level/');
+  const enabledAt = (first: number) => first >= 0 && r.screens.slice(0, first).every((x) => x.ready);
+  const out: StepperStage[] = [], jump: Record<string, string> = {};
+  let levelsDone = true, levelsAdded = false;
+  for (const st of r.stages) {
+    if (collapse && isLevel(st.id)) {
+      levelsDone = levelsDone && st.done;
+      if (levelsAdded) continue;
+      levelsAdded = true;
+      const first = r.screens.findIndex((x) => x.key === 'level/1/features');
+      jump.levels = r.screens.find((x) => isLevel(x.stage) && !x.ready)?.key ?? r.screens.find((x) => x.stage === 'level/1')?.key ?? 'summary';
+      out.push({ id: 'levels', label: `Levels 1–${start}`, state: cur && isLevel(cur.stage) ? 'current' : 'ahead', enabled: enabledAt(first) });
+      continue;
+    }
+    const first = r.screens.findIndex((x) => x.stage === st.id);
+    jump[st.id] = firstOpen(r.screens, st.id);
+    out.push({ id: st.id, label: st.title, state: cur?.stage === st.id ? 'current' : st.done ? 'done' : 'ahead', enabled: enabledAt(first) });
+  }
+  const lv = out.find((x) => x.id === 'levels');
+  if (lv && lv.state !== 'current' && levelsDone) lv.state = 'done';
+  let line = '';
+  if (cur) {
+    const own = r.screens.filter((x) => x.stage === cur.stage);
+    const count = `(${own.indexOf(cur) + 1} of ${own.length})`;
+    line = collapse && isLevel(cur.stage) ? `Level ${cur.stage.split('/')[1]} · ${cur.title} ${count}` : `${r.stages.find((x) => x.id === cur.stage)?.title} · ${cur.title} ${count}`;
+  }
+  return { stages: out, line, jump };
+}
+
+// The first screen of the stage naming a catalog id the catalog lacks (a pack change): the creator reopens there.
+export function staleStep(cat: Catalog, a: CreatorAnswers): string | null {
+  if (a.cls && !cat.byId.has(a.cls)) return 'class';
+  if (a.background && !cat.byId.has(a.background)) return 'origin/background';
+  if (a.species && !cat.byId.has(a.species)) return 'origin/species';
+  const i = a.levels.findIndex((L) => 'cls' in L.pick && !cat.byId.has(L.pick.cls));
+  return i >= 0 ? `level/${i + 2}/features` : null;
 }
 
 // ---- The draft (its own key, never in the backup) ----

@@ -363,7 +363,10 @@ const refsOf = (c: Character) => new Set(LISTS.flatMap(([k, kind]) => (c[k] as {
 // Applies a plan with its answers: the class level first (so the catalog reads the new class level and attaches no
 // minLvl to what is gained now), the class proficiencies, the features, then the HP; then the record (added, picks,
 // set) and normalize(). kept: fields left as the player edited them (Task 13).
-export function applyLevel(c: Character, plan: Plan, ans: LevelAnswers, cat: Catalog | null): { c: Character; kept: { key: LevelKey; table: unknown }[] } {
+// opts.noLinks: every entry a flow finds on the sheet already is linked, spells too, without asking (the creator, which
+// asks no link questions); the level-up wizard leaves it off and keeps the player's answers.
+export function applyLevel(c: Character, plan: Plan, ans: LevelAnswers, cat: Catalog | null, opts: { noLinks?: boolean } = {}): { c: Character; kept: { key: LevelKey; table: unknown }[] } {
+  const bo = opts.noLinks ? { noLinks: true } : {};
   if (plan.steps.some((s) => s.kind === 'prereq' && s.warn) && !ans.anyway) throw new Error('Multiclass prerequisite not met');
   const { c: raised, row } = withLevel(c, plan.pick, cat);
   let x = raised;
@@ -388,7 +391,7 @@ export function applyLevel(c: Character, plan: Plan, ans: LevelAnswers, cat: Cat
     if (ans.sub.startsWith('name:')) x = { ...x, classes: x.classes.map((y) => (y.id === row ? { ...y, sub: ans.sub!.slice(5), subId: '' } : y)) };
     else if (cat?.byId.get(ans.sub)?.kind === 'subclass') {
       const e = cat.byId.get(ans.sub)!;
-      x = addFromCatalog(x, cat, e, { picks: {}, counted: {}, links: {} });
+      x = addFromCatalog(x, cat, e, opts.noLinks ? buildChoices(cat, x, e, {}, {}, bo) : { picks: {}, counted: {}, links: {} });
       x = { ...x, classes: x.classes.map((y) => (y.id === row ? { ...y, sub: e.name, subId: e.id } : y)) };
       picks['subclass'] = [e.id];
     }
@@ -396,7 +399,7 @@ export function applyLevel(c: Character, plan: Plan, ans: LevelAnswers, cat: Cat
   if (cat) for (const s of plan.steps) {
     if (s.kind !== 'feature' || s.onSheet || !s.entry) continue;
     const e = cat.byId.get(s.entry.id)!;
-    const ch = buildChoices(cat, x, e, ans.flows[s.key] ?? {});
+    const ch = buildChoices(cat, x, e, ans.flows[s.key] ?? {}, {}, bo);
     const ids = new Set(x.feats.map((f) => f.id));
     x = addFromCatalog(x, cat, e, ch);
     const added = x.feats.find((f) => !ids.has(f.id) && f.cid === e.id);
@@ -417,7 +420,7 @@ export function applyLevel(c: Character, plan: Plan, ans: LevelAnswers, cat: Cat
     const feat = cat.byId.get(ans.asi.feat);
     const ch = choicesOf(asiStep.entry)[0];
     if (feat && ch) {
-      const a: AddChoices = { picks: { [ch.id]: [feat.id] }, counted: {}, links: {}, nested: { [feat.id]: buildChoices(cat, x, feat, ans.asi.flow) } };
+      const a: AddChoices = { picks: { [ch.id]: [feat.id] }, counted: {}, links: {}, nested: { [feat.id]: buildChoices(cat, x, feat, ans.asi.flow, {}, bo) } };
       x = asiStep.onSheet ? addChoicePicks(x, cat, asiStep.onSheet, asiStep.entry, ch.id, a) : addFromCatalog(x, cat, asiStep.entry, a);
       picks['asi'] = [feat.id];
     }

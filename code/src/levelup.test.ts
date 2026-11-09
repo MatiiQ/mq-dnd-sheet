@@ -596,3 +596,15 @@ describe('levelScreens and levelStepReady', () => {
     expect(asks(exp)).toBe(true);
   });
 });
+
+describe('applyLevel noLinks (creator fixes, Task 14)', () => {
+  it('a level feature granting a spell the sheet already has links it with noLinks, and adds a second row without', () => {
+    const gift = feat('ranger', 'gift', 2, { grants: [{ id: 'g1', kind: 'spell', name: 'Light', spell: 'Light' }] });
+    const k = mergeCatalog([...entries, gift], null);
+    const r1 = { ...ranger1(), spells: [{ id: 's1', name: 'Light', lvl: 0 } as Character['spells'][number]] };
+    const pick = { row: r1.classes[0].id }, ans = fixed();
+    const plan = levelPlan(r1, pick, k, ans)!;
+    expect(applyLevel(r1, plan, ans, k, { noLinks: true }).c.spells.filter((s) => s.name === 'Light')).toHaveLength(1);
+    expect(applyLevel(r1, plan, ans, k).c.spells.filter((s) => s.name === 'Light')).toHaveLength(2);
+  });
+});

@@ -588,7 +588,8 @@ export function prereqMet(c: Character, prereq: string | undefined, adding: Entr
 // within one entry. counted/links: by resolved spec id. group: the feature group to use instead of groupOf's. from:
 // the source the new entry hangs from.
 // equip: a background's starting equipment, package A, package B or nothing.
-export interface AddChoices { picks: Record<string, string[]>; counted: Record<string, boolean>; links: Record<string, string>; nested?: Record<string, AddChoices>; group?: FeatureGroup; from?: string; item?: ItemAnswers; equip?: 'A' | 'B' | 'none' }
+// skip: grant spec ids not added at all (a spell another source already grants, found by the creator's noLinks flows).
+export interface AddChoices { picks: Record<string, string[]>; counted: Record<string, boolean>; links: Record<string, string>; skip?: string[]; nested?: Record<string, AddChoices>; group?: FeatureGroup; from?: string; item?: ItemAnswers; equip?: 'A' | 'B' | 'none' }
 const NO_ANSWERS: AddChoices = { picks: {}, counted: {}, links: {} };
 
 // The feature group an entry is added under; null for kinds that are never features.
@@ -723,7 +724,7 @@ function addSpellGrants(c: Character, cat: Catalog, cid: string | undefined, id:
 
 // The entry's resolved grants as addGrants inputs, with the player's counted and link answers and the spells they make.
 function inputsOf(cat: Catalog, e: Entry, ans: AddChoices, specs: Resolved[]): GrantInput[] {
-  return specs.map((spec) => {
+  return specs.filter((spec) => !ans.skip?.includes(spec.id)).map((spec) => {
     const sp = spec.kind === 'spell' ? spellFor(cat, e, spec) : undefined;
     return { spec, ...(ans.counted[spec.id] ? { counted: true } : {}), ...(ans.links[spec.id] ? { link: ans.links[spec.id] } : {}), ...(sp ? { spell: sp } : {}) };
   });

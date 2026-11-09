@@ -52,7 +52,7 @@ function Creator({ cat, initial, onCreate, notice }: { cat: Catalog; initial?: D
   const [a, setA] = useState<CreatorAnswers>(initial?.answers ?? NEW_ANSWERS());
   // A draft naming catalog ids the catalog no longer has (a pack change) reopens at the first step that names one.
   const [stale] = useState(() => (initial ? staleStep(cat, initial.answers) : null));
-  const [step, setStep] = useState(stale ?? (initial ? oldIndex(initial.step) : 0));
+  const [step, setStep] = useState(stale ? oldIndex(stale) : initial ? oldIndex(initial.step) : 0);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
   const warned = useRef(false);
   const set = (f: (x: CreatorAnswers) => CreatorAnswers) => setA(f);

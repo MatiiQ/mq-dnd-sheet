@@ -1,7 +1,7 @@
 // ChoiceFlow's answers as pure functions (moved from the component): the entries of a flow, what their answers add
 // ("Already counted" and link-or-add), and the AddChoices they build. Links resolve against the sheet given
 // (findUnlinked), so stored answers replay on a new sheet without naming its ids (the creator's draft).
-import { findUnlinked } from '../logic';
+import { findUnlinked, normName } from '../logic';
 import type { Ability, Character } from '../types';
 import { atLevel, blocksPick, choiceActive, choiceOptions, choicesOf, countedDefault, featureName, grantSpellName, isCountable, livePicks, nestedEntries, pickCap, resolveChoices, validPicks, type AddChoices } from './copy';
 import type { Catalog } from './merge';
@@ -14,7 +14,8 @@ export interface NodeAnswers { picks: Record<string, string[]>; counted: Record<
 export type FlowAnswers = Record<string, NodeAnswers>;
 export interface FlowNode { key: string; parent: string | null; entry: Entry; picks: Record<string, string[]>; preset: Record<string, string[]>; adding: Entry[]; title: string }
 export interface CountItem { node: FlowNode; spec: Omit<GrantSpec, 'opt'>; on: boolean }
-export interface LinkItem { node: FlowNode; spec: Omit<GrantSpec, 'opt'>; name: string; found: string; choice: 'link' | 'new' | null }
+// granted: the spell found is another source's row (noLinks only): the grant is skipped, never linked (which would move it).
+export interface LinkItem { node: FlowNode; spec: Omit<GrantSpec, 'opt'>; name: string; found: string; choice: 'link' | 'new' | null; granted?: boolean }
 
 export const EMPTY: NodeAnswers = { picks: {}, counted: {}, links: {} };
 // Grant kinds that can link to an entry already on the sheet instead of adding a new one.
@@ -50,6 +51,12 @@ export function flowReview(cat: Catalog, c: Character, nodes: FlowNode[], answer
       const found = kind && !(spec.kind === 'spell' && node.entry.kind === 'item') ? findUnlinked(c, kind, name) : null;
       // Plan 3's defaults: link a resource or an action of the same name; a spell asks.
       if (found) links.push({ node, spec, name, found, choice: opts.noLinks ? 'link' : own.links[spec.id] ?? (spec.kind === 'spell' ? null : 'link') });
+      // noLinks: a spell another source already grants stays that source's one row (Sage's Magic Initiate and a High
+      // Elf both give Prestidigitation); this grant is skipped.
+      else if (opts.noLinks && spec.kind === 'spell' && node.entry.kind !== 'item') {
+        const row = c.spells.find((x) => x.from && normName(x.name) === normName(name));
+        if (row) links.push({ node, spec, name, found: row.id, choice: 'link', granted: true });
+      }
     }
   }
   return { counts, links };
@@ -64,9 +71,9 @@ export function buildChoices(cat: Catalog, c: Character, entry: Entry, answers: 
     const own = answers[node.key] ?? EMPTY;
     const counted: Record<string, boolean> = {};
     for (const x of counts) if (x.node.key === node.key && x.on) counted[x.spec.id] = true;
-    const linked: Record<string, string> = {};
-    for (const x of links) if (x.node.key === node.key && x.choice === 'link') linked[x.spec.id] = x.found;
-    out.set(node.key, { picks: { ...node.preset, ...own.picks }, counted, links: linked, ...(node.key === '' && own.equip ? { equip: own.equip } : {}) });
+    const linked: Record<string, string> = {}, skip: string[] = [];
+    for (const x of links) if (x.node.key === node.key && x.choice === 'link') { if (x.granted) skip.push(x.spec.id); else linked[x.spec.id] = x.found; }
+    out.set(node.key, { picks: { ...node.preset, ...own.picks }, counted, links: linked, ...(skip.length ? { skip } : {}), ...(node.key === '' && own.equip ? { equip: own.equip } : {}) });
   }
   for (const node of nodes) {
     if (node.parent === null) continue;
