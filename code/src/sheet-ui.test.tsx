@@ -532,6 +532,16 @@ describe('level-up and undo from the menu', () => {
   const button = btnStarting;
   // Opening the menu mounts the PHB data row, whose pack lookup settles a tick later: let it finish inside the test.
   const menu = async () => { tap(label('Menu: rests and characters')); await act(async () => {}); };
+  it('the menu has one Characters section: the button, Duplicate, Delete; no list, no examples', async () => {
+    renderSheet({});
+    await menu();
+    expect(button('Characters')).toBeTruthy();
+    expect(button('Duplicate this character')).toBeTruthy();
+    expect(button('Delete this character')).toBeTruthy();
+    expect(document.body.textContent).not.toContain('Your characters');
+    expect(document.body.textContent).not.toContain('Example Characters');
+    expect(button('+ New character')).toBeFalsy();
+  });
   it('level-up then undo', async () => {
     renderSheet(withClass({ ...blankCharacter(), maxHp: 10, hp: 10 }, { name: 'Ranger', clsId: 'class/ranger', hd: 10, lvl: 1 }));
     const before = saved().levels.length;

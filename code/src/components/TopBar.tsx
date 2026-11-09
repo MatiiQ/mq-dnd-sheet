@@ -6,12 +6,11 @@ import { SRD_VERSION } from '../catalog/schema';
 import { setLayoutMode, useLayoutMode, useWide, type LayoutMode } from '../layout';
 import { classLine, totalLevel, acOnOther, acSpellIdle, activeAuras, CONDITIONS, PILL_STATS, TABS, fmt, hpColor, maxHpOf, pillView, resPill, setConc, setPill, toggleAcSpell, type PillView, type RestEvent } from '../logic';
 import { showCompanions } from '../creatures';
-import { druidSample, sampleCharacter } from '../defaults';
 import { useSheet, type FormState } from '../sheet';
-import { EXAMPLES, charInfo, charName, importFile, saveBackupFile, type CharacterStore } from '../storage';
+import { charName, importFile, saveBackupFile, type CharacterStore } from '../storage';
 import { undoPreview } from '../levelup';
 import type { Character, Spell, Tab } from '../types';
-import { CheckIcon, ChevronDown, ChevronRight, MenuIcon, PencilIcon, StarIcon, XIcon, useArmed } from './ui';
+import { CheckIcon, ChevronRight, MenuIcon, PencilIcon, StarIcon, XIcon, useArmed } from './ui';
 
 const SECTION_LINKS = [['sec-hp', 'Hit Points'], ['sec-abilities', 'Abilities'], ['sec-senses', 'Senses'], ['sec-defenses', 'Defenses'], ['sec-conditions', 'Conditions'], ['sec-resources', 'Resources'], ['sec-companions', 'Companions']];
 // The section links shown: Companions only while its section is (showCompanions).
@@ -31,11 +30,10 @@ interface Props {
   onRest: (kind: RestEvent) => void;
   onLevelUp: () => void;
   onUndoLevel: () => void;
-  onCreate: () => void;
   onCharacters: () => void;
 }
 
-export function TopBar({ store, activeSec, setActiveSec, menuOpen, setMenuOpen, onToggleEdit, onSwitched, onRest, onLevelUp, onUndoLevel, onCreate, onCharacters }: Props) {
+export function TopBar({ store, activeSec, setActiveSec, menuOpen, setMenuOpen, onToggleEdit, onSwitched, onRest, onLevelUp, onUndoLevel, onCharacters }: Props) {
   const { c, update, edit, form } = useSheet();
   const ch = c.ch;
   const initials = (ch.name || '?').split(/\s+/).filter((x) => x).slice(0, 2).map((x) => x.charAt(0).toUpperCase()).join('') || '?';
@@ -222,7 +220,7 @@ export function TopBar({ store, activeSec, setActiveSec, menuOpen, setMenuOpen, 
         </>
       )}
       {menuOpen && <Menu store={store} onClose={() => setMenuOpen(false)} onSwitched={onSwitched} onRest={onRest}
-        onLevelUp={() => { setMenuOpen(false); onLevelUp(); }} onUndoLevel={() => { setMenuOpen(false); onUndoLevel(); }} onCreate={() => { setMenuOpen(false); onCreate(); }} onCharacters={() => { setMenuOpen(false); onCharacters(); }} />}
+        onLevelUp={() => { setMenuOpen(false); onLevelUp(); }} onUndoLevel={() => { setMenuOpen(false); onUndoLevel(); }} onCharacters={() => { setMenuOpen(false); onCharacters(); }} />}
     </header>
   );
 }
@@ -264,14 +262,11 @@ function LevelButtons({ c, onLevelUp, onUndoLevel }: { c: Character; onLevelUp: 
   );
 }
 
-function Menu({ store, onClose, onSwitched, onRest, onLevelUp, onUndoLevel, onCreate, onCharacters }: { store: CharacterStore; onClose: () => void; onSwitched: (editOn?: boolean, keepMenu?: boolean) => void; onRest: (kind: RestEvent) => void; onLevelUp: () => void; onUndoLevel: () => void; onCreate: () => void; onCharacters: () => void }) {
+function Menu({ store, onClose, onSwitched, onRest, onLevelUp, onUndoLevel, onCharacters }: { store: CharacterStore; onClose: () => void; onSwitched: (editOn?: boolean, keepMenu?: boolean) => void; onRest: (kind: RestEvent) => void; onLevelUp: () => void; onUndoLevel: () => void; onCharacters: () => void }) {
   const { c } = useSheet();
   const [delArmed, tapDelete] = useArmed();
   const [longArmed, tapLong] = useArmed();
   const [backupMsg, setBackupMsg] = useState<string | null>(null);
-  const [choosing, setChoosing] = useState(false);
-  // Starts open while an example is the open character, so its check mark shows.
-  const [examplesOpen, setExamplesOpen] = useState(store.isExample);
   const layout = useLayoutMode();
   const fileRef = useRef<HTMLInputElement>(null);
   const name = c.ch.name || 'this character';
@@ -307,33 +302,8 @@ function Menu({ store, onClose, onSwitched, onRest, onLevelUp, onUndoLevel, onCr
         <span className="label">Levels</span>
         <LevelButtons c={c} onLevelUp={onLevelUp} onUndoLevel={onUndoLevel} />
 
+        <span className="label">Characters</span>
         <button type="button" className="menu-btn" onClick={onCharacters}>Characters</button>
-        <span className="label">Your characters</span>
-        {!store.list.length && <span className="small">No characters yet.</span>}
-        {store.list.map((x) => {
-          const cur = x.id === store.charId;
-          return (
-            <button key={x.id} type="button" className="char-btn" aria-current={cur}
-              onClick={() => { if (cur) { onClose(); return; } store.switchTo(x.id); onSwitched(); }}>
-              <span className="col grow" style={{ textAlign: 'left', padding: '4px 0' }}>
-                <span className="ellipsis">{x.name}</span>
-                {x.info && <span className="small ellipsis" style={{ fontWeight: 500 }}>{x.info}</span>}
-              </span>
-              {cur && <CheckIcon />}
-            </button>
-          );
-        })}
-        <button type="button" className="menu-btn" style={{ color: 'var(--accent)' }} aria-expanded={choosing} aria-controls="new-choice"
-          onClick={() => setChoosing(!choosing)}>+ New character</button>
-        {choosing && (
-          <div id="new-choice" className="new-choice">
-            <button type="button" className="menu-btn plain" onClick={onCreate}>Step by step (creator)</button>
-            <button type="button" className="menu-btn plain" onClick={() => { store.newBlank(); onSwitched(true); }}>Blank sheet</button>
-            <button type="button" className="menu-btn plain" onClick={() => { store.add(sampleCharacter()); onSwitched(); }}>Copy of Ilyra · Ranger 5</button>
-            <button type="button" className="menu-btn plain" onClick={() => { store.add(druidSample()); onSwitched(); }}>Copy of Seren · Druid 12</button>
-            <button type="button" className="menu-btn" onClick={() => setChoosing(false)}>Cancel</button>
-          </div>
-        )}
         {!store.isExample && (
           <>
             <button type="button" className="menu-btn plain"
@@ -343,28 +313,6 @@ function Menu({ store, onClose, onSwitched, onRest, onLevelUp, onUndoLevel, onCr
               {delArmed ? 'Tap again to delete ' + name : 'Delete this character'}
             </button>
           </>
-        )}
-
-        <button type="button" className="disclosure" aria-expanded={examplesOpen} aria-controls="example-list" onClick={() => setExamplesOpen(!examplesOpen)}>
-          <span className="label">Example Characters</span><ChevronDown size={14} />
-        </button>
-        {examplesOpen && (
-          <div id="example-list" className="col gap-8">
-            {EXAMPLES.map(({ id, make }) => {
-              const ex = make(), cur = id === store.charId;
-              // Always reloads, even when it's the open one: that's how an example resets.
-              return (
-                <button key={id} type="button" className="char-btn" aria-current={cur} onClick={() => { store.switchTo(id); onSwitched(); }}>
-                  <span className="col grow" style={{ textAlign: 'left', padding: '4px 0' }}>
-                    <span className="ellipsis">{charName(ex)}</span>
-                    <span className="small ellipsis" style={{ fontWeight: 500 }}>{charInfo(ex)}</span>
-                  </span>
-                  <span className="small">resets</span>
-                  {cur && <CheckIcon />}
-                </button>
-              );
-            })}
-          </div>
         )}
 
         <span className="label">Layout</span>

@@ -73,14 +73,14 @@ export default function App() {
   return (
     <>
       {creator}
-      <SheetApp store={store as CharacterStore & { c: Character }} draftUi={draftUi} onCreate={openCreator} onCharacters={() => setWelcome(true)}
+      <SheetApp store={store as CharacterStore & { c: Character }} draftUi={draftUi} onCharacters={() => setWelcome(true)}
         initialEdit={blankEdit} onEditShown={() => setBlankEdit(false)} />
     </>
   );
 }
 
-function SheetApp({ store, draftUi, onCreate, onCharacters, initialEdit = false, onEditShown }: {
-  store: CharacterStore & { c: Character }; draftUi: ReactNode; onCreate: () => void; onCharacters: () => void;
+function SheetApp({ store, draftUi, onCharacters, initialEdit = false, onEditShown }: {
+  store: CharacterStore & { c: Character }; draftUi: ReactNode; onCharacters: () => void;
   initialEdit?: boolean; onEditShown?: () => void;
 }) {
   const { c, update } = store;
@@ -177,7 +177,7 @@ function SheetApp({ store, draftUi, onCreate, onCharacters, initialEdit = false,
       <div className={'sheet' + (wide ? ' wide' : '')}>
         <TopBar store={store} activeSec={activeSec} setActiveSec={setActiveSec} menuOpen={menuOpen} setMenuOpen={setMenuOpen}
           onToggleEdit={() => { setEdit(!edit); setForm(null); }} onSwitched={onSwitched} onRest={onRest}
-          onLevelUp={() => setWizard('levelup')} onUndoLevel={() => setUndoAsk(true)} onCreate={onCreate} onCharacters={onCharacters} />
+          onLevelUp={() => setWizard('levelup')} onUndoLevel={() => setUndoAsk(true)} onCharacters={onCharacters} />
         <div className="sheet-body">
           <div className="sheet-left">
             {store.isExample && (
