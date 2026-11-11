@@ -478,7 +478,8 @@ export function missingPicks(cat: Catalog, c: Character, e: Entry, picks: Record
 type Resolved = Omit<GrantSpec, 'opt'>;
 // An entry added below another one; preset: choices already answered (a background's origin feat list).
 type Nested = { entry: Entry; preset?: Record<string, string[]> };
-// The entry's grants with the player's picks applied: picked options (an option picked twice gets ids -0 and -1),
+// The entry's grants with the player's picks applied: picked options (an option picked twice is one summed grant when
+// its val is a whole number, else ids -0 and -1),
 // '$ref' fields filled (a grant over a multi-pick choice copied once per pick, ids -<index>; one over a choice with no
 // valid picks dropped), a `casts` ref pointed at the spell spec of the same pick, and picks no grant uses turned into
 // proficiencies (skills, tools, languages, weapon masteries), entries (feats, traits, subclasses) or notes. c: the
@@ -499,6 +500,9 @@ export function resolveChoices(cat: Catalog, e: Entry, picks: Record<string, str
       for (const id of group?.ids ?? []) {
         const o = s.options.find((x) => x.id === id)!;
         if (n === 1) raw.push(strip(o));
+        // An option picked twice with a whole-number value (STR +1 twice) is one grant: STR +2, the option's own id. The
+        // cap loop adds a summed val as it adds two, so the score is the same.
+        else if (/^\d+$/.test(o.val ?? '')) raw.push({ ...strip(o), val: String(n * +o.val!), name: o.name.replace(/\+(\d+)/, () => '+' + n * +o.val!) });
         else for (let i = 0; i < n; i++) raw.push({ ...strip(o), id: `${o.id}-${i}` });
       }
     }

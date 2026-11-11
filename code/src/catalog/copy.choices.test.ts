@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { withClass } from '../test-fixtures';
 import srdEntries from '../data/srd/index';
 import { blankCharacter, sampleCharacter } from '../defaults';
-import { skillLevel } from '../logic';
+import { effScore, skillLevel } from '../logic';
 import type { Character, ClassRow } from '../types';
 import { entriesOf, mergeCatalog } from './merge';
 import type { Entry, FeatureEntry, SpellEntry } from './schema';
@@ -131,13 +131,15 @@ describe('resolveChoices', () => {
     expect(missingPicks(cat, blankCharacter(), mi, { list: ['druid'], cantrips: ['spell/guidance'] })).toEqual(['cantrips', 'spell1', 'ab']);
     expect(missingPicks(cat, blankCharacter(), mi, { list: ['druid'], cantrips: ['spell/guidance', 'spell/produce-flame'], spell1: ['spell/goodberry'], ab: ['wis'] })).toEqual([]);
   });
-  it('gives a background’s ability picks, skill and tool grants, with ids per pick', () => {
+  it('gives a background’s ability picks (a repeated one merged), skill and tool grants', () => {
     const acolyte = cat.byId.get('background/acolyte')!;
     const r = resolveChoices(cat, acolyte, { abil: ['o2', 'o2', 'o3'] });
-    expect(r.specs.filter((s) => s.kind === 'abil').map((s) => [s.id, s.ab])).toEqual([['o2-0', 'wis'], ['o2-1', 'wis'], ['o3', 'cha']]);
+    expect(r.specs.filter((s) => s.kind === 'abil').map((s) => [s.id, s.ab])).toEqual([['o2', 'wis'], ['o3', 'cha']]);
+    expect(r.specs.find((s) => s.id === 'o2')!.val).toBe('2');
     expect(r.specs.filter((s) => s.kind === 'prof').map((s) => s.target)).toEqual(['insight', 'religion', 'Calligrapher’s Supplies']);
     const thrice = resolveChoices(cat, acolyte, { abil: ['o2', 'o2', 'o2'] });
-    expect(thrice.specs.filter((s) => s.kind === 'abil')).toHaveLength(2);
+    expect(thrice.specs.filter((s) => s.kind === 'abil')).toHaveLength(1);
+    expect(thrice.specs.find((s) => s.kind === 'abil')!.val).toBe('2');
     expect(missingPicks(cat, blankCharacter(), acolyte, { abil: ['o2', 'o2', 'o2'] })).toEqual(['abil']);
   });
   it('copies a resource per pick, each casting its own spell (Signature Spells)', () => {
@@ -464,6 +466,30 @@ describe('optDesc (spec 2026-11-10 §1.6)', () => {
         { id: 'o1', kind: 'prof', name: 'Protector: Martial weapons', cat: 'weapon', target: 'Martial weapons', opt: 'Protector' },
         { id: 'o2', kind: 'prof', name: 'Protector: Heavy armor', cat: 'armor', target: 'Heavy armor', opt: 'Protector' }] }] } as Entry;
     expect(optDesc(e, choice(e, 'order'), 'Protector')).toBe('Martial weapons, Heavy armor');
+  });
+});
+
+describe('repeated picks become one grant (spec 2026-11-10 §1.7)', () => {
+  const soldier = E('background/soldier');
+  const abilSpecs = (e: Entry, picks: Record<string, string[]>) => resolveChoices(cat, e, picks).specs.filter((s) => s.kind === 'abil');
+  it('STR twice: one spec with the option id, val and name summed, other fields kept', () => {
+    expect(abilSpecs(soldier, { abil: ['o1', 'o1'] })).toEqual([{ id: 'o1', kind: 'abil', name: 'STR +2', ab: 'str', val: '2', cap: 20 }]);
+  });
+  it('three different picks keep three specs and their ids', () => {
+    expect(abilSpecs(soldier, { abil: ['o1', 'o2', 'o3'] }).map((s) => s.id)).toEqual(['o1', 'o2', 'o3']);
+  });
+  it('a value that is not a whole number keeps one spec per pick', () => {
+    const e = { id: 'feat/x', kind: 'feat', name: 'X', src: 'srd', desc: '', cat: 'general', grants: [
+      { kind: 'choice', id: 'c', name: 'C', pick: 2, repeat: true, options: [{ id: 'o1', kind: 'checkBonus', name: 'Arcana + WIS', target: 'arcana', val: 'wis>=1' }] }] } as Entry;
+    expect(resolveChoices(cat, e, { c: ['o1', 'o1'] }).specs.map((s) => [s.id, s.val])).toEqual([['o1-0', 'wis>=1'], ['o1-1', 'wis>=1']]);
+  });
+  it('the merged grant gives the score of two capped +1s (19 → 20)', () => {
+    const base = { ...blankCharacter(), abil: { ...blankCharacter().abil, str: 19 } };
+    const c = addFromCatalog(base, cat, soldier, A({ abil: ['o1', 'o1', 'o2'], tool: ['prof/dice'] }, undefined, { equip: 'none' }));
+    expect(effScore(c, 'str')).toBe(20);
+  });
+  it('the ASI feat with one ability twice gives one +2', () => {
+    expect(abilSpecs(E('feat/ability-score-improvement'), { asi: ['o2', 'o2'] })).toMatchObject([{ id: 'o2', val: '2', name: 'DEX +2' }]);
   });
 });
 

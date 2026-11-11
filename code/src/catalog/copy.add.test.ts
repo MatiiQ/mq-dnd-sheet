@@ -52,7 +52,7 @@ describe('addFromCatalog', () => {
     expect(bg.desc).toContain('Equipment: ');
     expect(c.ch).toEqual(blank.ch);
     const g = fromOf(c, 'feature:' + bg.id).grants;
-    expect(g.filter((x) => x.kind === 'abil').map((x) => x.ab)).toEqual(['wis', 'wis', 'cha']);
+    expect(g.filter((x) => x.kind === 'abil').map((x) => [x.ab, x.val])).toEqual([['wis', '2'], ['cha', '1']]);
     expect(g.filter((x) => x.kind === 'prof').map((x) => x.target)).toEqual(['insight', 'religion', 'Calligrapher’s Supplies']);
     const feat = c.feats.find((f) => f.cid === 'feat/magic-initiate')!;
     expect(feat).toMatchObject({ name: 'Magic Initiate (Cleric)', from: 'feature:' + bg.id, srcKind: 'background' });
