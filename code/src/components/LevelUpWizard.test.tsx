@@ -196,3 +196,24 @@ describe('SpellScreen (spec 2026-11-10 §2.1, §2.2)', () => {
   });
 });
 
+describe('AsiScreen groups (spec 2026-11-10 §2.3)', () => {
+  const ft = (n: string, prereq?: string): Entry => ({ id: 'feat/' + n, kind: 'feat', name: n, src: 'srd', desc: '', cat: 'general', ...(prereq ? { prereq } : {}) } as Entry);
+  const asi = feat('ranger', 'asi', 4, { grants: [{ kind: 'choice', id: 'feat', name: 'Feat', pick: 1, pool: 'feat:cat=general' }] });
+  const acat = mergeCatalog([cls('Ranger', 10), asi, ft('zeta'), ft('alpha'), ft('strong', 'str>=19'), ft('held'), ft('mighty', 'str>=19')], null);
+  const show = (p: Partial<Character> = {}) => {
+    const c = withClass({ ...blankCharacter(), maxHp: 10, hp: 10, ...p }, { name: 'Ranger', clsId: 'class/ranger', hd: 10, lvl: 3 });
+    const plan = levelPlan(c, { row: c.classes[0].id }, acat, { flows: {}, spells: {} })!;
+    const step = { key: 'asi@4', kind: 'asi' as const, title: 'Ability Score Improvement', entry: asi };
+    mount(<LevelScreen cat={acat} c={c} plan={plan} screen={{ kind: 'step', key: step.key, title: step.title, ready: false, step }} answers={{ flows: {}, spells: {} }} set={() => {}} />);
+  };
+  const groups = () => [...document.querySelectorAll('h4.block-title')].map((h) => [h.textContent, [...h.parentElement!.querySelectorAll('.tile-title')].map((t) => t.textContent)]);
+  it('available, needs a prerequisite, already on your sheet; held and unmet goes last; sorted', () => {
+    show({ feats: [{ id: 'h', g: 'feat', name: 'held', desc: '', cid: 'feat/held' }, { id: 'm', g: 'feat', name: 'mighty', desc: '', cid: 'feat/mighty' }] });
+    expect(groups()).toEqual([['Available', ['alpha', 'zeta']], ['Needs a prerequisite', ['strong']], ['Already on your sheet', ['held', 'mighty']]]);
+  });
+  it('an empty group has no heading', () => {
+    show();
+    expect(groups().map((g) => g[0])).toEqual(['Available', 'Needs a prerequisite']);
+  });
+});
+
