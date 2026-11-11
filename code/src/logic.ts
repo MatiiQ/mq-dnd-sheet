@@ -6,7 +6,7 @@ import type { ProfCat } from './catalog/names';
 import { canLoad, setHands } from './hands';
 import { fixCreatures } from './creatures';
 import { activeGrants, charLevel, classLevel, dropLinkOnly, hasActiveEffect, INCAPACITATING, inactiveReason, isActive, isEquipped, isOn, LINKED_LISTS, srcKindOfLink, type SourceKind, linkOf, parseLink, sourceLabel, sourceOf, SRC_KINDS } from './links';
-import type { AcEffect, Ability, ArmorKind, CastAbility, Character, ClassRow, Coin, Creature, Die, Concentration, Counter, DefenseKind, FxState, Grant, HpSnapshot, Item, Linked, Recharge, Resource, Size, Spell, SpeedKind, SpellSort, Tab, Unarmored } from './types';
+import type { AcEffect, Ability, ArmorKind, CastAbility, Character, ClassRow, Coin, Creature, Die, Concentration, Counter, DefenseKind, Econ, FxState, Grant, HpSnapshot, Item, Linked, Recharge, Resource, Size, Spell, SpeedKind, SpellSort, Tab, Unarmored } from './types';
 
 export const ABILITIES: [Ability, string][] = [
   ['str', 'Strength'], ['dex', 'Dexterity'], ['con', 'Constitution'],
@@ -1373,9 +1373,21 @@ export function removalSummary(c: Character, ref: Ref): { goes: string[]; keep: 
 export interface Chip { label: string; ref: Ref; target: PillTarget; active: boolean; why?: string; counted?: boolean }
 const DEF_NAMES: Record<DefenseKind, string> = { res: 'Resistance', vul: 'Vulnerability', imm: 'Immunity', adv: 'Advantage' };
 const RECHARGE_LABEL: Record<Recharge, string> = { none: '', short: 'Short Rest', long: 'Long Rest', dawn: 'Dawn' };
+export const ECON_LABEL: Record<Econ, string> = { action: 'Action', bonus: 'Bonus Action', reaction: 'Reaction', free: 'Free', other: 'Other' };
+// A damage bonus's chip (spec 2026-11-10 §2.5): "+2 damage" and the first qualifier that applies, so two bonuses of one
+// source tell apart (Rage: Strength attacks, Unarmed Strike). Dice ("1d6") read as typed: num() gives 0 for them.
+function dmgBonusLabel(c: Character, g: Grant, v: number): string {
+  const amount = /\dd\d/.test(g.val ?? '') ? '+' + g.val : fmt(v);
+  const paren = /\(([^)]+)\)/.exec(g.name)?.[1];
+  const spell = g.spell ? c.spells.find((s) => s.cid === g.spell)?.name ?? g.spell.split('/').pop()!.split('-').map(capital).join(' ') : undefined;
+  const q = paren ?? spell ?? (g.cantrip ? 'cantrips' : g.onItem ? 'the chosen weapon' : g.weapon ? g.weapon : g.useAb === 'str' ? 'Strength attacks' : undefined);
+  return amount + ' damage' + (q ? ' (' + q + ')' : '');
+}
 function grantLabel(c: Character, g: Grant): string {
   const v = num(c, g.val, g);
   switch (g.kind) {
+    case 'dmgBonus': return dmgBonusLabel(c, g, v);
+    case 'action': return g.econ ? ECON_LABEL[g.econ] + ' · ' + g.name : g.name;
     case 'abil': return fmt(v) + ' ' + (g.ab ?? '').toUpperCase();
     case 'prof': return g.target ? SKILLS.find(([k]) => k === g.target)?.[1] ?? ABILITIES.find(([k]) => k === g.target)?.[1] ?? g.target : g.name;
     case 'speed': return g.mode === 'walk' ? (g.val === 'walk2' ? 'Speed × 2' : g.floor ? 'Speed at least ' + v + ' ft' : 'Speed ' + fmt(v) + ' ft') : capital(g.mode ?? '') + (g.val === 'walk' ? ' = Speed' : g.val === 'walk2' ? ' = 2 × Speed' : ' ' + v + ' ft');

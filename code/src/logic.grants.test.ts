@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { blankCharacter, sampleCharacter } from './defaults';
 import type { GrantSpec } from './catalog/schema';
+import srdEntries from './data/srd/index';
+import { mergeCatalog } from './catalog/merge';
+import { addFromCatalog } from './catalog/copy';
 import { readManual, castAbOf, removeChip, grantChips, addGrants, findUnlinked, removalChain, removalSummary, normalize, mergedDefenses, removeRef, modeSpeed, effScore, armorClass, longRest, activeAuras, preparedCount, saveMod, spellUsable } from './logic';
 import { migrate } from './migrate';
 import { inactiveReason, isActive } from './links';
@@ -404,3 +407,32 @@ describe('reading a manual (SRD 5.2.1, Manual of Gainful Exercise)', () => {
     expect(readManual(read, 'bk')).toBe(read);
   });
 });
+
+describe('grant chip labels (spec 2026-11-10 §2.5)', () => {
+  const srd = mergeCatalog(srdEntries, null);
+  const labels = (c: Character, link: string) => grantChips(c, link).map((x) => x.label);
+  it('Rage’s chips are all distinct', () => {
+    const c0 = withClass({ ...blankCharacter() }, { name: 'Barbarian', clsId: 'class/barbarian', lvl: 1, hd: 12 });
+    const c = addFromCatalog(c0, srd, srd.byId.get('feature/barbarian/rage')!, { picks: {}, counted: {}, links: {} });
+    const rage = c.feats.find((f) => f.cid === 'feature/barbarian/rage')!;
+    const l = labels(c, 'feature:' + rage.id);
+    expect(new Set(l).size).toBe(l.length);
+    expect(l).toEqual(expect.arrayContaining(['Bonus Action · Rage', '+2 damage (Strength attacks)', '+2 damage (Unarmed Strike)']));
+  });
+  const one = (g: Partial<Grant> & Pick<Grant, 'kind'>) => {
+    const c: Character = { ...blankCharacter(), feats: [{ id: 'f', g: 'class', name: 'F', desc: '' }], grants: [{ id: 'g', name: 'Bonus', from: 'feature:f', ...g } as Grant] };
+    return labels(c, 'feature:f')[0];
+  };
+  it('an action without econ keeps its name', () => {
+    expect(one({ kind: 'action', name: 'Second Wind' })).toBe('Second Wind');
+  });
+  it('one damage qualifier each', () => {
+    expect(one({ kind: 'dmgBonus', val: '1', spell: 'spell/eldritch-blast' })).toBe('+1 damage (Eldritch Blast)');
+    expect(one({ kind: 'dmgBonus', val: '1', cantrip: true })).toBe('+1 damage (cantrips)');
+    expect(one({ kind: 'dmgBonus', val: '1', onItem: true })).toBe('+1 damage (the chosen weapon)');
+    expect(one({ kind: 'dmgBonus', val: '1', weapon: 'martial-melee' })).toBe('+1 damage (martial-melee)');
+    expect(one({ kind: 'dmgBonus', val: '1' })).toBe('+1 damage');
+    expect(one({ kind: 'dmgBonus', val: '1d6' })).toBe('+1d6 damage');
+  });
+});
+

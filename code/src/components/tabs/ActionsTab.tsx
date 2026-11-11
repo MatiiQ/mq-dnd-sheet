@@ -9,13 +9,12 @@ import { useCatalog } from '../../catalog/useCatalog';
 import { RuleNotes } from '../RuleNotes';
 import { canLoad, hasProp, isWeapon, NO_SHIELD, putAway, putInHand, shieldOn as shieldOf, twoHanded, versatile, weaponKind, weaponsHeld } from '../../hands';
 import { isOn, linkOf, sourceLabel } from '../../links';
-import { advWord, castSpell, COMBAT_ACTIONS, itemOfSpell, pactLeft, fmt, freeCastsOf, ORDINAL, regainTo, removeRef, slotsLeft, spellAtkAdv, spellUsable, toggled, type AcPart } from '../../logic';
+import { advWord, castSpell, COMBAT_ACTIONS, ECON_LABEL, itemOfSpell, pactLeft, fmt, freeCastsOf, ORDINAL, regainTo, removeRef, slotsLeft, spellAtkAdv, spellUsable, toggled, type AcPart } from '../../logic';
 import { patchEntry, removeEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { Attack, Character, Econ, Item, Rider, Spell } from '../../types';
 import { afterSummonCast } from '../Companions';
 import { AcTargetSwitch, AddButton, applyCast, Caret, DieBadge, EffectSwitch, EntryForm, EntryRow, FreeCastButton, ItemCastButtons, Step, TextField } from '../ui';
 
-const ECON: Record<Econ, string> = { action: 'Action', bonus: 'Bonus Action', reaction: 'Reaction', free: 'Free', other: 'Other' };
 type Filter = 'all' | 'action' | 'bonus' | 'reaction';
 const FILTERS: [Filter, string][] = [['all', 'All'], ['action', 'Action'], ['bonus', 'Bonus'], ['reaction', 'Reaction']];
 const USE_LABEL: Record<WeaponAttack['use'], string> = { melee: '', thrown: 'thrown', ranged: '', 'two-handed': 'two hands' };
@@ -27,7 +26,7 @@ const RIDER_BLANK = { name: '', dice: '' };
 const econOfAttack = (a: Attack): Econ => a.econ ?? 'action';
 
 function EconTag({ econ }: { econ: Econ }) {
-  return <span className={'econ-tag econ-' + econ}>{ECON[econ]}</span>;
+  return <span className={'econ-tag econ-' + econ}>{ECON_LABEL[econ]}</span>;
 }
 function Parts({ label, parts }: { label: string; parts: AcPart[] }) {
   return <span className="muted">{label}: {parts.map((p) => p.label + ' ' + fmt(p.value) + (p.note ? ' (' + p.note + ')' : '')).join(' · ') || 'none'}</span>;
@@ -228,7 +227,7 @@ export function ActionsTab() {
         <TextField label="Mastery (optional)" value={fa.draft.mastery} placeholder="e.g. Nick: extra Light attack" onChange={(v) => fa.set({ mastery: v })} />
         <label className="field">Timing
           <select className="input" value={fa.draft.econ} onChange={(e) => fa.set({ econ: e.target.value as Econ })}>
-            {(Object.keys(ECON) as Econ[]).map((k) => <option key={k} value={k}>{ECON[k]}</option>)}
+            {(Object.keys(ECON_LABEL) as Econ[]).map((k) => <option key={k} value={k}>{ECON_LABEL[k]}</option>)}
           </select>
         </label>
         <label className="field">Section
