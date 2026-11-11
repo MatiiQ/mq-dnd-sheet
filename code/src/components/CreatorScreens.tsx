@@ -1,7 +1,7 @@
 // The creator's screens, Class to Summary (spec 2026-11-08 §3): each renders one screen of creatorScreens and writes the
 // answers through the pure writers in creator.ts. The level screens are LevelScreen (LevelUpWizard.tsx).
 import { useState } from 'react';
-import { choicesOf, equipText, nestedEntries, poolOptions } from '../catalog/copy';
+import { choicesOf, equipText, featBenefits, firstSentence, nestedEntries, optionGroups, poolOptions } from '../catalog/copy';
 import { choiceKey, type ChoiceStep, type FlowAnswers } from '../catalog/flow';
 import { entriesOf, type Catalog } from '../catalog/merge';
 import type { BackgroundEntry, ClassEntry, Entry, GrantSpec } from '../catalog/schema';
@@ -49,10 +49,22 @@ function backgroundBody(cat: Catalog, e: BackgroundEntry): string {
   const profs = (cat2: string) => (e.grants ?? []).filter((g): g is GrantSpec => g.kind === 'prof' && g.cat === cat2).map((g) => g.name);
   const feat = cat.byId.get(e.feat.split(':')[0]);
   const tool = profs('tool').concat((e.grants ?? []).filter((g) => g.kind === 'choice' && g.pool?.startsWith('tool:')).map((g) => g.name));
-  return [feat && 'Feat: ' + feat.name, profs('skill').length && 'Skills: ' + profs('skill').join(', '), tool.length && 'Tool: ' + tool.join(', ')].filter(Boolean).join(' · ');
+  return [feat && 'Feat: ' + feat.name + ' (' + featBenefits(feat.desc).replace(/\.$/, '') + ')', profs('skill').length && 'Skills: ' + profs('skill').join(', '), tool.length && 'Tool: ' + tool.join(', ')].filter(Boolean).join(' · ');
 }
 
-export function OriginTiles({ cat, a, set, kind }: ScreenProps & { kind: 'background' | 'species' }) {
+// A species trait in More: its text, then the options of a choice it asks on a later screen (spec 2026-11-10 §1.4).
+function traitMore(cat: Catalog, c: Character, t: Entry): string {
+  const lvl = 'lvl' in t && typeof t.lvl === 'number' && t.lvl > 1 ? ` (from level ${t.lvl})` : '';
+  const lines = [t.name + lvl + ': ' + t.desc];
+  for (const ch of choicesOf(t)) {
+    const opts = ch.pool?.startsWith('trait:of=') ? poolOptions(cat, c, ch.pool, {}).map((o) => '• ' + o.label + (o.entry?.desc ? ': ' + firstSentence(o.entry.desc) : ''))
+      : ch.options?.length ? optionGroups(ch).map((g) => '• ' + g.label) : [];
+    if (opts.length) lines.push(...opts, 'You choose one on the next screen.');
+  }
+  return lines.join('\n');
+}
+
+export function OriginTiles({ cat, a, set, r, kind }: ScreenProps & { kind: 'background' | 'species' }) {
   const id = kind === 'background' ? a.background : a.species;
   // A new pick clears its flow (its answers named the old entry's choices).
   const pick = (e: Entry) => set((x) => (kind === 'background' ? (x.background === e.id ? x : { ...x, background: e.id, bgFlow: {} }) : (x.species === e.id ? x : { ...x, species: e.id, spFlow: {} })));
@@ -65,12 +77,12 @@ export function OriginTiles({ cat, a, set, kind }: ScreenProps & { kind: 'backgr
             const abil = choicesOf(e).find((ch) => ch.id === 'abil');
             const abs = [...new Set((abil?.options ?? []).map((o) => o.ab).filter(Boolean))].map((k) => (k as string).toUpperCase()).join(', ');
             const feat = cat.byId.get(e.feat.split(':')[0]);
-            return <ChoiceTile key={e.id} title={e.name} meta={abs || undefined} body={backgroundBody(cat, e) || undefined} more={feat?.desc || undefined} selected={id === e.id} onSelect={() => pick(e)} />;
+            return <ChoiceTile key={e.id} title={e.name} meta={abs || undefined} body={backgroundBody(cat, e) || undefined} more={[e.desc, feat && feat.name + ': ' + feat.desc].filter(Boolean).join('\n\n') || undefined} selected={id === e.id} onSelect={() => pick(e)} />;
           }
           const traits = nestedEntries(cat, e, {}).map((n) => n.entry);
           const sp = e as Extract<Entry, { kind: 'species' }>;
           return <ChoiceTile key={e.id} title={e.name} meta={`${sp.sizes.split(',').map((s) => s[0].toUpperCase() + s.slice(1)).join(' or ')} · Speed ${sp.speed} ft`}
-            body={traits.map((t) => t.name).join(', ') || undefined} more={traits.length ? traits.map((t) => t.name + ': ' + t.desc).join('\n\n') : undefined}
+            body={traits.map((t) => t.name).join(', ') || undefined} more={traits.length ? traits.map((t) => traitMore(cat, r.originFor.species, t)).join('\n\n') : undefined}
             selected={id === e.id} onSelect={() => pick(e)} />;
         })}
       </div>

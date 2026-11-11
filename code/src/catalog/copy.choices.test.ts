@@ -6,7 +6,7 @@ import { skillLevel } from '../logic';
 import type { Character, ClassRow } from '../types';
 import { entriesOf, mergeCatalog } from './merge';
 import type { Entry, FeatureEntry, SpellEntry } from './schema';
-import { atLevel, choiceActive, featureName, addFromCatalog, featureCandidates, countedDefault, choicesOf, classIdOf, matchId, subclassIdOf, type AddChoices, freeText, missingPicks, needed, optionGroups, poolOptions, prereqMet, resolveChoices, validPicks } from './copy';
+import { featBenefits, firstSentence, atLevel, choiceActive, featureName, addFromCatalog, featureCandidates, countedDefault, choicesOf, classIdOf, matchId, subclassIdOf, type AddChoices, freeText, missingPicks, needed, optionGroups, poolOptions, prereqMet, resolveChoices, validPicks } from './copy';
 
 const cat = mergeCatalog(srdEntries, null);
 // ---- Task 3: choices and prerequisites ----
@@ -422,3 +422,31 @@ describe('featureCandidates', () => {
     expect(featureCandidates(cat, blankCharacter(), 'background').map((x) => x.entry.id)).toContain('background/acolyte');
   });
 });
+
+describe('featBenefits (spec 2026-11-10 §1.3)', () => {
+  const desc = (id: string) => E(id).desc;
+  it('lists the benefit headings', () => {
+    expect(featBenefits(desc('feat/alert'))).toBe('Initiative Proficiency, Initiative Swap');
+    expect(featBenefits(desc('feat/magic-initiate'))).toBe('Two Cantrips, Level 1 Spell, Spell Change');
+  });
+  it('leaves out Repeatable', () => {
+    expect(featBenefits('You gain the following benefits.\nTough Hide. You have thick skin.\nRepeatable. You can take this feat more than once.')).toBe('Tough Hide');
+  });
+  it('without the marker line gives the first sentence', () => {
+    expect(featBenefits(desc('feat/savage-attacker'))).toBe(firstSentence(desc('feat/savage-attacker')));
+    expect(featBenefits(desc('feat/skilled'))).toBe(firstSentence(desc('feat/skilled')));
+  });
+  it('with the marker but no heading gives the first line after it, never the marker or empty', () => {
+    expect(featBenefits('You gain the following benefits.\nRepeatable. You can take this feat more than once.')).toBe('Repeatable.');
+  });
+  it('every SRD origin feat gives a non-empty result; headings are at most four words', () => {
+    const feats = entriesOf(cat, 'feat').filter((f) => f.cat === 'origin');
+    expect(feats.length).toBeGreaterThan(2);
+    for (const f of feats) {
+      const r = featBenefits(f.desc);
+      expect(r, f.id).not.toBe('');
+      if (f.desc.includes('You gain the following benefits.')) for (const part of r.split(', ')) expect(part.split(' ').length, f.id + ': ' + part).toBeLessThanOrEqual(4);
+    }
+  });
+});
+

@@ -559,6 +559,25 @@ export function resolveChoices(cat: Catalog, e: Entry, picks: Record<string, str
 // Feature prerequisites by slug: a feature whose cid ends with /<slug>; one without cid whose name, up to its first
 // '·', ':' or '(', slugs to it (a hand-typed "Fighting Style · Archery"); or an entry being added in the same flow.
 const ARMOR_PROF: Record<string, string> = { light: 'Light armor', medium: 'Medium armor', heavy: 'Heavy armor', shield: 'Shields' };
+// The start of a text: up to the first ". " (kept), or its first line.
+export function firstSentence(text: string): string {
+  const line = text.split('\n')[0];
+  const i = line.indexOf('. ');
+  return i < 0 ? line : line.slice(0, i + 1);
+}
+// A feat's benefits for a tile (spec 2026-11-10 §1.3): the headings of the lines after "You gain the following
+// benefits." (one to four capitalised words, small words between, then ". ", at a line start or after a sentence end),
+// Repeatable left out; else the first sentence of what follows the marker, or of the desc when there is no marker.
+const BENEFITS_MARK = 'You gain the following benefits.';
+const BENEFIT_HEAD = /(?:^|(?<=\. ))((?:[A-Z][\w’'-]*|\d+)(?: (?:(?:of|the|a|an|to|in|and|or|for) )?(?:[A-Z][\w’'-]*|\d+)){0,3})\. /gm;
+export function featBenefits(desc: string): string {
+  const lines = desc.split('\n');
+  const at = lines.findIndex((l) => l.trim() === BENEFITS_MARK);
+  if (at < 0) return firstSentence(desc);
+  const rest = lines.slice(at + 1).join('\n');
+  const heads = [...rest.matchAll(BENEFIT_HEAD)].map((m) => m[1]).filter((h) => h !== 'Repeatable');
+  return heads.length ? heads.join(', ') : firstSentence(rest);
+}
 export const titled = (s: string) => s.split(/[-\s]/).map(capital).join(' ');
 // cls: an option's class (an invocation's level is the Warlock level); without it, the character level.
 export function prereqMet(c: Character, prereq: string | undefined, adding: Entry[] = [], cls?: string): { ok: boolean; missing: string[] } {
