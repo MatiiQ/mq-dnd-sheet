@@ -6,7 +6,7 @@ import { skillLevel } from '../logic';
 import type { Character, ClassRow } from '../types';
 import { entriesOf, mergeCatalog } from './merge';
 import type { Entry, FeatureEntry, SpellEntry } from './schema';
-import { featBenefits, firstSentence, atLevel, choiceActive, featureName, addFromCatalog, featureCandidates, countedDefault, choicesOf, classIdOf, matchId, subclassIdOf, type AddChoices, freeText, missingPicks, needed, optionGroups, poolOptions, prereqMet, resolveChoices, validPicks } from './copy';
+import { featBenefits, firstSentence, optDesc, atLevel, choiceActive, featureName, addFromCatalog, featureCandidates, countedDefault, choicesOf, classIdOf, matchId, subclassIdOf, type AddChoices, freeText, missingPicks, needed, optionGroups, poolOptions, prereqMet, resolveChoices, validPicks } from './copy';
 
 const cat = mergeCatalog(srdEntries, null);
 // ---- Task 3: choices and prerequisites ----
@@ -447,6 +447,23 @@ describe('featBenefits (spec 2026-11-10 §1.3)', () => {
       expect(r, f.id).not.toBe('');
       if (f.desc.includes('You gain the following benefits.')) for (const part of r.split(', ')) expect(part.split(' ').length, f.id + ': ' + part).toBeLessThanOrEqual(4);
     }
+  });
+});
+
+describe('optDesc (spec 2026-11-10 §1.6)', () => {
+  const order = E('feature/cleric/divine-order');
+  it('the paragraph that starts with the option name, without it', () => {
+    expect(optDesc(order, choice(order, 'order'), 'Protector').startsWith('Trained for battle')).toBe(true);
+  });
+  it('names a choice that only this option asks', () => {
+    expect(optDesc(order, choice(order, 'order'), 'Thaumaturge').endsWith('Also: Thaumaturge cantrip, chosen next.')).toBe(true);
+  });
+  it('without a paragraph: the group’s grant names without the option prefix', () => {
+    const e = { id: 'feature/x/order', kind: 'feature', name: 'Order', src: 'srd', cls: 'x', lvl: 1, desc: 'You serve as the Protector. Of course.', grants: [
+      { kind: 'choice', id: 'order', name: 'Order', pick: 1, options: [
+        { id: 'o1', kind: 'prof', name: 'Protector: Martial weapons', cat: 'weapon', target: 'Martial weapons', opt: 'Protector' },
+        { id: 'o2', kind: 'prof', name: 'Protector: Heavy armor', cat: 'armor', target: 'Heavy armor', opt: 'Protector' }] }] } as Entry;
+    expect(optDesc(e, choice(e, 'order'), 'Protector')).toBe('Martial weapons, Heavy armor');
   });
 });
 

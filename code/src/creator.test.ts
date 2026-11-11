@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mergeCatalog } from './catalog/merge';
+import srdEntries from './data/srd/index';
 import type { ChoiceSpec, ClassEntry, Entry, FeatureEntry, GrantSpec } from './catalog/schema';
 import { creatorScreens, dropLevelTicks, firstOpen, nextOpen, replayOrigin, replaySteps, stepperModel, type Screen } from './creator';
 import { applyRolled, arrayFill, assignScore, bonusMode, chooseClass, classArray, classTileText, clearDraft, DRAFT_KEY, dropLowest, ensureLevel, isAnswers, languageOptions, OLD_STEP_KEYS, parseTotals, pointsSpent, readDraft, replay, setBonusMode, setBonusPick, setFirst, setLevelAns, setLevelPick, setMethod, setStart, stageName, STANDARD_ARRAY, staleStep, toAnswerPick, writeDraft, type CreatorAnswers } from './creator';
@@ -603,3 +604,20 @@ describe('no-class notice and Stepper ticks (spec 2026-11-10 §1.1, §1.2)', () 
     expect(isAnswers({ ...base(), passed: [1] })).toBe(false);
   });
 });
+
+describe('origin screens sharing a title (spec 2026-11-10 §1.5)', () => {
+  const srd = mergeCatalog(srdEntries, null);
+  const titles = (bg: string, lineage: string) => {
+    const a: CreatorAnswers = { cls: 'class/fighter', start: 1, background: bg, bgFlow: {}, species: 'species/elf',
+      spFlow: { '>trait/elf/elven-lineage': { picks: { lin: [lineage] }, counted: {}, links: {} } }, skills: [], languages: [], method: 'array', scores: {},
+      details: { name: '', align: '', appearance: '', notes: '' }, first: { flows: {}, spells: {} }, levels: [] };
+    return creatorScreens(srd, a, { fill: true }).screens.map((x) => x.title).filter((t) => t.startsWith('Spellcasting ability'));
+  };
+  it('two such screens name their entries', () => {
+    expect(titles('background/acolyte', 'trait/elf/high-elf')).toEqual(['Spellcasting ability · Magic Initiate (Cleric)', 'Spellcasting ability · High Elf']);
+  });
+  it('one keeps the plain title', () => {
+    expect(titles('background/soldier', 'trait/elf/wood-elf')).toEqual(['Spellcasting ability']);
+  });
+});
+

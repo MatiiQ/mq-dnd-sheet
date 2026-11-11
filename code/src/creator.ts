@@ -402,6 +402,10 @@ export function creatorScreens(cat: Catalog, a: CreatorAnswers, opts: { fill?: b
   originChoices('bg', bg, a.bgFlow, r.originFor.background);
   push('origin', 'origin/species', 'Species', { kind: 'species' }, !a.species ? not('Choose a species') : r.failed.species ? not(r.failed.species) : READY);
   originChoices('sp', sp, a.spFlow, r.originFor.species);
+  // Two origin screens with one title (High Elf's and Magic Initiate's "Spellcasting ability") name their entries.
+  const oc = screens.filter((x) => x.body.kind === 'origin-choice');
+  const shared = new Set(oc.filter((x) => oc.some((y) => y !== x && y.title === x.title)));
+  for (const x of shared) if (x.body.kind === 'origin-choice' && x.body.step.kind === 'choice') x.title = `${x.title} · ${x.body.step.node.title}`;
   const langOpts = languageOptions(cat);
   const langNeed = Math.min(2, langOpts.length);
   const langHave = a.languages.filter((n) => langOpts.some((p) => p.name.toLowerCase() === n.toLowerCase())).length;

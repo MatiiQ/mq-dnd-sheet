@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { blocksPick, choicesOf, equipText, freeText, livePicks, optionGroups, poolOptions, validPicks, type AddChoices, type PoolOption } from '../../catalog/copy';
+import { blocksPick, choicesOf, equipText, freeText, livePicks, optDesc, optionGroups, poolOptions, validPicks, type AddChoices, type PoolOption } from '../../catalog/copy';
 import { buildChoices, choiceKey, choiceNeed, choiceStepReady, choiceSteps, EMPTY, flowNodes, flowReview, spellAbilityDefault, togglePick, type ChoiceOpts, type CountItem, type FlowAnswers, type FlowNode, type LinkItem, type NodeAnswers } from '../../catalog/flow';
 import type { Catalog } from '../../catalog/merge';
 import type { ChoiceSpec, Entry } from '../../catalog/schema';
@@ -236,9 +236,9 @@ function ControlledStep({ entry, cat, preset, held, pick, at, answers = {}, onAn
     const next = togglePick(choice, cur, v, { blocked: blocksPick(v, { held, option }), cap: pick?.[choice.id] });
     if (next) setNode(node.key, (n) => withPicks(n, node, choice, next));
   };
-  const tileOf = (value: string, title: string, option?: PoolOption) => {
+  const tileOf = (value: string, title: string, option?: PoolOption, text?: string) => {
     const isHeld = blocksPick(value, { held, option });
-    const desc = option?.entry?.desc ?? '';
+    const desc = text ?? option?.entry?.desc ?? '';
     return (
       <ChoiceTile key={value} title={title} count={count(value)} selected={count(value) > 0} held={isHeld} picked={count(value) > 0}
         warn={!!option?.unmet} meta={option?.unmet ? 'Needs ' + option.unmet.join(', ') : option?.taken && !isHeld ? 'On the sheet' : undefined}
@@ -246,7 +246,8 @@ function ControlledStep({ entry, cat, preset, held, pick, at, answers = {}, onAn
     );
   };
   let list = null;
-  if (choice.options) list = <div className="tile-grid">{optionGroups(choice).map((g) => tileOf(g.value, g.label))}</div>;
+  const byOpt = choice.options?.some((o) => o.opt);
+  if (choice.options) list = <div className="tile-grid">{optionGroups(choice).map((g) => tileOf(g.value, g.label, undefined, byOpt ? optDesc(node.entry, choice, g.label) : undefined))}</div>;
   else if (choice.pool && freeText(cat, c, choice.pool, node.picks)) {
     list = (
       <div className="col gap-6">
@@ -267,9 +268,11 @@ function ControlledStep({ entry, cat, preset, held, pick, at, answers = {}, onAn
       </div>
     );
   }
+  // One name when the choice and its entry share it (Keen Senses), compared without case.
+  const heading = normName(choice.name) === normName(node.title) ? choice.name : choice.name + ' · ' + node.title;
   return (
-    <div className="col gap-8 choice-flow" role="group" aria-label={choice.name + ' · ' + node.title}>
-      <h4 className="pick-title">{choice.name} · {node.title}</h4>
+    <div className="col gap-8 choice-flow" role="group" aria-label={heading}>
+      <h4 className="pick-title">{heading}</h4>
       <span className="small">Choose {need} · {chosen} of {need} chosen</span>
       {sa && (
         <span className="small">

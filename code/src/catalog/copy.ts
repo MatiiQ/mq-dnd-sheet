@@ -578,6 +578,15 @@ export function featBenefits(desc: string): string {
   const heads = [...rest.matchAll(BENEFIT_HEAD)].map((m) => m[1]).filter((h) => h !== 'Repeatable');
   return heads.length ? heads.join(', ') : firstSentence(rest);
 }
+// An `opt` group's tile text (spec 2026-11-10 §1.6): the desc paragraph starting "<opt>. " without that label, else the
+// group's grant names without their "<opt>: " prefix; then any choice only this option asks ("Also: …, chosen next.").
+export function optDesc(entry: Entry, choice: ChoiceSpec, opt: string): string {
+  const head = new RegExp('^' + opt.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\. ');
+  const para = entry.desc.split('\n').find((l) => head.test(l));
+  const text = para ? para.replace(head, '') : (choice.options ?? []).filter((o) => o.opt === opt).map((o) => o.name.replace(opt + ': ', '')).join(', ');
+  const also = choicesOf(entry).filter((ch) => ch.ifPick === choice.id + '=' + opt).map((ch) => ` Also: ${ch.name}, chosen next.`).join('');
+  return text + also;
+}
 export const titled = (s: string) => s.split(/[-\s]/).map(capital).join(' ');
 // cls: an option's class (an invocation's level is the Warlock level); without it, the character level.
 export function prereqMet(c: Character, prereq: string | undefined, adding: Entry[] = [], cls?: string): { ok: boolean; missing: string[] } {
