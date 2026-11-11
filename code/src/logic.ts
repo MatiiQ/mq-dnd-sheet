@@ -112,7 +112,7 @@ export const abilityMod = (c: Character, k: Ability) => mod(effScore(c, k));
 export function isPermanentGrant(c: Character, g: Grant): boolean {
   if (g.when || g.counted) return false;
   const seen = new Set<string>();
-  for (let from = g.from; from && !seen.has(from); ) {
+  for (let from: string | undefined = g.from; from && !seen.has(from); ) {
     seen.add(from);
     const p = parseLink(from);
     if (!p || p.kind === 'class') return true;
