@@ -2,7 +2,8 @@ import { useState, type CSSProperties } from 'react';
 import { PROF_NAMES, type ProfCat } from '../../catalog/names';
 import { entriesOf } from '../../catalog/merge';
 import { useCatalog } from '../../catalog/useCatalog';
-import { hasActiveEffect, linkOf, sourceLabel } from '../../links';
+import { masteryText } from '../../actions';
+import { hasActiveEffect, isActive, linkOf, sourceLabel } from '../../links';
 import { classLine, removeRef, addGrants, grantChips, newId, normName, profList, type GrantInput } from '../../logic';
 import { removeEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { Character, Feature, FeatureGroup, SrcKind } from '../../types';
@@ -10,11 +11,32 @@ import { GrantList, removalNote, SourceChips } from '../Chips';
 import { SummonStep, summonStart } from '../Companions';
 import { FeaturePicker } from '../pickers/FeaturePicker';
 import { SourcePicker } from '../SourcePicker';
+import { jumpTo } from '../nav';
 import { AddButton, EffectSwitch, EntryForm, EntryRow, RemoveButton, TextField } from '../ui';
 
 const PROF_CATS: [ProfCat, string][] = [['armor', 'Armor'], ['weapon', 'Weapons'], ['tool', 'Tools'], ['language', 'Languages']];
 
 const BLANK = { g: 'class' as FeatureGroup, name: '', desc: '', makes: undefined as Feature['makes'], from: undefined as string | undefined, srcKind: undefined as SrcKind | undefined, srcName: undefined as string | undefined, pending: [] as GrantInput[] };
+
+// The tab's groups in display order.
+const GROUP_ORDER: FeatureGroup[] = ['class', 'sub', 'background', 'feat', 'species', 'training', 'other'];
+// c.mastery is one list for the character, so it shows once (spec 2026-11-10 §2.7): on the first feature in tab order with
+// an active target-less Weapon Mastery grant (a level-gated one gives no slots yet).
+export function firstMasteryFeature(c: Character): string | undefined {
+  const marks = (x: Feature) => c.grants.some((g) => g.from === 'feature:' + x.id && g.kind === 'prof' && g.cat === 'mastery' && !g.target && isActive(c, g));
+  for (const g of GROUP_ORDER) { const x = c.feats.find((f) => f.g === g && marks(f)); if (x) return x.id; }
+  return undefined;
+}
+// The chosen masteries, inside the open row: opening it loads the catalog for the weapons' masteries.
+function MasteryLine() {
+  const { c, update } = useSheet();
+  const state = useCatalog(true);
+  const text = masteryText(c, state.status === 'ready' ? state.cat : undefined);
+  return text ? <span className="muted">Chosen: {text}</span> : (
+    <span className="row wrap gap-8"><span className="muted">None chosen</span>
+      <button type="button" className="btn btn-sm" onClick={() => jumpTo({ tab: 'actions' }, update)}>Choose in Actions</button></span>
+  );
+}
 
 export function FeaturesTab() {
   const { c, update, form: openForm, setForm } = useSheet();
@@ -25,6 +47,7 @@ export function FeaturesTab() {
     ['species', 'Species · ' + (c.ch.species || '')], ['training', 'Training & proficiencies'], ['other', 'Other']
   ];
   const d = f.draft;
+  const masteryAt = firstMasteryFeature(c);
   // A feature's Summon: no slot level; the same step as a spell's cast.
   const summonFrom = (x: Feature) => {
     const s = summonStart(c, x, linkOf('feature', x.id));
@@ -88,8 +111,9 @@ export function FeaturesTab() {
                       {x.makes === 'pet' && <button type="button" className="btn btn-sm toggle-btn" onClick={() => summonFrom(x)}>Summon</button>}
                       {x.makes === 'form' && <button type="button" className="btn btn-sm toggle-btn" onClick={() => setForm({ kind: 'summon', id: link })}>Assume form</button>}
                     </> : undefined}
-                    body={x.desc || src ? <>
+                    body={x.desc || src || masteryAt === x.id ? <>
                       {x.desc && <span className="entry-desc">{x.desc}</span>}
+                      {masteryAt === x.id && <MasteryLine />}
                       {src && <span className="muted">Source: {src}</span>}
                     </> : undefined}
                     onEdit={() => f.openEdit(x.id, { g: x.g || 'other', name: x.name, desc: x.desc || '', makes: x.makes, from: x.from, srcKind: x.srcKind, srcName: x.srcName, pending: [] })}
