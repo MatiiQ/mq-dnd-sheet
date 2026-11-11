@@ -608,3 +608,27 @@ describe('applyLevel noLinks (creator fixes, Task 14)', () => {
     expect(applyLevel(r1, plan, ans, k).c.spells.filter((s) => s.name === 'Light')).toHaveLength(2);
   });
 });
+
+describe('spell steps name their class (spec 2026-11-10 §2.1)', () => {
+  it('a class with its own tables: titles and source name the class row, keys unchanged', () => {
+    const r = ranger1({ dex: 13, wis: 13, cha: 13 });
+    const plan = levelPlan(r, { cls: 'class/sorcerer' }, cat, A())!;
+    const cantrips = plan.steps.find((s) => s.kind === 'cantrips')!, prepare = plan.steps.find((s) => s.kind === 'prepare')!;
+    expect([cantrips.title, prepare.title]).toEqual(['Sorcerer cantrips: pick 4', 'Sorcerer spells: prepare 2 more']);
+    expect([cantrips.key, prepare.key]).toEqual(['cantrips:class/sorcerer@1', 'prepare:class/sorcerer@1']);
+    expect(prepare.source).toBe('From the Sorcerer table at Sorcerer level 1.');
+  });
+  it('a subclass casting grant names the subclass (Eldritch Knight)', () => {
+    // The grant is on the sheet from level 3, so level 4's rise in prepared spells is the first step it drives.
+    const c2 = levelTo(fighter1(), 'class/fighter', 2);
+    const ans = fixed({ sub: 'subclass/fighter/eldritch-knight' });
+    const ek3 = applyLevel(c2, levelPlan(c2, { row: c2.classes[0].id }, cat, ans)!, ans, cat).c;
+    const prepare = levelPlan(ek3, { row: ek3.classes[0].id }, cat, fixed())!.steps.find((s) => s.kind === 'prepare')!;
+    // This fixture names subclasses by slug; the catalog's name reads "Eldritch Knight".
+    const sub = ek3.classes[0].sub;
+    expect(sub).toBe('eldritch-knight');
+    expect(prepare.title).toBe(sub + ' spells: prepare 1 more');
+    expect(prepare.source).toBe(`From the ${sub} table at ${ek3.classes[0].name} level 4.`);
+  });
+});
+

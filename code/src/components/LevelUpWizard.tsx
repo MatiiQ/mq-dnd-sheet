@@ -312,21 +312,26 @@ function SpellScreen({ cat, step, value, onChange }: { cat: Catalog | null; step
   return (
     <div className="col gap-8">
       <h3 className="block-title">{step.title}</h3>
+      {step.source && <span className="small">{step.source}</span>}
       {step.warn && <span className="small">{step.warn}</span>}
       <span className="muted">{value.length} of {step.owed} chosen. You can also add spells later in the Spells tab.</span>
       {spells.length > 12 && <input type="search" className="input" aria-label="Search the spells" placeholder="Search" value={query} onChange={(e) => setQuery(e.target.value)} />}
-      {levels.map((l) => (
+      {levels.map((l) => {
+        // Counted over every spell of the level, never the filtered ones: a search must not hide the count.
+        const k = spells.filter((e) => e.lvl === l && value.includes(e.id)).length;
+        return (
         <div key={l} className="col gap-6">
-          <span className="label">{l === 0 ? 'Cantrips' : 'Level ' + l}</span>
+          <h4 className="block-title">{l === 0 ? 'Cantrips' : `Level ${l} spells`}{k ? ` · ${k} chosen` : ''}</h4>
           <div className="tile-grid">
             {shown.filter((e) => e.lvl === l).map((e) => (
               <ChoiceTile key={e.id} title={e.name} selected={value.includes(e.id)} onSelect={() => toggle(e.id)}
-                meta={[e.school, e.time, e.range, e.conc && 'Concentration', e.ritual && 'Ritual'].filter(Boolean).join(' · ')}
+                meta={[e.lvl === 0 ? 'Cantrip' : 'Level ' + e.lvl, e.school, e.time, e.range, e.conc && 'Concentration', e.ritual && 'Ritual'].filter(Boolean).join(' · ')}
                 {...descTile(e.desc, e.higher)} />
             ))}
           </div>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

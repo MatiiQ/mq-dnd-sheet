@@ -21,7 +21,7 @@ export type StepKind = 'prereq' | 'hp' | 'profs' | 'feature' | 'subclass' | 'cho
 // key: stable across replays, built only from catalog ids and the class level, never from a generated id:
 // '<kind>:<entry catalog id>@<class level>' ('feature:feature/ranger/deft-explorer@1'), plus '/<choice id>' for a choice
 // step, and fixed names for hp, prereq, profs ('profs/<choice id>'), subclass, asi, cantrips, prepare, mastery.
-export interface Step { key: string; kind: StepKind; title: string; entry?: Entry; choice?: ChoiceSpec; owed?: number; held?: string[]; onSheet?: string; warn?: string; list?: string; maxLvl?: number }
+export interface Step { key: string; kind: StepKind; title: string; entry?: Entry; choice?: ChoiceSpec; owed?: number; held?: string[]; onSheet?: string; warn?: string; list?: string; maxLvl?: number; source?: string }
 export interface Plan { pick: ClassPick; cls?: ClassEntry; n: number; clsLvl: number; steps: Step[] }
 export interface LevelAnswers {
   hp?: { mode: 'fixed' | 'roll'; val: number };  // absent only at total level 1
@@ -108,15 +108,17 @@ function narrowed(e: FeatureEntry, clsLvl: number): FeatureEntry {
 // A row's casting tables: its class's own (cantrips, prepared, slots), or for a class without them the active casting
 // grant from its features (Eldritch Knight, Arcane Trickster). maxLvl: the highest slot level the class prepares on its
 // own (PHB p.45): its slots row, the pact slot level for a pact class, the grant's highest sN with a value.
-interface CastTables { ab?: Ability; cantrips?: string; prepared?: string; maxLvl: number }
+// who: whose table it is, for the step titles (spec 2026-11-10 §2.1): the class row, or for a casting grant the row's
+// subclass (Eldritch Knight), else the grant's name.
+interface CastTables { ab?: Ability; cantrips?: string; prepared?: string; maxLvl: number; who: string }
 function castTables(x: Character, cls: ClassEntry, r: ClassRow): CastTables | null {
   const top = (row: number[] | undefined) => (row ? row.reduce((m, n, i) => (n > 0 ? i + 1 : m), 0) : 0);
-  if (cls.castAb && (cls.slots?.length || cls.cantrips || cls.prepared)) return { ab: cls.castAb, cantrips: cls.cantrips, prepared: cls.prepared, maxLvl: top(cls.slots?.[r.lvl - 1]) };
+  if (cls.castAb && (cls.slots?.length || cls.cantrips || cls.prepared)) return { ab: cls.castAb, cantrips: cls.cantrips, prepared: cls.prepared, maxLvl: top(cls.slots?.[r.lvl - 1]), who: r.name };
   const short = cls.id.split('/')[1];
   const g = activeGrants(x, 'casting').find((y) => x.feats.find((f) => 'feature:' + f.id === y.from)?.cid?.startsWith('feature/' + short + '/'));
   if (!g) return null;
   const s = [g.s1, g.s2, g.s3, g.s4, g.s5].map((v) => (v ? num(x, v, g) : 0));
-  return { ab: g.ab as Ability, cantrips: g.cantrips, prepared: g.prepared, maxLvl: top(s) };
+  return { ab: g.ab as Ability, cantrips: g.cantrips, prepared: g.prepared, maxLvl: top(s), who: r.sub.trim() || g.name };
 }
 // A level table's value at a class level (the table belongs to the class, so its level is the class level).
 const tableAt = (x: Character, t: string | undefined, lvl: number) => { if (!t || lvl < 1) return 0; const v = valueAt(t, { ...valueCtx(x), level: lvl }); return typeof v === 'number' ? v : 0; };
@@ -225,8 +227,9 @@ export function levelPlan(c: Character, pick: ClassPick, cat: Catalog | null, an
     const prepared = tableAt(x, ct.prepared, r.lvl) - tableAt(x, ct.prepared, r.lvl - 1);
     const list = cls.castAb ? short : (activeGrants(x, 'casting').find((g) => g.ab === ct.ab)?.list ?? short);
     const maxLvl = cls.pact ? pactFor(x, cat).lvl : ct.maxLvl;
-    if (cantrips > 0) steps.push({ key: 'cantrips:' + cls.id + '@' + r.lvl, kind: 'cantrips', title: 'Pick ' + cantrips + (cantrips === 1 ? ' cantrip' : ' cantrips'), owed: cantrips, list, maxLvl: 0 });
-    if (prepared > 0) steps.push({ key: 'prepare:' + cls.id + '@' + r.lvl, kind: 'prepare', title: 'Prepare ' + prepared + ' more', owed: prepared, list, maxLvl,
+    const source = `From the ${ct.who} table at ${r.name} level ${r.lvl}.`;
+    if (cantrips > 0) steps.push({ key: 'cantrips:' + cls.id + '@' + r.lvl, kind: 'cantrips', title: `${ct.who} cantrips: pick ${cantrips}`, owed: cantrips, list, maxLvl: 0, source });
+    if (prepared > 0) steps.push({ key: 'prepare:' + cls.id + '@' + r.lvl, kind: 'prepare', title: `${ct.who} spells: prepare ${prepared} more`, owed: prepared, list, maxLvl, source,
       ...(short === 'wizard' ? { warn: 'The whole Wizard list is offered: check your spellbook.' } : {}) });
   }
   // Growing choices (step 7): entries on the sheet whose count follows the level or PB, not handled above.
