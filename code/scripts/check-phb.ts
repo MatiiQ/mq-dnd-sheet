@@ -50,7 +50,8 @@ export function scanPushRanges(lines: string[], phrases: string[], cwd: string):
     const [, local, , remote] = line.trim().split(/\s+/);
     if (zero.test(local)) continue; // deleting a remote branch publishes nothing
     let known = !zero.test(remote);
-    if (known) { try { git(['cat-file', '-e', `${remote}^{commit}`], cwd); } catch { known = false; } }
+    // stderr ignored: an unknown remote commit is expected here, and git's 'fatal:' line would look like a failure.
+    if (known) { try { execFileSync('git', ['cat-file', '-e', `${remote}^{commit}`], { cwd, stdio: ['ignore', 'pipe', 'ignore'] }); } catch { known = false; } }
     const range = known ? [`${remote}..${local}`] : [local, '--not', '--remotes'];
     const patch = git(['log', '-p', '--cc', '--no-color', '--no-ext-diff', ...range], cwd);
     // One commit at a time: a phrase must belong to one commit, so the message can name it.

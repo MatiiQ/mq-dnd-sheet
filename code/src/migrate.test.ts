@@ -185,6 +185,12 @@ describe('top-level fields', () => {
 });
 
 describe('entry fields', () => {
+  it('gives a repeated entry id a new one, so removing one entry never removes another', () => {
+    const c = migrate({ ...blankCharacter(), inv: [{ id: 'x', name: 'Rope', qty: 1, eq: false }, { id: 'x', name: 'Torch', qty: 1, eq: false }] });
+    expect(c.inv[0].id).toBe('x');
+    expect(c.inv[1].id).not.toBe('x');
+    expect(c.inv.map((i) => i.name)).toEqual(['Rope', 'Torch']);
+  });
   it('keeps dmgMod and a damage type list only when well formed, and never dtypes next to a typed dtype', () => {
     const sp = { id: 'a', name: 'Orb', lvl: 1, time: 'Action', range: '90 ft', fx: 'damage', dmg: '3d8' };
     const c = migrate({ ...sampleCharacter(), spells: [{ ...sp, dmgMod: true, dtypes: 'Acid,Cold' }, { ...sp, id: 'b', dmgMod: 'yes', dtypes: 'Acid' },

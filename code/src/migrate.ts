@@ -14,6 +14,7 @@ const FIXED_RECORDS = ['ch', 'abil', 'speeds', 'coins', 'notes'] as const;
 // Lists of entries: each needs a name and holds only plain values.
 const ENTRY_LISTS = ['senses', 'res', 'attacks', 'riders', 'inv', 'spells', 'feats', 'acMods', 'grants', 'profs', 'defenses', 'sections'] as const;
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+const str = (v: unknown) => (typeof v === 'string' ? v : '');
 export const isEntry = (x: unknown): x is Record<string, unknown> =>
   isObj(x) && typeof x.name === 'string' && Object.values(x).every((v) => v === null || typeof v !== 'object');
 const WHENS: When[] = ['armor', 'noHeavy', 'noArmor', 'noShield', 'noArmorNoShield', 'active', 'empty'];
@@ -158,7 +159,6 @@ function cleanAtk(v: unknown): CreatureAttack[] {
 function cleanCreature(x: Raw): Creature {
   const { atk, conds, kind, on, ac, hp, maxHp, temp, speed, init, note, from, srcKind, srcName, ...rest } = x;
   const num = (v: unknown) => (finite(v) && v >= 0 ? v : 0);
-  const str = (v: unknown) => (typeof v === 'string' ? v : '');
   const link = cleanLinked({ from, srcKind, srcName } as Linked);
   return {
     ...cleanFields(rest, CREATURE_FIELDS), ...link,
@@ -181,7 +181,6 @@ export function cleanClasses(list: unknown): ClassRow[] {
   const rows = (Array.isArray(list) ? list : []).filter(isEntry);
   const out: ClassRow[] = [];
   for (const x of rows) {
-    const str = (v: unknown) => (typeof v === 'string' ? v : '');
     let id = typeof x.id === 'string' && x.id && !x.id.includes('.') ? x.id : newId();
     if (out.some((r) => r.id === id)) id = newId();
     out.push({
@@ -243,7 +242,6 @@ function v1to2(d: Raw): Raw {
   const { cls, sub, clsId, subId, ...chRest } = ch;
   const hd: Die = DICE_OK.includes(hdDie as Die) ? (hdDie as Die) : 8;
   const id = newId();
-  const str = (v: unknown) => (typeof v === 'string' ? v : '');
   const row = {
     id, name: str(cls), clsId: str(clsId), sub: str(sub), subId: str(subId), lvl: level, hd, prep: prepMax,
     ...(isAbility(d.castAb) ? { castAb: d.castAb } : {})
@@ -295,7 +293,9 @@ export function migrate(data: unknown): Character {
   for (const k of ENTRY_LISTS) {
     // A spell's parts are the one list an entry may hold; cleanParts checks them.
     const ok = (x: unknown) => isEntry(k === 'spells' && isObj(x) && 'parts' in x ? { ...x, parts: null } : x);
-    d[k] = (d[k] as unknown[]).filter(ok).map((x) => (typeof (x as Raw).id === 'string' ? x : { ...(x as object), id: newId() }));
+    // A missing or repeated id gets a new one (the first keeps it), so removing or editing one entry never hits another.
+    // Sections keep their repeats here: cleanSections drops them, as an item names its section by id.
+    d[k] = (d[k] as Raw[]).filter(ok).map((x, i, all) => (typeof x.id === 'string' && (k === 'sections' || all.findIndex((y) => y.id === x.id) === i) ? x : { ...x, id: newId() }));
   }
   // castFx is optional and absent by default (blankCharacter has none), so it is copied here; normalize() cleans it.
   if (raw.castFx !== undefined) d.castFx = raw.castFx;
