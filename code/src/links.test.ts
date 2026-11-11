@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { withClass } from './test-fixtures';
 import { sampleCharacter } from './defaults';
-import { activeGrants, charLevel, effectCanTargetOther, fixLinks, hasActiveEffect, isOn, inactiveReason, isActive, parseLink, sourceLabel, sourceOf, srcKindOfLink, totalLevel, wouldLoop } from './links';
+import { activeGrants, charLevel, effectApplies, effectCanTargetOther, fixLinks, hasActiveEffect, isOn, inactiveReason, isActive, parseLink, sourceLabel, sourceOf, srcKindOfLink, totalLevel, wouldLoop } from './links';
 import { grantErrors } from './catalog/schema';
 import { castSpell, effectsAfterEdit, longRest, toggleEffect } from './logic';
 import { migrate } from './migrate';
@@ -279,3 +279,19 @@ describe('a spent Spell Scroll', () => {
     expect(inactiveReason({ ...c, inv: [potion] }, c.spells[0])).toBe('none left');
   });
 });
+
+describe('effectApplies (spec 2026-11-10 §2.8)', () => {
+  it('Rage switched on applies', () => {
+    const c: Character = { ...blankCharacter(), feats: [feat('rage')], effectsOn: ['feature:rage'],
+      grants: [{ id: 'g', kind: 'dmgBonus', name: 'Rage', val: '2', when: 'active', from: 'feature:rage' }] };
+    expect(effectApplies(c, 'feature:rage')).toBe(true);
+  });
+  it('a potion’s effect while the potion is in a bag applies to nothing', () => {
+    const bag: Item = { id: 'bag', name: 'Bag of Holding', qty: 1, eq: false, xdim: true };
+    const pot: Item = { id: 'pot', name: 'Potion of Speed', qty: 1, eq: false, in: 'bag' };
+    const c: Character = { ...blankCharacter(), inv: [bag, pot], effectsOn: ['item:pot'],
+      grants: [{ id: 'g', kind: 'speed', name: 'Speed', mode: 'walk', val: 'walk2', when: 'active', from: 'item:pot' }] };
+    expect(effectApplies(c, 'item:pot')).toBe(false);
+  });
+});
+

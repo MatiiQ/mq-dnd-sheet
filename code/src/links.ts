@@ -201,6 +201,10 @@ export const isActive = (c: Character, x: Linked) => inactiveReason(c, x) === nu
 export const activeGrants = (c: Character, kind: GrantKind, withCounted = false): Grant[] =>
   c.grants.filter((g) => g.kind === kind && (withCounted || !g.counted) && isActive(c, g));
 
+// True when some switched effect of this link counts now (spec 2026-11-10 §2.8): a potion's effect while the potion is
+// in a bag applies to nothing, so it gets no status chip.
+export const effectApplies = (c: Character, link: string) =>
+  LINKED_LISTS.some((k) => (c[k] as Linked[]).some((x) => x.from === link && x.when === 'active' && inactiveReason(c, x) === null));
 // True when something from this link counts only while its effect is on (it then gets an On/Off switch).
 export const hasActiveEffect = (c: Character, link: string) =>
   LINKED_LISTS.some((k) => (c[k] as Linked[]).some((x) => x.from === link && x.when === 'active'));

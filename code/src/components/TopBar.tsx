@@ -4,7 +4,8 @@ import { packSummary, parsePackFile } from '../catalog/pack';
 import { deletePack, getPack, putPack } from '../catalog/pack-db';
 import { SRD_VERSION } from '../catalog/schema';
 import { setLayoutMode, useLayoutMode, useWide, type LayoutMode } from '../layout';
-import { classLine, totalLevel, acOnOther, acSpellIdle, activeAuras, CONDITIONS, PILL_STATS, TABS, fmt, hpColor, maxHpOf, pillView, resPill, setConc, setPill, toggleAcSpell, type PillView, type RestEvent } from '../logic';
+import { classLine, totalLevel, acOnOther, acSpellIdle, activeAuras, CONDITIONS, PILL_STATS, TABS, fmt, hpColor, maxHpOf, pillView, resPill, setConc, setPill, toggleAcSpell, toggleEffect, type PillView, type RestEvent } from '../logic';
+import { effectApplies, sourceOf } from '../links';
 import { showCompanions } from '../creatures';
 import { useSheet, type FormState } from '../sheet';
 import { charName, importFile, saveBackupFile, type CharacterStore } from '../storage';
@@ -40,6 +41,11 @@ export function TopBar({ store, activeSec, setActiveSec, menuOpen, setMenuOpen, 
   const [classOpen, setClassOpen] = useState(false);
   const condParts = CONDITIONS.filter((n) => c.conds[n]);
   const auras = activeAuras(c).filter((a) => a.why === null);
+  // Switched-on effects that apply now, with a source, not an AC spell already chipped and not an aura's source (a greyed
+  // aura's included: Conditions lists it); more than two collapse into one link. The active form opens Hit Points.
+  const auraLinks = new Set(activeAuras(c).map((a) => a.g.from));
+  const effects = c.effectsOn.filter((link) => !c.acOn.some((id) => link === 'spell:' + id) && !auraLinks.has(link) && sourceOf(c, link) && effectApplies(c, link));
+  const activeForm = (c.creatures ?? []).find((x) => x.kind === 'form' && x.on);
   const inTabs = activeSec === 'sec-tabs';
   // Two columns: the tabs sit beside the core, so the nav holds only tabs and a tap doesn't scroll the page.
   const wide = useWide();
@@ -161,7 +167,7 @@ export function TopBar({ store, activeSec, setActiveSec, menuOpen, setMenuOpen, 
         </div>
       )}
 
-      {(c.conc || c.acOn.length > 0 || condParts.length > 0 || c.exh > 0 || auras.length > 0) && (
+      {(c.conc || c.acOn.length > 0 || condParts.length > 0 || c.exh > 0 || auras.length > 0 || effects.length > 0 || activeForm) && (
         <div className="row wrap gap-6" style={{ paddingTop: 4 }}>
           {c.conc && (
             <button type="button" className="status-chip" onClick={() => update(setConc(null))} aria-label={'End concentration on ' + c.conc.name}>
@@ -173,6 +179,15 @@ export function TopBar({ store, activeSec, setActiveSec, menuOpen, setMenuOpen, 
               {sp.name} · {acEffect(c, sp)}<XIcon size={14} strokeWidth={2.5} />
             </button>
           ))}
+          {effects.length > 2 ? <a href="#sec-conditions" className="cond-chip">{effects.length} effects</a> : effects.map((link) => {
+            const name = sourceOf(c, link)!.name;
+            return (
+              <button key={link} type="button" className="status-chip" onClick={() => update((p) => toggleEffect(p, link))} aria-label={'End ' + name}>
+                {name}<XIcon size={14} strokeWidth={2.5} />
+              </button>
+            );
+          })}
+          {activeForm && <a href="#sec-hp" className="cond-chip">{activeForm.name}</a>}
           {condParts.length > 0 && (
             <a href="#sec-conditions" className="cond-chip">{condParts.length > 2 ? condParts.length + ' conditions' : condParts.join(' · ')}</a>
           )}
