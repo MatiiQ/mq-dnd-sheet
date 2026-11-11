@@ -78,12 +78,13 @@ const constCtx = (c: Character): ValueCtx => ({ level: charLevel(c), pb: profBon
 // A score and the parts it is made of. Fixed order (spec): the typed base; each active grant capped at 20 adds, never
 // past the cap and never lowering (no increase can raise a score above 20, PHB p.38); then cap-25 grants (Primal
 // Champion, PHB p.53) and cap-30 grants the same way; a set score raises to the highest set value; the temporary
-// adjustment last; 1–30. Counted grants are already in the typed base and add nothing.
-export function abilityParts(c: Character, k: Ability): AcPart[] {
+// adjustment last; 1–30. Counted grants are already in the typed base and add nothing. keep: only the grants it passes
+// enter the cap loop, and the set step and the adjustment are skipped (permanentScore).
+export function abilityParts(c: Character, k: Ability, keep?: (g: Grant) => boolean): AcPart[] {
   const ctx = constCtx(c);
   let s = c.abil[k];
   const parts: AcPart[] = [{ label: 'Score', value: s }];
-  const mine = activeGrants(c, 'abil', true).filter((g) => g.ab === k);
+  const mine = activeGrants(c, 'abil', true).filter((g) => g.ab === k && (!keep || keep(g)));
   // Where a grant part came from, so its tile can name and open the source.
   const at = (g: Grant) => ({ from: g.from, src: sourceLabel(c, g) });
   parts.push(...mine.filter((g) => g.counted).map((g) => ({ label: g.name, value: numIn(ctx, g.val), note: 'counted', ...at(g) })));
@@ -94,6 +95,7 @@ export function abilityParts(c: Character, k: Ability): AcPart[] {
       s = next;
     }
   }
+  if (keep) return parts;
   const sets = activeGrants(c, 'abilSet').filter((g) => g.ab === k);
   const top = sets.reduce<Grant | null>((b, g) => (!b || numIn(ctx, g.val) > numIn(ctx, b.val) ? g : b), null);
   const set = top ? numIn(ctx, top.val) : 0;
@@ -104,6 +106,28 @@ export function abilityParts(c: Character, k: Ability): AcPart[] {
 export const effScore = (c: Character, k: Ability) =>
   clamp(abilityParts(c, k).reduce((t, p) => t + (p.note === 'counted' ? 0 : p.value), 0), 1, 30);
 export const abilityMod = (c: Character, k: Ability) => mod(effScore(c, k));
+// A permanent ability grant (spec 2026-11-10 §2.4; ability scores PHB p.38): no `when`, not counted, and no source up
+// its `from` chain is an item or has a `when` (a feature nested under a switched one is temporary too). A class row
+// ends the walk.
+export function isPermanentGrant(c: Character, g: Grant): boolean {
+  if (g.when || g.counted) return false;
+  const seen = new Set<string>();
+  for (let from = g.from; from && !seen.has(from); ) {
+    seen.add(from);
+    const p = parseLink(from);
+    if (!p || p.kind === 'class') return true;
+    if (p.kind === 'item') return false;
+    const src = sourceOf(c, from) as Linked | null;
+    if (!src) return true;
+    if (src.when) return false;
+    from = src.from;
+  }
+  return true;
+}
+// The score with only the permanent bonuses: what "Was" compares with. abilSet grants and the adjustment count as
+// temporary (simplification: a permanent set score from a custom feature would show "Was" for ever; SRD and PHB have none).
+export const permanentScore = (c: Character, k: Ability) =>
+  clamp(abilityParts(c, k, (g) => isPermanentGrant(c, g)).reduce((t, p) => t + (p.note === 'counted' ? 0 : p.value), 0), 1, 30);
 // Skill proficiency level (0 none, 1 proficient, 2 Expertise): the higher of the hand value and the active grants.
 // `by` names the grant's source when a grant raises it above the hand value.
 // `from`: that grant's source link.

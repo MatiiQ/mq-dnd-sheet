@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { newId } from './logic';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
-import { ABILITIES, charLevel, hasHistory, setBaseRows, valueCtx, profBonus, regainLabel, speedOf, grantChips, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, carriedWeight, carryCapacity, fmt, hitDieRoll, hpColor, hpRingStops, initiative, initiativeAdv, parseWeight, passiveScore, passiveParts, passiveNotes, pillView, resPill, setPill, preparedCount, saveMod, skillMod, slotsLeft, num, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, advWord, spellAtkAdv, shortRest, longRest } from './logic';
+import { ABILITIES, charLevel, hasHistory, setBaseRows, valueCtx, profBonus, regainLabel, speedOf, grantChips, restRolls, maxFields, maxOf, normalize, resourceGroups, mergedDefenses, mergedSenses, removeRef, abilityParts, isPermanentGrant, permanentScore, carryUpOf, maxHpOf, modeSpeed, sizeOf, walkSpeed, effScore, hasProf, profList, saveProficient, skillLevel, carriedWeight, carryCapacity, fmt, hitDieRoll, hpColor, hpRingStops, initiative, initiativeAdv, parseWeight, passiveScore, passiveParts, passiveNotes, pillView, resPill, setPill, preparedCount, saveMod, skillMod, slotsLeft, num, speedNow, spellAttack, spellAttackParts, spellDcParts, spellSaveDC, spellUsable, advWord, spellAtkAdv, shortRest, longRest } from './logic';
 import { migrate } from './migrate';
 import { extraDamage } from './actions';
 import { inactiveReason } from './links';
@@ -615,3 +615,40 @@ describe('spell attack Advantage (checkAdv target spellAtk)', () => {
     expect(advWord(spellAtkAdv(make({ grants: [g, dis], effectsOn: ['feature:f10'] })))).toBe('');
   });
 });
+
+describe('permanentScore (spec 2026-11-10 §2.4, PHB p.38)', () => {
+  const g = (id: string, val: string, p: Partial<Grant> = {}): Grant => ({ id, kind: 'abil', name: 'G ' + id, ab: 'dex', val, cap: 20, from: 'feature:bg', ...p });
+  const feats: Feature[] = [{ id: 'bg', g: 'background', name: 'Soldier', desc: '' }, { id: 'ft', g: 'feat', name: 'Feat', desc: '' }, { id: 'rage', g: 'class', name: 'Rage', desc: '' }];
+  const sheet = (dex: number, grants: Grant[], p: Partial<Character> = {}): Character =>
+    ({ ...blankCharacter(), abil: { ...blankCharacter().abil, dex }, feats, grants, effectsOn: ['feature:rage'], ...p });
+  const perm = [g('a', '2'), g('b', '1', { from: 'feature:ft' })];
+  it('background and feat bonuses count as the score', () => {
+    const c = sheet(14, perm);
+    expect(permanentScore(c, 'dex')).toBe(17);
+    expect(effScore(c, 'dex')).toBe(17);
+  });
+  it('a switched-on effect does not', () => {
+    const c = sheet(14, [...perm, g('t', '2', { from: 'feature:rage', when: 'active' })]);
+    expect(isPermanentGrant(c, c.grants[2])).toBe(false);
+    expect(permanentScore(c, 'dex')).toBe(17);
+    expect(effScore(c, 'dex')).toBe(19);
+  });
+  it('an item grant, a set score and the adjustment do not', () => {
+    const belt: Item = { id: 'belt', name: 'Belt', qty: 1, eq: true };
+    expect(permanentScore(sheet(14, [...perm, g('i', '2', { from: 'item:belt' })], { inv: [belt] }), 'dex')).toBe(17);
+    expect(permanentScore(sheet(14, [...perm, { id: 's', kind: 'abilSet', name: 'Set', ab: 'dex', val: '19', from: 'feature:ft' }]), 'dex')).toBe(17);
+    expect(permanentScore(sheet(14, perm, { abilAdj: { dex: 2 } }), 'dex')).toBe(17);
+  });
+  it('a temporary grant applied first takes no cap room from a permanent one (18 → 20)', () => {
+    const c = sheet(18, [g('t', '2', { from: 'feature:rage', when: 'active' }), g('p', '2')]);
+    expect(permanentScore(c, 'dex')).toBe(20);
+  });
+  it('a grant of a feature nested under a switched feature is temporary', () => {
+    const outer: Feature = { id: 'outer', g: 'class', name: 'Outer', desc: '', when: 'active' };
+    const inner: Feature = { id: 'inner', g: 'class', name: 'Inner', desc: '', from: 'feature:outer' };
+    const c = sheet(14, [...perm, g('n', '2', { from: 'feature:inner' })], { feats: [...feats, outer, inner], effectsOn: ['feature:outer'] });
+    expect(effScore(c, 'dex')).toBe(19);
+    expect(permanentScore(c, 'dex')).toBe(17);
+  });
+});
+

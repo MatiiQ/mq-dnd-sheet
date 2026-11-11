@@ -571,3 +571,25 @@ describe('level-up and undo from the menu', () => {
     expect(up.textContent).toContain('Level 20: nothing more to gain');
   });
 });
+
+describe('ability "Was" (spec 2026-11-10 §2.4)', () => {
+  const bg: Feature = { id: 'bg', g: 'background', name: 'Soldier', desc: '' };
+  const fx: Feature = { id: 'fx', g: 'class', name: 'Surge', desc: '' };
+  const plus2 = { id: 'g', kind: 'abil' as const, name: 'STR +2', ab: 'str', val: '2', cap: 20 as const, from: 'feature:bg' };
+  const active = { id: 'h', kind: 'abil' as const, name: 'Surge', ab: 'str', val: '2', cap: 20 as const, from: 'feature:fx', when: 'active' as const };
+  it('a permanent bonus shows no Was', () => {
+    renderSheet({ feats: [bg], grants: [plus2] });
+    expect(document.body.textContent).not.toContain('Was ');
+  });
+  it('a switched-on bonus shows Was and the permanent score', () => {
+    renderSheet({ feats: [bg, fx], grants: [plus2, active], effectsOn: ['feature:fx'] });
+    expect(document.body.textContent).toContain('Was 12');
+  });
+  it('edit mode names the score before bonuses and the score with them', () => {
+    renderSheet({ abil: { ...blankCharacter().abil, str: 14 }, feats: [bg], grants: [plus2] });
+    editMode();
+    expect(document.body.textContent).toContain('Score before bonuses · 16 with bonuses');
+    expect(label('Score before bonuses, strength')).not.toBeNull();
+  });
+});
+
