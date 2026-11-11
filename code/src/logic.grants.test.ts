@@ -430,9 +430,13 @@ describe('grant chip labels (spec 2026-11-10 §2.5)', () => {
     expect(one({ kind: 'dmgBonus', val: '1', spell: 'spell/eldritch-blast' })).toBe('+1 damage (Eldritch Blast)');
     expect(one({ kind: 'dmgBonus', val: '1', cantrip: true })).toBe('+1 damage (cantrips)');
     expect(one({ kind: 'dmgBonus', val: '1', onItem: true })).toBe('+1 damage (the chosen weapon)');
-    expect(one({ kind: 'dmgBonus', val: '1', weapon: 'martial-melee' })).toBe('+1 damage (martial-melee)');
+    expect(one({ kind: 'dmgBonus', val: '1', weapon: 'martial-melee' })).toBe('+1 damage (Martial Melee)');
+    expect(one({ kind: 'dmgBonus', val: '2', weapon: 'longbow,shortbow' })).toBe('+2 damage (Longbow, Shortbow)');
     expect(one({ kind: 'dmgBonus', val: '1' })).toBe('+1 damage');
     expect(one({ kind: 'dmgBonus', val: '1d6' })).toBe('+1d6 damage');
+  });
+  it('a damage name that already gives the amount stays', () => {
+    expect(one({ kind: 'dmgBonus', val: '2', name: '+2 damage with a one-handed Melee weapon' })).toBe('+2 damage with a one-handed Melee weapon');
   });
 });
 

@@ -51,13 +51,15 @@ describe('creator replay', () => {
     expect(pointsSpent({ str: 15, dex: 15, con: 15, int: 8, wis: 8, cha: 8 })).toBe(27);
     expect(dropLowest([1, 6, 4, 3])).toBe(13);
   });
-  it('species features gated by level are added before level 1 and active at their level', () => {
+  it('a species trait of a later level waits in the description and is added on reaching its level', () => {
     const one = replay(cat, base()).c;
-    const gift = one.feats.find((f) => f.cid === 'trait/elf/late-gift')!;
-    expect(gift.minLvl).toBe(3);
-    expect(isActive(one, gift)).toBe(false);
+    expect(one.feats.some((f) => f.cid === 'trait/elf/late-gift')).toBe(false);
+    expect(one.feats.find((f) => f.cid === 'species/elf')!.desc).toContain('added at character level 3');
     const three = replay(cat, base({ start: 3, levels: [lvl(2), lvl(3)] })).c;
-    expect(isActive(three, three.feats.find((f) => f.cid === 'trait/elf/late-gift')!)).toBe(true);
+    const gift = three.feats.find((f) => f.cid === 'trait/elf/late-gift')!;
+    expect(gift.from).toBe('feature:' + three.feats.find((f) => f.cid === 'species/elf')!.id);
+    expect(gift.minLvl).toBeUndefined();
+    expect(isActive(three, gift)).toBe(true);
   });
   it('lowering the starting level drops later level answers', () => {
     const r = replay(cat, base({ start: 3, levels: [lvl(2), lvl(3), lvl(4), lvl(5)] }));

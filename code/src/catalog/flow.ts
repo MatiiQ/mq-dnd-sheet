@@ -30,7 +30,7 @@ export function flowNodes(cat: Catalog, c: Character, entry: Entry, answers: Flo
     const e = atLevel(c, e0);
     const node: FlowNode = { key, parent, entry: e, picks, preset: pre, adding: [...adding, e], title: featureName(cat, c, e, picks) };
     out.push(node);
-    for (const n of nestedEntries(cat, e, picks)) walk(n.entry, key + '>' + n.entry.id, key, n.preset ?? {}, node.adding);
+    for (const n of nestedEntries(cat, e, picks, c)) walk(n.entry, key + '>' + n.entry.id, key, n.preset ?? {}, node.adding);
   };
   walk(entry, '', null, preset, []);
   return out;

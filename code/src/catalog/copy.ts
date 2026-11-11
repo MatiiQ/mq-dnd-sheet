@@ -674,7 +674,8 @@ export const equipText = (cat: Catalog, e: BackgroundEntry | ClassEntry) =>
   [...equipItems(cat, e).map((x) => (x.qty > 1 ? `${x.qty} × ${x.name}` : x.name)), `${e.gpA ?? 0} GP`].join(', ');
 // What addFromCatalog adds as features below e: picked feats, traits and subclasses; a background's origin feat
 // ('feat/magic-initiate:cleric' presets the list); a species' traits (not its lineage options, which come by choice).
-export function nestedEntries(cat: Catalog, e: Entry, picks: Record<string, string[]>): Nested[] {
+// With c, a species trait above the character level is left out: the level-up adds it on reaching that level (levelPlan).
+export function nestedEntries(cat: Catalog, e: Entry, picks: Record<string, string[]>, c?: Character): Nested[] {
   const out: Nested[] = [...resolveChoices(cat, e, picks).entries];
   if (e.kind === 'background') {
     const [id, list] = e.feat.split(':');
@@ -683,10 +684,12 @@ export function nestedEntries(cat: Catalog, e: Entry, picks: Record<string, stri
   }
   if (e.kind === 'species') {
     const sp = e.id.split('/')[1];
-    out.push(...entriesOf(cat, 'trait').filter((t) => t.species === sp && !t.of).map((entry) => ({ entry })));
+    out.push(...entriesOf(cat, 'trait').filter((t) => t.species === sp && !t.of && !(c && laterTrait(c, t))).map((entry) => ({ entry })));
   }
   return out;
 }
+// A species trait that comes at a later character level (Large Form at 5). The creator adds the species at level 0.
+export const laterTrait = (c: Character, t: TraitEntry) => t.lvl > Math.max(1, charLevel(c));
 // The entry with its choices' pick counts set for this character (Ritual Caster: Proficiency Bonus, PHB p.206).
 export function atLevel<E extends Entry>(c: Character, e: E): E {
   if (!('grants' in e) || !e.grants?.some((g) => g.kind === 'choice' && g.pickAt)) return e;
@@ -710,7 +713,7 @@ function checkAnswers(cat: Catalog, c: Character, entry: Entry, ans: AddChoices)
   }
   checkItemAnswers(cat, e, ans.item);
   if (e.kind === 'background' && e.equipA !== undefined && !ans.equip) throw new Error(`${e.name}: choose starting equipment`);
-  for (const n of nestedEntries(cat, e, ans.picks)) checkAnswers(cat, c, n.entry, answersFor(ans, n));
+  for (const n of nestedEntries(cat, e, ans.picks, c)) checkAnswers(cat, c, n.entry, answersFor(ans, n));
 }
 
 // "Magic Initiate (Cleric)": the entry's name, plus the label of its list choice's pick. A 'feat or …' list choice names
@@ -861,6 +864,8 @@ function addEntry(c: Character, cat: Catalog, entry: Entry, ans: AddChoices): Ch
     if (sizes.length === 1) out.size = sizes[0];
     else lines.push(`Size: ${sizes.map((x) => capital(x)).join(' or ')} (set it in Edit details)`);
   }
+  if (e.kind === 'species') for (const t of entriesOf(cat, 'trait').filter((t) => t.species === e.id.split('/')[1] && !t.of && laterTrait(c, t)))
+    lines.push(`${t.name}: added at character level ${t.lvl}.`);
   const lvl = e.kind === 'feature' || e.kind === 'trait' ? e.lvl : 0;
   const feature: Feature = {
     id, g, name: featureName(cat, c, e, ans.picks), desc: lines.filter((l) => l.trim()).join('\n'), cid: e.id,
@@ -868,7 +873,7 @@ function addEntry(c: Character, cat: Catalog, entry: Entry, ans: AddChoices): Ch
   };
   out.feats = [...out.feats, feature];
   out = addWithSpells(out, cat, linkOf('feature', id), inputsOf(cat, e, ans, r.specs));
-  for (const n of nestedEntries(cat, e, ans.picks)) out = addEntry(out, cat, n.entry, { ...answersFor(ans, n), from: linkOf('feature', id) });
+  for (const n of nestedEntries(cat, e, ans.picks, c)) out = addEntry(out, cat, n.entry, { ...answersFor(ans, n), from: linkOf('feature', id) });
   return out;
 }
 

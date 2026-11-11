@@ -1376,11 +1376,14 @@ const RECHARGE_LABEL: Record<Recharge, string> = { none: '', short: 'Short Rest'
 export const ECON_LABEL: Record<Econ, string> = { action: 'Action', bonus: 'Bonus Action', reaction: 'Reaction', free: 'Free', other: 'Other' };
 // A damage bonus's chip (spec 2026-11-10 §2.5): "+2 damage" and the first qualifier that applies, so two bonuses of one
 // source tell apart (Rage: Strength attacks, Unarmed Strike). Dice ("1d6") read as typed: num() gives 0 for them.
+// A name that already gives the amount ("+2 damage with a one-handed Melee weapon") stays.
 function dmgBonusLabel(c: Character, g: Grant, v: number): string {
+  if (g.name.startsWith('+')) return g.name;
   const amount = /\dd\d/.test(g.val ?? '') ? '+' + g.val : fmt(v);
+  const titleSlug = (s: string) => s.split('-').map(capital).join(' ');
   const paren = /\(([^)]+)\)/.exec(g.name)?.[1];
-  const spell = g.spell ? c.spells.find((s) => s.cid === g.spell)?.name ?? g.spell.split('/').pop()!.split('-').map(capital).join(' ') : undefined;
-  const q = paren ?? spell ?? (g.cantrip ? 'cantrips' : g.onItem ? 'the chosen weapon' : g.weapon ? g.weapon : g.useAb === 'str' ? 'Strength attacks' : undefined);
+  const spell = g.spell ? c.spells.find((s) => s.cid === g.spell)?.name ?? titleSlug(g.spell.split('/').pop()!) : undefined;
+  const q = paren ?? spell ?? (g.cantrip ? 'cantrips' : g.onItem ? 'the chosen weapon' : g.weapon ? g.weapon.split(',').map(titleSlug).join(', ') : g.useAb === 'str' ? 'Strength attacks' : undefined);
   return amount + ' damage' + (q ? ' (' + q + ')' : '');
 }
 function grantLabel(c: Character, g: Grant): string {

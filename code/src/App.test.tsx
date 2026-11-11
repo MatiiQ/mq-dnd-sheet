@@ -33,6 +33,14 @@ describe('Welcome', () => {
     expect(btn('Step by step')).toBeFalsy();
     expect(label('Characters')).toBeTruthy();
   });
+  it('Step by step opens the creator above the welcome screen (later in the DOM, same fixed z-index)', () => {
+    mount(<App />);
+    tap(btn('+ New character')); tap(btn('Step by step'));
+    const creator = document.querySelector('[aria-label="Create a character"]')!;
+    const welcome = document.querySelector('main.welcome')!;
+    expect(creator).toBeTruthy();
+    expect(welcome.compareDocumentPosition(creator) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
   it('Blank sheet adds a character and opens it in edit mode once', () => {
     mount(<StrictMode><App /></StrictMode>);
     tap(btn('+ New character')); tap(btn('Blank sheet'));

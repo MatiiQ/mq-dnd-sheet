@@ -5,6 +5,7 @@ import type { ChoiceSpec, ClassEntry, Entry, FeatureEntry, SubclassEntry } from 
 import { applyLevel, asks, emptyCharacter, fixedHp, heldPicks, hpGain, levelPlan, levelScreens, levelSet, levelSpellOptions, levelStepReady, masteryOptions, owedPicks, prereqCheck, stepEntry, undoLevel, undoPreview, withLevel, type ClassPick, type LevelAnswers } from './levelup';
 import { abilityMod, hdSpent, longRest, maxHpOf, removeRef } from './logic';
 import { migrate } from './migrate';
+import { addFromCatalog } from './catalog/copy';
 import { blankCharacter } from './defaults';
 import type { Character } from './types';
 import { noIds } from './test-fixtures';
@@ -632,3 +633,21 @@ describe('spell steps name their class (spec 2026-11-10 §2.1)', () => {
   });
 });
 
+
+describe('species traits of a later character level', () => {
+  const sp: Entry[] = [{ id: 'species/zz', kind: 'species', name: 'Zz', src: 'srd', desc: '', sizes: 'medium', speed: 30 } as Entry,
+    { id: 'trait/zz/late', kind: 'trait', name: 'Late', src: 'srd', desc: '', species: 'zz', lvl: 3, grants: [] } as Entry];
+  const local = mergeCatalog([...entries, ...sp], null);
+  const upL = (c: Character) => applyLevel(c, levelPlan(c, { row: c.classes[0].id }, local, fixed())!, fixed(), local).c;
+  it('waits in the species description, comes at its level under the species, and goes with an undo', () => {
+    const one = addFromCatalog(ranger1(), local, local.byId.get('species/zz')!, { picks: {}, counted: {}, links: {} });
+    const zz = one.feats.find((f) => f.cid === 'species/zz')!;
+    expect(one.feats.some((f) => f.cid === 'trait/zz/late')).toBe(false);
+    expect(zz.desc).toContain('Late: added at character level 3.');
+    const two = upL(one);
+    expect(two.feats.some((f) => f.cid === 'trait/zz/late')).toBe(false);
+    const three = upL(two);
+    expect(three.feats.filter((f) => f.cid === 'trait/zz/late').map((f) => [f.from, f.minLvl])).toEqual([['feature:' + zz.id, undefined]]);
+    expect(undoLevel(three).feats.some((f) => f.cid === 'trait/zz/late')).toBe(false);
+  });
+});

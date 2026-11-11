@@ -606,15 +606,19 @@ describe('Later levels (spec 2026-11-10 §2.6)', () => {
   };
   const block = (title: string) => [...document.querySelectorAll('.block')].find((b) => b.querySelector('.block-title')?.textContent?.startsWith(title));
   const laterBtn = () => [...document.querySelectorAll('button')].find((b) => b.textContent?.startsWith('Later levels'));
-  it('a Goliath 1 lists Large Form only under a closed Later levels', () => {
+  it('a Goliath 1 has no Large Form yet, only a line in the species description', () => {
     const c = goliath(1);
-    const lf = c.feats.find((f) => f.cid === 'trait/goliath/large-form')!;
+    expect(c.feats.some((f) => f.cid === 'trait/goliath/large-form')).toBe(false);
+    expect(c.feats.find((f) => f.cid === 'species/goliath')!.desc).toContain('Large Form: added at character level 5.');
     renderSheet(c);
-    expect(block('Species')!.querySelector('#feat-' + lf.id)).toBeNull();
+    expect(laterBtn()).toBeUndefined();
+  });
+  it('a feature waiting for its level sits under a closed Later levels', () => {
+    renderSheet(withClass({ ...blankCharacter(), tab: 'features', feats: [{ id: 'w', g: 'class', name: 'Waiting', desc: '', minLvl: 5 }] }, { lvl: 1 }));
     expect(laterBtn()!.getAttribute('aria-expanded')).toBe('false');
-    expect(document.body.textContent).not.toContain('Large Form · from level 5');
+    expect(document.body.textContent).not.toContain('Waiting · from level 5');
     tap(laterBtn());
-    expect(document.body.textContent).toContain('Large Form · from level 5');
+    expect(document.body.textContent).toContain('Waiting · from level 5');
   });
   it('at level 5 Large Form is in Species and Later levels is gone', () => {
     const c = goliath(5);
@@ -628,14 +632,13 @@ describe('Later levels (spec 2026-11-10 §2.6)', () => {
     expect(laterBtn()).toBeTruthy();
   });
   it('a reveal of a waiting feature opens Later levels and its row', () => {
-    const c = goliath(1);
-    const lf = c.feats.find((f) => f.cid === 'trait/goliath/large-form')!;
-    const res = c.res.find((r) => r.from === 'feature:' + lf.id)!;
+    const c = withClass({ ...blankCharacter(), tab: 'features', feats: [{ id: 'w', g: 'class', name: 'Waiting', desc: '', minLvl: 5 }],
+      res: [{ id: 'r', name: 'Waiting', count: 1, max: 1, recharge: 'long', from: 'feature:w' }] }, { lvl: 1 });
     renderSheet(c);
-    tap(document.querySelector('#res-' + res.id + ' .entry-head'));
-    tap([...document.querySelectorAll('button')].find((b) => b.textContent?.startsWith('Source:') && b.closest('#res-' + res.id)));
+    tap(document.querySelector('#res-r .entry-head'));
+    tap([...document.querySelectorAll('button')].find((b) => b.textContent?.startsWith('Source:') && b.closest('#res-r')));
     expect(laterBtn()!.getAttribute('aria-expanded')).toBe('true');
-    expect(document.querySelector('#feat-' + lf.id + ' .entry-head')!.getAttribute('aria-expanded')).toBe('true');
+    expect(document.querySelector('#feat-w .entry-head')!.getAttribute('aria-expanded')).toBe('true');
   });
   it('firstMasteryFeature skips a waiting feature for one in a group', () => {
     const wm = (id: string, minLvl?: number) => ({ id, g: 'class' as const, name: 'WM ' + id, desc: '', ...(minLvl ? { minLvl } : {}) });

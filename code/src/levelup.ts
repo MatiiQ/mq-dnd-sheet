@@ -21,7 +21,7 @@ export type StepKind = 'prereq' | 'hp' | 'profs' | 'feature' | 'subclass' | 'cho
 // key: stable across replays, built only from catalog ids and the class level, never from a generated id:
 // '<kind>:<entry catalog id>@<class level>' ('feature:feature/ranger/deft-explorer@1'), plus '/<choice id>' for a choice
 // step, and fixed names for hp, prereq, profs ('profs/<choice id>'), subclass, asi, cantrips, prepare, mastery.
-export interface Step { key: string; kind: StepKind; title: string; entry?: Entry; choice?: ChoiceSpec; owed?: number; held?: string[]; onSheet?: string; warn?: string; list?: string; maxLvl?: number; source?: string }
+export interface Step { key: string; kind: StepKind; title: string; entry?: Entry; choice?: ChoiceSpec; owed?: number; held?: string[]; onSheet?: string; warn?: string; list?: string; maxLvl?: number; source?: string; from?: string }
 export interface Plan { pick: ClassPick; cls?: ClassEntry; n: number; clsLvl: number; steps: Step[] }
 export interface LevelAnswers {
   hp?: { mode: 'fixed' | 'roll'; val: number };  // absent only at total level 1
@@ -214,6 +214,12 @@ export function levelPlan(c: Character, pick: ClassPick, cat: Catalog | null, an
       if (owed > 0) steps.push({ key: 'choice:' + e.id + '@' + r.lvl + '/' + ch.id, kind: 'choice', title: e.name + ': ' + ch.name, entry: e, choice: ch, owed, held: heldPicks(x, cat, on.id, ch), onSheet: on.id });
     }
   }
+  // Species traits of this character level (Large Form at 5, PHB p.192), under the species on the sheet: the add flow
+  // leaves them out below their level (laterTrait).
+  for (const sp of x.feats.filter((f) => f.cid?.startsWith('species/'))) {
+    for (const e of entriesOf(cat, 'trait').filter((t) => t.species === sp.cid!.split('/')[1] && !t.of && t.lvl === n && !x.feats.some((f) => f.cid === t.id)))
+      steps.push({ key: 'feature:' + e.id + '@' + n, kind: 'feature', title: e.name, entry: e, from: 'feature:' + sp.id });
+  }
   // Ability Score Improvement / Epic Boon (step 8): a feat at this class level, on the entry once it is on the sheet.
   for (const e of entriesOf(cat, 'feature').filter((y) => y.cls === short && !y.sub && isAsi(y.id) && (y.lvl === r.lvl || (y.again ?? '').split(',').map(Number).includes(r.lvl)))) {
     const on = x.feats.find((f) => f.cid === e.id);
@@ -404,7 +410,7 @@ export function applyLevel(c: Character, plan: Plan, ans: LevelAnswers, cat: Cat
     const e = cat.byId.get(s.entry.id)!;
     const ch = buildChoices(cat, x, e, ans.flows[s.key] ?? {}, {}, bo);
     const ids = new Set(x.feats.map((f) => f.id));
-    x = addFromCatalog(x, cat, e, ch);
+    x = addFromCatalog(x, cat, e, s.from ? { ...ch, from: s.from } : ch);
     const added = x.feats.find((f) => !ids.has(f.id) && f.cid === e.id);
     if (added) for (const [k, v] of Object.entries(ch.picks)) picks['feature:' + added.id + '/' + k] = v;
   }
