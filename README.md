@@ -275,3 +275,67 @@ app with the SRD data and type the rest by hand.
   machine that holds `reference/`.
 - Tests that need PHB data live in `code/scripts/local/` (gitignored) and never run in CI.
 
+
+### The catalog audit (`npm run audit-catalog`)
+
+The audit compares the catalog (SRD data plus the PHB pack) with its sources, so a wrong number, a missing entry or
+a description that says something the sheet doesn't do shows up before it reaches a character. It is a Vitest file,
+`code/scripts/audit/catalog-audit.test.ts`; the checks themselves are pure functions in `code/scripts/audit/checks.ts` and
+`wiring.ts`.
+
+**What it does.** `npm run audit-catalog` first runs `npm run pack`, then runs the audit with `AUDIT_REQUIRED=1`, so a
+missing input fails the run instead of skipping it. Inputs: `reference/build/phb-pack.json`, `resources/srd/srd.txt`,
+the condensed rules in `reference/`, and the app's own code. The checks:
+- SRD headings against entries (every spell and magic item has an entry and the other way round), the SRD rules glossary
+  against the rule entries;
+- the PHB parsed from `reference/` against the catalog, field by field, and parsers that return fewer entries than the
+  catalog holds (a format change in `reference/`);
+- numbers in a description against the entry's own fields (spell dice and costs, item charges), class spell lists, class
+  feature headings, lookup tables (options, stat blocks, roll tables) against the catalog's text;
+- text that states an effect the sheet has a grant kind for, and features that say they take a Bonus Action or Reaction,
+  with no grant or no row in the Actions tab (the "gap" checks);
+- wiring against the app's code: choice pools, fields no code reads, rule categories, spell links, background equipment;
+- a hash of each entry's grants, because grant values mostly have no source to compare with, so any change needs a look.
+
+**Where the accepted exceptions are kept.** In `reference/audit-known.json`, not in the repo: the file names and can quote
+PHB content, so it is gitignored with the rest of `reference/`. It has three parts:
+- `accepted`: findings that are fine as they are (a false positive, or text that is text by design);
+- `todo`: real defects still to fix;
+- `grants`: the hash of each entry's grants.
+
+Every finding in `accepted` and `todo` has a key (`<check>|<entry id>`), a `note` (what the finding says right now) and a
+`reason` (why it is fine, or what is wrong, with the review date). A reason explains the finding, never just a status.
+The audit **fails** on:
+- a finding not in the file (new);
+- a known finding whose note changed (it got worse or different);
+- a known finding that no longer occurs (remove it, or the list rots);
+- a grant hash that changed.
+
+**Accepting changes.** After you read what failed (`reference/build/audit-report.txt` lists every finding with its note;
+its first line gives the run time and the pack's build time), run `AUDIT_UPDATE=1 npm run audit-catalog`. It rewrites the
+file to the current state, copies the old one to `audit-known.json.bak`, and prints the keys added, removed and changed.
+A kept key keeps its group and reason; a **new key goes to `todo`** with the reason "new, not triaged", so move it to
+`accepted` and write the reason by hand once you've decided. A green audit means nothing is new, not that the catalog is
+clean: read `todo`.
+
+**CI and clones without `reference/`.** CI runs only `checks.test.ts` (the checks on synthetic input); the full audit is
+skipped without the pack and the SRD text. The pre-push hook (`npm run hooks`) runs it before every push on a machine
+that has `reference/`.
+
+### How `npm run check-phb` works
+
+A guard against publishing Player's Handbook text. It runs in three places: by hand, in the pre-push hook, and nowhere in CI
+(CI has no `reference/`).
+
+1. `npm run pack` writes `reference/build/check-phrases.json`: 8-word phrases from the start and middle of every PHB
+   description. Phrases the SRD data or the app's own text also contain are left out, so shared wording never blocks.
+   Without the file, the check fails and says to run `npm run pack`.
+2. `npm run check-phb` builds the app, then looks for any phrase (ignoring case, extra whitespace, curly quotes and JSON escapes) in every file of
+   `dist/` and every tracked file. Each hit is printed as `"<phrase>" in <file>`; any hit exits with an error, none
+   prints `No PHB text found.`
+3. The hook adds `--pre-push`: the same search over **every commit being pushed**: its added lines, its message and its
+   file names. Text added and later removed still counts, because it stays public in the history. It also refuses any file
+   under `reference/`, `resources/` or `code/scripts/local/`, and any binary file other than the app icons.
+4. On a clone without `reference/` it prints that the push is **unchecked** and lets it through.
+
+The hook runs `audit-catalog` first (when `reference/` exists), then `check-phb`. Either one failing blocks the push.
