@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mergeCatalog } from './catalog/merge';
 import type { ChoiceSpec, ClassEntry, Entry, FeatureEntry, GrantSpec } from './catalog/schema';
-import { creatorScreens, firstOpen, nextOpen, replaySteps, stepperModel, type Screen } from './creator';
+import { creatorScreens, dropLevelTicks, firstOpen, nextOpen, replayOrigin, replaySteps, stepperModel, type Screen } from './creator';
 import { applyRolled, arrayFill, assignScore, bonusMode, chooseClass, classArray, classTileText, clearDraft, DRAFT_KEY, dropLowest, ensureLevel, isAnswers, languageOptions, OLD_STEP_KEYS, parseTotals, pointsSpent, readDraft, replay, setBonusMode, setBonusPick, setFirst, setLevelAns, setLevelPick, setMethod, setStart, stageName, STANDARD_ARRAY, staleStep, toAnswerPick, writeDraft, type CreatorAnswers } from './creator';
 import { isActive } from './links';
 import { maxHpOf, skillLevel } from './logic';
@@ -539,3 +539,67 @@ describe('navigation', () => {
   });
 });
 
+describe('no-class notice and Stepper ticks (spec 2026-11-10 §1.1, §1.2)', () => {
+  const keysOf = (r: ReturnType<typeof creatorScreens>, stage: string) => r.screens.filter((x) => x.stage === stage).map((x) => x.key);
+  it('an empty class adds no notice; an unknown one does', () => {
+    expect(replayOrigin(cat, { ...full(), cls: '' }).dropped.some((d) => d.includes('Class:'))).toBe(false);
+    expect(replayOrigin(cat, { ...full(), cls: 'class/nope' }).dropped).toContain('Class: not in the loaded catalog');
+  });
+  it('a stage is done only when its screens are ready and every key was passed; Summary never', () => {
+    const r = creatorScreens(cat, full(), { fill: true });
+    expect(r.screens.every((x) => x.ready)).toBe(true);
+    expect(stepperModel(r, 'summary', 1).stages.some((s) => s.state === 'done')).toBe(false);
+    const m = stepperModel(r, 'summary', 1, keysOf(r, 'class'));
+    expect(m.stages.find((s) => s.id === 'class')!.state).toBe('done');
+    expect(m.stages.find((s) => s.id === 'origin')!.state).toBe('ahead');
+    const all = r.screens.map((x) => x.key);
+    expect(stepperModel(r, 'class', 1, all).stages.find((s) => s.id === 'summary')!.state).not.toBe('done');
+  });
+  it('the collapsed Levels stage is done only when every level key was passed', () => {
+    const a = full({ start: 5, levels: [lvl(2), lvl(3), lvl(4), lvl(5)] });
+    const r = creatorScreens(cat, a, { fill: true });
+    const levelKeys = r.screens.filter((x) => x.stage.startsWith('level/')).map((x) => x.key);
+    expect(levelKeys.length).toBeGreaterThan(5);
+    const lv = (passed: string[]) => stepperModel(r, 'class', 5, passed).stages.find((s) => s.id === 'levels')!.state;
+    expect(lv(levelKeys.slice(1))).toBe('ahead');
+    expect(lv(levelKeys)).toBe('done');
+  });
+  it('chooseClass drops level, skills and equipment ticks; the scores tick only when they were refilled', () => {
+    const passed = ['class', 'origin/background', 'origin/skills', 'equipment', 'abilities/scores', 'level/1/features', 'level/2/hp'];
+    const hand = chooseClass(base({ passed, scores: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 } }), cat, 'class/rogue');
+    expect(hand.passed).toEqual(['class', 'origin/background', 'abilities/scores']);
+    const fill = chooseClass(base({ passed, scores: arrayFill(ranger, STANDARD_ARRAY) }), cat, 'class/rogue');
+    expect(fill.passed).toEqual(['class', 'origin/background']);
+    const buy = chooseClass(base({ passed, method: 'buy' }), cat, 'class/rogue');
+    expect(buy.passed).toEqual(['class', 'origin/background', 'abilities/scores']);
+  });
+  it('setStart drops ticks of levels above the new start', () => {
+    expect(setStart(base({ start: 5, passed: ['level/4/features', 'level/2/hp'] }), 3).passed).toEqual(['level/2/hp']);
+  });
+  it('setLevelPick to another class drops that level and later; the same class keeps them', () => {
+    const passed = ['level/2/hp', 'level/3/features', 'level/4/hp'];
+    const a = base({ start: 4, passed, levels: [lvl(2), lvl(3), lvl(4)] });
+    expect(setLevelPick(a, 1, { cls: 'class/rogue' }).passed).toEqual(['level/2/hp']);
+    expect(setLevelPick(a, 1, { cls: 'class/ranger' }).passed).toEqual(passed);
+  });
+  it('setLevelAns drops ticks from the next level on a reshape only', () => {
+    const passed = ['level/2/hp', 'level/3/features', 'level/4/hp'];
+    const a = base({ start: 4, passed, levels: [lvl(2), lvl(3), lvl(4)] });
+    expect(setLevelAns(a, 0, (x) => ({ ...x, sub: 'subclass/x' })).passed).toEqual(['level/2/hp']);
+    expect(setLevelAns(a, 0, (x) => ({ ...x, hp: { mode: 'fixed', val: 5 } })).passed).toEqual(passed);
+  });
+  it('setFirst drops level 2 and later ticks on a reshape', () => {
+    const a = base({ start: 3, passed: ['level/1/hp', 'level/2/hp', 'level/3/features'], levels: [lvl(2), lvl(3)] });
+    expect(setFirst(a, (x) => ({ ...x, sub: 'subclass/x' })).passed).toEqual(['level/1/hp']);
+  });
+  it('dropLevelTicks without passed returns the same object', () => {
+    const a = base();
+    expect(dropLevelTicks(a, 1)).toBe(a);
+  });
+  it('isAnswers accepts an absent or string-list passed; refuses a damaged one', () => {
+    expect(isAnswers(base())).toBe(true);
+    expect(isAnswers(base({ passed: ['class'] }))).toBe(true);
+    expect(isAnswers({ ...base(), passed: 3 })).toBe(false);
+    expect(isAnswers({ ...base(), passed: [1] })).toBe(false);
+  });
+});

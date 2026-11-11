@@ -51,7 +51,7 @@ function Creator({ cat, initial, onCreate, notice }: { cat: Catalog; initial?: D
   const [stale] = useState(() => (initial ? staleStep(cat, initial.answers) : null));
   // The screen list, recomputed when the answers (without the details: typing a name must not replay 20 levels) or the
   // catalog change.
-  const { details: _d, ...rest } = a;
+  const { details: _d, passed: _p, ...rest } = a;
   const key = JSON.stringify(rest);
   const r = useMemo(() => creatorScreens(cat, { ...a, details: NO_DETAILS }, { fill: true }), [cat, key]); // eslint-disable-line react-hooks/exhaustive-deps
   const listed = (k?: string | null) => !!k && r.screens.some((x) => x.key === k);
@@ -72,7 +72,7 @@ function Creator({ cat, initial, onCreate, notice }: { cat: Catalog; initial?: D
 
   const screen = r.screens.find((x) => x.key === cur) ?? r.screens[0];
   const idx = r.screens.indexOf(screen);
-  const m = stepperModel(r, screen.key, a.start);
+  const m = stepperModel(r, screen.key, a.start, a.passed ?? []);
   const blocking = r.replay.dropped.filter((d) => !isNote(d));
   const createOk = r.screens.every((x) => x.ready) && a.levels.length >= a.start - 1 && blocking.length === 0;
   const create = () => {
@@ -116,7 +116,12 @@ function Creator({ cat, initial, onCreate, notice }: { cat: Catalog; initial?: D
       <div className="col gap-6">
         <div className="row wrap gap-8">
           {idx > 0 && <button type="button" className="btn" onClick={() => setAt(r.screens[idx - 1].key)}>Back</button>}
-          {!last && <button type="button" className="btn btn-primary" aria-disabled={!screen.ready} onClick={() => screen.ready && setAt(r.screens[idx + 1].key)}>Next</button>}
+          {!last && <button type="button" className="btn btn-primary" aria-disabled={!screen.ready} onClick={() => {
+            if (!screen.ready) return;
+            // Only Next ticks a screen: a Stepper jump would tick always-ready screens the player never saw.
+            set((x) => ({ ...x, passed: x.passed?.includes(screen.key) ? x.passed : [...(x.passed ?? []), screen.key] }));
+            setAt(r.screens[idx + 1].key);
+          }}>Next</button>}
           {last && <button type="button" className="btn btn-primary" aria-disabled={!createOk} onClick={create}>Create character</button>}
         </div>
         {!screen.ready && screen.missing && <span className="small" role="status">{screen.missing}</span>}
