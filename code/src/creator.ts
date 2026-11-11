@@ -25,6 +25,7 @@ export interface CreatorAnswers {
   details: { name: string; align: string; appearance: string; notes: string };
   first: LevelAnswers;                                                // level 1 of `cls`; its skill flow is built from `skills`
   firstDone?: boolean;                                                // an older draft's flag; still accepted, never written
+  passed?: string[];                                                  // screen keys moved past with Next (the Stepper's ticks)
   levels: { pick: { cls: string } | { name: string; hd: Die }; ans: LevelAnswers }[];  // levels[0] is level 2
 }
 // step: the key of the screen the creator was on ('origin/background', 'level/3/features').
@@ -95,21 +96,30 @@ export const classOf = (cat: Catalog, id: string) => { const e = cat.byId.get(id
 
 // A new class: its skills, level 1, later levels and the class package start over; the scores follow the new class
 // when they are empty or still the old class's fill (Point Buy scores stay).
+// Ticks go with the answers they stood for: level keys (the same for every class), the class skills and the package;
+// the scores' tick too when they are refilled with the new class's suggestion the player hasn't seen.
 export function chooseClass(a: CreatorAnswers, cat: Catalog, clsId: string): CreatorAnswers {
   if (a.cls === clsId) return a;
-  const { equip: _equip, ...rest } = a;
+  const { equip: _equip, ...rest } = dropLevelTicks(a, 1);
   const out: CreatorAnswers = { ...rest, cls: clsId, skills: [], first: { flows: {}, spells: {} }, levels: [] };
+  if (out.passed) out.passed = out.passed.filter((k) => k !== 'origin/skills' && k !== 'equipment');
   delete out.firstDone;
   if (a.method === 'buy') return out;
   const pool = scorePool(a);
   const untouched = !Object.keys(a.scores).length || JSON.stringify(sortKeys(a.scores)) === JSON.stringify(sortKeys(arrayFill(classOf(cat, a.cls), pool)));
-  return untouched ? { ...out, scores: arrayFill(classOf(cat, clsId), pool) } : out;
+  if (!untouched) return out;
+  return { ...out, scores: arrayFill(classOf(cat, clsId), pool), ...(out.passed ? { passed: out.passed.filter((k) => k !== 'abilities/scores') } : {}) };
+}
+// The Stepper's ticks of level `from` and later go when those levels' answers are recreated.
+export function dropLevelTicks(a: CreatorAnswers, from: number): CreatorAnswers {
+  if (!a.passed) return a;
+  return { ...a, passed: a.passed.filter((k) => { const m = /^level\/(\d+)\//.exec(k); return !m || +m[1] < from; }) };
 }
 const sortKeys = (o: Partial<Record<Ability, number>>) => ORDER.map((k) => o[k]);
 
 export const setStart = (a: CreatorAnswers, n: number): CreatorAnswers => {
   const start = Math.max(1, Math.min(20, Math.round(n)));
-  return { ...a, start, levels: a.levels.slice(0, start - 1) };
+  return { ...dropLevelTicks(a, start + 1), start, levels: a.levels.slice(0, start - 1) };
 };
 // A method change clears the scores (Point Buy: all 8) and keeps the rolled totals; the Standard Array and Rolled
 // fill them for the class at once.
@@ -173,18 +183,18 @@ export function ensureLevel(a: CreatorAnswers, i: number): CreatorAnswers {
 export function setLevelPick(a: CreatorAnswers, i: number, pick: CreatorAnswers['levels'][number]['pick']): CreatorAnswers {
   const e = ensureLevel(a, i);
   if (JSON.stringify(e.levels[i].pick) === JSON.stringify(pick)) return e;
-  return { ...e, levels: [...e.levels.slice(0, i), { pick, ans: { flows: {}, spells: {} } }] };
+  return { ...dropLevelTicks(e, i + 2), levels: [...e.levels.slice(0, i), { pick, ans: { flows: {}, spells: {} } }] };
 }
 // A subclass or ASI feat change changes what later levels offer, so they go; other answers keep them.
 const reshapes = (x: LevelAnswers, y: LevelAnswers) => x.sub !== y.sub || x.asi?.feat !== y.asi?.feat;
 export function setLevelAns(a: CreatorAnswers, i: number, f: (ans: LevelAnswers) => LevelAnswers): CreatorAnswers {
   const e = ensureLevel(a, i), old = e.levels[i].ans, ans = f(old);
   const levels = [...e.levels.slice(0, i), { ...e.levels[i], ans }, ...(reshapes(old, ans) ? [] : e.levels.slice(i + 1))];
-  return { ...e, levels };
+  return { ...(reshapes(old, ans) ? dropLevelTicks(e, i + 3) : e), levels };
 }
 export function setFirst(a: CreatorAnswers, f: (ans: LevelAnswers) => LevelAnswers): CreatorAnswers {
   const first = f(a.first);
-  return { ...a, first, levels: reshapes(a.first, first) ? [] : a.levels };
+  return reshapes(a.first, first) ? { ...dropLevelTicks(a, 2), first, levels: [] } : { ...a, first };
 }
 // The creator names a class by catalog id (or typed name), never by row id, so the answers replay on a fresh sheet.
 export function toAnswerPick(before: Character, p: ClassPick): CreatorAnswers['levels'][number]['pick'] {
@@ -240,7 +250,7 @@ export function replayOrigin(cat: Catalog, a: CreatorAnswers, opts: { fill?: boo
     if (!c.profs.some((p) => p.cat === 'language' && p.name === e.name)) c = { ...c, profs: [...c.profs, { id: newId(), cat: 'language', name: e.name }] };
   }
   const cls = cat.byId.get(a.cls);
-  if (cls?.kind !== 'class') dropped.push('Class: not in the loaded catalog');
+  if (cls?.kind !== 'class') { if (a.cls) dropped.push('Class: not in the loaded catalog'); }
   else c = addPackage(c, cat, cls as ClassEntry, a.equip ?? 'none');
   c = { ...c, abil: { ...c.abil, ...a.scores } };
   originFor.full = c;
@@ -392,6 +402,10 @@ export function creatorScreens(cat: Catalog, a: CreatorAnswers, opts: { fill?: b
   originChoices('bg', bg, a.bgFlow, r.originFor.background);
   push('origin', 'origin/species', 'Species', { kind: 'species' }, !a.species ? not('Choose a species') : r.failed.species ? not(r.failed.species) : READY);
   originChoices('sp', sp, a.spFlow, r.originFor.species);
+  // Two origin screens with one title (High Elf's and Magic Initiate's "Spellcasting ability") name their entries.
+  const oc = screens.filter((x) => x.body.kind === 'origin-choice');
+  const shared = new Set(oc.filter((x) => oc.some((y) => y !== x && y.title === x.title)));
+  for (const x of shared) if (x.body.kind === 'origin-choice' && x.body.step.kind === 'choice') x.title = `${x.title} · ${x.body.step.node.title}`;
   const langOpts = languageOptions(cat);
   const langNeed = Math.min(2, langOpts.length);
   const langHave = a.languages.filter((n) => langOpts.some((p) => p.name.toLowerCase() === n.toLowerCase())).length;
@@ -456,17 +470,22 @@ export function nextOpen(prev: Screen[], screens: Screen[], at: string): string 
 }
 
 // The Stepper's stages, its line and where each stage jumps. With a starting level above 3 the level stages collapse
-// into one "Levels 1–N" stage (spec §2 "Stepper").
-export function stepperModel(r: { stages: Stage[]; screens: Screen[] }, at: string, start: number): { stages: StepperStage[]; line: string; jump: Record<string, string> } {
+// into one "Levels 1–N" stage (spec §2 "Stepper"). A stage is done once listed, all its screens ready and every one of
+// them moved past with Next (`passed`); Summary never is.
+export function stepperModel(r: { stages: Stage[]; screens: Screen[] }, at: string, start: number, passed: string[] = []): { stages: StepperStage[]; line: string; jump: Record<string, string> } {
   const collapse = start > 3;
   const cur = r.screens.find((x) => x.key === at);
   const isLevel = (id: string) => id.startsWith('level/');
   const enabledAt = (first: number) => first >= 0 && r.screens.slice(0, first).every((x) => x.ready);
   const out: StepperStage[] = [], jump: Record<string, string> = {};
   let levelsDone = true, levelsAdded = false;
+  const doneOf = (st: Stage) => {
+    const own = r.screens.filter((x) => x.stage === st.id);
+    return st.listed && st.id !== 'summary' && own.every((x) => x.ready && passed.includes(x.key));
+  };
   for (const st of r.stages) {
     if (collapse && isLevel(st.id)) {
-      levelsDone = levelsDone && st.done;
+      levelsDone = levelsDone && doneOf(st);
       if (levelsAdded) continue;
       levelsAdded = true;
       const first = r.screens.findIndex((x) => x.key === 'level/1/features');
@@ -476,7 +495,7 @@ export function stepperModel(r: { stages: Stage[]; screens: Screen[] }, at: stri
     }
     const first = r.screens.findIndex((x) => x.stage === st.id);
     jump[st.id] = firstOpen(r.screens, st.id);
-    out.push({ id: st.id, label: st.title, state: cur?.stage === st.id ? 'current' : st.done ? 'done' : 'ahead', enabled: enabledAt(first) });
+    out.push({ id: st.id, label: st.title, state: cur?.stage === st.id ? 'current' : doneOf(st) ? 'done' : 'ahead', enabled: enabledAt(first) });
   }
   const lv = out.find((x) => x.id === 'levels');
   if (lv && lv.state !== 'current' && levelsDone) lv.state = 'done';
@@ -517,7 +536,7 @@ export function isAnswers(a: unknown): a is CreatorAnswers {
     && isFlow(a.bgFlow) && isFlow(a.spFlow) && isStrs(a.skills) && isStrs(a.languages)
     && (a.method === 'array' || a.method === 'buy' || a.method === 'rolled') && Object.values(a.scores).every((n) => Number.isInteger(n))
     && ['name', 'align', 'appearance', 'notes'].every((k) => typeof d[k] === 'string')
-    && isLevelAns(a.first) && (a.firstDone === undefined || typeof a.firstDone === 'boolean')
+    && isLevelAns(a.first) && (a.firstDone === undefined || typeof a.firstDone === 'boolean') && (a.passed === undefined || isStrs(a.passed))
     && a.levels.every((L) => isObj(L) && isObj(L.pick) && (typeof L.pick.cls === 'string' || (typeof L.pick.name === 'string' && DICE.includes(L.pick.hd as never))) && isLevelAns(L.ans));
 }
 // Steps are screen keys; an older draft's step index maps to the first screen of its stage (OLD_STEP_KEYS). An older

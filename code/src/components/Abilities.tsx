@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ABILITIES, SKILLS, abilityMod, abilityParts, clamp, effScore, fmt, saveMod, saveProficient, skillLevel, skillMod, stealthDisBy } from '../logic';
+import { ABILITIES, SKILLS, abilityMod, abilityParts, clamp, effScore, fmt, permanentScore, saveMod, saveProficient, skillLevel, skillMod, stealthDisBy } from '../logic';
 import { useWide } from '../layout';
 import { useSheet } from '../sheet';
 import type { Ability } from '../types';
@@ -31,11 +31,11 @@ function AbilityCard({ k, name }: { k: Ability; name: string }) {
   // Rows ('save' or a skill key) whose granted source is shown outside Edit mode, after a tap. UI state only.
   const [shown, setShown] = useState<string[]>([]);
   const toggleShown = (key: string) => setShown((l) => (l.includes(key) ? l.filter((x) => x !== key) : [...l, key]));
-  const cur = effScore(c, k), base = c.abil[k], changed = cur !== base;
+  const cur = effScore(c, k), base = c.abil[k], perm = permanentScore(c, k), changed = cur !== perm;
   const saveProf = !!c.saveProf[k];
   // A grant can make a save proficient on top of the hand toggle; the dot shows the result and names the grant.
   const save = saveProficient(c, k);
-  const scoreColor = cur > base ? 'var(--blue)' : cur < base ? 'var(--danger)' : 'var(--text)';
+  const scoreColor = cur > perm ? 'var(--blue)' : cur < perm ? 'var(--danger)' : 'var(--text)';
   const lower = name.toLowerCase();
   // Accepted: the steppers commit per tap. A mis-tap that lowers a score lowers a formula maximum such as 'wis>=1', and
   // normalize() cuts that resource's count for good; tapping + again doesn't give it back. That is the spec's rule for
@@ -55,10 +55,10 @@ function AbilityCard({ k, name }: { k: Ability; name: string }) {
           {wide
             ? <span className="abil-name"><span aria-hidden="true">{k.toUpperCase()}</span><span className="sr-only">{name}</span></span>
             : <span className="abil-name">{name}</span>}
-          {changed && !edit && <span className="small">Was {base}</span>}
+          {changed && !edit && <span className="small">Was {perm}</span>}
           {edit && (
-            <label className="row gap-6 small">Original score
-              <TypeInNumber className="input input-num" style={{ width: 56 }} aria-label={'Original ' + lower + ' score'} value={base} onCommit={(v) => update((p) => ({ abil: { ...p.abil, [k]: clamp(v, 1, 30) } }))} />
+            <label className="row gap-6 small">Score before bonuses{perm !== base ? ` · ${perm} with bonuses` : ''}
+              <TypeInNumber className="input input-num" style={{ width: 56 }} aria-label={'Score before bonuses, ' + lower} value={base} onCommit={(v) => update((p) => ({ abil: { ...p.abil, [k]: clamp(v, 1, 30) } }))} />
             </label>
           )}
         </div>

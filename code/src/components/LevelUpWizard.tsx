@@ -279,6 +279,11 @@ function AsiScreen({ cat, raised, step, value, onChange }: { cat: Catalog; raise
   const ch = step.entry ? choicesOf(step.entry)[0] as ChoiceSpec | undefined : undefined;
   const opts = ch?.pool ? poolOptions(cat, raised, ch.pool, {}) : [];
   const cur = value ? [value.feat] : [];
+  // Three groups (spec 2026-11-10 §2.3), names sorted: held first decides (held and unmet goes last), then unmet.
+  const sorted = [...opts].sort((x, y) => x.label.localeCompare(y.label));
+  const isHeld = (o: PoolOption) => blocksPick(o.value, { option: o });
+  const groups: [string, PoolOption[]][] = [['Available', sorted.filter((o) => !isHeld(o) && !o.unmet)], ['Needs a prerequisite', sorted.filter((o) => !isHeld(o) && o.unmet)],
+    ['Already on your sheet', sorted.filter(isHeld)]];
   const tap = (o: PoolOption) => {
     if (!ch) return;
     const next = togglePick(ch, cur, o.value, { blocked: blocksPick(o.value, { option: o }) });
@@ -288,13 +293,18 @@ function AsiScreen({ cat, raised, step, value, onChange }: { cat: Catalog; raise
     <div className="col gap-8">
       <h3 className="block-title">{step.title}</h3>
       {step.warn && <div role="status" className="notice notice-blue">{step.warn}</div>}
-      <div className="tile-grid">
-        {opts.map((o) => {
-          const held = blocksPick(o.value, { option: o });
-          return <ChoiceTile key={o.value} title={o.label} selected={cur.includes(o.value)} held={held} picked={cur.includes(o.value)} warn={!!o.unmet}
-            meta={o.unmet ? 'Needs ' + o.unmet.join(', ') : undefined} {...descTile(o.entry?.desc)} onSelect={() => tap(o)} />;
-        })}
-      </div>
+      {groups.map(([name, list]) => list.length > 0 && (
+        <div key={name} className="col gap-6">
+          <h4 className="block-title">{name}</h4>
+          <div className="tile-grid">
+            {list.map((o) => {
+              const held = blocksPick(o.value, { option: o });
+              return <ChoiceTile key={o.value} title={o.label} selected={cur.includes(o.value)} held={held} picked={cur.includes(o.value)} warn={!!o.unmet}
+                meta={o.unmet ? 'Needs ' + o.unmet.join(', ') : undefined} {...descTile(o.entry?.desc)} onSelect={() => tap(o)} />;
+            })}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -312,21 +322,26 @@ function SpellScreen({ cat, step, value, onChange }: { cat: Catalog | null; step
   return (
     <div className="col gap-8">
       <h3 className="block-title">{step.title}</h3>
+      {step.source && <span className="small">{step.source}</span>}
       {step.warn && <span className="small">{step.warn}</span>}
       <span className="muted">{value.length} of {step.owed} chosen. You can also add spells later in the Spells tab.</span>
       {spells.length > 12 && <input type="search" className="input" aria-label="Search the spells" placeholder="Search" value={query} onChange={(e) => setQuery(e.target.value)} />}
-      {levels.map((l) => (
+      {levels.map((l) => {
+        // Counted over every spell of the level, never the filtered ones: a search must not hide the count.
+        const k = spells.filter((e) => e.lvl === l && value.includes(e.id)).length;
+        return (
         <div key={l} className="col gap-6">
-          <span className="label">{l === 0 ? 'Cantrips' : 'Level ' + l}</span>
+          <h4 className="block-title">{l === 0 ? 'Cantrips' : `Level ${l} spells`}{k ? ` · ${k} chosen` : ''}</h4>
           <div className="tile-grid">
             {shown.filter((e) => e.lvl === l).map((e) => (
               <ChoiceTile key={e.id} title={e.name} selected={value.includes(e.id)} onSelect={() => toggle(e.id)}
-                meta={[e.school, e.time, e.range, e.conc && 'Concentration', e.ritual && 'Ritual'].filter(Boolean).join(' · ')}
+                meta={[e.lvl === 0 ? 'Cantrip' : 'Level ' + e.lvl, e.school, e.time, e.range, e.conc && 'Concentration', e.ritual && 'Ritual'].filter(Boolean).join(' · ')}
                 {...descTile(e.desc, e.higher)} />
             ))}
           </div>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

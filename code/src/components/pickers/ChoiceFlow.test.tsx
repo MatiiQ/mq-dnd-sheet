@@ -183,3 +183,30 @@ describe('spellAbilityDefault', () => {
     expect(spellAbilityDefault(['wis', 'cha'], 'int')).toBe('wis');
   });
 });
+
+describe('ChoiceFlow controlled heading and order options (spec 2026-11-10 §1.5, §1.6)', () => {
+  const show = (id: string, at: string) => mount(<Ctx><ChoiceFlow entry={cat.byId.get(id)!} cat={cat} at={at} answers={{}} onAnswers={() => {}} onDone={() => {}} onCancel={() => {}} /></Ctx>);
+  const heading = () => [document.querySelector('.choice-flow h4')!.textContent, document.querySelector('.choice-flow')!.getAttribute('aria-label')];
+  it('a choice named like its entry shows the name once', () => {
+    show('trait/elf/keen-senses', '_/c1');
+    expect(heading()).toEqual(['Keen Senses', 'Keen Senses']);
+    unmount();
+    show('trait/goliath/giant-ancestry', '_/anc');
+    expect(heading()).toEqual(['Giant ancestry', 'Giant ancestry']);
+  });
+  it('another name keeps both', () => {
+    show('feat/magic-initiate', '_/ab');
+    expect(heading()).toEqual(['Spellcasting ability · Magic Initiate', 'Spellcasting ability · Magic Initiate']);
+  });
+  it('an order option tile explains itself', () => {
+    show('feature/cleric/divine-order', '_/order');
+    expect(tile('Protector')!.querySelector('.tile-body')!.textContent!.startsWith('Trained for battle')).toBe(true);
+  });
+  it('the uncontrolled picker keeps its heading and no option text', () => {
+    mount(<Ctx><ChoiceFlow entry={cat.byId.get('feature/cleric/divine-order')!} cat={cat} onDone={() => {}} onCancel={() => {}} /></Ctx>);
+    expect(document.querySelector('.choice-flow .label')!.textContent).toBe('Divine Order');
+    expect(document.querySelector('.choice-flow h4')!.textContent).toMatch(/^Divine Order · choose 1/);
+    expect(document.body.textContent).not.toContain('Trained for battle');
+  });
+});
+

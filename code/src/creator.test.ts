@@ -1,8 +1,9 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mergeCatalog } from './catalog/merge';
+import srdEntries from './data/srd/index';
 import type { ChoiceSpec, ClassEntry, Entry, FeatureEntry, GrantSpec } from './catalog/schema';
-import { creatorScreens, firstOpen, nextOpen, replaySteps, stepperModel, type Screen } from './creator';
+import { creatorScreens, dropLevelTicks, firstOpen, nextOpen, replayOrigin, replaySteps, stepperModel, type Screen } from './creator';
 import { applyRolled, arrayFill, assignScore, bonusMode, chooseClass, classArray, classTileText, clearDraft, DRAFT_KEY, dropLowest, ensureLevel, isAnswers, languageOptions, OLD_STEP_KEYS, parseTotals, pointsSpent, readDraft, replay, setBonusMode, setBonusPick, setFirst, setLevelAns, setLevelPick, setMethod, setStart, stageName, STANDARD_ARRAY, staleStep, toAnswerPick, writeDraft, type CreatorAnswers } from './creator';
 import { isActive } from './links';
 import { maxHpOf, skillLevel } from './logic';
@@ -50,13 +51,15 @@ describe('creator replay', () => {
     expect(pointsSpent({ str: 15, dex: 15, con: 15, int: 8, wis: 8, cha: 8 })).toBe(27);
     expect(dropLowest([1, 6, 4, 3])).toBe(13);
   });
-  it('species features gated by level are added before level 1 and active at their level', () => {
+  it('a species trait of a later level waits in the description and is added on reaching its level', () => {
     const one = replay(cat, base()).c;
-    const gift = one.feats.find((f) => f.cid === 'trait/elf/late-gift')!;
-    expect(gift.minLvl).toBe(3);
-    expect(isActive(one, gift)).toBe(false);
+    expect(one.feats.some((f) => f.cid === 'trait/elf/late-gift')).toBe(false);
+    expect(one.feats.find((f) => f.cid === 'species/elf')!.desc).toContain('added at character level 3');
     const three = replay(cat, base({ start: 3, levels: [lvl(2), lvl(3)] })).c;
-    expect(isActive(three, three.feats.find((f) => f.cid === 'trait/elf/late-gift')!)).toBe(true);
+    const gift = three.feats.find((f) => f.cid === 'trait/elf/late-gift')!;
+    expect(gift.from).toBe('feature:' + three.feats.find((f) => f.cid === 'species/elf')!.id);
+    expect(gift.minLvl).toBeUndefined();
+    expect(isActive(three, gift)).toBe(true);
   });
   it('lowering the starting level drops later level answers', () => {
     const r = replay(cat, base({ start: 3, levels: [lvl(2), lvl(3), lvl(4), lvl(5)] }));
@@ -536,6 +539,87 @@ describe('navigation', () => {
     expect(staleStep(cat, { ...full(), cls: 'class/gone' })).toBe('class');
     expect(staleStep(cat, full({ start: 2, levels: [{ pick: { cls: 'class/gone' }, ans: { flows: {}, spells: {} } }] }))).toBe('level/2/features');
     expect(staleStep(cat, full())).toBeNull();
+  });
+});
+
+describe('no-class notice and Stepper ticks (spec 2026-11-10 §1.1, §1.2)', () => {
+  const keysOf = (r: ReturnType<typeof creatorScreens>, stage: string) => r.screens.filter((x) => x.stage === stage).map((x) => x.key);
+  it('an empty class adds no notice; an unknown one does', () => {
+    expect(replayOrigin(cat, { ...full(), cls: '' }).dropped.some((d) => d.includes('Class:'))).toBe(false);
+    expect(replayOrigin(cat, { ...full(), cls: 'class/nope' }).dropped).toContain('Class: not in the loaded catalog');
+  });
+  it('a stage is done only when its screens are ready and every key was passed; Summary never', () => {
+    const r = creatorScreens(cat, full(), { fill: true });
+    expect(r.screens.every((x) => x.ready)).toBe(true);
+    expect(stepperModel(r, 'summary', 1).stages.some((s) => s.state === 'done')).toBe(false);
+    const m = stepperModel(r, 'summary', 1, keysOf(r, 'class'));
+    expect(m.stages.find((s) => s.id === 'class')!.state).toBe('done');
+    expect(m.stages.find((s) => s.id === 'origin')!.state).toBe('ahead');
+    const all = r.screens.map((x) => x.key);
+    expect(stepperModel(r, 'class', 1, all).stages.find((s) => s.id === 'summary')!.state).not.toBe('done');
+  });
+  it('the collapsed Levels stage is done only when every level key was passed', () => {
+    const a = full({ start: 5, levels: [lvl(2), lvl(3), lvl(4), lvl(5)] });
+    const r = creatorScreens(cat, a, { fill: true });
+    const levelKeys = r.screens.filter((x) => x.stage.startsWith('level/')).map((x) => x.key);
+    expect(levelKeys.length).toBeGreaterThan(5);
+    const lv = (passed: string[]) => stepperModel(r, 'class', 5, passed).stages.find((s) => s.id === 'levels')!.state;
+    expect(lv(levelKeys.slice(1))).toBe('ahead');
+    expect(lv(levelKeys)).toBe('done');
+  });
+  it('chooseClass drops level, skills and equipment ticks; the scores tick only when they were refilled', () => {
+    const passed = ['class', 'origin/background', 'origin/skills', 'equipment', 'abilities/scores', 'level/1/features', 'level/2/hp'];
+    const hand = chooseClass(base({ passed, scores: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 } }), cat, 'class/rogue');
+    expect(hand.passed).toEqual(['class', 'origin/background', 'abilities/scores']);
+    const fill = chooseClass(base({ passed, scores: arrayFill(ranger, STANDARD_ARRAY) }), cat, 'class/rogue');
+    expect(fill.passed).toEqual(['class', 'origin/background']);
+    const buy = chooseClass(base({ passed, method: 'buy' }), cat, 'class/rogue');
+    expect(buy.passed).toEqual(['class', 'origin/background', 'abilities/scores']);
+  });
+  it('setStart drops ticks of levels above the new start', () => {
+    expect(setStart(base({ start: 5, passed: ['level/4/features', 'level/2/hp'] }), 3).passed).toEqual(['level/2/hp']);
+  });
+  it('setLevelPick to another class drops that level and later; the same class keeps them', () => {
+    const passed = ['level/2/hp', 'level/3/features', 'level/4/hp'];
+    const a = base({ start: 4, passed, levels: [lvl(2), lvl(3), lvl(4)] });
+    expect(setLevelPick(a, 1, { cls: 'class/rogue' }).passed).toEqual(['level/2/hp']);
+    expect(setLevelPick(a, 1, { cls: 'class/ranger' }).passed).toEqual(passed);
+  });
+  it('setLevelAns drops ticks from the next level on a reshape only', () => {
+    const passed = ['level/2/hp', 'level/3/features', 'level/4/hp'];
+    const a = base({ start: 4, passed, levels: [lvl(2), lvl(3), lvl(4)] });
+    expect(setLevelAns(a, 0, (x) => ({ ...x, sub: 'subclass/x' })).passed).toEqual(['level/2/hp']);
+    expect(setLevelAns(a, 0, (x) => ({ ...x, hp: { mode: 'fixed', val: 5 } })).passed).toEqual(passed);
+  });
+  it('setFirst drops level 2 and later ticks on a reshape', () => {
+    const a = base({ start: 3, passed: ['level/1/hp', 'level/2/hp', 'level/3/features'], levels: [lvl(2), lvl(3)] });
+    expect(setFirst(a, (x) => ({ ...x, sub: 'subclass/x' })).passed).toEqual(['level/1/hp']);
+  });
+  it('dropLevelTicks without passed returns the same object', () => {
+    const a = base();
+    expect(dropLevelTicks(a, 1)).toBe(a);
+  });
+  it('isAnswers accepts an absent or string-list passed; refuses a damaged one', () => {
+    expect(isAnswers(base())).toBe(true);
+    expect(isAnswers(base({ passed: ['class'] }))).toBe(true);
+    expect(isAnswers({ ...base(), passed: 3 })).toBe(false);
+    expect(isAnswers({ ...base(), passed: [1] })).toBe(false);
+  });
+});
+
+describe('origin screens sharing a title (spec 2026-11-10 §1.5)', () => {
+  const srd = mergeCatalog(srdEntries, null);
+  const titles = (bg: string, lineage: string) => {
+    const a: CreatorAnswers = { cls: 'class/fighter', start: 1, background: bg, bgFlow: {}, species: 'species/elf',
+      spFlow: { '>trait/elf/elven-lineage': { picks: { lin: [lineage] }, counted: {}, links: {} } }, skills: [], languages: [], method: 'array', scores: {},
+      details: { name: '', align: '', appearance: '', notes: '' }, first: { flows: {}, spells: {} }, levels: [] };
+    return creatorScreens(srd, a, { fill: true }).screens.map((x) => x.title).filter((t) => t.startsWith('Spellcasting ability'));
+  };
+  it('two such screens name their entries', () => {
+    expect(titles('background/acolyte', 'trait/elf/high-elf')).toEqual(['Spellcasting ability · Magic Initiate (Cleric)', 'Spellcasting ability · High Elf']);
+  });
+  it('one keeps the plain title', () => {
+    expect(titles('background/soldier', 'trait/elf/wood-elf')).toEqual(['Spellcasting ability']);
   });
 });
 

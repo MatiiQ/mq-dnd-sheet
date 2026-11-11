@@ -5,6 +5,7 @@ import type { ChoiceSpec, ClassEntry, Entry, FeatureEntry, SubclassEntry } from 
 import { applyLevel, asks, emptyCharacter, fixedHp, heldPicks, hpGain, levelPlan, levelScreens, levelSet, levelSpellOptions, levelStepReady, masteryOptions, owedPicks, prereqCheck, stepEntry, undoLevel, undoPreview, withLevel, type ClassPick, type LevelAnswers } from './levelup';
 import { abilityMod, hdSpent, longRest, maxHpOf, removeRef } from './logic';
 import { migrate } from './migrate';
+import { addFromCatalog } from './catalog/copy';
 import { blankCharacter } from './defaults';
 import type { Character } from './types';
 import { noIds } from './test-fixtures';
@@ -606,5 +607,47 @@ describe('applyLevel noLinks (creator fixes, Task 14)', () => {
     const plan = levelPlan(r1, pick, k, ans)!;
     expect(applyLevel(r1, plan, ans, k, { noLinks: true }).c.spells.filter((s) => s.name === 'Light')).toHaveLength(1);
     expect(applyLevel(r1, plan, ans, k).c.spells.filter((s) => s.name === 'Light')).toHaveLength(2);
+  });
+});
+
+describe('spell steps name their class (spec 2026-11-10 §2.1)', () => {
+  it('a class with its own tables: titles and source name the class row, keys unchanged', () => {
+    const r = ranger1({ dex: 13, wis: 13, cha: 13 });
+    const plan = levelPlan(r, { cls: 'class/sorcerer' }, cat, A())!;
+    const cantrips = plan.steps.find((s) => s.kind === 'cantrips')!, prepare = plan.steps.find((s) => s.kind === 'prepare')!;
+    expect([cantrips.title, prepare.title]).toEqual(['Sorcerer cantrips: pick 4', 'Sorcerer spells: prepare 2 more']);
+    expect([cantrips.key, prepare.key]).toEqual(['cantrips:class/sorcerer@1', 'prepare:class/sorcerer@1']);
+    expect(prepare.source).toBe('From the Sorcerer table at Sorcerer level 1.');
+  });
+  it('a subclass casting grant names the subclass (Eldritch Knight)', () => {
+    // The grant is on the sheet from level 3, so level 4's rise in prepared spells is the first step it drives.
+    const c2 = levelTo(fighter1(), 'class/fighter', 2);
+    const ans = fixed({ sub: 'subclass/fighter/eldritch-knight' });
+    const ek3 = applyLevel(c2, levelPlan(c2, { row: c2.classes[0].id }, cat, ans)!, ans, cat).c;
+    const prepare = levelPlan(ek3, { row: ek3.classes[0].id }, cat, fixed())!.steps.find((s) => s.kind === 'prepare')!;
+    // This fixture names subclasses by slug; the catalog's name reads "Eldritch Knight".
+    const sub = ek3.classes[0].sub;
+    expect(sub).toBe('eldritch-knight');
+    expect(prepare.title).toBe(sub + ' spells: prepare 1 more');
+    expect(prepare.source).toBe(`From the ${sub} table at ${ek3.classes[0].name} level 4.`);
+  });
+});
+
+
+describe('species traits of a later character level', () => {
+  const sp: Entry[] = [{ id: 'species/zz', kind: 'species', name: 'Zz', src: 'srd', desc: '', sizes: 'medium', speed: 30 } as Entry,
+    { id: 'trait/zz/late', kind: 'trait', name: 'Late', src: 'srd', desc: '', species: 'zz', lvl: 3, grants: [] } as Entry];
+  const local = mergeCatalog([...entries, ...sp], null);
+  const upL = (c: Character) => applyLevel(c, levelPlan(c, { row: c.classes[0].id }, local, fixed())!, fixed(), local).c;
+  it('waits in the species description, comes at its level under the species, and goes with an undo', () => {
+    const one = addFromCatalog(ranger1(), local, local.byId.get('species/zz')!, { picks: {}, counted: {}, links: {} });
+    const zz = one.feats.find((f) => f.cid === 'species/zz')!;
+    expect(one.feats.some((f) => f.cid === 'trait/zz/late')).toBe(false);
+    expect(zz.desc).toContain('Late: added at character level 3.');
+    const two = upL(one);
+    expect(two.feats.some((f) => f.cid === 'trait/zz/late')).toBe(false);
+    const three = upL(two);
+    expect(three.feats.filter((f) => f.cid === 'trait/zz/late').map((f) => [f.from, f.minLvl])).toEqual([['feature:' + zz.id, undefined]]);
+    expect(undoLevel(three).feats.some((f) => f.cid === 'trait/zz/late')).toBe(false);
   });
 });

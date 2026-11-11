@@ -168,4 +168,20 @@ describe('CreatorWizard', () => {
     render(() => {}, at('origin/gone', ready({ languages: [] })));
     expect(document.body.textContent).toContain('Choose 2 more languages');
   });
+  it('Stepper: no stage after Class is done after choosing a class; a jump never ticks Details; Next does', () => {
+    render(() => {});
+    tap(tile('Barbarian'));
+    const states = () => [...document.querySelectorAll('.stepper-btn')].map((b) => b.getAttribute('aria-label')!);
+    expect(states().filter((l) => l.endsWith(', done'))).toEqual([]);
+    unmount();
+    render(() => {}, at('details', ready()));
+    const stage = (name: string) => states().find((l) => l.startsWith(name + ','))!;
+    tap([...document.querySelectorAll('.stepper-btn')].find((b) => b.getAttribute('aria-label')!.startsWith('Summary'))!);
+    tap([...document.querySelectorAll('.stepper-btn')].find((b) => b.getAttribute('aria-label')!.startsWith('Details'))!);
+    expect(stage('Details')).not.toMatch(/done/);
+    next();
+    expect(stage('Details')).toBe('Details, done');
+    expect(draft().answers.passed).toContain('details');
+  });
 });
+

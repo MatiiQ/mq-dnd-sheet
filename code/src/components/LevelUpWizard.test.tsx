@@ -166,3 +166,54 @@ describe('LevelUpWizard', () => {
     expect(button('Fixed (6)')).toBeTruthy();
   });
 });
+
+describe('SpellScreen (spec 2026-11-10 §2.1, §2.2)', () => {
+  const spell = (n: string, lvl: number): Entry => ({ id: 'spell/' + n, kind: 'spell', name: n, src: 'srd', desc: '', lvl, school: 'Evocation', time: 'Action', range: 'Self', classes: 'cleric' } as Entry);
+  const scat = mergeCatalog([...entries, spell('light', 0), spell('bless', 1), spell('cure', 1)], null);
+  const show = (kind: 'cantrips' | 'prepare') => {
+    const c = withClass({ ...blankCharacter(), maxHp: 10, hp: 10 }, { name: 'Ranger', clsId: 'class/ranger', hd: 10, lvl: 1 }), plan = levelPlan(c, { row: c.classes[0].id }, scat, { flows: {}, spells: {} })!;
+    const step = { key: kind + ':x', kind, title: 'Cleric ' + kind, owed: 2, list: 'cleric', maxLvl: kind === 'cantrips' ? 0 : 1, source: 'From the Cleric table at Cleric level 1.' };
+    const screen: LevelScreenSpec = { kind: 'step', key: step.key, title: step.title, ready: false, step };
+    function H() {
+      const [a, setA] = useState<LevelAnswers>({ flows: {}, spells: {} });
+      return <LevelScreen cat={scat} c={c} plan={plan} screen={screen} answers={a} set={setA} />;
+    }
+    mount(<H />);
+  };
+  const heads = () => [...document.querySelectorAll('h4.block-title')].map((h) => h.textContent);
+  it('shows the source line and level headings with the chosen count; tiles start with their level', () => {
+    show('prepare');
+    expect(document.body.textContent).toContain('From the Cleric table at Cleric level 1.');
+    expect(heads()).toEqual(['Level 1 spells']);
+    tap([...document.querySelectorAll('.tile-pick')].find((b) => b.textContent?.startsWith('bless'))!);
+    expect(heads()).toEqual(['Level 1 spells · 1 chosen']);
+    expect([...document.querySelectorAll('.tile-pick .small')][0].textContent!.startsWith('Level 1')).toBe(true);
+  });
+  it('cantrips read Cantrips and Cantrip', () => {
+    show('cantrips');
+    expect(heads()).toEqual(['Cantrips']);
+    expect([...document.querySelectorAll('.tile-pick .small')][0].textContent!.startsWith('Cantrip')).toBe(true);
+  });
+});
+
+describe('AsiScreen groups (spec 2026-11-10 §2.3)', () => {
+  const ft = (n: string, prereq?: string): Entry => ({ id: 'feat/' + n, kind: 'feat', name: n, src: 'srd', desc: '', cat: 'general', ...(prereq ? { prereq } : {}) } as Entry);
+  const asi = feat('ranger', 'asi', 4, { grants: [{ kind: 'choice', id: 'feat', name: 'Feat', pick: 1, pool: 'feat:cat=general' }] });
+  const acat = mergeCatalog([cls('Ranger', 10), asi, ft('zeta'), ft('alpha'), ft('strong', 'str>=19'), ft('held'), ft('mighty', 'str>=19')], null);
+  const show = (p: Partial<Character> = {}) => {
+    const c = withClass({ ...blankCharacter(), maxHp: 10, hp: 10, ...p }, { name: 'Ranger', clsId: 'class/ranger', hd: 10, lvl: 3 });
+    const plan = levelPlan(c, { row: c.classes[0].id }, acat, { flows: {}, spells: {} })!;
+    const step = { key: 'asi@4', kind: 'asi' as const, title: 'Ability Score Improvement', entry: asi };
+    mount(<LevelScreen cat={acat} c={c} plan={plan} screen={{ kind: 'step', key: step.key, title: step.title, ready: false, step }} answers={{ flows: {}, spells: {} }} set={() => {}} />);
+  };
+  const groups = () => [...document.querySelectorAll('h4.block-title')].map((h) => [h.textContent, [...h.parentElement!.querySelectorAll('.tile-title')].map((t) => t.textContent)]);
+  it('available, needs a prerequisite, already on your sheet; held and unmet goes last; sorted', () => {
+    show({ feats: [{ id: 'h', g: 'feat', name: 'held', desc: '', cid: 'feat/held' }, { id: 'm', g: 'feat', name: 'mighty', desc: '', cid: 'feat/mighty' }] });
+    expect(groups()).toEqual([['Available', ['alpha', 'zeta']], ['Needs a prerequisite', ['strong']], ['Already on your sheet', ['held', 'mighty']]]);
+  });
+  it('an empty group has no heading', () => {
+    show();
+    expect(groups().map((g) => g[0])).toEqual(['Available', 'Needs a prerequisite']);
+  });
+});
+

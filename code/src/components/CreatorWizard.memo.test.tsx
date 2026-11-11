@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { mergeCatalog } from '../catalog/merge';
 import type { ClassEntry, Entry } from '../catalog/schema';
 import { creatorScreens, type CreatorAnswers } from '../creator';
-import { mount, type } from '../test-dom';
+import { btn, mount, tap, type } from '../test-dom';
 import { CreatorWizard, NEW_ANSWERS } from './CreatorWizard';
 
 vi.mock('../creator', async (orig) => { const m = await orig<typeof import('../creator')>(); return { ...m, creatorScreens: vi.fn(m.creatorScreens) }; });
@@ -31,5 +31,11 @@ describe('creatorScreens memo', () => {
     expect(calls()).toBe(before);
     act(() => swap());
     expect(calls()).toBe(before + 1);
+  });
+  it('Next records the screen it leaves without recomputing the screen list (passed is not in the memo key)', () => {
+    mount(<CreatorWizard cat={mergeCatalog(entries, null)} initial={{ v: 1, step: 'details', answers }} onCreate={() => {}} onClose={() => {}} />);
+    const before = vi.mocked(creatorScreens).mock.calls.length;
+    tap(btn('Next'));
+    expect(vi.mocked(creatorScreens).mock.calls.length).toBe(before);
   });
 });

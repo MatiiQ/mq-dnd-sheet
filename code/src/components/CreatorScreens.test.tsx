@@ -5,7 +5,10 @@ import { mergeCatalog } from '../catalog/merge';
 import type { ChoiceSpec, ClassEntry, Entry, GrantSpec } from '../catalog/schema';
 import { creatorScreens, replaySteps, type CreatorAnswers } from '../creator';
 import { label, mount, tap, type, unmount } from '../test-dom';
-import { Bonus, ClassTiles, Equipment, Languages, OriginChoice, Scores, type ScreenProps } from './CreatorScreens';
+import { Bonus, ClassTiles, Equipment, Languages, OriginChoice, OriginTiles, Scores, Summary, type ScreenProps } from './CreatorScreens';
+import { blankCharacter } from '../defaults';
+import { withClass } from '../test-fixtures';
+import srdEntries from '../data/srd/index';
 
 const skills: ChoiceSpec = { kind: 'choice', id: 'skills', name: 'Skills', pick: 2, pool: 'skill:arcana|history|insight' };
 const wizard: ClassEntry = { id: 'class/wizard', kind: 'class', name: 'Wizard', src: 'srd', desc: '', hd: 6, saves: 'int,wis', skills, armor: '', weapons: '', castAb: 'int',
@@ -115,3 +118,56 @@ describe('creator screens', () => {
     expect(seen.bgFlow['>feat/mi'].picks.ab).toEqual(['int']);
   });
 });
+
+describe('origin tiles explain the choice (spec 2026-11-10 §1.3, §1.4)', () => {
+  const srd = mergeCatalog(srdEntries, null);
+  const show = (kind: 'background' | 'species') => {
+    const a = A({ cls: 'class/fighter', background: undefined });
+    mount(<OriginTiles cat={srd} a={a} set={() => {}} r={replaySteps(srd, a, { fill: true })} kind={kind} />);
+  };
+  const tileOf = (name: string) => [...document.querySelectorAll('.tile-pick')].find((b) => b.querySelector('.tile-title')?.textContent === name)!;
+  const moreOf = (name: string) => {
+    const t = tileOf(name);
+    const box = t.parentElement!;
+    tap(box.querySelector('.tile-more'));
+    return box.querySelector('.tile-long')!.textContent!;
+  };
+  it('the Soldier tile names its feat and the feat’s benefits; More holds both texts', () => {
+    show('background');
+    const body = tileOf('Soldier').textContent!;
+    expect(body).toContain('Feat: Savage Attacker (');
+    expect(body).toContain('strikes)');
+    expect(body).not.toContain('strikes.)');
+    const more = moreOf('Soldier');
+    expect(more.startsWith(srd.byId.get('background/soldier')!.desc)).toBe(true);
+    expect(more).toContain('\n\nSavage Attacker: ');
+  });
+  it('the Goliath tile lists the Giant Ancestry options and Large Form’s level', () => {
+    show('species');
+    const more = moreOf('Goliath');
+    for (const id of ['clouds-jaunt-cloud-giant', 'fires-burn-fire-giant', 'frosts-chill-frost-giant', 'hills-tumble-hill-giant', 'stones-endurance-stone-giant', 'storms-thunder-storm-giant'])
+      expect(more).toContain('• ' + srd.byId.get('trait/goliath/' + id)!.name + ': ');
+    expect(more).toContain('You choose one on the next screen.');
+    expect(more).toContain('Large Form (from level 5)');
+  });
+  it('the Elf tile lists Keen Senses options without a colon', () => {
+    show('species');
+    const more = moreOf('Elf');
+    expect(more).toContain('• Insight proficiency');
+    expect(more).not.toContain('proficiency: ');
+  });
+});
+
+describe('creator Summary (spec 2026-11-10 §1.8)', () => {
+  const srd = mergeCatalog(srdEntries, null);
+  it('lists the chosen masteries; none, no line', () => {
+    const c = (mastery: string[]) => withClass({ ...blankCharacter(), mastery, feats: [{ id: 'fw', g: 'class', name: 'Weapon Mastery', desc: '' }],
+      grants: [{ id: 'gm', kind: 'prof', name: 'Weapon Mastery', cat: 'mastery', val: '2', from: 'feature:fw' }] }, { lvl: 1 });
+    mount(<Summary a={A()} preview={c(['greataxe', 'handaxe'])} cat={srd} />);
+    expect(document.body.textContent).toContain('Weapon Mastery: Greataxe (Cleave), Handaxe (Vex)');
+    unmount();
+    mount(<Summary a={A()} preview={c([])} cat={srd} />);
+    expect(document.body.textContent).not.toContain('Weapon Mastery:');
+  });
+});
+

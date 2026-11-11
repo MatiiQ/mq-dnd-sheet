@@ -159,8 +159,10 @@ function auraReason(c: Character, x: Linked, seen: Set<string>): string | null {
   const on = c.grants.some((g) => g.kind === 'aura' && links.has(g.from) && inactiveReason(c, g, new Set([...seen, key])) === null);
   return on ? null : 'aura not active';
 }
+// The level an entry waits for (its own minLvl above the level it reads), else 0 (spec 2026-11-10 §2.6).
+export const laterLevel = (c: Character, x: Linked): number => (x.minLvl && x.minLvl > classLevel(c, x) ? x.minLvl : 0);
 function baseReason(c: Character, x: Linked, seen: Set<string>): string | null {
-  if (x.minLvl && x.minLvl > classLevel(c, x)) return 'from level ' + x.minLvl;
+  if (laterLevel(c, x)) return 'from level ' + laterLevel(c, x);
   const p = parseLink(x.from);
   if (p?.kind === 'item') {
     const item = c.inv.find((i) => i.id === p.id);
@@ -201,6 +203,10 @@ export const isActive = (c: Character, x: Linked) => inactiveReason(c, x) === nu
 export const activeGrants = (c: Character, kind: GrantKind, withCounted = false): Grant[] =>
   c.grants.filter((g) => g.kind === kind && (withCounted || !g.counted) && isActive(c, g));
 
+// True when some switched effect of this link counts now (spec 2026-11-10 §2.8): a potion's effect while the potion is
+// in a bag applies to nothing, so it gets no status chip.
+export const effectApplies = (c: Character, link: string) =>
+  LINKED_LISTS.some((k) => (c[k] as Linked[]).some((x) => x.from === link && x.when === 'active' && inactiveReason(c, x) === null));
 // True when something from this link counts only while its effect is on (it then gets an On/Off switch).
 export const hasActiveEffect = (c: Character, link: string) =>
   LINKED_LISTS.some((k) => (c[k] as Linked[]).some((x) => x.from === link && x.when === 'active'));

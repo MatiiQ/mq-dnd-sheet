@@ -344,12 +344,8 @@ export function TextField({ label, value, onChange, placeholder, style, list }: 
 
 // ---------- creator and level-up tiles ----------
 
-// The start of a text: up to the first ". " (kept), or its first line.
-export function firstSentence(text: string): string {
-  const line = text.split('\n')[0];
-  const i = line.indexOf('. ');
-  return i < 0 ? line : line.slice(0, i + 1);
-}
+// The start of a text (lives in catalog/copy.ts, which may not import components).
+export { firstSentence } from '../catalog/copy';
 
 // One option as a tile: a select button (aria-pressed) and, beside it, a More button that opens the long text. No
 // onSelect: a plain tile (the features screen). held: already on the sheet, struck through; a tap still reaches

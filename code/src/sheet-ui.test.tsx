@@ -6,6 +6,9 @@ import type { ClassEntry } from './catalog/schema';
 import App from './App';
 import { blankCharacter } from './defaults';
 import { modeSpeed, speedNow } from './logic';
+import srdEntries from './data/srd/index';
+import { addFromCatalog } from './catalog/copy';
+import { firstMasteryFeature } from './components/tabs/FeaturesTab';
 import { btnStarting, label, mount, tap, unmount } from './test-dom';
 import { haAura, holyAvenger, paladin, withClass, withClasses } from './test-fixtures';
 import type { Character, Feature, Item } from './types';
@@ -571,3 +574,77 @@ describe('level-up and undo from the menu', () => {
     expect(up.textContent).toContain('Level 20: nothing more to gain');
   });
 });
+
+describe('ability "Was" (spec 2026-11-10 §2.4)', () => {
+  const bg: Feature = { id: 'bg', g: 'background', name: 'Soldier', desc: '' };
+  const fx: Feature = { id: 'fx', g: 'class', name: 'Surge', desc: '' };
+  const plus2 = { id: 'g', kind: 'abil' as const, name: 'STR +2', ab: 'str', val: '2', cap: 20 as const, from: 'feature:bg' };
+  const active = { id: 'h', kind: 'abil' as const, name: 'Surge', ab: 'str', val: '2', cap: 20 as const, from: 'feature:fx', when: 'active' as const };
+  it('a permanent bonus shows no Was', () => {
+    renderSheet({ feats: [bg], grants: [plus2] });
+    expect(document.body.textContent).not.toContain('Was ');
+  });
+  it('a switched-on bonus shows Was and the permanent score', () => {
+    renderSheet({ feats: [bg, fx], grants: [plus2, active], effectsOn: ['feature:fx'] });
+    expect(document.body.textContent).toContain('Was 12');
+  });
+  it('edit mode names the score before bonuses and the score with them', () => {
+    renderSheet({ abil: { ...blankCharacter().abil, str: 14 }, feats: [bg], grants: [plus2] });
+    editMode();
+    expect(document.body.textContent).toContain('Score before bonuses · 16 with bonuses');
+    expect(label('Score before bonuses, strength')).not.toBeNull();
+  });
+});
+
+// Large Form from character level 5 (PHB p.192); the Elven Lineage spells at levels 3 and 5 (PHB p.190) wait the same way.
+describe('Later levels (spec 2026-11-10 §2.6)', () => {
+  const srd = mergeCatalog(srdEntries, null);
+  const goliath = (lvl: number): Character => {
+    const c0 = withClass({ ...blankCharacter(), tab: 'features' }, { name: 'Barbarian', lvl, hd: 12 });
+    return addFromCatalog(c0, srd, srd.byId.get('species/goliath')!, { picks: {}, counted: {}, links: {},
+      nested: { 'trait/goliath/giant-ancestry': { picks: { anc: ['trait/goliath/clouds-jaunt-cloud-giant'] }, counted: {}, links: {} } } });
+  };
+  const block = (title: string) => [...document.querySelectorAll('.block')].find((b) => b.querySelector('.block-title')?.textContent?.startsWith(title));
+  const laterBtn = () => [...document.querySelectorAll('button')].find((b) => b.textContent?.startsWith('Later levels'));
+  it('a Goliath 1 has no Large Form yet, only a line in the species description', () => {
+    const c = goliath(1);
+    expect(c.feats.some((f) => f.cid === 'trait/goliath/large-form')).toBe(false);
+    expect(c.feats.find((f) => f.cid === 'species/goliath')!.desc).toContain('Large Form: added at character level 5.');
+    renderSheet(c);
+    expect(laterBtn()).toBeUndefined();
+  });
+  it('a feature waiting for its level sits under a closed Later levels', () => {
+    renderSheet(withClass({ ...blankCharacter(), tab: 'features', feats: [{ id: 'w', g: 'class', name: 'Waiting', desc: '', minLvl: 5 }] }, { lvl: 1 }));
+    expect(laterBtn()!.getAttribute('aria-expanded')).toBe('false');
+    expect(document.body.textContent).not.toContain('Waiting · from level 5');
+    tap(laterBtn());
+    expect(document.body.textContent).toContain('Waiting · from level 5');
+  });
+  it('at level 5 Large Form is in Species and Later levels is gone', () => {
+    const c = goliath(5);
+    renderSheet(c);
+    expect(block('Species')!.querySelector('#feat-' + c.feats.find((f) => f.cid === 'trait/goliath/large-form')!.id)).not.toBeNull();
+    expect(laterBtn()).toBeUndefined();
+  });
+  it('a group whose only feature waits shows no heading', () => {
+    renderSheet(withClass({ ...blankCharacter(), tab: 'features', feats: [{ id: 'w', g: 'other', name: 'Waiting', desc: '', minLvl: 5 }] }, { lvl: 1 }));
+    expect(block('Other')).toBeUndefined();
+    expect(laterBtn()).toBeTruthy();
+  });
+  it('a reveal of a waiting feature opens Later levels and its row', () => {
+    const c = withClass({ ...blankCharacter(), tab: 'features', feats: [{ id: 'w', g: 'class', name: 'Waiting', desc: '', minLvl: 5 }],
+      res: [{ id: 'r', name: 'Waiting', count: 1, max: 1, recharge: 'long', from: 'feature:w' }] }, { lvl: 1 });
+    renderSheet(c);
+    tap(document.querySelector('#res-r .entry-head'));
+    tap([...document.querySelectorAll('button')].find((b) => b.textContent?.startsWith('Source:') && b.closest('#res-r')));
+    expect(laterBtn()!.getAttribute('aria-expanded')).toBe('true');
+    expect(document.querySelector('#feat-w .entry-head')!.getAttribute('aria-expanded')).toBe('true');
+  });
+  it('firstMasteryFeature skips a waiting feature for one in a group', () => {
+    const wm = (id: string, minLvl?: number) => ({ id, g: 'class' as const, name: 'WM ' + id, desc: '', ...(minLvl ? { minLvl } : {}) });
+    const g = (id: string) => ({ id: 'g' + id, kind: 'prof' as const, name: 'Weapon Mastery', cat: 'mastery' as const, val: '2', from: 'feature:' + id });
+    const c = withClass({ ...blankCharacter(), feats: [wm('later', 5), wm('now')], grants: [g('later'), g('now')] }, { lvl: 1 });
+    expect(firstMasteryFeature(c)).toBe('now');
+  });
+});
+

@@ -478,7 +478,8 @@ export function missingPicks(cat: Catalog, c: Character, e: Entry, picks: Record
 type Resolved = Omit<GrantSpec, 'opt'>;
 // An entry added below another one; preset: choices already answered (a background's origin feat list).
 type Nested = { entry: Entry; preset?: Record<string, string[]> };
-// The entry's grants with the player's picks applied: picked options (an option picked twice gets ids -0 and -1),
+// The entry's grants with the player's picks applied: picked options (an option picked twice is one summed grant when
+// its val is a whole number, else ids -0 and -1),
 // '$ref' fields filled (a grant over a multi-pick choice copied once per pick, ids -<index>; one over a choice with no
 // valid picks dropped), a `casts` ref pointed at the spell spec of the same pick, and picks no grant uses turned into
 // proficiencies (skills, tools, languages, weapon masteries), entries (feats, traits, subclasses) or notes. c: the
@@ -499,6 +500,9 @@ export function resolveChoices(cat: Catalog, e: Entry, picks: Record<string, str
       for (const id of group?.ids ?? []) {
         const o = s.options.find((x) => x.id === id)!;
         if (n === 1) raw.push(strip(o));
+        // An option picked twice with a whole-number value (STR +1 twice) is one grant: STR +2, the option's own id. The
+        // cap loop adds a summed val as it adds two, so the score is the same.
+        else if (/^\d+$/.test(o.val ?? '')) raw.push({ ...strip(o), val: String(n * +o.val!), name: o.name.replace(/\+(\d+)/, () => '+' + n * +o.val!) });
         else for (let i = 0; i < n; i++) raw.push({ ...strip(o), id: `${o.id}-${i}` });
       }
     }
@@ -559,6 +563,34 @@ export function resolveChoices(cat: Catalog, e: Entry, picks: Record<string, str
 // Feature prerequisites by slug: a feature whose cid ends with /<slug>; one without cid whose name, up to its first
 // '·', ':' or '(', slugs to it (a hand-typed "Fighting Style · Archery"); or an entry being added in the same flow.
 const ARMOR_PROF: Record<string, string> = { light: 'Light armor', medium: 'Medium armor', heavy: 'Heavy armor', shield: 'Shields' };
+// The start of a text: up to the first ". " (kept), or its first line.
+export function firstSentence(text: string): string {
+  const line = text.split('\n')[0];
+  const i = line.indexOf('. ');
+  return i < 0 ? line : line.slice(0, i + 1);
+}
+// A feat's benefits for a tile (spec 2026-11-10 §1.3): the headings of the lines after "You gain the following
+// benefits." (one to four capitalised words, small words between, then ". ", at a line start or after a sentence end),
+// Repeatable left out; else the first sentence of what follows the marker, or of the desc when there is no marker.
+const BENEFITS_MARK = 'You gain the following benefits.';
+const BENEFIT_HEAD = /(?:^|(?<=\. ))((?:[A-Z][\w’'-]*|\d+)(?: (?:(?:of|the|a|an|to|in|and|or|for) )?(?:[A-Z][\w’'-]*|\d+)){0,3})\. /gm;
+export function featBenefits(desc: string): string {
+  const lines = desc.split('\n');
+  const at = lines.findIndex((l) => l.trim() === BENEFITS_MARK);
+  if (at < 0) return firstSentence(desc);
+  const rest = lines.slice(at + 1).join('\n');
+  const heads = [...rest.matchAll(BENEFIT_HEAD)].map((m) => m[1]).filter((h) => h !== 'Repeatable');
+  return heads.length ? heads.join(', ') : firstSentence(rest);
+}
+// An `opt` group's tile text (spec 2026-11-10 §1.6): the desc paragraph starting "<opt>. " without that label, else the
+// group's grant names without their "<opt>: " prefix; then any choice only this option asks ("Also: …, chosen next.").
+export function optDesc(entry: Entry, choice: ChoiceSpec, opt: string): string {
+  const head = new RegExp('^' + opt.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\. ');
+  const para = entry.desc.split('\n').find((l) => head.test(l));
+  const text = para ? para.replace(head, '') : (choice.options ?? []).filter((o) => o.opt === opt).map((o) => o.name.replace(opt + ': ', '')).join(', ');
+  const also = choicesOf(entry).filter((ch) => ch.ifPick === choice.id + '=' + opt).map((ch) => ` Also: ${ch.name}, chosen next.`).join('');
+  return text + also;
+}
 export const titled = (s: string) => s.split(/[-\s]/).map(capital).join(' ');
 // cls: an option's class (an invocation's level is the Warlock level); without it, the character level.
 export function prereqMet(c: Character, prereq: string | undefined, adding: Entry[] = [], cls?: string): { ok: boolean; missing: string[] } {
@@ -642,7 +674,8 @@ export const equipText = (cat: Catalog, e: BackgroundEntry | ClassEntry) =>
   [...equipItems(cat, e).map((x) => (x.qty > 1 ? `${x.qty} × ${x.name}` : x.name)), `${e.gpA ?? 0} GP`].join(', ');
 // What addFromCatalog adds as features below e: picked feats, traits and subclasses; a background's origin feat
 // ('feat/magic-initiate:cleric' presets the list); a species' traits (not its lineage options, which come by choice).
-export function nestedEntries(cat: Catalog, e: Entry, picks: Record<string, string[]>): Nested[] {
+// With c, a species trait above the character level is left out: the level-up adds it on reaching that level (levelPlan).
+export function nestedEntries(cat: Catalog, e: Entry, picks: Record<string, string[]>, c?: Character): Nested[] {
   const out: Nested[] = [...resolveChoices(cat, e, picks).entries];
   if (e.kind === 'background') {
     const [id, list] = e.feat.split(':');
@@ -651,10 +684,12 @@ export function nestedEntries(cat: Catalog, e: Entry, picks: Record<string, stri
   }
   if (e.kind === 'species') {
     const sp = e.id.split('/')[1];
-    out.push(...entriesOf(cat, 'trait').filter((t) => t.species === sp && !t.of).map((entry) => ({ entry })));
+    out.push(...entriesOf(cat, 'trait').filter((t) => t.species === sp && !t.of && !(c && laterTrait(c, t))).map((entry) => ({ entry })));
   }
   return out;
 }
+// A species trait that comes at a later character level (Large Form at 5). The creator adds the species at level 0.
+export const laterTrait = (c: Character, t: TraitEntry) => t.lvl > Math.max(1, charLevel(c));
 // The entry with its choices' pick counts set for this character (Ritual Caster: Proficiency Bonus, PHB p.206).
 export function atLevel<E extends Entry>(c: Character, e: E): E {
   if (!('grants' in e) || !e.grants?.some((g) => g.kind === 'choice' && g.pickAt)) return e;
@@ -678,7 +713,7 @@ function checkAnswers(cat: Catalog, c: Character, entry: Entry, ans: AddChoices)
   }
   checkItemAnswers(cat, e, ans.item);
   if (e.kind === 'background' && e.equipA !== undefined && !ans.equip) throw new Error(`${e.name}: choose starting equipment`);
-  for (const n of nestedEntries(cat, e, ans.picks)) checkAnswers(cat, c, n.entry, answersFor(ans, n));
+  for (const n of nestedEntries(cat, e, ans.picks, c)) checkAnswers(cat, c, n.entry, answersFor(ans, n));
 }
 
 // "Magic Initiate (Cleric)": the entry's name, plus the label of its list choice's pick. A 'feat or …' list choice names
@@ -829,6 +864,8 @@ function addEntry(c: Character, cat: Catalog, entry: Entry, ans: AddChoices): Ch
     if (sizes.length === 1) out.size = sizes[0];
     else lines.push(`Size: ${sizes.map((x) => capital(x)).join(' or ')} (set it in Edit details)`);
   }
+  if (e.kind === 'species') for (const t of entriesOf(cat, 'trait').filter((t) => t.species === e.id.split('/')[1] && !t.of && laterTrait(c, t)))
+    lines.push(`${t.name}: added at character level ${t.lvl}.`);
   const lvl = e.kind === 'feature' || e.kind === 'trait' ? e.lvl : 0;
   const feature: Feature = {
     id, g, name: featureName(cat, c, e, ans.picks), desc: lines.filter((l) => l.trim()).join('\n'), cid: e.id,
@@ -836,7 +873,7 @@ function addEntry(c: Character, cat: Catalog, entry: Entry, ans: AddChoices): Ch
   };
   out.feats = [...out.feats, feature];
   out = addWithSpells(out, cat, linkOf('feature', id), inputsOf(cat, e, ans, r.specs));
-  for (const n of nestedEntries(cat, e, ans.picks)) out = addEntry(out, cat, n.entry, { ...answersFor(ans, n), from: linkOf('feature', id) });
+  for (const n of nestedEntries(cat, e, ans.picks, c)) out = addEntry(out, cat, n.entry, { ...answersFor(ans, n), from: linkOf('feature', id) });
   return out;
 }
 

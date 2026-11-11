@@ -65,9 +65,10 @@ export default function App() {
   // Nothing open (no character of your own, no example open), or Menu › Characters: the welcome screen.
   if (!store.c || welcome) return (
     <>
-      {creator}
       <Welcome store={store} draft={draftUi} onNew={openCreator} onBlank={onBlank} onImported={() => setWelcome(false)}
         onOpen={(id) => { store.switchTo(id); setWelcome(false); }} {...(store.c ? { onBack: () => setWelcome(false) } : {})} />
+      {/* After Welcome: both are fixed at the same z-index, so the later one paints on top. */}
+      {creator}
     </>
   );
   return (
