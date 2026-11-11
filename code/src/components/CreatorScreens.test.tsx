@@ -5,7 +5,9 @@ import { mergeCatalog } from '../catalog/merge';
 import type { ChoiceSpec, ClassEntry, Entry, GrantSpec } from '../catalog/schema';
 import { creatorScreens, replaySteps, type CreatorAnswers } from '../creator';
 import { label, mount, tap, type, unmount } from '../test-dom';
-import { Bonus, ClassTiles, Equipment, Languages, OriginChoice, OriginTiles, Scores, type ScreenProps } from './CreatorScreens';
+import { Bonus, ClassTiles, Equipment, Languages, OriginChoice, OriginTiles, Scores, Summary, type ScreenProps } from './CreatorScreens';
+import { blankCharacter } from '../defaults';
+import { withClass } from '../test-fixtures';
 import srdEntries from '../data/srd/index';
 
 const skills: ChoiceSpec = { kind: 'choice', id: 'skills', name: 'Skills', pick: 2, pool: 'skill:arcana|history|insight' };
@@ -153,6 +155,19 @@ describe('origin tiles explain the choice (spec 2026-11-10 §1.3, §1.4)', () =>
     const more = moreOf('Elf');
     expect(more).toContain('• Insight proficiency');
     expect(more).not.toContain('proficiency: ');
+  });
+});
+
+describe('creator Summary (spec 2026-11-10 §1.8)', () => {
+  const srd = mergeCatalog(srdEntries, null);
+  it('lists the chosen masteries; none, no line', () => {
+    const c = (mastery: string[]) => withClass({ ...blankCharacter(), mastery, feats: [{ id: 'fw', g: 'class', name: 'Weapon Mastery', desc: '' }],
+      grants: [{ id: 'gm', kind: 'prof', name: 'Weapon Mastery', cat: 'mastery', val: '2', from: 'feature:fw' }] }, { lvl: 1 });
+    mount(<Summary a={A()} preview={c(['greataxe', 'handaxe'])} cat={srd} />);
+    expect(document.body.textContent).toContain('Weapon Mastery: Greataxe (Cleave), Handaxe (Vex)');
+    unmount();
+    mount(<Summary a={A()} preview={c([])} cat={srd} />);
+    expect(document.body.textContent).not.toContain('Weapon Mastery:');
   });
 });
 

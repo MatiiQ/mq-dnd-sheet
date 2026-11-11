@@ -9,6 +9,7 @@ import {
   applyRolled, assignScore, assigned, bonusMode, chooseClass, classOf, classTileText, dropLowest, languageOptions, parseTotals, POINT_BUDGET, pointsSpent, scorePool,
   setBonusMode, setBonusPick, setMethod, setStart, type CreatorAnswers, type ReplaySteps
 } from '../creator';
+import { masteryText } from '../actions';
 import { ABILITIES, abilityName, armorClass, classLine, effScore, fmt, maxHpOf, skillLevel } from '../logic';
 import { Sheet } from '../sheet';
 import type { Ability, Character } from '../types';
@@ -304,7 +305,7 @@ export function Details({ a, set }: ScreenProps) {
 }
 
 // The character Create builds: name and class line, HP, AC, final scores, what each level added, items and coins.
-export function Summary({ a, preview }: { a: CreatorAnswers; preview: Character | null }) {
+export function Summary({ a, preview, cat }: { a: CreatorAnswers; preview: Character | null; cat: Catalog }) {
   if (!preview) return <span className="muted">Pick a class first.</span>;
   const c = preview;
   const lists = { feature: c.feats, spell: c.spells, item: c.inv, sense: c.senses, defense: c.defenses, res: c.res, attack: c.attacks } as Record<string, { id: string; name: string }[]>;
@@ -322,6 +323,7 @@ export function Summary({ a, preview }: { a: CreatorAnswers; preview: Character 
         const names = [...new Set(l.added.map(nameOf).filter((s): s is string => !!s))];
         return names.length ? <span key={l.n} className="small">Level {l.n}: {names.join(', ')}</span> : null;
       })}
+      {masteryText(c, cat) && <span className="small">Weapon Mastery: {masteryText(c, cat)}</span>}
       <span className="small">{c.inv.length} {c.inv.length === 1 ? 'item' : 'items'}{coins ? ' · ' + coins : ''}</span>
       {a.start > 1 && <span className="small">Starting above level 1: the Starting Equipment at Higher Levels table (PHB p.43) gives more gold and items; add them by hand.</span>}
     </div>

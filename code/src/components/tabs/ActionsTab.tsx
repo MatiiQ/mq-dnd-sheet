@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import {
-  attacksPerAction, extraDamage, extraText, featureActions, lightExtra, masterySlots, otherWeapons, spellActions, switchFeatureEffect, unarmedStrike, weaponAttacks,
+  attacksPerAction, extraDamage, extraText, featureActions, lightExtra, masteryKind, masterySlots, masteryText, otherWeapons, spellActions, switchFeatureEffect, unarmedStrike, weaponAttacks,
   type SpellAction, type WeaponAttack
 } from '../../actions';
 import { capWords, dtypeText, titled, weaponRules } from '../../catalog/copy';
@@ -168,11 +168,9 @@ export function ActionsTab() {
 
   // ---- mastery ----
   const slots = masterySlots(c);
-  const catItem = (kind: string) => { const e = cat?.byId.get('item/' + kind); return e?.kind === 'item' ? e : undefined; };
-  const kindName = (kind: string) => c.inv.find((i) => isWeapon(i) && weaponKind(i) === kind)?.name ?? catItem(kind)?.name ?? titled(kind);
-  const kindMastery = (kind: string) => c.inv.find((i) => isWeapon(i) && weaponKind(i) === kind && i.mastery)?.mastery ?? catItem(kind)?.mastery;
-  const counted = c.mastery.slice(0, slots);
-  const masteryLine = counted.map((k) => kindName(k) + (kindMastery(k) ? ' (' + titled(kindMastery(k)!) + ')' : '')).join(', ');
+  const kindName = (kind: string) => masteryKind(c, cat ?? undefined, kind).name;
+  const kindMastery = (kind: string) => masteryKind(c, cat ?? undefined, kind).mastery;
+  const masteryLine = masteryText(c, cat ?? undefined);
   const options = [...new Set([
     ...(cat ? entriesOf(cat, 'item').filter((e) => e.cat === 'weapon' && e.mastery).map((e) => e.id.split('/').pop()!) : []),
     ...c.inv.filter((i) => isWeapon(i) && i.mastery).map(weaponKind), ...c.mastery

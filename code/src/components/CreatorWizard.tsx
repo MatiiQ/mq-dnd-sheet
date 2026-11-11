@@ -102,7 +102,7 @@ function Creator({ cat, initial, onCreate, notice }: { cat: Catalog; initial?: D
     case 'details': body = <Details {...props} />; break;
     case 'level': body = <LevelBody cat={cat} a={a} set={set} screen={screen} title={r.stages.find((x) => x.id === screen.stage)?.title ?? ''} />; break;
     // Fill only changes unfinished answers, so once every screen is ready the memoized replay is what Create builds.
-    case 'summary': body = <Summary a={a} preview={details(r.replay.c, a)} />; break;
+    case 'summary': body = <Summary a={a} preview={details(r.replay.c, a)} cat={cat} />; break;
   }
   const last = screen.key === 'summary';
   return (

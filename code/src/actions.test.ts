@@ -4,7 +4,7 @@ import { mergeCatalog } from './catalog/merge';
 import type { Entry, ItemEntry, SpellEntry } from './catalog/schema';
 import { addFromCatalog, itemFromEntry, spellFromEntry, type AddChoices } from './catalog/copy';
 import { blankCharacter, druidSample, sampleCharacter } from './defaults';
-import { attacksPerAction, cantripDice, econOf, extraDamage, extraText, featureActions, switchFeatureEffect, hasMastery, lightExtra, masterySlots, otherWeapons, resOfFeature, spellActions, unarmedStrike, weaponAbility, weaponAttacks, weaponProficient, type Use } from './actions';
+import { attacksPerAction, cantripDice, econOf, extraDamage, extraText, featureActions, switchFeatureEffect, hasMastery, lightExtra, masterySlots, masteryText, otherWeapons, resOfFeature, spellActions, unarmedStrike, weaponAbility, weaponAttacks, weaponProficient, type Use } from './actions';
 import { weaponKind } from './hands';
 import { takeOut } from './inventory';
 import { addGrants, castSpell, normalize, setFxItem } from './logic';
@@ -665,3 +665,21 @@ describe('switching a feature effect on from its Actions row', () => {
     expect(switchFeatureEffect(c(0), 'feature:is', 'r1')).toBeNull();
   });
 });
+
+describe('masteryText (spec 2026-11-10 §1.8, §2.7)', () => {
+  const barb = (mastery: string[]): Character => withClass({
+    ...blankCharacter(), mastery, feats: [{ id: 'fw', g: 'class', name: 'Weapon Mastery', desc: '' }],
+    grants: [{ id: 'gm', kind: 'prof', name: 'Weapon Mastery', cat: 'mastery', val: '2', from: 'feature:fw' }]
+  }, { lvl: 1 });
+  it('names each counted kind with its mastery from the catalog', () => {
+    expect(masteryText(barb(['greataxe', 'handaxe']), cat)).toBe('Greataxe (Cleave), Handaxe (Vex)');
+  });
+  it('without a catalog and with nothing in the inventory reads the titled kind', () => {
+    expect(masteryText(barb(['greataxe', 'handaxe']))).toBe('Greataxe, Handaxe');
+  });
+  it('lists only the kinds the slots count; none gives empty text', () => {
+    expect(masteryText(barb(['greataxe', 'handaxe', 'maul']), cat)).toBe('Greataxe (Cleave), Handaxe (Vex)');
+    expect(masteryText(barb([]), cat)).toBe('');
+  });
+});
+

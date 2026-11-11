@@ -1,5 +1,7 @@
 // The Actions tab, computed from the sheet (plan 5): weapon attacks, Unarmed Strike, spells, feature actions and extra
 // damage. Pure functions of the character; nothing here is stored.
+import { titled } from './catalog/copy';
+import type { Catalog } from './catalog/merge';
 import { slug, type SpellPart } from './catalog/schema';
 import { valueAt } from './catalog/value';
 import { hasProp, isWeapon, twoHanded, versatile, weaponKind, weaponMatches, weaponsHeld } from './hands';
@@ -16,6 +18,17 @@ export const otherWeapons = (c: Character): Item[] =>
 // prof 'mastery' grants without a target (Fighter 3, 4 from level 4, PHB p.91; Ranger 2 …).
 export const masterySlots = (c: Character) =>
   activeGrants(c, 'prof').filter((g) => g.cat === 'mastery' && !g.target).reduce((t, g) => t + num(c, g.val, g), 0);
+// A Weapon Mastery kind's name and mastery: from a weapon of that kind in the inventory, else the catalog's item, else
+// the titled kind (no catalog yet, an offline first launch).
+export function masteryKind(c: Character, cat: Catalog | undefined, kind: string): { name: string; mastery?: string } {
+  const e = cat?.byId.get('item/' + kind), it = e?.kind === 'item' ? e : undefined;
+  const own = c.inv.filter((i) => isWeapon(i) && weaponKind(i) === kind);
+  const mastery = own.find((i) => i.mastery)?.mastery ?? it?.mastery;
+  return { name: own[0]?.name ?? it?.name ?? titled(kind), ...(mastery ? { mastery } : {}) };
+}
+// The counted picks as "Greataxe (Cleave), Handaxe (Vex)"; '' when none.
+export const masteryText = (c: Character, cat?: Catalog): string =>
+  c.mastery.slice(0, masterySlots(c)).map((k) => { const m = masteryKind(c, cat, k); return m.name + (m.mastery ? ' (' + titled(m.mastery) + ')' : ''); }).join(', ');
 // A weapon kind (a weaponKind slug) counts when it is among the first masterySlots picks, or an active mastery grant
 // names it (grant targets are weapon names, so they compare as slugs). Picks past the slot count stay stored.
 export function hasMastery(c: Character, kind: string): boolean {
