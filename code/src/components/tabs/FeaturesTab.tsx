@@ -1,9 +1,9 @@
-import { useState, type CSSProperties } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { PROF_NAMES, type ProfCat } from '../../catalog/names';
 import { entriesOf } from '../../catalog/merge';
 import { useCatalog } from '../../catalog/useCatalog';
 import { masteryText } from '../../actions';
-import { hasActiveEffect, isActive, linkOf, sourceLabel } from '../../links';
+import { hasActiveEffect, isActive, laterLevel, linkOf, sourceLabel } from '../../links';
 import { classLine, removeRef, addGrants, grantChips, newId, normName, profList, type GrantInput } from '../../logic';
 import { removeEntry, saveEntry, useEntryForm, useSheet } from '../../sheet';
 import type { Character, Feature, FeatureGroup, SrcKind } from '../../types';
@@ -12,7 +12,7 @@ import { SummonStep, summonStart } from '../Companions';
 import { FeaturePicker } from '../pickers/FeaturePicker';
 import { SourcePicker } from '../SourcePicker';
 import { jumpTo } from '../nav';
-import { AddButton, EffectSwitch, EntryForm, EntryRow, RemoveButton, TextField } from '../ui';
+import { AddButton, Caret, EffectSwitch, EntryForm, EntryRow, RemoveButton, TextField } from '../ui';
 
 const PROF_CATS: [ProfCat, string][] = [['armor', 'Armor'], ['weapon', 'Weapons'], ['tool', 'Tools'], ['language', 'Languages']];
 
@@ -39,7 +39,13 @@ function MasteryLine() {
 }
 
 export function FeaturesTab() {
-  const { c, update, form: openForm, setForm } = useSheet();
+  const { c, update, form: openForm, setForm, focus } = useSheet();
+  // Features that wait for a later level (Large Form at 1) sit in a folded group at the end; a reveal of one opens it.
+  const later = c.feats.filter((x) => GROUP_ORDER.includes(x.g) && laterLevel(c, x) > 0).sort((x, y) => laterLevel(c, x) - laterLevel(c, y));
+  const [laterOpen, setLaterOpen] = useState(false);
+  useEffect(() => {
+    if (focus && !focus.used && later.some((x) => 'feat-' + x.id === focus.id)) setLaterOpen(true);
+  }, [focus?.n]); // eslint-disable-line react-hooks/exhaustive-deps
   const f = useEntryForm('feat', BLANK, 'feature', 'Add a custom feature or trait');
   const picking = openForm?.kind === 'pick-feat';
   const titles: [FeatureGroup, string][] = [
@@ -87,47 +93,56 @@ export function FeaturesTab() {
     </EntryForm>
   );
 
+  // One feature row; head: the row's heading (Later levels adds the level).
+  const rowOf = (x: Feature, head = <strong>{x.name}</strong>) => {
+    if (f.editingId === x.id) return <div key={x.id}>{form}</div>;
+    const link = linkOf('feature', x.id), src = sourceLabel(c, x);
+    return (
+      <EntryRow key={x.id} id={'feat-' + x.id} name={x.name}
+        // A catalog description runs to paragraphs: the row shows its start, the open row all of it.
+        head={<>{head}{x.desc && <span className="muted entry-clamp">{x.desc}</span>}</>}
+        side={hasActiveEffect(c, link) || x.makes ? <>
+          {hasActiveEffect(c, link) && <EffectSwitch link={link} name={x.name} />}
+          {/* A feature that makes a creature (Primal Companion) or a form (Wild Shape) opens its summon step. */}
+          {x.makes === 'pet' && <button type="button" className="btn btn-sm toggle-btn" onClick={() => summonFrom(x)}>Summon</button>}
+          {x.makes === 'form' && <button type="button" className="btn btn-sm toggle-btn" onClick={() => setForm({ kind: 'summon', id: link })}>Assume form</button>}
+        </> : undefined}
+        body={x.desc || src || masteryAt === x.id ? <>
+          {x.desc && <span className="entry-desc">{x.desc}</span>}
+          {masteryAt === x.id && <MasteryLine />}
+          {src && <span className="muted">Source: {src}</span>}
+        </> : undefined}
+        onEdit={() => f.openEdit(x.id, { g: x.g || 'other', name: x.name, desc: x.desc || '', makes: x.makes, from: x.from, srcKind: x.srcKind, srcName: x.srcName, pending: [] })}
+        onRemove={() => update((p) => removeRef(p, { kind: 'feature', id: x.id }))}
+        removeConfirm={removalNote(c, { kind: 'feature', id: x.id })}>
+        {grantChips(c, link).length > 0 && <SourceChips link={link} />}
+        {x.makes && <SummonStep link={link} src={x} />}
+      </EntryRow>
+    );
+  };
+
   return (
     <div className="col gap-12">
       <div className="grid" style={{ '--min': '260px', gap: 12 } as CSSProperties}>
         {titles.map(([g, title]) => {
-          const items = c.feats.filter((x) => x.g === g);
+          const items = c.feats.filter((x) => x.g === g && !laterLevel(c, x));
           // The Training card always shows: it holds the proficiencies and the row that adds one.
           if (!items.length && g !== 'training') return null;
           return (
             <div key={g} className="block">
               <h3 className="block-title">{title}</h3>
               {g === 'training' && <Proficiencies />}
-              {items.map((x) => {
-                if (f.editingId === x.id) return <div key={x.id}>{form}</div>;
-                const link = linkOf('feature', x.id), src = sourceLabel(c, x);
-                return (
-                  <EntryRow key={x.id} id={'feat-' + x.id} name={x.name}
-                    // A catalog description runs to paragraphs: the row shows its start, the open row all of it.
-                    head={<><strong>{x.name}</strong>{x.desc && <span className="muted entry-clamp">{x.desc}</span>}</>}
-                    side={hasActiveEffect(c, link) || x.makes ? <>
-                      {hasActiveEffect(c, link) && <EffectSwitch link={link} name={x.name} />}
-                      {/* A feature that makes a creature (Primal Companion) or a form (Wild Shape) opens its summon step. */}
-                      {x.makes === 'pet' && <button type="button" className="btn btn-sm toggle-btn" onClick={() => summonFrom(x)}>Summon</button>}
-                      {x.makes === 'form' && <button type="button" className="btn btn-sm toggle-btn" onClick={() => setForm({ kind: 'summon', id: link })}>Assume form</button>}
-                    </> : undefined}
-                    body={x.desc || src || masteryAt === x.id ? <>
-                      {x.desc && <span className="entry-desc">{x.desc}</span>}
-                      {masteryAt === x.id && <MasteryLine />}
-                      {src && <span className="muted">Source: {src}</span>}
-                    </> : undefined}
-                    onEdit={() => f.openEdit(x.id, { g: x.g || 'other', name: x.name, desc: x.desc || '', makes: x.makes, from: x.from, srcKind: x.srcKind, srcName: x.srcName, pending: [] })}
-                    onRemove={() => update((p) => removeRef(p, { kind: 'feature', id: x.id }))}
-                    removeConfirm={removalNote(c, { kind: 'feature', id: x.id })}>
-                    {grantChips(c, link).length > 0 && <SourceChips link={link} />}
-                    {x.makes && <SummonStep link={link} src={x} />}
-                  </EntryRow>
-                );
-              })}
+              {items.map((x) => rowOf(x))}
             </div>
           );
         })}
       </div>
+      {later.length > 0 && (
+        <div className="block">
+          <button type="button" className="btn row gap-4" aria-expanded={laterOpen} onClick={() => setLaterOpen(!laterOpen)}>Later levels<Caret open={laterOpen} /></button>
+          {laterOpen && later.map((x) => rowOf(x, <><strong>{x.name}</strong> · from level {laterLevel(c, x)}</>))}
+        </div>
+      )}
       {!f.isOpen && !picking && (
         <div className="row wrap gap-8">
           <AddButton onClick={() => setForm({ kind: 'pick-feat', id: null })}>+ Add feature or trait</AddButton>

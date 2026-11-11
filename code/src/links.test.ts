@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { withClass } from './test-fixtures';
 import { sampleCharacter } from './defaults';
-import { activeGrants, charLevel, effectApplies, effectCanTargetOther, fixLinks, hasActiveEffect, isOn, inactiveReason, isActive, parseLink, sourceLabel, sourceOf, srcKindOfLink, totalLevel, wouldLoop } from './links';
+import { activeGrants, charLevel, effectApplies, laterLevel, effectCanTargetOther, fixLinks, hasActiveEffect, isOn, inactiveReason, isActive, parseLink, sourceLabel, sourceOf, srcKindOfLink, totalLevel, wouldLoop } from './links';
 import { grantErrors } from './catalog/schema';
 import { castSpell, effectsAfterEdit, longRest, toggleEffect } from './logic';
 import { migrate } from './migrate';
@@ -292,6 +292,14 @@ describe('effectApplies (spec 2026-11-10 §2.8)', () => {
     const c: Character = { ...blankCharacter(), inv: [bag, pot], effectsOn: ['item:pot'],
       grants: [{ id: 'g', kind: 'speed', name: 'Speed', mode: 'walk', val: 'walk2', when: 'active', from: 'item:pot' }] };
     expect(effectApplies(c, 'item:pot')).toBe(false);
+  });
+});
+
+describe('laterLevel (spec 2026-11-10 §2.6)', () => {
+  it('a feature from level 5 waits at level 1, not at level 5', () => {
+    const x: Feature = { ...feat('lf'), minLvl: 5 };
+    expect(laterLevel(withClass({ ...blankCharacter(), feats: [x] }, { lvl: 1 }), x)).toBe(5);
+    expect(laterLevel(withClass({ ...blankCharacter(), feats: [x] }, { lvl: 5 }), x)).toBe(0);
   });
 });
 

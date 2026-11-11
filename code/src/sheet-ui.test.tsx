@@ -6,6 +6,9 @@ import type { ClassEntry } from './catalog/schema';
 import App from './App';
 import { blankCharacter } from './defaults';
 import { modeSpeed, speedNow } from './logic';
+import srdEntries from './data/srd/index';
+import { addFromCatalog } from './catalog/copy';
+import { firstMasteryFeature } from './components/tabs/FeaturesTab';
 import { btnStarting, label, mount, tap, unmount } from './test-dom';
 import { haAura, holyAvenger, paladin, withClass, withClasses } from './test-fixtures';
 import type { Character, Feature, Item } from './types';
@@ -590,6 +593,55 @@ describe('ability "Was" (spec 2026-11-10 §2.4)', () => {
     editMode();
     expect(document.body.textContent).toContain('Score before bonuses · 16 with bonuses');
     expect(label('Score before bonuses, strength')).not.toBeNull();
+  });
+});
+
+// Large Form from character level 5 (PHB p.192); the Elven Lineage spells at levels 3 and 5 (PHB p.190) wait the same way.
+describe('Later levels (spec 2026-11-10 §2.6)', () => {
+  const srd = mergeCatalog(srdEntries, null);
+  const goliath = (lvl: number): Character => {
+    const c0 = withClass({ ...blankCharacter(), tab: 'features' }, { name: 'Barbarian', lvl, hd: 12 });
+    return addFromCatalog(c0, srd, srd.byId.get('species/goliath')!, { picks: {}, counted: {}, links: {},
+      nested: { 'trait/goliath/giant-ancestry': { picks: { anc: ['trait/goliath/clouds-jaunt-cloud-giant'] }, counted: {}, links: {} } } });
+  };
+  const block = (title: string) => [...document.querySelectorAll('.block')].find((b) => b.querySelector('.block-title')?.textContent?.startsWith(title));
+  const laterBtn = () => [...document.querySelectorAll('button')].find((b) => b.textContent?.startsWith('Later levels'));
+  it('a Goliath 1 lists Large Form only under a closed Later levels', () => {
+    const c = goliath(1);
+    const lf = c.feats.find((f) => f.cid === 'trait/goliath/large-form')!;
+    renderSheet(c);
+    expect(block('Species')!.querySelector('#feat-' + lf.id)).toBeNull();
+    expect(laterBtn()!.getAttribute('aria-expanded')).toBe('false');
+    expect(document.body.textContent).not.toContain('Large Form · from level 5');
+    tap(laterBtn());
+    expect(document.body.textContent).toContain('Large Form · from level 5');
+  });
+  it('at level 5 Large Form is in Species and Later levels is gone', () => {
+    const c = goliath(5);
+    renderSheet(c);
+    expect(block('Species')!.querySelector('#feat-' + c.feats.find((f) => f.cid === 'trait/goliath/large-form')!.id)).not.toBeNull();
+    expect(laterBtn()).toBeUndefined();
+  });
+  it('a group whose only feature waits shows no heading', () => {
+    renderSheet(withClass({ ...blankCharacter(), tab: 'features', feats: [{ id: 'w', g: 'other', name: 'Waiting', desc: '', minLvl: 5 }] }, { lvl: 1 }));
+    expect(block('Other')).toBeUndefined();
+    expect(laterBtn()).toBeTruthy();
+  });
+  it('a reveal of a waiting feature opens Later levels and its row', () => {
+    const c = goliath(1);
+    const lf = c.feats.find((f) => f.cid === 'trait/goliath/large-form')!;
+    const res = c.res.find((r) => r.from === 'feature:' + lf.id)!;
+    renderSheet(c);
+    tap(document.querySelector('#res-' + res.id + ' .entry-head'));
+    tap([...document.querySelectorAll('button')].find((b) => b.textContent?.startsWith('Source:') && b.closest('#res-' + res.id)));
+    expect(laterBtn()!.getAttribute('aria-expanded')).toBe('true');
+    expect(document.querySelector('#feat-' + lf.id + ' .entry-head')!.getAttribute('aria-expanded')).toBe('true');
+  });
+  it('firstMasteryFeature skips a waiting feature for one in a group', () => {
+    const wm = (id: string, minLvl?: number) => ({ id, g: 'class' as const, name: 'WM ' + id, desc: '', ...(minLvl ? { minLvl } : {}) });
+    const g = (id: string) => ({ id: 'g' + id, kind: 'prof' as const, name: 'Weapon Mastery', cat: 'mastery' as const, val: '2', from: 'feature:' + id });
+    const c = withClass({ ...blankCharacter(), feats: [wm('later', 5), wm('now')], grants: [g('later'), g('now')] }, { lvl: 1 });
+    expect(firstMasteryFeature(c)).toBe('now');
   });
 });
 

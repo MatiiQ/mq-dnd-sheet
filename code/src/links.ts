@@ -159,8 +159,10 @@ function auraReason(c: Character, x: Linked, seen: Set<string>): string | null {
   const on = c.grants.some((g) => g.kind === 'aura' && links.has(g.from) && inactiveReason(c, g, new Set([...seen, key])) === null);
   return on ? null : 'aura not active';
 }
+// The level an entry waits for (its own minLvl above the level it reads), else 0 (spec 2026-11-10 §2.6).
+export const laterLevel = (c: Character, x: Linked): number => (x.minLvl && x.minLvl > classLevel(c, x) ? x.minLvl : 0);
 function baseReason(c: Character, x: Linked, seen: Set<string>): string | null {
-  if (x.minLvl && x.minLvl > classLevel(c, x)) return 'from level ' + x.minLvl;
+  if (laterLevel(c, x)) return 'from level ' + laterLevel(c, x);
   const p = parseLink(x.from);
   if (p?.kind === 'item') {
     const item = c.inv.find((i) => i.id === p.id);
